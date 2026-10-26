@@ -1,0 +1,8 @@
+{
+  "id": "ledovec",
+  "name": "Ledovec",
+  "climate": {"temperature": 0.02, "humidity": 0.6},
+  "terrain": {"height": 74, "variation": 14},
+  "blocks": {"surface": "glass", "filler": "obsidian", "filler_depth": 4, "beach": "gravel", "underwater": "gravel"},
+  "trees": {"density": 0}
+}

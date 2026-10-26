@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- An isometric grass block. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#5F9F35" android:pathData="M54,30 L78,42 L54,54 L30,42 Z" />
+    <path android:fillColor="#86603F" android:pathData="M30,42 L54,54 L54,80 L30,68 Z" />
+    <path android:fillColor="#6B4C32" android:pathData="M54,54 L78,42 L78,68 L54,80 Z" />
+    <path android:fillColor="#4C8A2A" android:pathData="M30,42 L54,54 L54,59 L30,47 Z" />
+    <path android:fillColor="#3F7522" android:pathData="M54,54 L78,42 L78,47 L54,59 Z" />
+</vector>

@@ -1,0 +1,12 @@
+.gradle/
+build/
+app/build/
+app/.cxx/
+local.properties
+*.apk
+*.keystore
+.idea/
+tools/legacy-apk/work/
+tools/legacy-apk/apktool_*.jar
+*.idsig
+screenshots/

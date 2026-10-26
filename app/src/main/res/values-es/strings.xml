@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="pack_title">Paquete de texturas</string>
+    <string name="pack_load">Cargar paquete (.zip, .mcpack, terrain.png)</string>
+    <string name="pack_reset">Restaurar texturas por defecto</string>
+    <string name="pack_reset_done">Texturas por defecto restauradas</string>
+    <string name="pack_loaded">Paquete cargado (%d archivos)</string>
+    <string name="pack_empty">No se encontraron texturas de bloques en el archivo</string>
+    <string name="pack_error">Error al cargar: %s</string>
+    <string name="save">Guardar</string>
+    <string name="modpack_imported">Paquete instalado y activado</string>
+    <string name="modpack_invalid">El archivo no tiene manifest.json ni carpetas biomes, dimensions o recipes</string>
+    <string name="world_exported">Guardado en Descargas/VoxelCraft: %s</string>
+</resources>

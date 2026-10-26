@@ -1,0 +1,7 @@
+{
+  "recipes": [
+    {"type": "shapeless", "ingredients": ["dirt", "leaves"], "result": "grass"},
+    {"type": "shaped", "pattern": ["GG", "GG"], "key": {"G": "glowstone"}, "result": "glowstone", "count": 4}
+  ],
+  "smelting": [{"input": "gravel", "output": "flint"}]
+}

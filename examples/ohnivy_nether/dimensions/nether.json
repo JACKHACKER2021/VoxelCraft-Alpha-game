@@ -1,0 +1,8 @@
+{
+  // Přepíše jen uvedené klíče, ostatní zůstanou z dřívějších balíčků.
+  "lava_level": 48,
+  "blocks": {"fill": "nether_brick", "floor": "netherrack", "ore": "glowstone"},
+  "ore_chance": 0.02,
+  "glowstone_clusters": 5,
+  "fog_color": [0.45, 0.12, 0.02]
+}

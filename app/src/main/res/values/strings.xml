@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">VoxelCraft</string>
+    <string name="pack_title">Texture pack</string>
+    <string name="pack_load">Load a pack (.zip, .mcpack, terrain.png)</string>
+    <string name="pack_reset">Restore default textures</string>
+    <string name="pack_reset_done">Default textures restored</string>
+    <string name="pack_loaded">Pack loaded (%d files)</string>
+    <string name="pack_empty">No block textures were found in the file</string>
+    <string name="pack_error">Loading failed: %s</string>
+    <string name="save">Save</string>
+    <string name="modpack_imported">Pack installed and enabled</string>
+    <string name="modpack_invalid">The archive has no manifest.json and no biomes, dimensions or recipes folders</string>
+    <string name="world_exported">Saved to Downloads/VoxelCraft: %s</string>
+</resources>

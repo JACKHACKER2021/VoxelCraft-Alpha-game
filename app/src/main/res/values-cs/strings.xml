@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="pack_title">Balíček textur</string>
+    <string name="pack_load">Načíst balíček (.zip, .mcpack, terrain.png)</string>
+    <string name="pack_reset">Vrátit výchozí textury</string>
+    <string name="pack_reset_done">Výchozí textury obnoveny</string>
+    <string name="pack_loaded">Balíček načten (%d souborů)</string>
+    <string name="pack_empty">V souboru nebyly nalezeny žádné textury bloků</string>
+    <string name="pack_error">Načtení selhalo: %s</string>
+    <string name="save">Uložit</string>
+    <string name="modpack_imported">Balíček nainstalován a zapnut</string>
+    <string name="modpack_invalid">V archivu není manifest.json ani složky biomes, dimensions nebo recipes</string>
+    <string name="world_exported">Uloženo do Stažené soubory/VoxelCraft: %s</string>
+</resources>

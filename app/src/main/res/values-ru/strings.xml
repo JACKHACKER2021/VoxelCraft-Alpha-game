@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="pack_title">Набор текстур</string>
+    <string name="pack_load">Загрузить набор (.zip, .mcpack, terrain.png)</string>
+    <string name="pack_reset">Вернуть стандартные текстуры</string>
+    <string name="pack_reset_done">Стандартные текстуры восстановлены</string>
+    <string name="pack_loaded">Набор загружен (файлов: %d)</string>
+    <string name="pack_empty">В файле не найдено текстур блоков</string>
+    <string name="pack_error">Ошибка загрузки: %s</string>
+    <string name="save">Сохранить</string>
+    <string name="modpack_imported">Пакет установлен и включён</string>
+    <string name="modpack_invalid">В архиве нет manifest.json и папок biomes, dimensions или recipes</string>
+    <string name="world_exported">Сохранено в Загрузки/VoxelCraft: %s</string>
+</resources>
