@@ -9,6 +9,7 @@
 #include "Crafting.h"
 #include "GenConfig.h"
 #include "Items.h"
+#include "Shaders.h"
 #include "Math.h"
 
 namespace vc {
@@ -74,6 +75,9 @@ struct Settings {
     int cameraMode = 0;       // 0 first person, 1 from behind, 2 from the front
     bool viewBobbing = true;
     bool showMap = true;      // minimap in the top right corner
+    GraphicsMode graphics = GraphicsMode::Enhanced;  // 1.5.5: Classic or Enhanced (Vibrant shaders)
+    bool shadows = true;      // 1.5.5 Enhanced: shadows of the sun and moon
+    bool waves = true;        // 1.5.5 Enhanced: leaves and plants sway, water ripples
     // Audio
     float musicVolume = 0.6f;
     float soundVolume = 0.8f;

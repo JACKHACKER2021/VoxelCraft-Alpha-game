@@ -2164,7 +2164,14 @@ void Session::render(Renderer& renderer, Ui& ui, const Settings& settings, bool 
         if (settings.clouds) buildClouds(camera_.eye(), clock_, sky.clouds, cloudVerts_);
         else cloudVerts_.clear();
         renderer.setSky(sunMoonVerts_, starVerts_, sky.stars, cloudVerts_);
+        // 1.5.5: shadows from the sun by day and, fainter, from the moon at night; none in heavy rain.
+        const Vec3 sun = sunDirectionAt((float)std::fmod(state_.dayTime, kDayTicks));
+        const bool moon = sun.y < 0;
+        const Vec3 light = moon ? sun * -1.0f : sun;
+        const float up = std::clamp((light.y - 0.04f) / 0.22f, 0.0f, 1.0f);
+        renderer.setSun(light, up * up * (3 - 2 * up) * (moon ? 0.35f : 1.0f) * (1 - 0.85f * skyRain_));
     } else {
+        renderer.setSun(Vec3(0, 1, 0), 0);
         renderer.setFogColors(config_.overworld.sky, config_.nether.fog);
         renderer.setSky({}, {}, 0, {});
         dayLight_ = 1;

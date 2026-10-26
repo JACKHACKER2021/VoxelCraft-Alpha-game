@@ -36,6 +36,8 @@ Vec3 sunDirection(float ticks) {
 
 }  // namespace
 
+Vec3 sunDirectionAt(float ticks) { return sunDirection(ticks); }
+
 DayPhase dayPhase(float ticks) {
     float t = std::fmod(std::fmod(ticks, kDayTicks) + kDayTicks, kDayTicks);
     if (t < 3000 || t >= 23000) return DayPhase::Morning;

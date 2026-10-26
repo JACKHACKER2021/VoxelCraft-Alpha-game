@@ -104,7 +104,8 @@ private:
     enum PromptId { PromptWorldName = 1, PromptSeed = 2, PromptJson = 3, PromptPackName = 4, PromptPackImported = 5,
                     PromptPlayerName = 6, PromptSkinImported = 7, PromptEditWorldName = 8,
                     PromptStructureImported = 9, PromptDevName = 10, PromptDevPassword = 11, PromptMusicEnded = 12,
-                    PromptJoinAddress = 13, PromptChat = 14, PromptCode = 15, PromptPublicIp = 16, PromptWorldImported = 17 };
+                    PromptJoinAddress = 13, PromptChat = 14, PromptCode = 15, PromptPublicIp = 16, PromptWorldImported = 17,
+                    PromptShaderPackName = 18 };
 
     void setScreen(Screen s);
     Settings playSettings() const;  // settings_ without developer options for normal players
@@ -301,6 +302,11 @@ private:
     // Ore Redesign experiment is played.
     std::vector<uint8_t> oreBase_;
     void applyOreRedesign(bool on);
+    // 1.5.5: the world shader follows the graphics setting and the active shader pack.
+    bool shadersDirty_ = true;
+    ShaderProfile shaderProfile_;
+    GraphicsMode appliedGraphics_ = GraphicsMode::Enhanced;
+    void applyShaders();
     int splash_ = 0;
     bool languageSent_ = false;
     std::string achievementBanner_;  // shown over the game for a few seconds

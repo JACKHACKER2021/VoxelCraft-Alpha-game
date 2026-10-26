@@ -1,6 +1,5 @@
 // Desktop sanity test for the platform-independent engine core.
 // Build & run: tests/run_tests.sh
-#include <cstdlib>
 #include <cassert>
 #include <cstdio>
 #include <algorithm>
@@ -47,6 +46,7 @@
 #include "engine/Game.h"
 #include "engine/Items.h"
 #include "engine/Save.h"
+#include "engine/Shaders.h"
 #include "engine/Session.h"
 #include "engine/Mesher.h"
 #include "engine/Player.h"
@@ -3802,10 +3802,57 @@ static int testExperiments151() {
     return 0;
 }
 
+static int testShaders155() {
+    namespace fs = std::filesystem;
+    // Graphics mode is a setting: Enhanced by default, Classic survives a save.
+    fs::path root = fs::temp_directory_path() / "vc_shaders";
+    fs::remove_all(root);
+    fs::create_directories(root);
+    Settings st;
+    CHECK(st.graphics == GraphicsMode::Enhanced);
+    st.graphics = GraphicsMode::Classic;
+    saveSettings((root / "settings.txt").string(), st);
+    CHECK(loadSettings((root / "settings.txt").string()).graphics == GraphicsMode::Classic);
+    // A shader pack: numbers are read and clamped, a bad world.fsh is refused.
+    PackManager packs(root.string());
+    packs.ensureDefaultPack();
+    CHECK(packs.shaderPackDir().empty());
+    const std::string id = packs.createPack("Sunny");
+    writeShaderPackFiles(packs.packDir(id), "Sunny");
+    packs.setEnabled(id, true);
+    CHECK(packs.shaderPackDir() == packs.packDir(id));
+    CHECK(fs::exists(fs::path(packs.packDir(id)) / "shaders/README.txt") && fs::exists(fs::path(packs.packDir(id)) / "shaders/world.fsh.example"));
+    ShaderProfile p = loadShaderPack(packs.packDir(id));
+    CHECK(p.name == "Sunny" && std::fabs(p.saturation - ShaderProfile{}.saturation) < 1e-4f && p.fragment.empty());
+    std::ofstream((fs::path(packs.packDir(id)) / "shaders/shader.json").string())
+        << R"({"name": "Loud", "saturation": 9, "warmth": 0.2, "shade": [0.5, 0.6, 3]})";
+    std::ofstream((fs::path(packs.packDir(id)) / "shaders/world.fsh").string()) << "void main() {}";
+    std::vector<std::string> warn;
+    p = loadShaderPack(packs.packDir(id), &warn);
+    CHECK(p.name == "Loud" && p.saturation == 2.0f && std::fabs(p.warmth - 0.2f) < 1e-4f && p.shade[2] == 2.0f && p.fragment.empty() && warn.size() == 1);
+    std::ofstream((fs::path(packs.packDir(id)) / "shaders/world.fsh").string()) << kVibrantWorldFs;
+    CHECK(loadShaderPack(packs.packDir(id)).fragment == kVibrantWorldFs);
+    // An old shader pack of another game: its files are kept aside, the pack gets our numbers.
+    const std::string old = packs.createPack("Old Shaders");
+    fs::create_directories(fs::path(packs.packDir(old)) / "shaders/program");
+    std::ofstream((fs::path(packs.packDir(old)) / "shaders/gbuffers_terrain.fsh").string()) << "#version 120\nvoid main(){}";
+    std::ofstream((fs::path(packs.packDir(old)) / "shaders/program/final.fsh").string()) << "#version 120";
+    CHECK(convertImportedShaderPack(packs.packDir(old), "Old Shaders"));
+    CHECK(fs::exists(fs::path(packs.packDir(old)) / "shaders/original/gbuffers_terrain.fsh") &&
+          fs::exists(fs::path(packs.packDir(old)) / "shaders/original/program/final.fsh"));
+    CHECK(loadShaderPack(packs.packDir(old)).name == "Old Shaders" && loadShaderPack(packs.packDir(old)).fragment.empty());
+    CHECK(!convertImportedShaderPack(packs.packDir(id), "x"));  // ours stays as it is
+    // Both shaders read the same inputs; the Vibrant one has every pack number.
+    for (const char* u : {"u_saturation", "u_contrast", "u_warmth", "u_vignette", "u_glow", "u_shade", "u_fogStrength", "u_time", "u_screen"})
+        CHECK(std::string(kVibrantWorldFs).find(u) != std::string::npos && std::string(kShaderPackGuide).find(u) != std::string::npos);
+    fs::remove_all(root);
+    return 0;
+}
+
 int main() {
     if (testOverworld() || testNether() || testPortal() || testTexturePacks() || testFontAndItems() || testSaves() ||
         testSurvivalSession() || testMenuFlow() || testCrafting() || testWorkbenchInSession() ||
-        testJsonAndPacks() || testSkinsStoreAudio() || testThirdPersonCamera() || testWaterEscape() || testLeavesMesh() || testPlants() || testDigParticles() || testDPad() || testStructures() || testInventoryAndHand() || testMetalsAndArmor() || testDeveloperAccess() || testEnglishEverywhere() || testMusic() || testDoorsChests() || testNewBiomes() || testWorldStructures() || testBoat() || testAchievements() || testLanGame() || testCommands() || testUpdate11() || testUpdate12() || testUpdate13() || testUpdate14() || testUpdate15() || testExperiments151())
+        testJsonAndPacks() || testSkinsStoreAudio() || testThirdPersonCamera() || testWaterEscape() || testLeavesMesh() || testPlants() || testDigParticles() || testDPad() || testStructures() || testInventoryAndHand() || testMetalsAndArmor() || testDeveloperAccess() || testEnglishEverywhere() || testMusic() || testDoorsChests() || testNewBiomes() || testWorldStructures() || testBoat() || testAchievements() || testLanGame() || testCommands() || testUpdate11() || testUpdate12() || testUpdate13() || testUpdate14() || testUpdate15() || testExperiments151() || testShaders155())
         return 1;
     std::printf("all tests passed\n");
     return 0;

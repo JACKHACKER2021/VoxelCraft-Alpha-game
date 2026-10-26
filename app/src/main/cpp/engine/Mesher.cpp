@@ -244,7 +244,8 @@ void buildChunkMesh(const World& world, const Chunk& chunk, ChunkMesh& out) {
                     const float planes[2][4] = {{e, e, 1 - e, 1 - e}, {1 - e, e, e, 1 - e}};
                     for (const auto& p : planes) {
                         Vertex a{wx + p[0], (float)y, wz + p[1], u0, v1, light, block}, b{wx + p[2], (float)y, wz + p[3], u1, v1, light, block};
-                        Vertex c{wx + p[2], y + 1.0f, wz + p[3], u1, v0, light, block}, d{wx + p[0], y + 1.0f, wz + p[1], u0, v0, light, block};
+                        Vertex c{wx + p[2], y + 1.0f, wz + p[3], u1, v0, light, block + kWaveSway},
+                            d{wx + p[0], y + 1.0f, wz + p[1], u0, v0, light, block + kWaveSway};  // the tops sway
                         dst.insert(dst.end(), {a, b, c, a, c, d});  // one side
                         dst.insert(dst.end(), {a, c, b, a, d, c});  // the other side
                     }
@@ -267,6 +268,8 @@ void buildChunkMesh(const World& world, const Chunk& chunk, ChunkMesh& out) {
                     else if (nether) light = fd.shade * 0.7f;  // no sky in the Nether: a dim, warm ambient
                     else light = fd.shade * sky.at(lx, ly, lz);
 
+                    // 1.5.5: leaves sway; the open surface of water and lava ripples.
+                    const int wave = isLeaves(id) ? 1 : isLiquid(id) && f == F_TOP && n.get(x, y + 1, z) != id ? 2 : 0;
                     int tile = tileFor(id, (Face)f);
                     float u0 = (tile % kAtlasCols) * kTile, v0 = (tile / kAtlasCols) * kTile;
                     const float uv[4][2] = {{u0, v0 + kTile}, {u0 + kTile, v0 + kTile}, {u0 + kTile, v0}, {u0, v0}};
@@ -297,6 +300,7 @@ void buildChunkMesh(const World& world, const Chunk& chunk, ChunkMesh& out) {
                     for (int i = 0; i < 4; ++i) {
                         const float* c = fd.corners[i];
                         q[i] = {wx + c[0], y + c[1] - (c[1] > 0 ? topCut : 0), wz + c[2], uv[i][0], uv[i][1], light * ao[i], block * (0.4f + 0.6f * ao[i])};
+                        if (wave == 1 || (wave == 2 && c[1] > 0)) q[i].block += wave == 1 ? kWaveSway : kWaveWater;
                     }
                     // Split the quad along the diagonal that keeps the shading smooth.
                     if (ao[0] + ao[2] >= ao[1] + ao[3]) dst.insert(dst.end(), {q[0], q[1], q[2], q[0], q[2], q[3]});

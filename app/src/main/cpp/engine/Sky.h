@@ -29,6 +29,9 @@ struct SkyState {
 };
 SkyState computeSky(float ticks, const float daySky[3], float rain);
 
+// Unit vector towards the sun (below the horizon at night: the moon is opposite).
+Vec3 sunDirectionAt(float ticks);
+
 // Sun, moon and stars around the camera (atlas tiles T_SUN, T_MOON, T_STAR), drawn behind everything.
 void buildSkyObjects(const Vec3& eye, float ticks, std::vector<Vertex>& sunMoon, std::vector<Vertex>& stars);
 // A layer of blocky clouds drifting east at y = kCloudHeight.

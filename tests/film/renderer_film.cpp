@@ -19,6 +19,9 @@ int mapW = 64, mapH = 64;
 
 namespace film {
 Frame frame;
+GraphicsMode graphics = GraphicsMode::Enhanced;
+ShaderProfile shader;
+int frameCount = 0;
 std::vector<uint8_t> playerSkin;
 std::vector<uint8_t> remoteSkins[8];
 namespace {
@@ -31,6 +34,11 @@ const std::unordered_map<int64_t, ChunkMesh>& meshes() { return gMeshes; }
 }  // namespace film
 
 bool Renderer::init() { return true; }
+bool Renderer::setShader(GraphicsMode mode, const ShaderProfile& profile) {
+    film::graphics = mode;
+    film::shader = profile;
+    return true;
+}
 void Renderer::shutdown() {}
 void Renderer::resize(int width, int height) { width_ = width; height_ = height; }
 void Renderer::setAtlas(const std::vector<uint8_t>& rgba, int size) { capture::atlas = rgba; capture::atlasSize = size; }
@@ -109,6 +117,7 @@ void Renderer::drawFirstPerson(const std::vector<Vertex>& skinVerts, const std::
 void Renderer::drawWorld(const Player& camera, Dimension dim, const RayHit&, float, float renderDistance, float fov) {
     film::Frame& f = film::frame;
     f.hasWorld = true;
+    ++film::frameCount;
     f.world = film::gWorld;
     f.camera = camera;
     f.dim = dim;
@@ -118,6 +127,10 @@ void Renderer::drawWorld(const Player& camera, Dimension dim, const RayHit&, flo
     std::copy(netherFog_, netherFog_ + 3, f.netherFog);
     std::copy(voidFog_, voidFog_ + 3, f.voidFog);
     f.brightness = brightness_;
+    f.sunDir = sunDir_;
+    f.sunStrength = sunStrength_;
+    f.shadows = shadows_;
+    f.waves = waves_;
     f.fogScale = fogScale_;
     f.sunMoon = skySunMoon_;
     f.stars = skyStars_;

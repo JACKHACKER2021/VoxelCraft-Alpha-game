@@ -10,6 +10,7 @@
 #include "Mesher.h"
 #include "Player.h"
 #include "PlayerModel.h"
+#include "Shaders.h"
 #include "Ui.h"
 #include "World.h"
 
@@ -20,6 +21,10 @@ public:
     bool init();
     void shutdown();
     void resize(int width, int height);
+    // 1.5.5: switches the world shader (Classic, or Enhanced with a shader pack's numbers and
+    // optional fragment shader). False when the pack's own world.fsh did not compile: the
+    // Vibrant shader is used instead.
+    bool setShader(GraphicsMode mode, const ShaderProfile& profile);
 
     // Uploads the terrain atlas (256x256 RGBA, 16x16 tiles of 16px).
     void setAtlas(const std::vector<uint8_t>& rgba, int size);
@@ -73,6 +78,11 @@ public:
     // Thicker fog above ground (the Halloween addon), 1 = normal.
     void setFogScale(float s) { fogScale_ = s; }
 
+    // 1.5.5 Enhanced: the light that casts shadows (unit vector towards the sun or moon) and
+    // how strong it is (0 = no shadows: night, rain, other dimensions); the player's settings.
+    void setSun(const Vec3& dir, float strength) { sunDir_ = dir; sunStrength_ = strength; }
+    void setEffects(bool shadows, bool waves) { shadows_ = shadows; waves_ = waves; }
+
     int width() const { return width_; }
     int height() const { return height_; }
 
@@ -86,6 +96,15 @@ private:
     // Streams triangles with the world shader into the last drawWorld scene.
     void drawDynamic(const std::vector<Vertex>& verts, GLuint texture, const Mat4* mvp = nullptr);
     void streamDraw(const std::vector<Vertex>& verts);  // with the current program and uniforms
+    void drawShadowMap(const Mat4& lightMvp, const Vec3& centre, float wave);
+    static constexpr int kShadowSize = 1024;
+    static constexpr float kShadowRadius = 40;  // blocks around the player that get shadows
+    GLuint shadowProg_ = 0, shadowFbo_ = 0, shadowTex_ = 0;
+    GLint uShadowLightMvp_ = -1, uShadowWave_ = -1, uShadowWaveTime_ = -1;
+    GLint uLightMvp_ = -1, uWave_ = -1, uWaveTime_ = -1, uShadowStrength_ = -1;
+    Vec3 sunDir_{0, 1, 0};
+    float sunStrength_ = 0;
+    bool shadows_ = true, waves_ = true;
     std::vector<Vertex> skySunMoon_, skyStars_, skyClouds_;
     float starAlpha_ = 0;
 
@@ -96,7 +115,10 @@ private:
     GLuint modelVao_ = 0, modelVbo_ = 0;
     Mat4 lastMvp_;
     GLint uMvp_ = -1, uFogColor_ = -1, uFogRange_ = -1, uCamPos_ = -1, uAlpha_ = -1;
-    GLint uUiProj_ = -1, uUiUseTex_ = -1, uBrightness_ = -1;
+    GLint uUiProj_ = -1, uUiUseTex_ = -1, uBrightness_ = -1, uTime_ = -1, uScreen_ = -1;
+    bool enhanced_ = false;
+    float fogTint_[3] = {1, 1, 1};
+    float shaderTime_ = 0;
     float sky_[3] = {0.53f, 0.74f, 1.0f}, netherFog_[3] = {0.22f, 0.04f, 0.03f}, voidFog_[3] = {0.16f, 0.05f, 0.24f};
     float brightness_ = 1.0f;
     float fogScale_ = 1.0f;

@@ -276,6 +276,13 @@ RecipeBook PackManager::buildRecipes(std::vector<std::string>* w) const {
     return any ? book : RecipeBook::defaults();
 }
 
+std::string PackManager::shaderPackDir() const {
+    std::string out;
+    for (const std::string& id : enabledOrder())
+        if (fs::is_directory(fs::path(root_) / id / "shaders")) out = (fs::path(root_) / id).string();
+    return out;
+}
+
 std::vector<std::string> PackManager::textureDirs() const {
     std::vector<std::string> out;
     for (const std::string& id : enabledOrder()) {

@@ -10,6 +10,7 @@
 
 #include "engine/Mesher.h"
 #include "engine/Player.h"
+#include "engine/Shaders.h"
 #include "engine/World.h"
 
 void writePng(const std::string& path, int w, int h, const std::vector<uint8_t>& rgba);
@@ -20,6 +21,65 @@ using namespace vc;
 float gSky[3] = {0.53f, 0.74f, 1.0f};  // clear colour and fog colour
 float gFogStart = 48, gFogEnd = 80;
 float gBrightness = 1;  // like the shader's u_brightness (night, rain)
+// 1.5.5: when set, pixels are shaded like the Vibrant (Enhanced) shader with these numbers.
+const ShaderProfile* gVibrant = nullptr;
+float gShaderTime = 0;
+// 1.5.5 sun shadows: a ray from each lit pixel towards the sun through the blocks of this world
+// (the game uses a shadow map of the same 40-block box around the player).
+const World* gShadowWorld = nullptr;
+Vec3 gSunDir{0, 1, 0}, gShadowCentre;
+float gSunStrength = 0;
+
+inline float sunVisibleAt(float x, float y, float z) {
+    const float dx = x - gShadowCentre.x, dz = z - gShadowCentre.z;
+    const float edge = std::sqrt(dx * dx + dz * dz) / 40.0f;
+    if (edge >= 1) return 1;
+    // Voxel walk (Amanatides & Woo) from just off the surface towards the sun.
+    Vec3 p(x + gSunDir.x * 0.02f, y + gSunDir.y * 0.02f, z + gSunDir.z * 0.02f);
+    int ix = (int)std::floor(p.x), iy = (int)std::floor(p.y), iz = (int)std::floor(p.z);
+    const int sx = gSunDir.x > 0 ? 1 : -1, sy = gSunDir.y > 0 ? 1 : -1, sz = gSunDir.z > 0 ? 1 : -1;
+    auto inv = [](float d) { return std::fabs(d) < 1e-6f ? 1e9f : 1 / std::fabs(d); };
+    const float ddx = inv(gSunDir.x), ddy = inv(gSunDir.y), ddz = inv(gSunDir.z);
+    float tx = (sx > 0 ? ix + 1 - p.x : p.x - ix) * ddx, ty = (sy > 0 ? iy + 1 - p.y : p.y - iy) * ddy,
+          tz = (sz > 0 ? iz + 1 - p.z : p.z - iz) * ddz;
+    for (int i = 0; i < 160; ++i) {
+        if (iy >= kChunkHeight || iy < 0) return 1;
+        const ItemId b = gShadowWorld->getBlock(ix, iy, iz);
+        if (b != AIR && !isLiquid(b) && !isPlant(b)) return std::min(1.0f, std::max(0.0f, (edge - 0.8f) / 0.2f));
+        if (tx < ty && tx < tz) ix += sx, tx += ddx;
+        else if (ty < tz) iy += sy, ty += ddy;
+        else iz += sz, tz += ddz;
+    }
+    return 1;
+}
+
+inline float smooth01(float a, float b, float x) {
+    float t = std::clamp((x - a) / (b - a), 0.0f, 1.0f);
+    return t * t * (3 - 2 * t);
+}
+
+// The Vibrant shader of Shaders.cpp, pixel for pixel.
+inline void vibrantPixel(const ShaderProfile& p, const float tex[3], float light, float block, float dist, float fog,
+                         const float fogColor[3], float out[3], float sunVis = 1) {
+    const float sunK = smooth01(0.25f, 0.9f, light) * sunVis, warmK = smooth01(0.7f, 1.0f, light);
+    const float warmMul[3] = {1 + p.warmth, 1 + p.warmth * 0.35f, 1 - p.warmth * 0.45f};
+    const float flick = 1 + 0.04f * std::sin(gShaderTime * 7 + dist * 0.7f);
+    const float lampMul[3] = {1, 0.86f, 0.62f};
+    float col[3];
+    for (int k = 0; k < 3; ++k) {
+        float sky = light * gBrightness * (0.58f + 0.42f * sunVis) * (p.shade[k] + (1 - p.shade[k]) * sunK) * (1 + (warmMul[k] - 1) * warmK);
+        float lamp = block * lampMul[k] * flick;
+        col[k] = tex[k] * std::max(sky, lamp) + tex[k] * lamp * p.glow * (1 - light);
+    }
+    const float g = col[0] * 0.299f + col[1] * 0.587f + col[2] * 0.114f;
+    float f = std::clamp(fog * p.fogStrength, 0.0f, 1.0f);
+    f = f * f * (3 - 2 * f);
+    for (int k = 0; k < 3; ++k) {
+        float c = g + (col[k] - g) * p.saturation;
+        c = std::clamp((c - 0.5f) * p.contrast + 0.5f, 0.0f, 1.0f);
+        out[k] = c * (1 - f) + fogColor[k] * p.fogTint[k] * f;
+    }
+}
 
 struct Image {
     int w, h;
@@ -79,20 +139,31 @@ void drawTriangles(Image& img, const Camera& cam, const std::vector<Vertex>& v, 
                 float t = (w0 * a.v / sw[0] + w1 * b.v / sw[1] + w2 * c.v / sw[2]) / iw;
                 float wx = (w0 * a.x / sw[0] + w1 * b.x / sw[1] + w2 * c.x / sw[2]) / iw;
                 float wz = (w0 * a.z / sw[0] + w1 * b.z / sw[1] + w2 * c.z / sw[2]) / iw;
+                float wy = (w0 * a.y / sw[0] + w1 * b.y / sw[1] + w2 * c.y / sw[2]) / iw;
                 int tx = std::clamp((int)(u * tex.w), 0, tex.w - 1), ty = std::clamp((int)(t * tex.h), 0, tex.h - 1);
                 const uint8_t* tc = &(*tex.rgba)[(ty * tex.w + tx) * 4];
                 float ta = tc[3] / 255.0f;
                 if (alpha >= 1 && ta < 0.5f) continue;  // the shader's alpha test
                 float light = a.light;
-                const float glow = w0 * a.block + w1 * b.block + w2 * c.block;  // lamps, as in the shader
+                const float glow = w0 * vertexGlow(a.block) + w1 * vertexGlow(b.block) + w2 * vertexGlow(c.block);  // lamps, as in the shader
                 const float warm[3] = {glow, glow * 0.9f, glow * 0.72f};
                 float dist = std::hypot(wx - cam.eye.x, wz - cam.eye.z);
                 float fog = std::clamp((dist - cam.fogStart) / (cam.fogEnd - cam.fogStart), 0.0f, 1.0f);
                 float* out = &img.color[(py * img.w + px) * 3];
                 float blend = alpha >= 1 ? 1 : ta * alpha;
-                for (int k = 0; k < 3; ++k) {
-                    float col = std::min(1.0f, tc[k] / 255.0f * std::max(light * gBrightness, warm[k])) * (1 - fog) + cam.fog[k] * fog;
-                    out[k] = out[k] * (1 - blend) + col * blend;
+                if (gVibrant) {
+                    const float t3[3] = {tc[0] / 255.0f, tc[1] / 255.0f, tc[2] / 255.0f};
+                    float col[3];
+                    float sunVis = 1;
+                    if (gShadowWorld && gSunStrength > 0 && light > 0.35f)
+                        sunVis = 1 + (sunVisibleAt(wx, wy, wz) - 1) * gSunStrength * (vertexWave(a.block) == 1 ? 0.45f : 1.0f) * smooth01(0.35f, 0.75f, light);
+                    vibrantPixel(*gVibrant, t3, light, glow, dist, (dist - cam.fogStart) / (cam.fogEnd - cam.fogStart), cam.fog, col, sunVis);
+                    for (int k = 0; k < 3; ++k) out[k] = out[k] * (1 - blend) + col[k] * blend;
+                } else {
+                    for (int k = 0; k < 3; ++k) {
+                        float col = std::min(1.0f, tc[k] / 255.0f * std::max(light * gBrightness, warm[k])) * (1 - fog) + cam.fog[k] * fog;
+                        out[k] = out[k] * (1 - blend) + col * blend;
+                    }
                 }
                 if (alpha >= 1) dz = z;
             }

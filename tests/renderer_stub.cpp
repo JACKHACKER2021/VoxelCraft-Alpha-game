@@ -16,6 +16,7 @@ int mapW = 64, mapH = 64;
 }  // namespace capture
 
 bool Renderer::init() { return true; }
+bool Renderer::setShader(GraphicsMode, const ShaderProfile&) { return true; }
 void Renderer::shutdown() {}
 void Renderer::resize(int width, int height) { width_ = width; height_ = height; }
 void Renderer::setAtlas(const std::vector<uint8_t>& rgba, int size) { capture::atlas = rgba; capture::atlasSize = size; }

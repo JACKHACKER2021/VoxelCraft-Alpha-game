@@ -657,7 +657,7 @@ public class VoxelActivity extends NativeActivity {
         }
         try (ZipFile zip = new ZipFile(archive)) {
             String prefix = null;
-            boolean java = false;
+            boolean java = false, shaders = false;
             for (Enumeration<? extends ZipEntry> e = zip.entries(); e.hasMoreElements(); ) {
                 String name = e.nextElement().getName().replace('\\', '/');
                 // A Java Edition mod (.jar) or datapack / resource pack (.zip).
@@ -667,14 +667,16 @@ public class VoxelActivity extends NativeActivity {
                 String candidate = null;
                 if (name.endsWith("manifest.json")) candidate = name.substring(0, name.length() - "manifest.json".length());
                 if (candidate == null && name.endsWith("content.json")) candidate = name.substring(0, name.length() - "content.json".length());
-                for (String dir : new String[] {"biomes/", "dimensions/", "recipes/"}) {
+                // 1.5.5: shader packs, ours (shaders/shader.json) or old ones of other games (shaders/*.fsh).
+                if (name.startsWith("shaders/") || name.contains("/shaders/")) shaders = true;
+                for (String dir : new String[] {"biomes/", "dimensions/", "recipes/", "shaders/"}) {
                     int i = name.indexOf(dir);
                     if (candidate == null && i >= 0 && (i == 0 || name.charAt(i - 1) == '/')) candidate = name.substring(0, i);
                 }
                 if (candidate != null && (prefix == null || candidate.length() < prefix.length())) prefix = candidate;
             }
             String base = slug(displayName(uri).replaceAll("\\.(zip|mcpack|mcaddon|jar)$", ""));
-            if (prefix == null && java) return installJavaMod(zip, base);
+            if (prefix == null && java && !shaders) return installJavaMod(zip, base);
             if (prefix == null) throw new IOException(str(R.string.modpack_invalid));
 
             File packs = new File(getFilesDir(), "packs");
@@ -690,7 +692,9 @@ public class VoxelActivity extends NativeActivity {
                 String lower = rel.toLowerCase(Locale.ROOT);
                 // Only data and images, and nothing that could escape the pack folder.
                 if (rel.isEmpty() || rel.contains("..") || rel.startsWith("/")) continue;
-                if (!(lower.endsWith(".json") || lower.endsWith(".png") || lower.endsWith(".tga") || lower.endsWith(".txt"))) continue;
+                boolean shaderFile = lower.startsWith("shaders/") && (lower.endsWith(".fsh") || lower.endsWith(".vsh")
+                        || lower.endsWith(".glsl") || lower.endsWith(".properties") || lower.endsWith(".frag") || lower.endsWith(".vert"));
+                if (!(lower.endsWith(".json") || lower.endsWith(".png") || lower.endsWith(".tga") || lower.endsWith(".txt") || shaderFile)) continue;
                 File target = new File(root, rel);
                 File parent = target.getParentFile();
                 if (parent != null && !parent.isDirectory() && !parent.mkdirs()) throw new IOException("mkdir");
@@ -705,7 +709,7 @@ public class VoxelActivity extends NativeActivity {
                 String json = "{\n  \"name\": \"" + base + "\",\n  \"description\": \"\",\n  \"version\": \"1.0.0\"\n}\n";
                 Files.write(manifest.toPath(), json.getBytes(StandardCharsets.UTF_8));
             }
-            return id;
+            return shaders ? "shaders:" + id : id;
         } finally {
             //noinspection ResultOfMethodCallIgnored
             archive.delete();

@@ -9,6 +9,7 @@
 #include <cstddef>
 
 #include "Blocks.h"
+#include "Shaders.h"
 
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, "VoxelCraft", __VA_ARGS__)
 
@@ -22,38 +23,67 @@ layout(location = 1) in vec2 a_uv;
 layout(location = 2) in float a_light;
 layout(location = 3) in float a_block;
 uniform mat4 u_mvp;
+uniform mat4 u_lightMvp;
 uniform vec3 u_cam;
+uniform float u_wave;
+uniform float u_waveTime;
 out vec2 v_uv;
 out float v_light;
 out float v_dist;
 out float v_block;
+out vec4 v_shadow;
+out float v_kind;
 void main() {
-    gl_Position = u_mvp * vec4(a_pos, 1.0);
+    // 1.5.5: the mesher marks swaying vertices (leaves, plant tops) and water surfaces in a_block.
+    float kind = floor(a_block * 0.5);
+    vec3 p = a_pos;
+    if (u_wave > 0.0 && kind > 0.5) {
+        float ph = u_waveTime * 1.7 + p.x * 0.55 + p.z * 0.45 + p.y * 0.3;
+        if (kind < 1.5) {
+            p.x += sin(ph) * 0.045 * u_wave;
+            p.z += cos(ph * 0.8 + 1.3) * 0.04 * u_wave;
+        } else {
+            p.y += (sin(ph * 0.9) * 0.5 - 0.5) * 0.06 * u_wave;
+        }
+    }
+    gl_Position = u_mvp * vec4(p, 1.0);
     v_uv = a_uv;
     v_light = a_light;
-    v_block = a_block;
-    v_dist = length(a_pos.xz - u_cam.xz);
+    v_block = a_block - 2.0 * kind;
+    v_dist = length(p.xz - u_cam.xz);
+    v_shadow = u_lightMvp * vec4(p, 1.0);
+    v_kind = kind;
 })";
 
-const char* kWorldFs = R"(#version 300 es
+// The shadow pass: depth from the sun, leaves and glass cut out like in the world shader.
+const char* kShadowVs = R"(#version 300 es
+layout(location = 0) in vec3 a_pos;
+layout(location = 1) in vec2 a_uv;
+layout(location = 3) in float a_block;
+uniform mat4 u_lightMvp;
+uniform float u_wave;
+uniform float u_waveTime;
+out vec2 v_uv;
+void main() {
+    float kind = floor(a_block * 0.5);
+    vec3 p = a_pos;
+    if (u_wave > 0.0 && kind > 0.5 && kind < 1.5) {
+        float ph = u_waveTime * 1.7 + p.x * 0.55 + p.z * 0.45 + p.y * 0.3;
+        p.x += sin(ph) * 0.045 * u_wave;
+        p.z += cos(ph * 0.8 + 1.3) * 0.04 * u_wave;
+    }
+    gl_Position = u_lightMvp * vec4(p, 1.0);
+    v_uv = a_uv;
+})";
+
+const char* kShadowFs = R"(#version 300 es
 precision mediump float;
 uniform sampler2D u_atlas;
-uniform vec3 u_fogColor;
-uniform vec2 u_fogRange;
-uniform float u_alpha;
-uniform float u_brightness;
 in vec2 v_uv;
-in float v_light;
-in float v_dist;
-in float v_block;
 out vec4 o_color;
 void main() {
-    vec4 c = texture(u_atlas, v_uv);
-    if (u_alpha >= 1.0 && c.a < 0.5) discard;
-    float fog = clamp((v_dist - u_fogRange.x) / (u_fogRange.y - u_fogRange.x), 0.0, 1.0);
-    // The sky's light dims at night; lamps and lava keep their warm light.
-    vec3 lit = max(vec3(v_light * u_brightness), vec3(v_block, v_block * 0.9, v_block * 0.72));
-    o_color = vec4(mix(min(c.rgb * lit, vec3(1.0)), u_fogColor, fog), c.a * u_alpha);
+    if (texture(u_atlas, v_uv).a < 0.5) discard;
+    o_color = vec4(1.0);
 })";
 
 const char* kUiVs = R"(#version 300 es
@@ -129,18 +159,68 @@ void setupUiVao(GLuint vao, GLuint vbo) {
     glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(UiVertex), (void*)offsetof(UiVertex, r));
 }
 
+// A box of the world seen from the sun: x/y across, depth along the sunlight.
+Mat4 sunMatrix(const Vec3& centre, const Vec3& sunDir, float radius, float depth) {
+    Mat4 o = Mat4::identity();
+    o.m[0] = 1 / radius;
+    o.m[5] = 1 / radius;
+    o.m[10] = -2 / (2 * depth);
+    o.m[14] = -1;  // near 0, far 2 * depth
+    return o * Mat4::lookDir(centre + sunDir * depth, sunDir * -1.0f, Vec3(0, 0, 1));
+}
+
 }  // namespace
 
-bool Renderer::init() {
-    worldProg_ = link(kWorldVs, kWorldFs);
-    uiProg_ = link(kUiVs, kUiFs);
-    if (!worldProg_ || !uiProg_) return false;
+bool Renderer::setShader(GraphicsMode mode, const ShaderProfile& profile) {
+    GLuint prog = 0;
+    bool custom = false;
+    if (mode == GraphicsMode::Enhanced && !profile.fragment.empty()) custom = (prog = link(kWorldVs, profile.fragment.c_str())) != 0;
+    if (!prog) prog = link(kWorldVs, mode == GraphicsMode::Enhanced ? kVibrantWorldFs : kClassicWorldFs);
+    if (!prog) prog = link(kWorldVs, kClassicWorldFs);  // never without a world shader
+    if (!prog) return false;
+    if (worldProg_) glDeleteProgram(worldProg_);
+    worldProg_ = prog;
     uMvp_ = glGetUniformLocation(worldProg_, "u_mvp");
     uCamPos_ = glGetUniformLocation(worldProg_, "u_cam");
     uFogColor_ = glGetUniformLocation(worldProg_, "u_fogColor");
     uFogRange_ = glGetUniformLocation(worldProg_, "u_fogRange");
     uAlpha_ = glGetUniformLocation(worldProg_, "u_alpha");
     uBrightness_ = glGetUniformLocation(worldProg_, "u_brightness");
+    uTime_ = glGetUniformLocation(worldProg_, "u_time");
+    uScreen_ = glGetUniformLocation(worldProg_, "u_screen");
+    glUseProgram(worldProg_);
+    glUniform1f(glGetUniformLocation(worldProg_, "u_saturation"), profile.saturation);
+    glUniform1f(glGetUniformLocation(worldProg_, "u_contrast"), profile.contrast);
+    glUniform1f(glGetUniformLocation(worldProg_, "u_warmth"), profile.warmth);
+    glUniform1f(glGetUniformLocation(worldProg_, "u_vignette"), profile.vignette);
+    glUniform1f(glGetUniformLocation(worldProg_, "u_glow"), profile.glow);
+    glUniform3f(glGetUniformLocation(worldProg_, "u_shade"), profile.shade[0], profile.shade[1], profile.shade[2]);
+    glUniform1f(glGetUniformLocation(worldProg_, "u_fogStrength"), profile.fogStrength);
+    glUniform1i(glGetUniformLocation(worldProg_, "u_atlas"), 0);
+    glUniform1i(glGetUniformLocation(worldProg_, "u_shadowMap"), 1);
+    uLightMvp_ = glGetUniformLocation(worldProg_, "u_lightMvp");
+    uWave_ = glGetUniformLocation(worldProg_, "u_wave");
+    uWaveTime_ = glGetUniformLocation(worldProg_, "u_waveTime");
+    uShadowStrength_ = glGetUniformLocation(worldProg_, "u_shadowStrength");
+    glUniform1f(uWave_, 0);
+    glUniform1f(uShadowStrength_, 0);
+    glUniformMatrix4fv(uLightMvp_, 1, GL_FALSE, Mat4::identity().m);
+    enhanced_ = mode == GraphicsMode::Enhanced;
+    std::copy(profile.fogTint, profile.fogTint + 3, fogTint_);
+    return custom || profile.fragment.empty() || mode == GraphicsMode::Classic;
+}
+
+bool Renderer::init() {
+    uiProg_ = link(kUiVs, kUiFs);
+    shadowProg_ = link(kShadowVs, kShadowFs);  // 0 on a phone without it: no shadows, nothing else changes
+    if (shadowProg_) {
+        uShadowLightMvp_ = glGetUniformLocation(shadowProg_, "u_lightMvp");
+        uShadowWave_ = glGetUniformLocation(shadowProg_, "u_wave");
+        uShadowWaveTime_ = glGetUniformLocation(shadowProg_, "u_waveTime");
+        glUseProgram(shadowProg_);
+        glUniform1i(glGetUniformLocation(shadowProg_, "u_atlas"), 0);
+    }
+    if (!uiProg_ || !setShader(GraphicsMode::Enhanced, ShaderProfile{})) return false;
     uUiProj_ = glGetUniformLocation(uiProg_, "u_proj");
     uUiUseTex_ = glGetUniformLocation(uiProg_, "u_useTex");
 
@@ -162,6 +242,9 @@ bool Renderer::init() {
 void Renderer::shutdown() {
     clearMeshes();
     if (atlas_) glDeleteTextures(1, &atlas_);
+    if (shadowTex_) glDeleteTextures(1, &shadowTex_);
+    if (shadowFbo_) glDeleteFramebuffers(1, &shadowFbo_);
+    shadowTex_ = shadowFbo_ = 0;
     if (gui_) glDeleteTextures(1, &gui_);
     if (skin_) glDeleteTextures(1, &skin_);
     if (skinAtlas_) glDeleteTextures(1, &skinAtlas_);
@@ -324,6 +407,8 @@ void Renderer::drawFirstPerson(const std::vector<Vertex>& skinVerts, const std::
     glUseProgram(worldProg_);
     glUniform3f(uCamPos_, 0, 0, 0);
     glUniform2f(uFogRange_, 1000, 2000);  // no fog on the hand
+    glUniform1f(uShadowStrength_, 0);  // the hand lives in its own space: no sun shadows, no swaying
+    glUniform1f(uWave_, 0);
     if (skin_ && !skinVerts.empty()) drawDynamic(skinVerts, skin_, &proj);
     if (!atlasVerts.empty()) drawDynamic(atlasVerts, atlas_, &proj);
 }
@@ -376,6 +461,58 @@ void Renderer::streamDraw(const std::vector<Vertex>& verts) {
     glBindVertexArray(0);
 }
 
+void Renderer::drawShadowMap(const Mat4& lightMvp, const Vec3& centre, float wave) {
+    if (!shadowFbo_) {
+        glGenTextures(1, &shadowTex_);
+        glBindTexture(GL_TEXTURE_2D, shadowTex_);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, kShadowSize, kShadowSize, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+        glGenFramebuffers(1, &shadowFbo_);
+        glBindFramebuffer(GL_FRAMEBUFFER, shadowFbo_);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowTex_, 0);
+        GLenum none = GL_NONE;
+        glDrawBuffers(1, &none);
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+            LOGE("shadow framebuffer incomplete: shadows off");
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glDeleteProgram(shadowProg_);
+            shadowProg_ = 0;
+            return;
+        }
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, shadowFbo_);
+    glViewport(0, 0, kShadowSize, kShadowSize);
+    glClear(GL_DEPTH_BUFFER_BIT);
+    glUseProgram(shadowProg_);
+    glUniformMatrix4fv(uShadowLightMvp_, 1, GL_FALSE, lightMvp.m);
+    glUniform1f(uShadowWave_, wave);
+    glUniform1f(uShadowWaveTime_, shaderTime_);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, atlas_);
+    glDisable(GL_CULL_FACE);  // thin leaves and plants cast shadows from both sides
+    glEnable(GL_POLYGON_OFFSET_FILL);
+    glPolygonOffset(2.0f, 4.0f);
+    const float reach = kShadowRadius * 1.5f + 16;
+    for (auto& [key, m] : meshes_) {
+        const int cx = (int)(key >> 32), cz = (int32_t)(uint32_t)key;
+        const float dx = cx * kChunkSize + 8.0f - centre.x, dz = cz * kChunkSize + 8.0f - centre.z;
+        if (m.count[0] && dx * dx + dz * dz < reach * reach) {
+            glBindVertexArray(m.vao[0]);
+            glDrawArrays(GL_TRIANGLES, 0, m.count[0]);
+        }
+    }
+    glDisable(GL_POLYGON_OFFSET_FILL);
+    glEnable(GL_CULL_FACE);
+    glBindVertexArray(0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(0, 0, width_, height_);
+}
+
 void Renderer::drawWorld(const Player& player, Dimension dim, const RayHit& selection, float breakProgress,
                          float renderDistance, float fovDegrees) {
     // Under water the fog turns blue and much denser; the Nether has thick red haze.
@@ -398,7 +535,8 @@ void Renderer::drawWorld(const Player& player, Dimension dim, const RayHit& sele
         fogStart *= fogScale_ < 1 ? fogScale_ * 0.5f : 1.0f;
         fogEnd *= fogScale_;
     }
-    glClearColor(fogColor[0], fogColor[1], fogColor[2], 1);
+    if (enhanced_) glClearColor(fogColor[0] * fogTint_[0], fogColor[1] * fogTint_[1], fogColor[2] * fogTint_[2], 1);
+    else glClearColor(fogColor[0], fogColor[1], fogColor[2], 1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     Vec3 eye = player.eye(), fwd = player.forward();
@@ -406,11 +544,33 @@ void Renderer::drawWorld(const Player& player, Dimension dim, const RayHit& sele
     Mat4 mvp = proj * Mat4::lookDir(eye, fwd, {0, 1, 0});
     lastMvp_ = mvp;
 
+    // 1.5.5 Enhanced: swaying leaves and rippling water, and the sun's shadows.
+    shaderTime_ += 1.0f / 60;
+    const float wave = enhanced_ && waves_ ? 1.0f : 0.0f;
+    const bool shadows = enhanced_ && shadows_ && shadowProg_ && dim == Dimension::Overworld && sunStrength_ > 0.02f &&
+                         !player.headInWater && !player.headInLava && !player.headInTar;
+    Mat4 lightMvp = Mat4::identity();
+    if (shadows) {
+        const Vec3 centre(std::floor(eye.x), std::floor(eye.y), std::floor(eye.z));
+        lightMvp = sunMatrix(centre, sunDir_, kShadowRadius, 96);
+        drawShadowMap(lightMvp, centre, wave);
+    }
+
     glUseProgram(worldProg_);
+    glUniform1f(uWave_, wave);
+    glUniform1f(uWaveTime_, shaderTime_);
+    glUniform1f(uShadowStrength_, shadows ? sunStrength_ : 0.0f);
+    glUniformMatrix4fv(uLightMvp_, 1, GL_FALSE, lightMvp.m);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, shadows ? shadowTex_ : 0);
+    glActiveTexture(GL_TEXTURE0);
     glUniformMatrix4fv(uMvp_, 1, GL_FALSE, mvp.m);
     glUniform3f(uCamPos_, eye.x, eye.y, eye.z);
-    glUniform3f(uFogColor_, fogColor[0], fogColor[1], fogColor[2]);
+    if (enhanced_) glUniform3f(uFogColor_, fogColor[0] * fogTint_[0], fogColor[1] * fogTint_[1], fogColor[2] * fogTint_[2]);
+    else glUniform3f(uFogColor_, fogColor[0], fogColor[1], fogColor[2]);
     glUniform2f(uFogRange_, fogStart, fogEnd);
+    glUniform1f(uTime_, shaderTime_);
+    glUniform2f(uScreen_, (float)width_, (float)height_);
     glUniform1f(uBrightness_, brightness_);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, atlas_);

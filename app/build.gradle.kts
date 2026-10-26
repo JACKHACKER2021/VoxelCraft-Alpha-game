@@ -11,8 +11,8 @@ android {
         applicationId = "cz.voxelcraft"
         minSdk = 30
         targetSdk = 36
-        versionCode = 20
-        versionName = "1.5.1"
+        versionCode = 21
+        versionName = "1.5.5"
         ndk {
             abiFilters += listOf("arm64-v8a", "x86_64")
         }

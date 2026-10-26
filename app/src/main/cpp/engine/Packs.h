@@ -22,6 +22,7 @@ struct PackInfo {
 //   dimensions/nether.json    keys override earlier packs
 //   recipes/*.json            recipes, smelting and fuels ("replace": true starts from scratch)
 //   textures/                 terrain.png, blocks/, items/ like a texture pack
+//   shaders/                  shader.json and world.fsh, a shader pack (see Shaders.h)
 // Enabled packs are applied in order; the order is stored in packs.json.
 class PackManager {
 public:
@@ -44,6 +45,8 @@ public:
     GenConfig buildConfig(std::vector<std::string>* warnings = nullptr) const;
     RecipeBook buildRecipes(std::vector<std::string>* warnings = nullptr) const;
     std::vector<std::string> textureDirs() const;  // enabled packs that ship textures, in order
+    // 1.5.5: the folder of the last enabled pack with a shaders/ folder, empty = none.
+    std::string shaderPackDir() const;
 
 private:
     std::vector<std::string> enabledOrder() const;

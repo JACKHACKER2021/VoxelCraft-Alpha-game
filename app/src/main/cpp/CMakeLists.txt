@@ -27,6 +27,7 @@ add_library(voxelcraft SHARED
     engine/Json.cpp
     engine/GenConfig.cpp
     engine/Packs.cpp
+    engine/Shaders.cpp
     engine/Skin.cpp
     engine/Profile.cpp
     engine/Store.cpp

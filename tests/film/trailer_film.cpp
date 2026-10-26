@@ -2838,3 +2838,190 @@ SHOT(g08_ores) {
         d.lookNow(Vec3(x + 0.5f, y + 1.8f, z - 3.5f));
     });
 }
+
+// ---------------------------------------------------------------- 1.5.5 Shaders
+
+// Variant: 0 Classic, 1 Enhanced (Vibrant), 2 the "Golden Hour" pack, 3 the "Frost" pack.
+void shaderVariant(Director& d, int variant) {
+    d.settings().graphics = variant == 0 ? GraphicsMode::Classic : GraphicsMode::Enhanced;
+    if (variant < 2) return;
+    const std::string id = variant == 2 ? "golden_hour" : "frost";
+    const fs::path dir = d.data / "packs" / id;
+    fs::create_directories(dir / "shaders");
+    std::ofstream((dir / "manifest.json").string()) << "{\"name\": \"" << id << "\", \"description\": \"\", \"version\": \"1.0.0\"}";
+    std::ofstream((dir / "shaders/shader.json").string())
+        << (variant == 2 ? R"({"name": "Golden Hour", "saturation": 1.45, "contrast": 1.12, "warmth": 0.34, "vignette": 0.45,
+                               "glow": 0.6, "shade": [0.9, 0.8, 0.95], "fog_tint": [1.15, 0.92, 0.75], "fog_strength": 1.2})"
+                         : R"({"name": "Frost", "saturation": 0.85, "contrast": 1.1, "warmth": -0.22, "vignette": 0.35,
+                               "glow": 0.2, "shade": [0.75, 0.88, 1.2], "fog_tint": [0.85, 0.95, 1.15], "fog_strength": 1.4})");
+    d.game->toolPacks().setEnabled(id, true);
+    d.game->toolRebuildPacks();
+}
+
+const char* kVariantName[] = {"classic", "enhanced", "golden", "frost"};
+
+void shaderForest(const fs::path& out, int variant) {
+    const std::string name = std::string("h01_forest_") + kVariantName[variant];
+    Director d(out, name);
+    d.openWorld("Shaders", 4242, GameMode::Creative);
+    shaderVariant(d, variant);
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    int bx = 0, bz = 0;
+    if (!findBiome(w, "forest", bx, bz)) return;
+    travel(d, Vec3(bx + 0.5f, (float)feetY(w, bx, bz) + 1, bz + 0.5f));
+    Player& p = s.player();
+    p.flying = true;
+    const int y = feetY(w, bx, bz);
+    s.setTimeOfDay(variant == 3 ? 3000 : 9200);  // afternoon: long shadows
+    d.settings().hideGui = true;
+    s.mobs().mobs().clear();
+    p.pos = Vec3(bx + 0.5f, y + 9.0f, bz + 0.5f);
+    d.idle(30);
+    d.shot(name);
+    d.seconds(6, [&](float k) {
+        p.flying = true;
+        p.yaw = 0.9f + k * 0.5f;
+        p.pitch = -0.18f;
+        p.pos = Vec3(bx + 0.5f + k * 10, y + 9.0f - k * 2, bz + 0.5f - k * 6);
+    });
+}
+SHOT(h01_forest_classic) { shaderForest(out, 0); }
+SHOT(h01_forest_enhanced) { shaderForest(out, 1); }
+SHOT(h01_forest_golden) { shaderForest(out, 2); }
+SHOT(h01_forest_frost) { shaderForest(out, 3); }
+
+void shaderNight(const fs::path& out, int variant) {
+    const std::string name = std::string("h02_night_") + kVariantName[variant];
+    Director d(out, name);
+    d.openWorld("Shaders", 4242, GameMode::Creative);
+    shaderVariant(d, variant);
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    int x, y, z;
+    meadow(d, x, y, z);
+    // A little camp: lamps, a powerstone path and a torch-lit stone hut.
+    for (int dz = -8; dz <= 0; ++dz) w.setBlock(x, y - 1, z + dz, POWERSTONE_BRICKS);
+    for (int dz = -8; dz <= 0; dz += 4) w.setBlock(x - 2, y, z + dz, POWERSTONE_LAMP_ON), w.setBlock(x + 2, y, z + dz, POWERSTONE_LAMP_ON);
+    for (int dx = -2; dx <= 2; ++dx)
+        for (int dy = 0; dy < 4; ++dy) w.setBlock(x + dx, y + dy, z - 11, dy == 1 && dx == 0 ? AIR : COBBLESTONE);
+    w.setBlock(x, y, z - 11, AIR);
+    w.setBlock(x, y + 3, z - 10, POWERSTONE_LAMP_ON);
+    Player& p = s.player();
+    p.flying = true;
+    s.setTimeOfDay(18500);
+    d.settings().hideGui = true;
+    s.mobs().mobs().clear();
+    p.pos = Vec3(x + 0.5f, y + 1.6f, z + 3.5f);
+    d.idle(30);
+    d.shot(name);
+    d.seconds(6, [&](float k) {
+        p.flying = true;
+        p.pos = Vec3(x + 0.5f + std::sin(k * 2) * 1.5f, y + 1.6f + k * 1.5f, z + 3.5f - k * 7);
+        d.lookNow(Vec3(x + 0.5f, y + 1.0f, z - 9.0f));
+    });
+}
+SHOT(h02_night_classic) { shaderNight(out, 0); }
+SHOT(h02_night_enhanced) { shaderNight(out, 1); }
+SHOT(h02_night_golden) { shaderNight(out, 2); }
+
+void shaderVillage(const fs::path& out, int variant) {
+    const std::string name = std::string("h03_village_") + kVariantName[variant];
+    Director d(out, name);
+    d.openWorld("Forgotten", 4242, GameMode::Creative);
+    shaderVariant(d, variant);
+    int x, y, z;
+    if (!findNetherVillage(d, x, y, z)) return;
+    Session& s = d.s();
+    Player& p = s.player();
+    p.flying = true;
+    d.settings().hideGui = true;
+    s.mobs().mobs().clear();
+    p.pos = Vec3(x + 0.5f, y + 9.0f, z + 18.0f);
+    d.idle(30);
+    d.shot(name);
+    d.seconds(6, [&](float k) {
+        p.flying = true;
+        p.pos = Vec3(x + 0.5f - 6 + k * 12, y + 9.0f - k * 4, z + 18.0f - k * 6);
+        d.lookNow(Vec3(x + 0.5f, y + 2.0f, z + 0.5f));
+    });
+}
+SHOT(h03_village_classic) { shaderVillage(out, 0); }
+SHOT(h03_village_enhanced) { shaderVillage(out, 1); }
+
+void shaderDesert(const fs::path& out, int variant) {
+    const std::string name = std::string("h04_crimson_") + kVariantName[variant];
+    Director d(out, name);
+    d.openWorld("Crimson", 4242, GameMode::Creative);
+    shaderVariant(d, variant);
+    goNether(d);
+    goVoid(d);
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    int bx = 1 << 30, bz = 0;
+    const int px = (int)s.player().pos.x, pz = (int)s.player().pos.z;
+    for (int r = 0; r < 3000 && bx == (1 << 30); r += 40)
+        for (int a = 0; a < 16 && bx == (1 << 30); ++a) {
+            const int x = px + (int)(std::cos(a * 0.3927f) * r), z = pz + (int)(std::sin(a * 0.3927f) * r);
+            if (w.voidBiomeAt(x, z) == World::VoidBiome::Crimson && w.voidBiomeAt(x + 40, z) == World::VoidBiome::Crimson &&
+                w.voidBiomeAt(x, z - 40) == World::VoidBiome::Crimson)
+                bx = x, bz = z;
+        }
+    if (bx == (1 << 30)) return;
+    Player& p = s.player();
+    p.flying = true;
+    travel(d, Vec3(bx + 0.5f, (float)w.voidHeight(bx, bz) + 9, bz + 0.5f));
+    d.settings().hideGui = true;
+    s.mobs().mobs().clear();
+    d.idle(30);
+    const Vec3 start = p.pos;
+    d.shot(name);
+    d.seconds(6, [&](float k) {
+        p.flying = true;
+        p.yaw = 0.3f + k * 0.5f;
+        const Vec3 f(std::sin(p.yaw), 0, -std::cos(p.yaw));
+        p.pos = start + f * (k * 24);
+        p.pos.y = std::max(start.y, (float)w.voidHeight((int)p.pos.x, (int)p.pos.z) + 7);
+        p.pitch = -0.3f;
+    });
+}
+SHOT(h04_crimson_classic) { shaderDesert(out, 0); }
+SHOT(h04_crimson_enhanced) { shaderDesert(out, 1); }
+
+// Shadows that follow the sun (a time-lapse) over a pond, a stone tower and a young tree.
+void shaderTimelapse(const fs::path& out, int variant) {
+    const std::string name = std::string("h05_timelapse_") + kVariantName[variant];
+    Director d(out, name);
+    d.openWorld("Shaders", 4242, GameMode::Creative);
+    shaderVariant(d, variant);
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    int x, y, z;
+    meadow(d, x, y, z);
+    flatten(w, x - 10, z - 16, x + 10, z + 2, y);
+    for (int dx = -3; dx <= 3; ++dx)
+        for (int dz = -12; dz <= -8; ++dz) w.setBlock(x + dx, y - 1, z + dz, WATER), w.setBlock(x + dx, y - 2, z + dz, SAND);
+    for (int dy = 0; dy < 8; ++dy)
+        for (int dx = 5; dx <= 6; ++dx)
+            for (int dz = -7; dz <= -6; ++dz) w.setBlock(x + dx, y + dy, z + dz, dy == 7 && (dx + dz) % 2 ? AIR : STONE_BRICKS);
+    for (int dy = 0; dy < 4; ++dy) w.setBlock(x - 6, y + dy, z - 6, LOG);
+    for (int dx = -2; dx <= 2; ++dx)
+        for (int dz = -2; dz <= 2; ++dz)
+            for (int dy = 3; dy < 6; ++dy)
+                if (std::abs(dx) + std::abs(dz) + (dy == 5) * 2 < 4 && !(dx == 0 && dz == 0 && dy < 4)) w.setBlock(x - 6 + dx, y + dy, z - 6 + dz, LEAVES);
+    Player& p = s.player();
+    p.flying = true;
+    p.pos = Vec3(x + 0.5f, y + 7.0f, z + 6.5f);
+    d.settings().hideGui = true;
+    s.mobs().mobs().clear();
+    s.setTimeOfDay(1500);
+    d.idle(30);
+    d.shot(name);
+    d.seconds(7, [&](float k) {
+        p.flying = true;
+        s.setTimeOfDay(1500 + k * 9000);  // from morning to late afternoon
+        d.lookNow(Vec3(x + 0.5f, y + 1.0f, z - 7.0f));
+    });
+}
+SHOT(h05_timelapse_classic) { shaderTimelapse(out, 0); }
+SHOT(h05_timelapse_enhanced) { shaderTimelapse(out, 1); }

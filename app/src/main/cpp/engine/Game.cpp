@@ -26,7 +26,7 @@
 namespace vc {
 
 namespace {
-const char* kVersion = "VoxelCraft 1.5.1";
+const char* kVersion = "VoxelCraft 1.5.5 build 1";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -88,6 +88,7 @@ Game::~Game() { endSession(); }
 
 bool Game::onSurfaceCreated() {
     if (!renderer_.init()) return false;
+    shadersDirty_ = true;  // a new GL context: build the chosen shader again
     hasSurface_ = true;
     loadTextures();
     renderer_.setGuiTexture(font_.rgba(), Font::kTexW, Font::kTexH);
@@ -227,6 +228,15 @@ void Game::loadTextures() {
     applyOreRedesign(session_ && session_->info().expOreRedesign);
 }
 
+void Game::applyShaders() {
+    shadersDirty_ = false;
+    appliedGraphics_ = settings_.graphics;
+    const std::string dir = packs_.shaderPackDir();
+    shaderProfile_ = dir.empty() ? ShaderProfile{} : loadShaderPack(dir, &packWarnings_);
+    if (!renderer_.setShader(settings_.graphics, shaderProfile_))
+        packWarnings_.push_back(shaderProfile_.name + ": world.fsh did not compile, the Vibrant shader is used");
+}
+
 void Game::applyOreRedesign(bool on) {
     if (oreBase_.empty()) return;
     for (int i = 0; i < kOreRedesignCount; ++i) {
@@ -249,6 +259,7 @@ void Game::rebuildFromPacks() {
     packs_.buildConfig(&packWarnings_);  // only to report problems; worlds snapshot it when created
     packSelected_ = std::clamp(packSelected_, 0, std::max(0, (int)packList_.size() - 1));
     if (hasSurface_) loadTextures();
+    shadersDirty_ = true;
 }
 
 // ---------------------------------------------------------------- flow
@@ -441,6 +452,8 @@ void Game::frame(double time) {
     if (!hasSurface_) return;
     float dt = lastTime_ > 0 ? (float)std::min(time - lastTime_, 0.1) : 0.016f;
     lastTime_ = now_ = time;
+    if (shadersDirty_ || settings_.graphics != appliedGraphics_) applyShaders();
+    renderer_.setEffects(settings_.shadows, settings_.waves);
     if (textureReload_.exchange(false) || texturesWinter_ != playSettings().addonWinter) loadTextures();
     if (packsReload_.exchange(false)) rebuildFromPacks();
     if (!languageSent_ && onLanguage) {
@@ -482,6 +495,16 @@ void Game::frame(double time) {
                                             {std::to_string(rep.blocks), std::to_string(rep.items), std::to_string(rep.recipes)})
                                       : tr("Z tohoto souboru nešlo nic převést");
                     toastUntil_ = time + 8;
+                }
+                if (packId.rfind("shaders:", 0) == 0) {
+                    // 1.5.5: a shader pack; old ones of other games keep their files for reference.
+                    packId = packId.substr(8);
+                    const bool foreign = convertImportedShaderPack(packs_.packDir(packId), packId);
+                    toast_ = foreign ? tr("Shader pack z jiné hry: soubory schovány v shaders/original, vzhled nastavíš v shader.json")
+                                     : tr("Shader pack nainstalován");
+                    toastUntil_ = time + 8;
+                    if (settings_.graphics != GraphicsMode::Enhanced) settings_.graphics = GraphicsMode::Enhanced;
+                    shadersDirty_ = true;
                 }
                 packs_.setEnabled(packId, true);  // an imported pack is switched on right away
                 rebuildFromPacks();
@@ -584,6 +607,13 @@ void Game::frame(double time) {
             } else if (id == PromptPackName && !text.empty()) {
                 packs_.createPack(text.substr(0, 40));
                 packList_ = packs_.list();
+            } else if (id == PromptShaderPackName && !text.empty()) {
+                // 1.5.5: an empty pack with the Vibrant numbers in shaders/shader.json, switched on.
+                const std::string packId = packs_.createPack(text.substr(0, 40));
+                writeShaderPackFiles(packs_.packDir(packId), text.substr(0, 40));
+                packs_.setEnabled(packId, true);
+                settings_.graphics = GraphicsMode::Enhanced;
+                rebuildFromPacks();
             }
         }
     }
@@ -1419,6 +1449,19 @@ void Game::settingsScreen() {
             applyGuiScale();
         }
         endRow();
+        // 1.5.5: Classic or Enhanced graphics, and the shader pack that tunes Enhanced.
+        row("Grafika", settings_.graphics == GraphicsMode::Enhanced ? tr("Vibrant shadery, živější barvy") : tr("Původní vzhled"));
+        if (ui_.dropdown(cx - 100, ry + 2, 100, 18, settings_.graphics == GraphicsMode::Enhanced ? "Vylepšená" : "Klasická")) {
+            settings_.graphics = settings_.graphics == GraphicsMode::Enhanced ? GraphicsMode::Classic : GraphicsMode::Enhanced;
+            shadersDirty_ = true;
+        }
+        endRow();
+        if (settings_.graphics == GraphicsMode::Enhanced) {
+            row("Shader pack", packs_.shaderPackDir().empty() ? tr("Žádný (Vibrant). Zapni balíček se složkou shaders") : shaderProfile_.name);
+            endRow();
+            check("Stíny", "Slunce a měsíc vrhají stíny", settings_.shadows);
+            check("Pohyb listí a vody", "Listí a tráva se vlní ve větru, voda se čeří", settings_.waves);
+        }
         float v = (settings_.brightness - 0.6f) / 0.9f;
         if (slider("Jas", std::to_string((int)std::round(settings_.brightness * 100)) + " %", v))
             settings_.brightness = 0.6f + v * 0.9f;
@@ -1615,11 +1658,13 @@ void Game::packsScreen() {
                                                : trf("{0} problém(ů): {1}", {std::to_string(packWarnings_.size()), packWarnings_[0]});
     ui_.text(x + 2, y + h - 40, status, packWarnings_.empty() ? kAccent : kError, 1, false, w - 4);
 
-    float by = y + h - 26, bw = std::floor((w - 16) / 3);
+    float by = y + h - 26, bw = std::floor((w - 24) / 4);
     if (ui_.button(x, by, bw, 22, "Importovat .zip") && onImportPack) onImportPack();
     if (ui_.button(x + bw + 8, by, bw, 22, "Nový balíček") && onTextPrompt)
         onTextPrompt(PromptPackName, "Název nového balíčku", "Můj balíček");
-    if (ui_.button(x + 2 * (bw + 8), by, bw, 22, "Zpět")) setScreen(Screen::Title);
+    if (ui_.button(x + 2 * (bw + 8), by, bw, 22, "Nový shader pack") && onTextPrompt)
+        onTextPrompt(PromptShaderPackName, "Název shader packu", "Můj shader");
+    if (ui_.button(x + 3 * (bw + 8), by, bw, 22, "Zpět")) setScreen(Screen::Title);
 }
 
 void Game::packFilesScreen() {

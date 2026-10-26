@@ -74,7 +74,35 @@ std::vector<uint8_t> paintWorld(const film::Frame& f) {
     gFogStart = start;
     gFogEnd = end;
     gBrightness = f.brightness;
-    return renderRgba(s, f.camera, capture::atlas, capture::atlasSize, f.fov);
+    // 1.5.5: the Enhanced mode, like the game's Vibrant shader (fog tint, vignette).
+    gVibrant = film::graphics == GraphicsMode::Enhanced ? &film::shader : nullptr;
+    gShaderTime = (float)film::frameCount / 24;
+    if (gVibrant)
+        for (int k = 0; k < 3; ++k) gSky[k] *= film::shader.fogTint[k];
+    // Shadows and swaying leaves, as the Enhanced shaders do them.
+    gShadowWorld = gVibrant && f.shadows && f.dim == Dimension::Overworld && f.sunStrength > 0.02f && !f.camera.headInWater ? f.world : nullptr;
+    gSunDir = f.sunDir;
+    gSunStrength = f.sunStrength;
+    gShadowCentre = Vec3(std::floor(f.camera.eye().x), 0, std::floor(f.camera.eye().z));
+    if (gVibrant && f.waves)
+        for (std::vector<Vertex>* list : {&s.opaque, &s.translucent})
+            for (Vertex& v : *list) {
+                const int kind = vertexWave(v.block);
+                if (!kind) continue;
+                const float ph = gShaderTime * 1.7f + v.x * 0.55f + v.z * 0.45f + v.y * 0.3f;
+                if (kind == 1) v.x += std::sin(ph) * 0.045f, v.z += std::cos(ph * 0.8f + 1.3f) * 0.04f;
+                else v.y += (std::sin(ph * 0.9f) * 0.5f - 0.5f) * 0.06f;
+            }
+    std::vector<uint8_t> rgba = renderRgba(s, f.camera, capture::atlas, capture::atlasSize, f.fov);
+    if (gVibrant && gVibrant->vignette > 0)
+        for (int y = 0; y < gImageH; ++y)
+            for (int x = 0; x < gImageW; ++x) {
+                const float qx = (x + 0.5f) / gImageW - 0.5f, qy = (y + 0.5f) / gImageH - 0.5f;
+                const float m = 1 - gVibrant->vignette * (qx * qx + qy * qy) * 1.6f;
+                uint8_t* c = &rgba[((size_t)y * gImageW + x) * 4];
+                for (int k = 0; k < 3; ++k) c[k] = (uint8_t)std::clamp(c[k] * m, 0.0f, 255.0f);
+            }
+    return rgba;
 }
 
 // The UI list on top of `base` (W x H rgba), like the UI shader.
