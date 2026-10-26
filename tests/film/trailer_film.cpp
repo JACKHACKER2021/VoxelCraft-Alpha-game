@@ -2564,3 +2564,277 @@ SHOT(t_tools) {
         }
     }
 }
+
+// ---------------------------------------------------------------- 1.5.1 the fixed Forgotten Powerstone
+
+// Wasteland ground in the Nether near the player: a spot whose floor is wasteland grass.
+bool findNetherWasteland(Director& d, int& bx, int& by, int& bz) {
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    const int px = (int)s.player().pos.x, pz = (int)s.player().pos.z;
+    for (int r = 0; r < 1500; r += 24)
+        for (int a = 0; a < 24; ++a) {
+            const int x = px + (int)(std::cos(a * kPi / 12) * r), z = pz + (int)(std::sin(a * kPi / 12) * r);
+            if (!w.wastelandAt(x, z) || !w.wastelandAt(x + 20, z) || !w.wastelandAt(x, z - 30)) continue;
+            travel(d, Vec3(x + 0.5f, 70, z + 0.5f));
+            w.ensureChunksAround(floorDiv(x, 16), floorDiv(z, 16), 3, 1000);
+            for (int y = 30; y < 100; ++y)
+                if (w.getBlock(x, y - 1, z) == WASTELAND_GRASS && w.getBlock(x, y, z) == AIR && w.getBlock(x, y + 1, z) == AIR) {
+                    bx = x, by = y, bz = z;
+                    std::printf("nether wasteland at %d %d %d\n", x, y, z);
+                    return true;
+                }
+        }
+    return false;
+}
+
+bool findNetherVillage(Director& d, int& x, int& y, int& z) {
+    int fx, fy, fz;
+    if (!findBlock(4242, Dimension::Nether, LOOT_CHEST_FORGOTTEN, fx, fy, fz, 40)) return false;
+    goNether(d);
+    travel(d, Vec3(fx + 0.5f, fy + 8.0f, fz + 0.5f));
+    World& w = d.s().currentWorld();
+    w.ensureChunksAround(floorDiv(fx, 16), floorDiv(fz, 16), 3, 1000);
+    for (int dx = -26; dx <= 26; ++dx)
+        for (int dz = -26; dz <= 26; ++dz)
+            for (int yy = fy - 6; yy < fy + 10; ++yy)
+                if (w.getBlock(fx + dx, yy, fz + dz) == POWERSTONE_LAMP_ON && w.getBlock(fx + dx, yy - 1, fz + dz) == CHISELED_POWERSTONE_BRICKS) {
+                    x = fx + dx, y = yy - 4, z = fz + dz;
+                    std::printf("nether village plaza at %d %d %d\n", x, y, z);
+                    return true;
+                }
+    x = fx, y = fy, z = fz;
+    return true;
+}
+
+SHOT(g01_wasteland) {
+    Director d(out, "g01");
+    d.openWorld("Wasteland", 4242, GameMode::Creative);
+    goNether(d);
+    int bx, by, bz;
+    if (!findNetherWasteland(d, bx, by, bz)) return;
+    Session& s = d.s();
+    Player& p = s.player();
+    p.flying = true;
+    p.pos = Vec3(bx + 0.5f, by + 6.0f, bz + 0.5f);
+    d.settings().hideGui = true;
+    s.mobs().mobs().clear();
+    d.idle(30);
+    const Vec3 start = p.pos;
+    d.shot("g01_wasteland");
+    d.seconds(8, [&](float k) {
+        p.flying = true;
+        p.yaw = -0.4f + k * 0.8f;
+        const Vec3 f(std::sin(p.yaw), 0, -std::cos(p.yaw));
+        p.pos = start + f * (k * 24) + Vec3(0, std::sin(k * 3) * 0.8f, 0);
+        p.pitch = -0.25f;
+    });
+}
+
+SHOT(g02_village) {
+    Director d(out, "g02");
+    d.openWorld("Forgotten", 4242, GameMode::Creative);
+    int x, y, z;
+    if (!findNetherVillage(d, x, y, z)) return;
+    Session& s = d.s();
+    Player& p = s.player();
+    p.flying = true;
+    d.settings().hideGui = true;
+    s.mobs().mobs().clear();
+    p.pos = Vec3(x + 0.5f, y + 12.0f, z + 26.0f);
+    d.idle(30);
+    d.shot("g02_village");
+    d.seconds(8, [&](float k) {
+        const float e = k * k * (3 - 2 * k);
+        p.flying = true;
+        p.pos = Vec3(x + 0.5f - 10 + e * 10, y + 12.0f - e * 8, z + 26.0f - e * 18);
+        d.lookNow(Vec3(x + 0.5f, y + 2.0f, z + 0.5f));
+    });
+}
+
+SHOT(g03_archaeology) {
+    Director d(out, "g03");
+    d.openWorld("Forgotten", 4242, GameMode::Survival);
+    int x, y, z;
+    if (!findNetherVillage(d, x, y, z)) return;
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    s.mobs().mobs().clear();
+    const int gx = x, gz = z + 6;
+    w.setBlock(gx, y - 1, gz, DEBRIS_GRAVEL);
+    w.setBlock(gx, y, gz, AIR);
+    w.setBlock(gx, y + 1, gz, AIR);
+    p.pos = Vec3(gx + 0.5f, (float)y, gz + 2.3f);
+    s.inventory().clear();
+    d.give(0, BRUSHER);
+    d.give(1, OLD_DOCUMENT + 0);
+    s.selectedSlot() = 0;
+    d.lookNow(topOf(gx, y - 1, gz));
+    d.idle(20);
+    d.shot("g03_archaeology");
+    d.seconds(0.6f, [&](float) { heal(d); d.lookNow(topOf(gx, y - 1, gz)); });
+    d.down(1, Director::kCenterX, Director::kCenterY);
+    d.seconds(2.4f, [&](float) { heal(d); d.lookNow(topOf(gx, y - 1, gz)); });
+    d.up(1, Director::kCenterX, Director::kCenterY);
+    d.seconds(1.2f, [&](float k) { heal(d); p.pitch = -0.7f + k * 0.1f; });
+    s.selectedSlot() = 1;
+    d.seconds(0.5f);
+    s.readDocument(0);
+    d.seconds(3.5f);
+    d.game->onBack();
+    d.seconds(0.4f);
+}
+
+SHOT(g04_husking) {
+    Director d(out, "g04");
+    d.openWorld("Wasteland", 4242, GameMode::Survival);
+    goNether(d);
+    int bx, y, bz;
+    if (!findNetherWasteland(d, bx, y, bz)) return;
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    flatten(w, bx - 8, bz - 20, bx + 8, bz + 4, y, WASTELAND_GRASS);
+    for (int dx = -8; dx <= 8; ++dx)
+        for (int dz = -20; dz <= 4; ++dz)
+            for (int dy = 0; dy < 5; ++dy) w.setBlock(bx + dx, y + dy, bz + dz, AIR);
+    for (int i = 0; i < 10; ++i) w.setBlock(bx - 7 + (i * 5) % 15, y, bz - 18 + i * 2, i % 3 ? DRY_GRASS : GRASSER_FLOWER);
+    Player& p = s.player();
+    p.flying = false;
+    p.pos = Vec3(bx + 0.5f, (float)y, bz + 2.5f);
+    p.yaw = 0;
+    p.pitch = 0.02f;
+    s.mobs().mobs().clear();
+    s.inventory().clear();
+    d.give(0, STEEL_SWORD);
+    for (int i = 0; i < 4; ++i) s.armor()[i] = {armorItem(3, i), 1};
+    s.mobs().spawn(MobType::Husking, 1, Vec3(bx - 2.5f, (float)y, bz - 10.5f));
+    s.mobs().spawn(MobType::Husking, 1, Vec3(bx + 3.5f, (float)y, bz - 13.5f));
+    d.idle(4);
+    d.shot("g04_husking");
+    d.seconds(7, [&](float k) {
+        heal(d);
+        p.yaw = std::sin(k * 3) * 0.12f;
+        p.pitch = 0.02f;
+    });
+}
+
+SHOT(g05_crimson_desert) {
+    Director d(out, "g05");
+    d.openWorld("Crimson", 4242, GameMode::Creative);
+    goNether(d);
+    goVoid(d);
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    int bx = 1 << 30, bz = 0;
+    const int px = (int)s.player().pos.x, pz = (int)s.player().pos.z;
+    for (int r = 0; r < 3000 && bx == (1 << 30); r += 40)
+        for (int a = 0; a < 16 && bx == (1 << 30); ++a) {
+            const int x = px + (int)(std::cos(a * 0.3927f) * r), z = pz + (int)(std::sin(a * 0.3927f) * r);
+            if (w.voidBiomeAt(x, z) == World::VoidBiome::Crimson && w.voidBiomeAt(x + 40, z) == World::VoidBiome::Crimson &&
+                w.voidBiomeAt(x, z - 40) == World::VoidBiome::Crimson)
+                bx = x, bz = z;
+        }
+    if (bx == (1 << 30)) return;
+    Player& p = s.player();
+    p.flying = true;
+    travel(d, Vec3(bx + 0.5f, (float)w.voidHeight(bx, bz) + 9, bz + 0.5f));
+    d.settings().hideGui = true;
+    s.mobs().mobs().clear();
+    d.idle(30);
+    const Vec3 start = p.pos;
+    d.shot("g05_crimson_desert");
+    d.seconds(9, [&](float k) {
+        p.flying = true;
+        p.yaw = 0.3f + k * 0.7f;
+        const Vec3 f(std::sin(p.yaw), 0, -std::cos(p.yaw));
+        p.pos = start + f * (k * 36);
+        p.pos.y = std::max(start.y, (float)w.voidHeight((int)p.pos.x, (int)p.pos.z) + 7);
+        p.pitch = -0.3f;
+    });
+}
+
+SHOT(g06_eyes) {
+    Director d(out, "g06");
+    d.openWorld("Eyes", 4242, GameMode::Creative);
+    goNether(d);
+    goVoid(d);
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z) - 4, y = (int)std::floor(p.pos.y);
+    // A little altar: Void Brick Eyes in a void brick wall, an Eye Log column in the middle.
+    for (int dx = -3; dx <= 3; ++dx)
+        for (int dy = -1; dy < 4; ++dy) w.setBlock(x + dx, y + dy, z, (dx == -2 || dx == 2) && dy == 1 ? VOID_BRICK_EYE : VOID_STONE_BRICKS);
+    for (int dy = 0; dy < 3; ++dy) w.setBlock(x, y + dy, z + 1, EYE_LOG);
+    for (int dx = -3; dx <= 3; ++dx)
+        for (int dz = 1; dz <= 5; ++dz)
+            for (int dy = 0; dy < 4; ++dy)
+                if (!(dx == 0 && dz == 1 && dy < 3)) w.setBlock(x + dx, y + dy, z + dz, AIR);
+    d.settings().hideGui = true;
+    s.mobs().mobs().clear();
+    p.flying = true;
+    p.pos = Vec3(x + 0.5f, (float)y + 0.2f, z + 4.5f);
+    d.idle(20);
+    d.shot("g06_eyes");
+    d.seconds(7, [&](float k) {
+        p.flying = true;
+        p.pos = Vec3(x + 0.5f + std::sin(k * 2) * 1.2f, (float)y + 0.2f, z + 4.5f - k * 1.2f);
+        d.lookNow(Vec3(x + 0.5f, y + 1.5f, z + 1.0f));
+    });
+}
+
+SHOT(g07_trees) {
+    Director d(out, "g07");
+    d.openWorld("Trees", 4242, GameMode::Creative);
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    int bx = 0, bz = 0;
+    if (!findBiome(w, "forest", bx, bz)) return;
+    travel(d, Vec3(bx + 0.5f, (float)feetY(w, bx, bz) + 1, bz + 0.5f));
+    Player& p = s.player();
+    int tx, ty, tz;
+    if (!findTree(w, p.pos, 3, tx, ty, tz)) return;
+    s.setTimeOfDay(5000);
+    p.flying = true;
+    d.settings().hideGui = true;
+    s.mobs().mobs().clear();
+    d.idle(20);
+    d.shot("g07_trees");
+    d.seconds(6, [&](float k) {
+        p.flying = true;
+        const float a = -0.6f + k * 1.8f;
+        p.pos = Vec3(tx + 0.5f + std::sin(a) * 4.5f, ty + 1.5f + k * 2, tz + 0.5f + std::cos(a) * 4.5f);
+        d.lookNow(Vec3(tx + 0.5f, ty + 2.5f, tz + 0.5f));
+    });
+}
+
+SHOT(g08_ores) {
+    Director d(out, "g08");
+    d.expOres = true;
+    d.openWorld("Ores", 4242, GameMode::Creative);
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    int x, y, z;
+    meadow(d, x, y, z);
+    // A rock wall with every redesigned ore in it.
+    const ItemId ores[] = {COAL_ORE, IRON_ORE, BRONZE_ORE, STEEL_ORE, RUBY_ORE, POWERSTONE_ORE};
+    for (int dx = -4; dx <= 4; ++dx)
+        for (int dy = 0; dy < 4; ++dy) {
+            const int i = (dx + 4 + dy * 3) % 9;
+            w.setBlock(x + dx, y + dy, z - 4, i < 6 ? ores[i] : STONE);
+        }
+    Player& p = s.player();
+    p.flying = true;
+    p.pos = Vec3(x + 0.5f, (float)y + 0.8f, z + 1.5f);
+    d.settings().hideGui = true;
+    s.mobs().mobs().clear();
+    s.setTimeOfDay(6000);
+    d.idle(20);
+    d.shot("g08_ores");
+    d.seconds(6, [&](float k) {
+        p.flying = true;
+        p.pos = Vec3(x + 0.5f - 3 + k * 6, (float)y + 0.8f, z + 1.5f - k);
+        d.lookNow(Vec3(x + 0.5f, y + 1.8f, z - 3.5f));
+    });
+}

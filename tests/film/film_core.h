@@ -146,6 +146,7 @@ struct Director {
     int shotFrame = 0;
     bool recording = false;
     int stepsPerFrame = 1;  // > 1 = time-lapse
+    bool expOres = false;   // the next openWorld turns on the Ore Redesign experiment
 
     Director(const fs::path& outDir, const std::string& name, bool keepSplash = false) : out(outDir) {
         data = fs::temp_directory_path() / ("vc_film_" + name);
@@ -272,6 +273,7 @@ struct Director {
         info.seed = seed;
         info.mode = mode;
         info.allowCommands = true;
+        info.expOreRedesign = expOres;
         GenConfig g = GenConfig::defaults();
         if (tweak) tweak(g);
         saveGenerator(info.folder, g);
