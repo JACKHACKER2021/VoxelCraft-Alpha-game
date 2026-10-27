@@ -350,7 +350,7 @@ public class VoxelActivity extends NativeActivity {
                 });
                 d.show();
                 v.start();
-            } catch (IOException e) {
+            } catch (RuntimeException e) {
                 Toast.makeText(this, "Video: " + e.getMessage(), Toast.LENGTH_LONG).show();
             }
         });

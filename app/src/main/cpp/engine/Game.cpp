@@ -27,7 +27,7 @@
 namespace vc {
 
 namespace {
-const char* kVersion = "VoxelCraft 1.5.5 build 1";
+const char* kVersion = "VoxelCraft 1.5.7 build 2";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
