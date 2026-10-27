@@ -298,10 +298,14 @@ int main(int argc, char** argv) {
     tap(390, 258);  // "..." creative inventory
     frames(2);
     shot("24_creative_building");
-    tap(114, 84);   // tab "Nástroje"
-    tap(175, 36);   // first tool into the hotbar
+    tap(65, 39);    // 1.5.9 icon tab "Sklo"
+    shot("24b_creative_glass");
+    for (int i = 0; i < 3; ++i) tap(114 + i * 20, 36);  // the groups open on a tap
+    shot("24c_creative_glass_group");
+    tap(39, 117);   // tab "Nástroje a zbraně"
+    tap(94, 36);    // first tool into the hotbar
     shot("25_creative_tools");
-    tap(114, 108);  // tab "Brnění"
+    tap(65, 117);   // tab "Brnění"
     shot("26_creative_armor");
     game.onBack();
     frames(2);

@@ -161,7 +161,7 @@ ChestContents* Session::chest(const FurnaceKey& key) {
 ChestContents Session::structureLoot(ItemId block, uint32_t seed) const {
     ChestContents c = generateLoot(block, seed);
     // 1.5.7 Exploration Maps experiment: a quarter of the structure chests hold a map to a mineshaft.
-    if (info_.expExplorationMaps && (seed >> 7) % 100 < 25)
+    if (explorationMaps() && (seed >> 7) % 100 < 25)
         for (ItemStack& slot : c)
             if (slot.empty()) {
                 slot = {EXPLORER_MAP, 1, 0};
@@ -214,7 +214,7 @@ void Session::uncoverFind(int x, int y, int z) {
     w.setBlock(x, y, z, GRAVEL);
     const uint32_t seed = info_.seed ^ (uint32_t)(x * 73856093) ^ (uint32_t)(y * 19349663) ^ (uint32_t)(z * 83492791);
     ItemStack find = archaeologyFind(seed);
-    if (info_.expExplorationMaps && (seed >> 9) % 100 < 18) find = {EXPLORER_MAP, 1, 0};  // 1.5.7 experiment
+    if (explorationMaps() && (seed >> 9) % 100 < 18) find = {EXPLORER_MAP, 1, 0};  // 1.5.7 experiment
     drops_.spawn(dimIndex(), Vec3(x + 0.5f, y + 1.1f, z + 0.5f), {0, 2.5f, 0}, find);
     particles_.spawnChips(w, x, y, z, 0, 1, 0, GRAVEL, 6);
     if (onMessage) onMessage(trf("Nález: {0}", {tr(itemName(find.id))}));
@@ -1530,7 +1530,7 @@ void Session::updateMobs(float dt) {
                                                 {COOKED_PORK, 3, 0}, {AIR, 1, 0}};
             const float roll = spawnRandom();
             ItemStack offer = kOffers[(int)(roll * 10) % 10];
-            if (offer.id == AIR) offer = info_.expExplorationMaps && roll > 0.95f ? ItemStack{EXPLORER_MAP, 1, 0} : ItemStack{SHIELD, 1, 0};
+            if (offer.id == AIR) offer = explorationMaps() && roll > 0.95f ? ItemStack{EXPLORER_MAP, 1, 0} : ItemStack{SHIELD, 1, 0};
             drops_.spawn(dim, e.pos, {0, 3, 0}, offer);
             sound(Sound::Coin);
         } else if (e.kind == MobEvent::Died) {

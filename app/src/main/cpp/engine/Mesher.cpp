@@ -226,6 +226,13 @@ void buildChunkMesh(const World& world, const Chunk& chunk, ChunkMesh& out) {
                                     else if (facing == 2) u = 1 - x, v = 1 - z;
                                     else if (facing == 3) u = 1 - z, v = x;
                                 }
+                                if (isTorch(id) && id != TORCH) {
+                                    // 1.5.9: a wall torch leans out from its wall, its foot against it.
+                                    static const float away[4][2] = {{0, 1}, {-1, 0}, {0, -1}, {1, 0}};
+                                    const float k = (p[1] - 3 / 16.0f) * 0.4f;
+                                    p[0] += away[id - TORCH_WALL][0] * k;
+                                    p[2] += away[id - TORCH_WALL][1] * k;
+                                }
                                 q[i] = {wx + p[0], y + p[1], wz + p[2], tu + u * kTile, tv + v * kTile, light, block};
                             }
                             out.opaque.insert(out.opaque.end(), {q[0], q[1], q[2], q[0], q[2], q[3]});

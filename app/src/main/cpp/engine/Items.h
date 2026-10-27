@@ -1,4 +1,5 @@
 #pragma once
+#include <vector>
 #include <array>
 #include <cstdint>
 #include <string>
@@ -53,6 +54,18 @@ struct CreativeTab {
 };
 extern const CreativeTab kCreativeTabs[];
 extern const int kCreativeTabCount;
+
+// 1.5.9: the creative inventory's categories, sorted from the same catalog (every item in
+// exactly one), and groups of variants shown behind one button (stained glass, stairs...).
+enum CreativeCategory {
+    CatBuilding, CatGlass, CatLighting, CatNature, CatDecoration, CatPowerstone, CatTools, CatArmor, CatMaps,
+    CatMaterials, CatEggs, CatCount
+};
+const char* creativeCategoryName(int category);
+ItemId creativeCategoryIcon(int category);
+const std::vector<ItemId>& creativeCategoryItems(int category);
+// The group of variants an item belongs to in the creative inventory, or nullptr.
+const char* creativeGroup(ItemId id);
 
 struct ItemStack {
     ItemId id = AIR;

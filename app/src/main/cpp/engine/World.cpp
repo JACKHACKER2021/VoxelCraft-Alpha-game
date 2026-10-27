@@ -350,10 +350,12 @@ void World::stampStructures(Chunk& c) {
         {WorldStructure::Village, kVillageRegion, 80, kVillageSize},
         {WorldStructure::DrownedRuins, 176, 60, kDrownedRuinsSize},
         {WorldStructure::BrokenPortal, 240, 60, kBrokenPortalSize},
+        {WorldStructure::RuinedVillage, 400, 45, kVillageSize},  // 1.5.9 (generation 3)
     };
     const int sea = config_.overworld.seaLevel;
     const int x0 = c.cx * kChunkSize, z0 = c.cz * kChunkSize, x1 = x0 + kChunkSize - 1, z1 = z0 + kChunkSize - 1;
     for (const Kind& k : kinds) {
+        if (k.type == WorldStructure::RuinedVillage && config_.generation < 3) continue;
         for (int rx = floorDiv(x0 - k.maxSize, k.region); rx <= floorDiv(x1, k.region); ++rx)
             for (int rz = floorDiv(z0 - k.maxSize, k.region); rz <= floorDiv(z1, k.region); ++rz) {
                 uint32_t h = hash3(rx, (int)k.type * 977 + 13, rz, seed_ ^ 0x57A7u);
@@ -367,7 +369,7 @@ void World::stampStructures(Chunk& c) {
                     if (blueprints_.size() > 48) blueprints_.clear();
                     Structure s = buildWorldStructure(k.type, h * 2654435761u);
                     // Villages keep their layout (their doors face the paths).
-                    const int turns = k.type == WorldStructure::Village ? 0 : (int)(h >> 28);
+                    const int turns = k.type == WorldStructure::Village || k.type == WorldStructure::RuinedVillage ? 0 : (int)(h >> 28);
                     it = blueprints_.emplace(key, std::make_shared<Structure>(s.rotated(turns))).first;
                 }
                 const Structure& s = *it->second;
@@ -380,12 +382,15 @@ void World::stampStructures(Chunk& c) {
                 const bool snowy = mb && (mb->freeze || mb->id == "snowy_taiga" || mb->id == "ice_plains");
                 const bool surface = k.type == WorldStructure::Ruin || k.type == WorldStructure::DesertTemple ||
                                      k.type == WorldStructure::Igloo || k.type == WorldStructure::Watchtower ||
-                                     k.type == WorldStructure::Village || k.type == WorldStructure::BrokenPortal;
+                                     k.type == WorldStructure::Village || k.type == WorldStructure::BrokenPortal ||
+                                     k.type == WorldStructure::RuinedVillage;
                 if (surface) {
                     if (middle.height <= sea + 1 || !mb || mb->peakBlock) continue;
                     if (k.type == WorldStructure::DesertTemple && !desert) continue;
                     if (k.type == WorldStructure::Igloo && !snowy) continue;
-                    if ((k.type == WorldStructure::Watchtower || k.type == WorldStructure::Village) && (desert || snowy)) continue;
+                    if ((k.type == WorldStructure::Watchtower || k.type == WorldStructure::Village || k.type == WorldStructure::RuinedVillage) &&
+                        (desert || snowy))
+                        continue;
                     oy = middle.height + (k.type == WorldStructure::Ruin ? 0 : 1);
                     // Some portal ruins are half buried.
                     if (k.type == WorldStructure::BrokenPortal) oy = middle.height - ((h >> 6) % 3 == 0 ? 3 : 0);
@@ -422,7 +427,7 @@ void World::stampStructures(Chunk& c) {
                                 for (int d = 1; d <= 4 && wy - d > 0; ++d) {
                                     ItemId below = c.get(lx, wy - d, lz);
                                     if (below != AIR && below != WATER && !isPlant(below)) break;
-                                    c.set(lx, wy - d, lz, k.type == WorldStructure::Village ? (ItemId)DIRT : (ItemId)COBBLESTONE);
+                                    c.set(lx, wy - d, lz, k.type == WorldStructure::Village || k.type == WorldStructure::RuinedVillage ? (ItemId)DIRT : (ItemId)COBBLESTONE);
                                 }
                         }
                 }
@@ -847,7 +852,10 @@ void World::generateVoid(Chunk& c) {
                     placeTree(c, x, h + 1, z, r, VOID_LOG, VOID_LEAVES);
                     c.set(x, h + 2, z, EYE_LOG);
                 } else if (r % 1000 < 70) {
-                    c.set(x, h + 1, z, NETHER_SPROUTS);
+                    // 1.5.9 (generation 3): the Cornerstone Dimension's sprouts do not belong on void
+                    // grass; new worlds grow the void's own crimson roots there, and fewer of them.
+                    if (config_.generation < 3) c.set(x, h + 1, z, NETHER_SPROUTS);
+                    else if (r % 1000 < 40) c.set(x, h + 1, z, CRIMSON_ROOTS);
                 }
             } else if (biomes[x][z] == VoidBiome::Crimson && c.get(x, h, z) == RED_SAND && r % 1000 < 25) {
                 c.set(x, h + 1, z, CRIMSON_ROOTS);
@@ -900,8 +908,11 @@ void World::generateVoid(Chunk& c) {
             WorldStructure type;
             int region, percent, size;
         };
-        static const VoidKind kinds[] = {{WorldStructure::VoidDungeon, 112, 60, 11}, {WorldStructure::VoidTower, 224, 70, 11}};
-        for (const VoidKind& k : kinds)
+        static const VoidKind kinds[] = {{WorldStructure::VoidDungeon, 112, 60, 11}, {WorldStructure::VoidTower, 224, 70, 11},
+                                         {WorldStructure::VoidMineshaft, 320, 55, 97}, {WorldStructure::VoidWatchtower, 192, 60, 7}};
+        for (const VoidKind& k : kinds) {
+            // 1.5.9 kinds only in worlds of generation 3.
+            if ((k.type == WorldStructure::VoidMineshaft || k.type == WorldStructure::VoidWatchtower) && config_.generation < 3) continue;
             for (int rx = floorDiv(bx0 - k.size, k.region); rx <= floorDiv(bx0 + 15, k.region); ++rx)
                 for (int rz = floorDiv(bz0 - k.size, k.region); rz <= floorDiv(bz0 + 15, k.region); ++rz) {
                     uint32_t h = hash3(rx, (int)k.type * 31 + 7, rz, seed_ ^ 0x701Fu);
@@ -913,12 +924,20 @@ void World::generateVoid(Chunk& c) {
                     int oy;
                     if (k.type == WorldStructure::VoidDungeon) {
                         oy = 18 + (int)((h >> 4) % 20);
+                    } else if (k.type == WorldStructure::VoidMineshaft) {
+                        // Under solid void land only (not the lava lands), well below the surface.
+                        if (voidBiomeAt(mx, mz) == VoidBiome::Lava) continue;
+                        oy = 16 + (int)((h >> 4) % 10);
+                        if (voidHeight(mx, mz) < oy + 16) continue;
                     } else {
                         if (voidBiomeAt(mx, mz) == VoidBiome::Lava) continue;
+                        // Watchtowers keep to the crimson lands; the old towers stand anywhere.
+                        if (k.type == WorldStructure::VoidWatchtower && voidBiomeAt(mx, mz) != VoidBiome::Crimson) continue;
                         oy = voidHeight(mx, mz);
                     }
                     stampBlueprint(c, blueprint((int)k.type, rx, rz, h), ox, oy, oz, false);
                 }
+        }
     }
     // The boss arena.
     const int x0 = cx * kChunkSize, z0 = cz * kChunkSize;

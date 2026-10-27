@@ -625,6 +625,7 @@ const GenConfig& GenConfig::defaults() {
             else if (path.rfind("biomes/", 0) == 0) biomes.push(j);
         }
         doc.set("biomes", biomes);
+        doc.set("generation", Json::number(3));  // new worlds get the newest generator
         return fromJson(doc);
     }();
     return cfg;
@@ -675,7 +676,7 @@ GenConfig GenConfig::fromJson(const Json& doc, std::vector<std::string>* w) {
     }
     c.flat = doc["flat"].boolean(false);
     c.crimsonDesert = std::clamp((int)doc["crimson_desert"].num(2), 1, 2);
-    c.generation = std::clamp((int)doc["generation"].num(2), 1, 2);
+    c.generation = std::clamp((int)doc["generation"].num(2), 1, 3);
     return c;
 }
 

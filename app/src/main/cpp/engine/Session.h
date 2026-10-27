@@ -54,6 +54,9 @@ public:
 
     World& currentWorld() { return *world_; }
     const WorldInfo& info() const { return info_; }
+    // 1.5.9: explorer maps are standard in worlds made since 1.5.9 (generation 3); older worlds
+    // keep the 1.5.7 experiment setting.
+    bool explorationMaps() const { return info_.expExplorationMaps || overworld_.config().generation >= 3; }
     GameMode mode() const { return info_.mode; }
     bool survival() const { return info_.mode == GameMode::Survival; }
     Inventory& inventory() { return state_.inventory; }

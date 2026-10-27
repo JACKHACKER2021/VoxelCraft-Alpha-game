@@ -765,6 +765,59 @@ Structure village(Rng& r) {
 
 }  // namespace
 
+// ---------------------------------------------------------------- 1.5.9
+
+// Swaps blocks of a blueprint (one material for another).
+void retexture(Structure& s, std::initializer_list<std::pair<ItemId, ItemId>> swaps) {
+    for (ItemId& b : s.cells)
+        for (const auto& [from, to] : swaps)
+            if (b == from) {
+                b = to;
+                break;
+            }
+}
+
+// The Crimson Void's mineshafts: void log posts, void plank beams, a void stone floor and
+// the void's own loot.
+Structure voidMineshaft(Rng& r) {
+    Structure s = mineshaft(r);
+    s.name = "Void mineshaft";
+    retexture(s, {{FENCE, VOID_LOG}, {PLANKS, VOID_PLANKS}, {LOOT_CHEST_MINE, LOOT_CHEST_VOID}});
+    for (int z = 1; z < s.sz - 1; ++z)
+        for (int x = 1; x < s.sx - 1; ++x)
+            if (s.at(x, 1, z) != Structure::kVoid) s.at(x, 0, z) = (x * 5 + z * 3) % 13 == 0 ? EYE_LOG : VOID_STONE;
+    return s;
+}
+
+// A watchtower of the Crimson Void: void bricks and logs, an eye on the lookout.
+Structure voidWatchtower(Rng& r) {
+    Structure s = watchtower(r);
+    s.name = "Void watchtower";
+    retexture(s, {{COBBLESTONE, VOID_STONE_BRICKS}, {SPRUCE_LOG, VOID_LOG}, {SPRUCE_PLANKS, VOID_PLANKS},
+                  {LOOT_CHEST_TOWER, LOOT_CHEST_VOID}, {CRAFTING_TABLE, EYE_LOG}});
+    return s;
+}
+
+// A village long abandoned: mossy and cracked, walls fallen, the fields gone to grass, the
+// lamps dark. The chests hold ruin loot.
+Structure ruinedVillage(Rng& r) {
+    Structure s = village(r);
+    s.name = "Ruined village";
+    for (int y = 0; y < s.sy; ++y)
+        for (int z = 0; z < s.sz; ++z)
+            for (int x = 0; x < s.sx; ++x) {
+                ItemId& b = s.at(x, y, z);
+                if (b == Structure::kVoid || b == AIR) continue;
+                if (b == FARMLAND) b = GRASS;
+                else if (isCrop(b) || b == POWERSTONE_LIGHT || b == HAY_BALE) b = AIR;
+                else if (b == CHEST) b = LOOT_CHEST_RUIN;
+                else if (y >= 2 && r.chance(y >= 4 ? 45 : 22)) b = AIR;  // fallen walls and roofs
+                else if (b == COBBLESTONE && r.chance(40)) b = MOSSY_COBBLESTONE;
+                else if (b == GLASS) b = AIR;
+            }
+    return s;
+}
+
 Structure buildWorldStructure(WorldStructure kind, uint32_t seed) {
     Rng r{seed | 1};
     switch (kind) {
@@ -784,6 +837,9 @@ Structure buildWorldStructure(WorldStructure kind, uint32_t seed) {
         case WorldStructure::BrokenPortal: return brokenPortal(r);
         case WorldStructure::CrimsonMineshaft: return crimsonMineshaft(r);
         case WorldStructure::GreatFortress: return greatFortress(r);
+        case WorldStructure::VoidMineshaft: return voidMineshaft(r);
+        case WorldStructure::VoidWatchtower: return voidWatchtower(r);
+        case WorldStructure::RuinedVillage: return ruinedVillage(r);
         default: return mineshaft(r);
     }
 }

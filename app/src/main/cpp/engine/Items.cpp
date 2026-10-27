@@ -1,6 +1,9 @@
 #include "Items.h"
 
 #include <algorithm>
+#include <cstring>
+#include <string>
+#include <vector>
 
 #include "Mods.h"
 
@@ -50,6 +53,84 @@ const CreativeTab kCreativeTabs[] = {
     {"Stavební", 0, 111}, {"Příroda", 111, 53}, {"Nástroje", 164, 39}, {"Brnění", 203, 20}, {"Suroviny", 223, 49},
 };
 const int kCreativeTabCount = sizeof(kCreativeTabs) / sizeof(kCreativeTabs[0]);
+
+namespace {
+bool keyHas(ItemId id, const char* part) { return std::strstr(itemKey(id), part) != nullptr; }
+bool keyEnds(ItemId id, const char* tail) {
+    const std::string k = itemKey(id), t = tail;
+    return k.size() >= t.size() && k.compare(k.size() - t.size(), t.size(), t) == 0;
+}
+
+int categoryOf(ItemId id, int oldTab) {
+    if (isSpawnEgg(id)) return CatEggs;
+    if (isArmor(id) || id == SHIELD) return id == SHIELD ? CatTools : CatArmor;
+    if (id == MAP || id == EXPLORER_MAP || id == FORTRESS_COMPASS || id == BOSS_COMPASS || id == WRITABLE_BOOK ||
+        id == WRITTEN_BOOK || isDocument(id) || id == ANCIENT_COIN || id == POWERSTONE_RELIC || id == POTTERY_SHARD ||
+        id == WORLD_END || id == BEDROCK)
+        return CatMaps;
+    if (isStainedGlass(id) || id == GLASS || id == POWERSTONE_GLASS) return CatGlass;
+    if (isTorch(id) || id == POWERSTONE_LIGHT || id == POWERSTONE_LAMP || isLamp(id)) return CatLighting;
+    if (isCable(id) || isSwitch(id) || isWallSwitch(id) || isTnt(id) || isPowerstoneFurnace(id) || id == POWERSTONE_BLOCK ||
+        id == POWERSTONE_DUST || id == POWERSTONE_CHIP || (keyHas(id, "powerstone") && !keyEnds(id, "_ore")))
+        return CatPowerstone;
+    if (oldTab == 2 || toolDurability(id) > 0 || isSword(id)) return CatTools;
+    if (isFood(id)) return CatMaterials;
+    if (oldTab == 1) return CatNature;
+    if (isFence(id) || isDoor(id) || isTrapdoor(id) || isBed(id) || isChest(id) || isSkeletonHead(id) || id == BOOKSHELF ||
+        id == CRAFTING_TABLE || id == FURNACE || id == HAY_BALE || id == WOOL || (id >= 164 && id <= 178) || id == OAK_DOOR_ITEM ||
+        id == IRON_DOOR_ITEM || id == BED_ITEM)
+        return CatDecoration;
+    if (oldTab == 0) return CatBuilding;
+    return CatMaterials;
+}
+}  // namespace
+
+const char* creativeCategoryName(int category) {
+    static const char* const names[CatCount] = {"Stavební bloky", "Sklo", "Osvětlení", "Příroda", "Dekorace",
+                                                "Powerstone a mechanismy", "Nástroje a zbraně", "Brnění", "Mapy a zvláštní předměty",
+                                                "Jídlo a suroviny", "Vejce"};
+    return category >= 0 && category < CatCount ? names[category] : "";
+}
+
+ItemId creativeCategoryIcon(int category) {
+    static const ItemId icons[CatCount] = {STONE_BRICKS, GLASS, TORCH, GRASS, BOOKSHELF, POWERSTONE_LAMP, IRON_PICKAXE,
+                                           (ItemId)(armorItem(2, 1)), MAP, BREAD, EGG_PIG};
+    return category >= 0 && category < CatCount ? icons[category] : AIR;
+}
+
+const std::vector<ItemId>& creativeCategoryItems(int category) {
+    static std::vector<ItemId> lists[CatCount];
+    static bool built = false;
+    if (!built) {
+        built = true;
+        for (int t = 0; t < kCreativeTabCount; ++t)
+            for (int i = kCreativeTabs[t].first; i < kCreativeTabs[t].first + kCreativeTabs[t].count; ++i)
+                lists[categoryOf(kCreativeItems[i], t)].push_back(kCreativeItems[i]);
+    }
+    static const std::vector<ItemId> none;
+    return category >= 0 && category < CatCount ? lists[category] : none;
+}
+
+const char* creativeGroup(ItemId id) {
+    if (isStainedGlass(id)) return "Barevné sklo";
+    if (isStairs(id)) return "Schody";
+    if (isSlab(id)) return "Desky";
+    if (isFence(id)) return "Ploty";
+    if (id == WOOL || (id >= 164 && id <= 178)) return "Vlna";
+    if (isDocument(id)) return "Staré dokumenty";
+    if (isSapling(id)) return "Sazenice";
+    if (isLeaves(id)) return "Listí";
+    if (isLog(id) && !keyHas(id, "eye")) return "Kmeny";
+    if (keyEnds(id, "planks")) return "Prkna";
+    if (keyEnds(id, "_ore")) return "Rudy";
+    if (isCable(id)) return "Kabely";
+    if (isSword(id)) return "Meče";
+    if (keyEnds(id, "_pickaxe")) return "Krumpáče";
+    if (keyEnds(id, "_axe")) return "Sekery";
+    if (keyEnds(id, "_shovel")) return "Lopaty";
+    if (isPaintedPlanks(id)) return "Malovaná prkna";
+    return nullptr;
+}
 
 namespace {
 struct KeyEntry {

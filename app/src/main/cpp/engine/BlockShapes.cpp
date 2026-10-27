@@ -40,7 +40,8 @@ static int torchBoxes(ItemId id, Box out[]) {
         out[0] = {lo, 0, lo, hi, 10 / 16.0f, hi};
         return 1;
     }
-    const float y0 = 3 / 16.0f, y1 = 13 / 16.0f, d = 3 / 16.0f;
+    // A 2 x 2 stick whose foot touches the wall; the mesher leans its top out from the wall.
+    const float y0 = 3 / 16.0f, y1 = 13 / 16.0f, d = 2 / 16.0f;
     switch (id - TORCH_WALL) {
         case 0: out[0] = {lo, y0, 0, hi, y1, d}; break;          // on the wall to the north
         case 1: out[0] = {1 - d, y0, lo, 1, y1, hi}; break;      // east

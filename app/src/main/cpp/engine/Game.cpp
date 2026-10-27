@@ -27,7 +27,7 @@
 namespace vc {
 
 namespace {
-const char* kVersion = "VoxelCraft 1.5.7 build 2";
+const char* kVersion = "VoxelCraft 1.5.9 build 3";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -1643,7 +1643,7 @@ void Game::createWorldScreen() {
     std::string info = trf("Biomy a Nether z {0} aktivních balíčků", {std::to_string(enabled)});
     ui_.text(x, cy + 108, info, kTextDim, 1, false, w);
     // 1.5.1: Experimental Features, for everyone, saved with the world.
-    if (ui_.button(x, cy + 120, col, 18, newWorldExpLiquids_ || newWorldExpMaps_ ? trf("Experimentální funkce ({0})", {std::to_string(newWorldExpLiquids_ + newWorldExpMaps_)}) : tr("Experimentální funkce")))
+    if (ui_.button(x, cy + 120, col, 18, newWorldExpLiquids_ ? trf("Experimentální funkce ({0})", {std::to_string((int)newWorldExpLiquids_)}) : tr("Experimentální funkce")))
         newWorldExpOpen_ = !newWorldExpOpen_;
     if (newWorldExpOpen_) {
         const float ex = x + 8, ey = y + 24, ew = w - 16;
@@ -1659,7 +1659,7 @@ void Game::createWorldScreen() {
             ui_.checkbox(ex + ew - 30, ry + 3, on);
         };
         experiment(ey + 36, "Tekoucí voda a láva", "Kapaliny tečou dolů a do stran; láva s vodou ztvrdne.", newWorldExpLiquids_);
-        experiment(ey + 60, "Průzkumné mapy", "Náhled 1.6.0: mapy k dolům v truhlách a ve štěrku s nálezy.", newWorldExpMaps_);
+        // 1.5.9: explorer maps are a standard feature now (no longer listed here).
         ui_.text(ex + 6, ey + 86, "Upozornění: experimenty se mohou změnit nebo zmizet.", Color{0.9f, 0.7f, 0.35f, 1}, 1, false, ew - 70);
         if (ui_.button(ex + ew - 66, ey + 92, 60, 16, "Hotovo")) newWorldExpOpen_ = false;
         return;  // the panel covers the screen's other buttons
@@ -3643,17 +3643,15 @@ void Game::creativeInventoryScreen() {
     int& selected = session_->selectedSlot();
     const float W = ui_.width(), H = ui_.height();
     ui_.fill(0, 0, W, H, {0, 0, 0, 0.45f});
-    const float pw = std::min(W - 16, 470.0f), ph = H - 12;
+    const float pw = std::min(W - 16, 560.0f), ph = H - 12;
     const float px = std::floor((W - pw) / 2), py = std::floor((H - ph) / 2);
     ui_.panel(px, py, pw, ph);
-    ui_.text(px + 7, py + 6, "Kreativní inventář", kLabel, 1, false);
     if (ui_.button(px + pw - 18, py + 3, 14, 14, "X")) {
         setScreen(Screen::Playing);
         return;
     }
-    // Tabs on the left.
-    const float tabW = 86;
-    // Items of the store addons that are on get a tab of their own.
+    // 1.5.9: categories as icon tabs on the left (two columns), the player on the right, and
+    // groups of variants (stained glass, stairs...) behind one button in the middle.
     const Settings play = playSettings();
     std::vector<ItemId> addonItems;
     if (play.addonWinter) addonItems.insert(addonItems.end(), {GIFT_BOX, CANDY_CANE});
@@ -3663,26 +3661,63 @@ void Game::creativeInventoryScreen() {
         addonItems.insert(addonItems.end(), {CAKE, ANNIV_LOGO, CONFETTI_BLOCK, BALLOON, BALLOON + 1, BALLOON + 2, PARTY_LANTERN,
                                              FESTIVE_BRICKS, PAINTED_PLANKS, PAINTED_PLANKS + 1, PAINTED_PLANKS + 2, PAINTED_PLANKS + 3,
                                              ANNIV_TOKEN, ANNIV_MEDAL, PARTY_POPPER});
-    // Extra tabs: the store addons that are on, then everything the mods add.
-    std::vector<std::pair<const char*, const std::vector<ItemId>*>> extra;
-    if (!addonItems.empty()) extra.emplace_back("Doplňky", &addonItems);
-    if (!modItems.empty()) extra.emplace_back("Módy", &modItems);
-    const int tabCount = kCreativeTabCount + (int)extra.size();
-    if (creativeTab_ >= tabCount) creativeTab_ = 0;
-    for (int t = 0; t < tabCount; ++t)
-        if (ui_.button(px + 6, py + 20 + t * 24, tabW, 20, t < kCreativeTabCount ? kCreativeTabs[t].name : extra[(size_t)(t - kCreativeTabCount)].first,
-                       true, t == creativeTab_)) {
+    struct Tab {
+        const char* name;
+        ItemId icon;
+        const std::vector<ItemId>* items;
+    };
+    std::vector<Tab> tabs;
+    for (int c = 0; c < CatCount; ++c) tabs.push_back({creativeCategoryName(c), creativeCategoryIcon(c), &creativeCategoryItems(c)});
+    if (!addonItems.empty()) tabs.push_back({"Doplňky", addonItems[0], &addonItems});
+    if (!modItems.empty()) tabs.push_back({"Módy", modItems[0], &modItems});
+    if (creativeTab_ >= (int)tabs.size()) creativeTab_ = 0;
+    const float tab = 24, tabX = px + 6, tabY = py + 20;
+    for (int t = 0; t < (int)tabs.size(); ++t) {
+        const float x = tabX + (t % 2) * (tab + 2), y = tabY + (t / 2) * (tab + 2);
+        ui_.slotFrame(x, y, tab, t == creativeTab_);
+        drawStack(x + (tab - kSlot) / 2, y + (tab - kSlot) / 2, {tabs[t].icon, 1});
+        if (ui_.held(x, y, tab, tab)) creativeHint_ = tabs[t].name;
+        if (ui_.tapped(x, y, tab, tab)) {
             creativeTab_ = t;
             creativeScroll_ = 0;
+            creativeGroup_.clear();
         }
-    // The catalogue of the tab: as many columns as fit, scrolled by dragging.
-    std::vector<ItemId> items = creativeTab_ >= kCreativeTabCount ? *extra[(size_t)(creativeTab_ - kCreativeTabCount)].second : addonItems;
-    if (creativeTab_ < kCreativeTabCount) {
-        const CreativeTab& tab = kCreativeTabs[creativeTab_];
-        items.assign(kCreativeItems + tab.first, kCreativeItems + tab.first + tab.count);
     }
-    const float gx = px + tabW + 14, gy = py + 20;
-    const int cols = std::clamp((int)((pw - tabW - 22) / kSlot), 6, 14);
+    const float tabW = 2 * tab + 2;
+    // The player, as the skin screen draws it.
+    const float figW = 40, figX = px + pw - figW - 6, figY = py + 22;
+    ui_.frame(figX, figY, figW, 84, kField, kSeparator);
+    if (!skins_.empty()) drawSkinFigure(figX + 4, figY + 10, 2, std::max(0, skinIndex(profile_.skin)), false);
+    // The catalogue: the category (variants folded into their group), or one open group.
+    const std::vector<ItemId>& all = *tabs[(size_t)creativeTab_].items;
+    std::vector<ItemId> items;
+    std::vector<bool> folded;
+    for (ItemId id : all) {
+        const char* g = creativeTab_ < CatCount ? creativeGroup(id) : nullptr;
+        if (!creativeGroup_.empty()) {
+            if (g && creativeGroup_ == g) items.push_back(id), folded.push_back(false);
+            continue;
+        }
+        if (g) {
+            bool seen = false;
+            for (ItemId o : items) seen = seen || (creativeGroup(o) && std::string(creativeGroup(o)) == g);
+            if (seen) continue;
+            int n = 0;
+            for (ItemId o : all) n += creativeGroup(o) && std::string(creativeGroup(o)) == g;
+            items.push_back(id), folded.push_back(n > 1);
+        } else {
+            items.push_back(id), folded.push_back(false);
+        }
+    }
+    const float gx = px + tabW + 14;
+    float gy = py + 20;
+    ui_.text(gx, py + 6, creativeGroup_.empty() ? tabs[(size_t)creativeTab_].name : creativeGroup_.c_str(), kTextBright, 1, false,
+             figX - gx - 60);
+    if (!creativeGroup_.empty() && ui_.button(figX - 56, py + 3, 50, 14, "Zpět")) {
+        creativeGroup_.clear();
+        creativeScroll_ = 0;
+    }
+    const int cols = std::max(4, (int)((figX - gx - 10) / kSlot));
     const float gridH = ph - 20 - kSlot - 22;
     const int rows = ((int)items.size() + cols - 1) / cols;
     creativeScroll_ -= ui_.dragY(gx, gy, cols * kSlot, gridH);
@@ -3693,6 +3728,17 @@ void Game::creativeInventoryScreen() {
         ItemId id = items[i];
         ui_.slotFrame(x, y, kSlot, false);
         drawStack(x, y, {id, 1});
+        if (folded[i]) {
+            // A group: a small "+" in the corner; a tap opens the variants.
+            ui_.fill(x + kSlot - 9, y + 1, 8, 8, {0, 0, 0, 0.6f});
+            ui_.text(x + kSlot - 8, y + 1, "+", kAccent, 1, false);
+            if (ui_.held(x, y, kSlot, kSlot)) creativeHint_ = creativeGroup(id);
+            if (ui_.tapped(x, y, kSlot, kSlot)) {
+                creativeGroup_ = creativeGroup(id);
+                creativeScroll_ = 0;
+            }
+            continue;
+        }
         if (ui_.held(x, y, kSlot, kSlot)) creativeHint_ = itemName(id);
         if (ui_.tapped(x, y, kSlot, kSlot)) {
             // A full stack into the selected hotbar slot.
@@ -3711,7 +3757,7 @@ void Game::creativeInventoryScreen() {
     }
     if (ui_.button(gx + kHotbarSize * kSlot + 6, hy, 76, kSlot, "Vyprázdnit", !inv.slots[selected].empty()))
         inv.slots[selected] = {};
-    if (!creativeHint_.empty()) ui_.text(px + 6, hy + 6, creativeHint_, kLabel, 1, false, tabW);
+    if (!creativeHint_.empty()) ui_.text(gx, hy - 11, creativeHint_, kLabel, 1, false, figX - gx);
 }
 
 }  // namespace vc

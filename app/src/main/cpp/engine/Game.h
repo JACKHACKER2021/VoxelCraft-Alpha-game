@@ -350,6 +350,7 @@ private:
     Screen devReturn_ = Screen::Settings;
     uint32_t splashSeed_ = 12345;
     float creativeScroll_ = 0;
+    std::string creativeGroup_;  // 1.5.9: the open group of variants (empty: the whole category)
     std::string creativeHint_;
 
     // Loading screen

@@ -212,12 +212,15 @@ bool redeemCode(Profile& p, const std::string& code, std::string& message) {
 }
 
 bool isVip(const Profile& p, long long now) {
+    // 1.5.9: the developer account tests everything; nothing is written to its purchases.
+    if (p.isDeveloper()) return true;
     if (p.owns("vip")) return true;
     auto it = p.until.find("vip");
     return it != p.until.end() && it->second > now;
 }
 
 bool addonOwned(const Profile& p, const std::string& id, long long now) {
+    if (p.isDeveloper()) return true;  // 1.5.9: developer testing access, separate from purchases
     if (p.owns(id)) return true;
     auto it = p.until.find(id);
     return it != p.until.end() && it->second > now;

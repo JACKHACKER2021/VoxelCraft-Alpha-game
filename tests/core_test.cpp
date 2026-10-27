@@ -3914,6 +3914,34 @@ static int testPhysics157() {
     return 0;
 }
 
+static int testWorld159() {
+    // 1.5.9: Crimson Void mineshafts and watchtowers in generation 3 only; ruined villages; every
+    // creative item sits in exactly one category.
+    GenConfig oldCfg = GenConfig::defaults();
+    oldCfg.generation = 2;
+    CHECK(GenConfig::defaults().generation == 3);
+    const Structure vm = buildWorldStructure(WorldStructure::VoidMineshaft, 7), vw = buildWorldStructure(WorldStructure::VoidWatchtower, 7);
+    const Structure rv = buildWorldStructure(WorldStructure::RuinedVillage, 7);
+    auto count = [](const Structure& s, ItemId id) { return (int)std::count(s.cells.begin(), s.cells.end(), id); };
+    CHECK(count(vm, VOID_LOG) > 20 && count(vm, FENCE) == 0 && count(vm, LOOT_CHEST_VOID) > 0);
+    CHECK(count(vw, VOID_STONE_BRICKS) > 50 && count(vw, COBBLESTONE) == 0);
+    CHECK(count(rv, LOOT_CHEST_RUIN) > 0 && count(rv, CHEST) == 0 && count(rv, FARMLAND) == 0);
+    World nv(4242, Dimension::Void), ov(4242, Dimension::Void, oldCfg);
+    nv.ensureChunksAround(0, 0, 12, 100000);
+    ov.ensureChunksAround(0, 0, 12, 100000);
+    long newLogs = 0, oldLogs = 0, sprouts = 0;
+    for (auto& [k, c] : nv.chunks())
+        for (ItemId b : c->blocks) newLogs += b == VOID_LOG, sprouts += b == NETHER_SPROUTS;
+    for (auto& [k, c] : ov.chunks())
+        for (ItemId b : c->blocks) oldLogs += b == VOID_LOG;
+    std::printf("world 1.5.9: void logs %ld (old %ld), sprouts in the void %ld\n", newLogs, oldLogs, sprouts);
+    CHECK(newLogs > oldLogs && sprouts == 0);
+    size_t total = 0;
+    for (int c = 0; c < CatCount; ++c) total += creativeCategoryItems(c).size();
+    CHECK(total == (size_t)kCreativeItemCount && creativeGroup(STAINED_GLASS) && !creativeGroup(STONE));
+    return 0;
+}
+
 static int testWorld157() {
     // New worlds: more cave air, openings from the surface, lava pools; old worlds unchanged.
     GenConfig oldCfg = GenConfig::defaults();
@@ -4022,7 +4050,7 @@ static int testStorage157() {
 int main() {
     if (testOverworld() || testNether() || testPortal() || testTexturePacks() || testFontAndItems() || testSaves() ||
         testSurvivalSession() || testMenuFlow() || testCrafting() || testWorkbenchInSession() ||
-        testJsonAndPacks() || testSkinsStoreAudio() || testThirdPersonCamera() || testWaterEscape() || testLeavesMesh() || testPlants() || testDigParticles() || testDPad() || testStructures() || testInventoryAndHand() || testMetalsAndArmor() || testDeveloperAccess() || testEnglishEverywhere() || testMusic() || testDoorsChests() || testNewBiomes() || testWorldStructures() || testBoat() || testAchievements() || testLanGame() || testCommands() || testUpdate11() || testUpdate12() || testUpdate13() || testUpdate14() || testUpdate15() || testExperiments151() || testShaders155() || testPhysics157() || testWorld157() || testStorage157())
+        testJsonAndPacks() || testSkinsStoreAudio() || testThirdPersonCamera() || testWaterEscape() || testLeavesMesh() || testPlants() || testDigParticles() || testDPad() || testStructures() || testInventoryAndHand() || testMetalsAndArmor() || testDeveloperAccess() || testEnglishEverywhere() || testMusic() || testDoorsChests() || testNewBiomes() || testWorldStructures() || testBoat() || testAchievements() || testLanGame() || testCommands() || testUpdate11() || testUpdate12() || testUpdate13() || testUpdate14() || testUpdate15() || testExperiments151() || testShaders155() || testPhysics157() || testWorld157() || testWorld159() || testStorage157())
         return 1;
     std::printf("all tests passed\n");
     return 0;

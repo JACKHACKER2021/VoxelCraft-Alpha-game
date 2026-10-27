@@ -83,7 +83,8 @@ struct GenConfig {
     int crimsonDesert = 2;
     // 1.5.7: bigger caves with openings to the surface, crimson mineshafts and the larger
     // fortress. Worlds from before keep their old generator (1).
-    int generation = 2;
+    // 1.5.9 (3): Crimson Void mineshafts and watchtowers, ruined villages in the Overworld.
+    int generation = 3;
 
     // The built-in defaults (the same content as the default pack files).
     static const GenConfig& defaults();
