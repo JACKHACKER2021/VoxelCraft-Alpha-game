@@ -19,6 +19,9 @@ enum class WorldStructure {
     // 1.5.0: the forgotten powerstone kingdom: abandoned villages in the wasteland, ruins
     // under lakes and seas, and broken portals that lead the way to a Nether fortress.
     ForgottenVillage, DrownedRuins, BrokenPortal,
+    // 1.5.7: abandoned mineshafts of crimson wood in the Cornerstone Dimension.
+    CrimsonMineshaft,
+    GreatFortress,  // 1.5.7: the fortress of new worlds, with four new wings (85 x 85)
     Count
 };
 

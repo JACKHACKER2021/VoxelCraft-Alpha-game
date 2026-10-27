@@ -26,11 +26,15 @@ std::vector<uint8_t> readFile(const fs::path& p) {
     return std::vector<uint8_t>((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
 }
 
-// Only plain chunk file names are accepted from the network ("c.<x>.<z>.bin").
+// Only plain chunk and region file names are accepted from the network ("c.<x>.<z>.bin",
+// 1.5.7: "r.<x>.<z>.vcr").
 bool safeChunkName(const std::string& n) {
-    if (n.size() < 7 || n.size() > 40 || n.compare(0, 2, "c.") != 0 || n.compare(n.size() - 4, 4, ".bin") != 0) return false;
+    const bool chunk = n.compare(0, 2, "c.") == 0 && n.size() > 4 && n.compare(n.size() - 4, 4, ".bin") == 0;
+    const bool region = n.compare(0, 2, "r.") == 0 && n.size() > 4 && n.compare(n.size() - 4, 4, ".vcr") == 0;
+    if (n.size() < 7 || n.size() > 40 || !(chunk || region)) return false;
     for (char ch : n)
-        if (!(std::isdigit((unsigned char)ch) || ch == '.' || ch == '-' || ch == 'c' || ch == 'b' || ch == 'i' || ch == 'n'))
+        if (!(std::isdigit((unsigned char)ch) || ch == '.' || ch == '-' || ch == 'c' || ch == 'b' || ch == 'i' || ch == 'n' ||
+              ch == 'r' || ch == 'v'))
             return false;
     return n.find("..") == std::string::npos;
 }

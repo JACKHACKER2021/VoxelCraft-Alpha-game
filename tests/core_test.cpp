@@ -304,7 +304,7 @@ static int testSaves() {
         w.saveModifiedChunks();
     }
     int files = 0;
-    for (auto& e : fs::directory_iterator(root / "chunks")) files += e.path().extension() == ".bin";
+    for (auto& e : fs::directory_iterator(root / "chunks")) files += e.path().extension() == ".vcr";
     CHECK(files == 1);
     World w2(5, Dimension::Overworld);
     w2.setStorageDir((root / "chunks").string());
@@ -613,7 +613,7 @@ static int testJsonAndPacks() {
     std::vector<std::string> warn;
     GenConfig round = GenConfig::fromJson(def.toJson(), &warn);
     CHECK(warn.empty() && round.biomes.size() == 7 && round.biomes[2].surface == def.biomes[2].surface);
-    CHECK(RecipeBook::defaults().shaped.size() == 12 + 35 + 6 + 2 + 16 + 6 + 24 + 16 + 3 + 10 + 12 && RecipeBook::defaults().shapeless.size() == 2 + 4 + 1 + 1 + 6 + 1 + 1 + 3 + 1);  // 1.5.1: no planks from Eye Logs
+    CHECK(RecipeBook::defaults().shaped.size() == 12 + 35 + 6 + 2 + 16 + 6 + 24 + 16 + 3 + 10 + 12 + 5 && RecipeBook::defaults().shapeless.size() == 2 + 4 + 1 + 1 + 6 + 1 + 1 + 3 + 1 + 2);  // 1.5.7: torch, shield, lamp; crimson planks  // 1.5.1: no planks from Eye Logs
 
     // Biomes really show up in the world: deserts are sandy, forests have trees.
     World w(1234, Dimension::Overworld);
@@ -633,7 +633,7 @@ static int testJsonAndPacks() {
     pm.ensureDefaultPack();
     auto list = pm.list();
     CHECK(list.size() == 1 && list[0].builtin && list[0].enabled && list[0].name == "VoxelCraft Default");
-    CHECK(pm.files("default").size() == 19 && pm.files("default")[0] == "manifest.json");
+    CHECK(pm.files("default").size() == 20 && pm.files("default")[0] == "manifest.json");
     warn.clear();
     GenConfig cfg = pm.buildConfig(&warn);
     CHECK(warn.empty() && cfg.biomes.size() == 7);
@@ -1839,7 +1839,7 @@ static int testEnglishEverywhere() {
     };
     frames(3);
     tap(378, 121);  // Settings
-    for (float y : {65.0f, 91.0f, 117.0f, 143.0f, 169.0f}) tap(103, y);  // every tab
+    for (float y : {65.0f, 91.0f, 117.0f, 143.0f, 169.0f, 195.0f}) tap(103, y);  // every tab
     game.onBack();
     frames(2);
     tap(222, 149);  // Store
@@ -2532,19 +2532,26 @@ static int testUpdate11() {
         CHECK(nether.nearestStructure(0, 0, fx, fy, fz));
         nether.ensureChunksAround(floorDiv(fx, kChunkSize), floorDiv(fz, kChunkSize), 3, 1000);
         int bricks = 0, chests = 0, frame = 0, grass = 0;
-        for (int x = fx - 26; x <= fx + 26; ++x)
-            for (int z = fz - 26; z <= fz + 26; ++z)
+        // 1.5.7: the great fortress of new worlds is 85 blocks across.
+        int shelves = 0, throne = 0;
+        nether.ensureChunksAround(floorDiv(fx, kChunkSize), floorDiv(fz, kChunkSize), 4, 1000);
+        for (int x = fx - 42; x <= fx + 42; ++x)
+            for (int z = fz - 42; z <= fz + 42; ++z)
                 for (int y = fy - 2; y < fy + 18; ++y) {
                     ItemId b = nether.getBlock(x, y, z);
                     bricks += b == NETHER_BRICK;
                     chests += b == LOOT_CHEST_FORTRESS;
                     frame += b == VOID_STONE;
+                    shelves += b == BOOKSHELF;
+                    throne += b == CHISELED_POWERSTONE_BRICKS;
                 }
+        std::printf("great fortress: %d shelves, %d powerstone carvings\n", shelves, throne);
+        CHECK(shelves > 30 && throne > 20);
         for (auto& [k, c] : nether.chunks())
             for (ItemId b : c->blocks) grass += b == NETHER_GRASS;
         std::printf("fortress at %d %d %d: %d bricks, %d chests, %d frame blocks; nether grass %d\n", fx, fy, fz, bricks, chests,
                     frame, grass);
-        CHECK(bricks > 2000 && chests >= 10 && frame >= 30 && grass > 0);
+        CHECK(bricks > 2000 && chests >= 13 && frame >= 30 && grass > 0);
         bool lit = false;
         for (int dy = 0; dy < 6 && !lit; ++dy) lit = tryLightPortal(nether, fx, fy + dy, fz, true);
         int portal = 0;
@@ -3775,15 +3782,16 @@ static int testExperiments151() {
     w.folder = dir.string();
     w.name = "exp";
     w.seed = 7;
-    w.expOreRedesign = true;
+    w.expFlowingLiquids = true;
+    w.expExplorationMaps = true;
     CHECK(saveLevel(w, PlayerState{}));
     WorldInfo r;
     PlayerState p;
-    CHECK(loadLevel(dir.string(), r, p) && r.expOreRedesign);
+    CHECK(loadLevel(dir.string(), r, p) && r.expFlowingLiquids && r.expExplorationMaps);
     std::ofstream((dir / "level.dat").string()) << "version=1\nname=old\nseed=5\nmode=1\n";
-    CHECK(loadLevel(dir.string(), r, p) && !r.expOreRedesign);
+    CHECK(loadLevel(dir.string(), r, p) && !r.expFlowingLiquids && !r.expExplorationMaps);
     fs::remove_all(dir);
-    // The redesigned ores are opaque 16x16 pictures that differ from the current ones.
+    // 1.5.7: the redesigned ores are the standard look: the atlas shows them.
     int size = 0;
     const std::vector<uint8_t> atlas = buildFallbackAtlas(size);
     for (int i = 0; i < kOreRedesignCount; ++i) {
@@ -3797,7 +3805,7 @@ static int testExperiments151() {
                 for (int k = 0; k < 3; ++k) diff += std::abs(a[k] - px[(y * 16 + x) * 4 + k]);
                 opaque += px[(y * 16 + x) * 4 + 3] == 255;
             }
-        CHECK(opaque == 256 && diff > 3000);
+        CHECK(opaque == 256 && diff == 0);
     }
     return 0;
 }
@@ -3849,10 +3857,172 @@ static int testShaders155() {
     return 0;
 }
 
+static int testPhysics157() {
+    namespace fs = std::filesystem;
+    fs::path root = fs::temp_directory_path() / "vc_physics_test";
+    fs::remove_all(root);
+    Settings settings;
+    settings.renderDistance = 2;
+    WorldInfo info;
+    info.folder = createWorldFolder(root.string());
+    info.name = "physics";
+    info.seed = 42;
+    info.mode = GameMode::Creative;
+    info.expFlowingLiquids = true;
+    Session s(info, PlayerState{});
+    double t = 0;
+    auto run = [&](float seconds) {
+        for (float e = 0; e < seconds; e += 1 / 60.0f) s.update(1 / 60.0f, t += 1 / 60.0, 600, 270, settings);
+    };
+    run(1);
+    World& w = s.currentWorld();
+    const int x = (int)std::floor(s.player().pos.x) + 6, z = (int)std::floor(s.player().pos.z) + 6;
+    int g = kChunkHeight - 2;
+    while (g > 1 && w.getBlock(x, g - 1, z) == AIR) --g;
+    // Sand placed in the air falls to the ground; gravel on top follows it.
+    for (int y = g; y < g + 12; ++y)
+        for (int dx = -4; dx <= 4; ++dx)
+            for (int dz = -4; dz <= 4; ++dz) w.setBlock(x + dx, y, z + dz, AIR);
+    for (int dx = -4; dx <= 4; ++dx)
+        for (int dz = -4; dz <= 4; ++dz) w.setBlock(x + dx, g - 1, z + dz, STONE);
+    w.setBlock(x, g + 8, z, SAND);
+    w.setBlock(x, g + 9, z, GRAVEL);
+    run(2);
+    CHECK(w.getBlock(x, g, z) == SAND && w.getBlock(x, g + 1, z) == GRAVEL && w.getBlock(x, g + 8, z) == AIR);
+    // A water source on a pillar flows down and spreads; removing it drains the flow.
+    w.setBlock(x + 3, g, z, STONE);
+    w.setBlock(x + 3, g + 1, z, WATER);
+    run(6);
+    int wet = 0;
+    for (int dx = -4; dx <= 4; ++dx)
+        for (int dz = -4; dz <= 4; ++dz) wet += w.getBlock(x + dx, g, z + dz) == WATER;
+    std::printf("physics: water spread over %d cells\n", wet);
+    CHECK(wet >= 8);
+    w.setBlock(x + 3, g + 1, z, AIR);
+    run(8);
+    wet = 0;
+    for (int dx = -4; dx <= 4; ++dx)
+        for (int dz = -4; dz <= 4; ++dz) wet += w.getBlock(x + dx, g, z + dz) == WATER;
+    CHECK(wet == 0);
+    // Lava flowing into water hardens.
+    w.setBlock(x - 3, g, z, WATER);
+    w.setBlock(x - 2, g, z, LAVA);
+    run(3);
+    CHECK(w.getBlock(x - 2, g, z) == OBSIDIAN);
+    // Torches pop off when their block goes.
+    fs::remove_all(root);
+    return 0;
+}
+
+static int testWorld157() {
+    // New worlds: more cave air, openings from the surface, lava pools; old worlds unchanged.
+    GenConfig oldCfg = GenConfig::defaults();
+    oldCfg.generation = 1;
+    World nw(777, Dimension::Overworld), ow(777, Dimension::Overworld, oldCfg);
+    nw.ensureChunksAround(0, 0, 4, 1000);
+    ow.ensureChunksAround(0, 0, 4, 1000);
+    long airNew = 0, airOld = 0, lava = 0, openings = 0;
+    for (auto& [k, c] : nw.chunks())
+        for (int y = 5; y < 60; ++y)
+            for (int z = 0; z < kChunkSize; ++z)
+                for (int x = 0; x < kChunkSize; ++x) {
+                    const ItemId b = c->get(x, y, z);
+                    airNew += b == AIR;
+                    lava += b == LAVA && y <= 7;
+                }
+    for (auto& [k, c] : ow.chunks())
+        for (int y = 5; y < 60; ++y)
+            for (int z = 0; z < kChunkSize; ++z)
+                for (int x = 0; x < kChunkSize; ++x) airOld += c->get(x, y, z) == AIR;
+    // An opening: a column open to the sky whose ground lies far below the land around it.
+    auto top = [&](int x, int z) {
+        int y = kChunkHeight - 1;
+        while (y > 1 && nw.getBlock(x, y, z) == AIR) --y;
+        return y;
+    };
+    for (int x = -48; x < 48; ++x)
+        for (int z = -48; z < 48; ++z) {
+            const int t = top(x, z), around = std::min({top(x - 8, z), top(x + 8, z), top(x, z - 8), top(x, z + 8)});
+            if (around > nw.seaLevel() + 2 && nw.getBlock(x, t, z) != WATER && t < around - 10) ++openings;
+        }
+    std::printf("world 1.5.7: cave air %ld (old %ld), deep lava %ld, open columns %ld\n", airNew, airOld, lava, openings);
+    CHECK(airNew > airOld * 1.2 && lava > 0 && openings > 0);
+    // Mineshafts: the explorer map finds one, and it really is there.
+    int mx, my, mz;
+    CHECK(nw.nearestMineshaft(0, 0, mx, my, mz));
+    nw.ensureChunksAround(floorDiv(mx, 16), floorDiv(mz, 16), 1, 1000);
+    int open = 0;
+    for (int dy = -2; dy <= 2; ++dy) open += nw.getBlock(mx, my + dy, mz) == AIR;
+    std::printf("mineshaft at %d %d %d (%d air)\n", mx, my, mz, open);
+    CHECK(open >= 2);
+    // Crimson mineshafts in the Cornerstone Dimension of new worlds only.
+    World nn(777, Dimension::Nether), on(777, Dimension::Nether, oldCfg);
+    CHECK(nn.nearestMineshaft(0, 0, mx, my, mz) && !on.nearestMineshaft(0, 0, mx, my, mz));
+    nn.nearestMineshaft(0, 0, mx, my, mz);
+    nn.ensureChunksAround(floorDiv(mx, 16), floorDiv(mz, 16), 3, 1000);
+    int crimson = 0;
+    for (auto& [k, c] : nn.chunks())
+        for (ItemId b : c->blocks) crimson += b == CRIMSON_PLANKS || b == CRIMSON_LOG;
+    std::printf("crimson mineshaft at %d %d %d: %d crimson wood blocks\n", mx, my, mz, crimson);
+    CHECK(crimson > 100);
+    // The hog man: hostile, but a gift of powerstone calms it and it pays after a look.
+    {
+        MobSystem mobs;
+        World flat(1, Dimension::Nether);
+        flat.ensureChunksAround(0, 0, 1, 1000);
+        int y = 120;
+        while (y > 2 && flat.getBlock(4, y - 1, 4) == AIR) --y;
+        mobs.spawn(MobType::Hogman, 1, Vec3(4.5f, (float)y, 4.5f));
+        CHECK(mobInfo(MobType::Hogman).hostile && std::string(tr(mobInfo(MobType::Hogman).name)) == "Hogman");
+        mobs.mobs()[0].calm = 90;
+        mobs.mobs()[0].barter = 2.5f;
+        std::vector<MobEvent> ev;
+        int paid = 0, hits = 0;
+        for (int i = 0; i < 240; ++i) {
+            ev.clear();
+            mobs.update(flat, 1, Vec3(5.5f, (float)y, 4.5f), true, 1 / 60.0f, ev);
+            for (const MobEvent& e : ev) paid += e.kind == MobEvent::Barter, hits += e.kind == MobEvent::HitPlayer;
+        }
+        CHECK(paid == 1 && hits == 0);
+        mobs.hurt(0, 1, Vec3(5.5f, (float)y, 4.5f));
+        CHECK(mobs.mobs()[0].calm == 0);
+    }
+    return 0;
+}
+
+static int testStorage157() {
+    namespace fs = std::filesystem;
+    // Chunks go into compressed region files, and old one-file-per-chunk worlds move over.
+    fs::path dir = fs::temp_directory_path() / "vc_regions";
+    fs::remove_all(dir);
+    int written = 0;
+    {
+        World w(99, Dimension::Overworld);
+        w.setStorageDir(dir.string());
+        w.ensureChunksAround(0, 0, 3, 1000);
+        for (int x = -40; x < 40; x += 3) written += w.setBlock(x, 70, x / 2, RUBY_BLOCK);
+        w.saveModifiedChunks();
+    }
+    size_t files = 0, bytes = 0;
+    for (const auto& e : fs::directory_iterator(dir)) ++files, bytes += fs::file_size(e.path());
+    std::printf("storage: %zu files, %zu bytes\n", files, bytes);
+    CHECK(files <= 4 && bytes < 400000);
+    {
+        World w(99, Dimension::Overworld);
+        w.setStorageDir(dir.string());
+        w.ensureChunksAround(0, 0, 3, 1000);
+        int found = 0;
+        for (int x = -40; x < 40; x += 3) found += w.getBlock(x, 70, x / 2) == RUBY_BLOCK;
+        CHECK(written > 20 && found == written);
+    }
+    fs::remove_all(dir);
+    return 0;
+}
+
 int main() {
     if (testOverworld() || testNether() || testPortal() || testTexturePacks() || testFontAndItems() || testSaves() ||
         testSurvivalSession() || testMenuFlow() || testCrafting() || testWorkbenchInSession() ||
-        testJsonAndPacks() || testSkinsStoreAudio() || testThirdPersonCamera() || testWaterEscape() || testLeavesMesh() || testPlants() || testDigParticles() || testDPad() || testStructures() || testInventoryAndHand() || testMetalsAndArmor() || testDeveloperAccess() || testEnglishEverywhere() || testMusic() || testDoorsChests() || testNewBiomes() || testWorldStructures() || testBoat() || testAchievements() || testLanGame() || testCommands() || testUpdate11() || testUpdate12() || testUpdate13() || testUpdate14() || testUpdate15() || testExperiments151() || testShaders155())
+        testJsonAndPacks() || testSkinsStoreAudio() || testThirdPersonCamera() || testWaterEscape() || testLeavesMesh() || testPlants() || testDigParticles() || testDPad() || testStructures() || testInventoryAndHand() || testMetalsAndArmor() || testDeveloperAccess() || testEnglishEverywhere() || testMusic() || testDoorsChests() || testNewBiomes() || testWorldStructures() || testBoat() || testAchievements() || testLanGame() || testCommands() || testUpdate11() || testUpdate12() || testUpdate13() || testUpdate14() || testUpdate15() || testExperiments151() || testShaders155() || testPhysics157() || testWorld157() || testStorage157())
         return 1;
     std::printf("all tests passed\n");
     return 0;

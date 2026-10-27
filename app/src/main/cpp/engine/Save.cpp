@@ -107,7 +107,8 @@ bool saveLevel(const WorldInfo& info, const PlayerState& p) {
     o << "mode=" << (int)info.mode << "\n";
     o << "lastPlayed=" << info.lastPlayed << "\n";
     o << "showCoordinates=" << (info.showCoordinates ? 1 : 0) << "\nkeepInventory=" << (info.keepInventory ? 1 : 0)
-      << "\nallowCommands=" << (info.allowCommands ? 1 : 0) << "\nexp.oreRedesign=" << (info.expOreRedesign ? 1 : 0) << "\n";
+      << "\nallowCommands=" << (info.allowCommands ? 1 : 0) << "\nexp.oreRedesign=" << (info.expOreRedesign ? 1 : 0)
+      << "\nexp.flowingLiquids=" << (info.expFlowingLiquids ? 1 : 0) << "\nexp.explorationMaps=" << (info.expExplorationMaps ? 1 : 0) << "\n";
     if (p.valid) {
         o << "player.x=" << p.pos.x << "\nplayer.y=" << p.pos.y << "\nplayer.z=" << p.pos.z << "\n";
         o << "spawn.x=" << p.spawn.x << "\nspawn.y=" << p.spawn.y << "\nspawn.z=" << p.spawn.z << "\n";
@@ -128,6 +129,7 @@ bool saveLevel(const WorldInfo& info, const PlayerState& p) {
         if (p.documentsRead) o << "\npages=" << p.documentsRead;
         o << "\narmor=";
         for (int i = 0; i < 4; ++i) o << (i ? "," : "") << (int)p.armor[i].id << ":" << (int)p.armor[i].count << ":" << p.armor[i].damage;
+        if (!p.offhand.empty()) o << "\noffhand=" << (int)p.offhand.id << ":" << (int)p.offhand.count << ":" << p.offhand.damage;
         o << "\n";
     }
     return writeFileAtomic(info.folder + "/level.dat", o.str());
@@ -145,6 +147,8 @@ bool loadLevel(const std::string& folder, WorldInfo& info, PlayerState& p) {
     info.keepInventory = num(kv, "keepInventory", 0) != 0;
     info.allowCommands = num(kv, "allowCommands", 0) != 0;
     info.expOreRedesign = num(kv, "exp.oreRedesign", 0) != 0;
+    info.expFlowingLiquids = num(kv, "exp.flowingLiquids", 0) != 0;
+    info.expExplorationMaps = num(kv, "exp.explorationMaps", 0) != 0;
 
     p = PlayerState{};
     if (!kv.count("player.x")) return true;
@@ -192,6 +196,8 @@ bool loadLevel(const std::string& folder, WorldInfo& info, PlayerState& p) {
         if (std::sscanf(slot.c_str(), "%d:%d:%d", &id, &count, &damage) >= 2 && armorPiece((ItemId)id) == i && count > 0)
             p.armor[i] = {(ItemId)id, 1, (uint16_t)std::max(0, damage)};
     }
+    if (int id = 0, count = 0, damage = 0; std::sscanf(kv["offhand"].c_str(), "%d:%d:%d", &id, &count, &damage) >= 2 && count > 0 && id > 0)
+        p.offhand = {(ItemId)id, (uint8_t)std::min(count, maxStack((ItemId)id)), (uint16_t)std::max(0, damage)};
     return true;
 }
 
@@ -220,6 +226,7 @@ GenConfig loadGenerator(const std::string& folder) {
     if (!Json::parse(ss.str(), doc, err)) return GenConfig::defaults();
     GenConfig c = GenConfig::fromJson(doc);
     if (!doc.has("crimson_desert")) c.crimsonDesert = 1;  // made before 1.5.1: keep its desert as it was
+    if (!doc.has("generation")) c.generation = 1;         // made before 1.5.7: no new caves or structures
     if (!c.flat) addMissingOres(c);  // only chunks generated from now on contain them
     upgradeNether(c);
     retireBiomes(c);
@@ -307,6 +314,7 @@ Settings loadSettings(const std::string& path) {
     s.graphics = num(kv, "graphics", 1) == 0 ? GraphicsMode::Classic : GraphicsMode::Enhanced;
     s.shadows = flag("shadows", s.shadows);
     s.waves = flag("waves", s.waves);
+    s.batterySaver = std::clamp((int)num(kv, "batterySaver", 1), 0, 2);
     s.musicVolume = std::clamp(num(kv, "musicVolume", s.musicVolume), 0.0f, 1.0f);
     s.soundVolume = std::clamp(num(kv, "soundVolume", s.soundVolume), 0.0f, 1.0f);
     s.uiSounds = flag("uiSounds", s.uiSounds);
@@ -337,7 +345,7 @@ void saveSettings(const std::string& path, const Settings& s) {
       << "\nguiScale=" << s.guiScale << "\nbrightness=" << s.brightness << "\nfov=" << s.fov
       << "\nrenderDistance=" << s.renderDistance << "\nhideGui=" << s.hideGui << "\nclouds=" << s.clouds << "\ncameraMode=" << s.cameraMode
       << "\nviewBobbing=" << s.viewBobbing << "\nmusicVolume=" << s.musicVolume << "\nsoundVolume=" << s.soundVolume
-      << "\nuiSounds=" << s.uiSounds << "\nlanguage=" << s.language << "\nshowMap=" << s.showMap << "\ngraphics=" << (int)s.graphics << "\nshadows=" << s.shadows << "\nwaves=" << s.waves
+      << "\nuiSounds=" << s.uiSounds << "\nlanguage=" << s.language << "\nshowMap=" << s.showMap << "\ngraphics=" << (int)s.graphics << "\nshadows=" << s.shadows << "\nwaves=" << s.waves << "\nbatterySaver=" << s.batterySaver
       << "\ndevGodMode=" << s.devGodMode << "\ndevFly=" << s.devFly << "\ndevInstantMine=" << s.devInstantMine
       << "\ndevDebug=" << s.devDebug << "\ndevNoclip=" << s.devNoclip << "\ndevSpeed=" << s.devSpeed
       << "\nexpDayNight=" << s.expDayNight << "\nexpFastFurnace=" << s.expFastFurnace << "\nexpOreMap=" << s.expOreMap << "\nexpFastGrowth=" << s.expFastGrowth << "\nexpLowGravity=" << s.expLowGravity

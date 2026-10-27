@@ -32,6 +32,7 @@ const MobInfo kInfo[] = {
     {"TNT zombie", 0.6f, 1.9f, 20, 2.5f, 0, true, false},
     {"Dehtová příšera", 1.1f, 1.7f, 30, 1.9f, 5, true, false},
     {"Husking", 0.6f, 1.95f, 24, 2.2f, 4, true, false},
+    {"Prasák", 0.7f, 1.95f, 22, 2.7f, 5, true, false},
 };
 static_assert(sizeof(kInfo) / sizeof(kInfo[0]) == (size_t)MobType::Count, "info for every mob");
 
@@ -203,6 +204,16 @@ void MobSystem::update(const World& world, int dim, const Vec3& target, bool hun
         const float dist = std::sqrt(toPlayer.x * toPlayer.x + toPlayer.z * toPlayer.z);
         float want = 0;  // forward speed this frame
         bool hunting = info.hostile && canHunt && dist < (info.boss ? 40.0f : 22.0f) && std::fabs(toPlayer.y) < 12;
+        if (m.type == MobType::Hogman) {
+            // 1.5.7: a gift of powerstone keeps it peaceful for a while; it looks the stone over and pays.
+            if (m.calm > 0) m.calm -= dt, hunting = false;
+            if (m.barter > 0 && (m.barter -= dt) <= 0) events.push_back({MobEvent::Barter, m.type, m.pos + Vec3(0, 1.0f, 0), 0, {}});
+            if (m.barter > 0) {
+                m.yaw = turnTo(m.yaw, yawTo(m.pos, goal), dt * 4);
+                want = 0;
+                m.vel.x *= 0.5f, m.vel.z *= 0.5f;
+            }
+        }
         if (hunting && m.type == MobType::TntZombie) {
             // Walks up to the player, stops and hisses; after a moment it blows up.
             m.yaw = turnTo(m.yaw, yawTo(m.pos, goal), dt * 6);
@@ -394,6 +405,7 @@ bool MobSystem::hurt(int index, float damage, const Vec3& from, int killer) {
         m.vel = m.vel + away * 6.0f + Vec3(0, 4.5f, 0);
     }
     if (!info.hostile) m.panic = 4;  // animals run away
+    if (m.type == MobType::Hogman) m.calm = 0, m.barter = 0;  // a hit makes it angry again
     if (m.health <= 0) {
         m.deathTime = 0.001f;
         return true;
@@ -645,6 +657,26 @@ void MobSystem::buildVertices(int dim, float time, std::vector<Vertex>& out) con
                 b.box({-0.22f, 1.56f, -0.22f}, {0.22f, 2.0f, 0.22f}, t, -m.attackAnim * 0.5f, {0, 1.58f, 0}, roll + tilt);
                 break;
             }
+            case MobType::Hogman: {
+                // 1.5.7: a stocky pig man in a leather tunic: pink arms, a snout and tusks.
+                int tunic[6], skinT[6];
+                tilesAll(T_HOGMAN_TUNIC, tunic);
+                tilesAll(T_HOGMAN_SKIN, skinT);
+                b.box({-0.24f, 0, -0.13f}, {-0.01f, 0.72f, 0.13f}, tunic, m.swing, {-0.12f, 0.72f, 0}, roll);
+                b.box({0.01f, 0, -0.13f}, {0.24f, 0.72f, 0.13f}, tunic, -m.swing, {0.12f, 0.72f, 0}, roll);
+                b.box({-0.29f, 0.72f, -0.16f}, {0.29f, 1.45f, 0.16f}, tunic, 0, {}, roll);
+                // Calm and bartering: arms down and turning the stone over; angry: raised to strike.
+                const float arm = m.barter > 0 ? 1.0f + 0.2f * std::sin(time * 8) : m.calm > 0 ? 0.1f * std::sin(time * 2 + m.age)
+                                                                                       : -m.swing * 0.8f + m.attackAnim * 1.4f;
+                b.box({-0.42f, 0.75f, -0.11f}, {-0.29f, 1.43f, 0.11f}, skinT, arm, {-0.35f, 1.37f, 0}, roll);
+                b.box({0.29f, 0.75f, -0.11f}, {0.42f, 1.43f, 0.11f}, skinT, m.swing * 0.8f, {0.35f, 1.37f, 0}, roll);
+                faceTiles(T_HOGMAN_SKIN, T_HOGMAN_FACE);
+                b.box({-0.26f, 1.45f, -0.25f}, {0.26f, 1.93f, 0.25f}, t, 0, {}, roll);
+                b.box({-0.11f, 1.5f, -0.33f}, {0.11f, 1.66f, -0.25f}, skinT, 0, {}, roll);  // the snout
+                b.box({-0.3f, 1.84f, -0.06f}, {-0.24f, 1.98f, 0.06f}, skinT, 0, {}, roll);  // ears
+                b.box({0.24f, 1.84f, -0.06f}, {0.3f, 1.98f, 0.06f}, skinT, 0, {}, roll);
+                break;
+            }
             case MobType::TarMonster: {
                 // A dripping heap of tar: stumpy legs, a wobbling body, long arms and glowing eyes.
                 int tar[6];
@@ -730,6 +762,9 @@ std::vector<std::pair<ItemId, int>> mobDrops(MobType type, float roll) {
             if (roll < 0.1f) return {{(ItemId)(OLD_DOCUMENT + (int)(roll * 79) % kDocumentPages), 1}, {POWERSTONE_DUST, 1}};
             return roll < 0.4f ? std::vector<std::pair<ItemId, int>>{{ANCIENT_COIN, 1}, {POWERSTONE_DUST, 1}}
                                : std::vector<std::pair<ItemId, int>>{{POWERSTONE_DUST, 1 + (int)(roll * 2)}};
+        case MobType::Hogman:
+            return roll < 0.2f ? std::vector<std::pair<ItemId, int>>{{RAW_PORK, 2}, {CRIMSON_LOG, 2}}
+                               : std::vector<std::pair<ItemId, int>>{{RAW_PORK, 1 + (int)(roll * 2)}};
         case MobType::CrimsonMan:
             return {{RUBY_BLOCK, 3}, {STEEL_BLOCK, 2}, {RUBY, 8}, {VOID_STONE_BRICKS, 16}, {armorItem(4, 1), 1}, {RUBY_PICKAXE, 1}};
         default: return {};

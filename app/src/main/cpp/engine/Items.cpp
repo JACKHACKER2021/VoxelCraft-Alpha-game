@@ -19,20 +19,20 @@ const ItemId kCreativeItems[] = {
     1210, 1211, 1212, 1213, 1214, 1215, 1216, 1217, 1218, 1219, 1220, 1221, 1222, 1223, 1224, 1225, TAR_BLOCK,
     POWERSTONE_BRICKS, CRACKED_POWERSTONE_BRICKS, CHISELED_POWERSTONE_BRICKS, POWERSTONE_GLASS, STAIRS_EXTRA, 1136,
     CRACKED_NETHER_BRICKS, CHISELED_NETHER_BRICKS, SPRUCE_FENCE, VOID_FENCE, NETHERPERK_FENCE, NETHER_BRICK_FENCE,
-    POWERSTONE_FENCE, SKELETON_HEAD, VOID_BRICK_EYE,
+    POWERSTONE_FENCE, SKELETON_HEAD, VOID_BRICK_EYE, TORCH, CRIMSON_PLANKS, POWERSTONE_FURNACE,
     // Nature
     GRASS, DIRT, SAND, GRAVEL, CLAY, SNOW_BLOCK, ICE, CACTUS, LEAVES, SPRUCE_LEAVES, TALL_GRASS, DANDELION, POPPY, WATER, LAVA,
     COAL_ORE, IRON_ORE, BRONZE_ORE, STEEL_ORE, RUBY_ORE, NETHERRACK, NETHER_BRICK,
     NETHER_GRASS, NETHER_SPROUTS, VOID_STONE, VOID_GRASS, VOID_LOG, EYE_LOG, VOID_LEAVES, RED_SAND, CRIMSON_ROOTS, PUMPKIN,
     NETHERPERK_LOG, NETHERPERK_CAP, OAK_SAPLING, PINE_SAPLING, VOID_SAPLING, NETHERPERK_SAPLING, POWERSTONE_ORE, WORLD_END,
     FARMLAND, WHEAT_SEEDS, TAR, DRIPSTONE_BLOCK, DRIPSTONE_UP, SNOW_LAYER,
-    WASTELAND_GRASS, DRY_GRASS, GRASSER_FLOWER, FERN, DEBRIS_GRAVEL, CRIMSON_STONE,
+    WASTELAND_GRASS, DRY_GRASS, GRASSER_FLOWER, FERN, DEBRIS_GRAVEL, CRIMSON_STONE, CRIMSON_LOG,
     // Tools
     WOOD_PICKAXE, WOOD_AXE, WOOD_SHOVEL, STONE_PICKAXE, STONE_AXE, STONE_SHOVEL, IRON_PICKAXE, IRON_AXE, IRON_SHOVEL,
     BRONZE_PICKAXE, BRONZE_AXE, BRONZE_SHOVEL, STEEL_PICKAXE, STEEL_AXE, STEEL_SHOVEL, RUBY_PICKAXE, RUBY_AXE, RUBY_SHOVEL,
     FLINT_AND_STEEL, VOID_FLINT_AND_STEEL,
     WOOD_SWORD, STONE_SWORD, IRON_SWORD, BRONZE_SWORD, STEEL_SWORD, RUBY_SWORD, BUCKET, WATER_BUCKET, LAVA_BUCKET, BOSS_COMPASS,
-    HOE, BOW, ARROW, MAP, BRUSHER, FORTRESS_COMPASS,
+    HOE, BOW, ARROW, MAP, BRUSHER, FORTRESS_COMPASS, SHIELD, EXPLORER_MAP,
     // Armour
     228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247,
     // Materials
@@ -42,12 +42,12 @@ const ItemId kCreativeItems[] = {
     FEATHER, WHEAT, BREAD, RAW_CHICKEN, COOKED_CHICKEN, RAW_BEEF, STEAK, MILK_BUCKET, EGG_CHICKEN, EGG_COW, EGG_VILLAGER,
     STRING, TAR_BALL, EGG_SPIDER, EGG_BAT, EGG_TNT_ZOMBIE, EGG_TAR_MONSTER,
     OLD_DOCUMENT, OLD_DOCUMENT + 1, OLD_DOCUMENT + 2, OLD_DOCUMENT + 3, OLD_DOCUMENT + 4, OLD_DOCUMENT + 5, OLD_DOCUMENT + 6,
-    OLD_DOCUMENT + 7, ANCIENT_COIN, POWERSTONE_RELIC, POTTERY_SHARD, EGG_HUSKING,
+    OLD_DOCUMENT + 7, ANCIENT_COIN, POWERSTONE_RELIC, POTTERY_SHARD, EGG_HUSKING, EGG_HOGMAN,
 };
 const int kCreativeItemCount = sizeof(kCreativeItems) / sizeof(kCreativeItems[0]);
-static_assert(sizeof(kCreativeItems) / sizeof(kCreativeItems[0]) == 108 + 52 + 36 + 20 + 48, "the creative tabs cover the whole catalog");
+static_assert(sizeof(kCreativeItems) / sizeof(kCreativeItems[0]) == 111 + 53 + 38 + 20 + 49, "the creative tabs cover the whole catalog");
 const CreativeTab kCreativeTabs[] = {
-    {"Stavební", 0, 108}, {"Příroda", 108, 52}, {"Nástroje", 160, 36}, {"Brnění", 196, 20}, {"Suroviny", 216, 48},
+    {"Stavební", 0, 111}, {"Příroda", 111, 53}, {"Nástroje", 164, 38}, {"Brnění", 202, 20}, {"Suroviny", 222, 49},
 };
 const int kCreativeTabCount = sizeof(kCreativeTabs) / sizeof(kCreativeTabs[0]);
 
@@ -126,6 +126,9 @@ const KeyEntry kKeys[] = {
     {NETHER_BRICK_FENCE, "nether_brick_fence"}, {POWERSTONE_FENCE, "powerstone_fence"},
     {BRUSHER, "brusher"}, {FORTRESS_COMPASS, "fortress_compass"}, {ANCIENT_COIN, "ancient_coin"},
     {POWERSTONE_RELIC, "powerstone_relic"}, {POTTERY_SHARD, "pottery_shard"}, {EGG_HUSKING, "husking_spawn_egg"}, {VOID_BRICK_EYE, "void_brick_eye"}, {CRIMSON_STONE, "crimson_stone"},
+    {TORCH, "torch"}, {CRIMSON_PLANKS, "crimson_planks"}, {CRIMSON_LOG, "crimson_log"}, {SHIELD, "shield"}, {EXPLORER_MAP, "explorer_map"},
+    {EGG_HOGMAN, "hogman_spawn_egg"}, {POWERSTONE_FURNACE, "powerstone_furnace"}, {POWERSTONE_FURNACE_ON, "lit_powerstone_furnace"},
+    {CEILING_CABLE, "ceiling_power_cable"}, {CEILING_CABLE_ON, "lit_ceiling_power_cable"},
 };
 }  // namespace
 
@@ -150,6 +153,7 @@ const char* itemKey(ItemId id) {
     if (isStairs(id)) return kStairsKeys[stairsMaterial(id)];
     if (isDocument(id)) return kDocumentKeys[id - OLD_DOCUMENT];
     if (isSkeletonHead(id)) return "skeleton_head";
+    if (isTorch(id)) return "torch";
     if (isSlab(id)) return kSlabKeys[(id - SLAB) / 3];
     for (const KeyEntry& e : kKeys)
         if (e.id == id) return e.key;
@@ -225,7 +229,7 @@ const char* itemName(ItemId id) {
     if (isSkeletonHead(id)) return "Lebka kostlivce";
     if (isSlab(id)) return kSlabNames[(id - SLAB) / 3];
     if (isStainedGlass(id)) return kGlassNames[id - STAINED_GLASS];
-    if (isWallCable(id)) return "Napájecí kabel";
+    if (isWallCable(id) || isCeilingCable(id)) return "Napájecí kabel";
     if (isWallSwitch(id)) return "Vypínač";
     switch (id) {
         case TAR: return "Dehet";
@@ -279,7 +283,14 @@ const char* itemName(ItemId id) {
         case EGG_HUSKING: return "Vejce: Husking";
         case VOID_BRICK_EYE: return "Oko v prázdnotných cihlách";
         case CRIMSON_STONE: return "Karmínový kámen";
-        default: break;
+        case TORCH: return "Pochodeň";
+        case CRIMSON_PLANKS: return "Karmínová prkna";
+        case CRIMSON_LOG: return "Karmínový kmen";
+        case SHIELD: return "Štít";
+        case EXPLORER_MAP: return "Průzkumná mapa";
+        case EGG_HOGMAN: return "Vejce: Prasák";
+        case POWERSTONE_FURNACE: case POWERSTONE_FURNACE_ON: return "Powerstonová pec";
+        default: if (isTorch(id)) return "Pochodeň"; break;
     }
     switch (id) {
         case STONE: return "Kámen";
@@ -496,6 +507,7 @@ int toolDurability(ItemId id) {
     if ((id >= BRONZE_PICKAXE && id <= BRONZE_SHOVEL) || id == BRONZE_SWORD) return 320;
     if (id == BUCKET || id == WATER_BUCKET || id == LAVA_BUCKET || id == BOSS_COMPASS || id == FORTRESS_COMPASS) return 0;
     if (id == BRUSHER) return 64;
+    if (id == SHIELD) return 336;
     switch (toolTier(id)) {
         case 1: return 59;
         case 2: return 131;
@@ -526,7 +538,7 @@ float armorReduction(const ItemStack armor[4]) {
 int maxStack(ItemId id) {
     if (const ModItem* m = id >= kModIdBase ? ModRegistry::get().item(id) : nullptr) return m->stack;
     if (id == WATER_BUCKET || id == LAVA_BUCKET || id == BOSS_COMPASS || id == CAKE || id == MILK_BUCKET || id == MAP || id == ANNIV_MEDAL ||
-        id == FORTRESS_COMPASS)
+        id == FORTRESS_COMPASS || id == EXPLORER_MAP)
         return 1;
     if (isSkeletonHead(id) || isDocument(id) || id == POWERSTONE_RELIC) return 16;
     if (id == BUCKET || isSpawnEgg(id)) return 16;
@@ -569,7 +581,7 @@ float hardness(ItemId id) {
         case COBBLESTONE: case PLANKS: case LOG: case BRICKS: case NETHER_BRICK: return 2.0f;
         case CRAFTING_TABLE: return 2.5f;
         case COAL_ORE: case IRON_ORE: return 3.0f;
-        case FURNACE: case LIT_FURNACE: return 3.5f;
+        case FURNACE: case LIT_FURNACE: case POWERSTONE_FURNACE: case POWERSTONE_FURNACE_ON: return 3.5f;
         case OBSIDIAN: return 50.0f;
         case SNOW_BLOCK: return 0.2f;
         case CLAY: return 0.6f;
@@ -593,7 +605,7 @@ float hardness(ItemId id) {
         default:
             if (isStairs(id) || isSlab(id)) return hardness(shapeMaterial(id));
             if (isStainedGlass(id)) return 0.3f;
-            if (isWallCable(id) || isWallSwitch(id)) return 0.0f;
+            if (isWallCable(id) || isWallSwitch(id) || isCeilingCable(id)) return 0.0f;
             if (isBalloon(id) || id == CONFETTI_BLOCK) return 0.1f;
             if (id == PARTY_LANTERN) return 0.5f;
             if (id == ANNIV_LOGO || id == FESTIVE_BRICKS) return 2.0f;
@@ -606,7 +618,8 @@ float hardness(ItemId id) {
             if (isTrapdoor(id)) return 3.0f;
             if (isBed(id)) return 0.2f;
             if (isSapling(id) || isCrop(id)) return 0.0f;
-            if (id == VOID_PLANKS || id == NETHERPERK_PLANKS) return 2.0f;
+            if (id == VOID_PLANKS || id == NETHERPERK_PLANKS || id == CRIMSON_PLANKS) return 2.0f;
+            if (isTorch(id)) return 0.0f;
             if (isLeaves(id)) return 0.2f;
             if (isLog(id) || id == SPRUCE_PLANKS) return 2.0f;
             return 1.0f;
@@ -625,7 +638,7 @@ ToolKind preferredTool(ItemId id, int& requiredTier) {
     }
     switch (id) {
         case STONE: case COBBLESTONE: case BRICKS: case NETHER_BRICK: case NETHERRACK: case COAL_ORE:
-        case FURNACE: case LIT_FURNACE: case SANDSTONE: case STONE_BRICKS: case MOSSY_COBBLESTONE:
+        case FURNACE: case LIT_FURNACE: case POWERSTONE_FURNACE: case POWERSTONE_FURNACE_ON: case SANDSTONE: case STONE_BRICKS: case MOSSY_COBBLESTONE:
             requiredTier = 1;
             return ToolKind::Pickaxe;
         case BRONZE_ORE: case BRONZE_BLOCK:
@@ -645,7 +658,8 @@ ToolKind preferredTool(ItemId id, int& requiredTier) {
         case VOID_STONE: case VOID_GRASS: case VOID_STONE_BRICKS: case NETHER_GRASS: case WASTELAND_GRASS: case VOID_BRICK_EYE: case CRIMSON_STONE:
             requiredTier = 1;
             return ToolKind::Pickaxe;
-        case PUMPKIN: case VOID_LOG: case EYE_LOG: case NETHERPERK_LOG: case VOID_PLANKS: case NETHERPERK_PLANKS: return ToolKind::Axe;
+        case PUMPKIN: case VOID_LOG: case EYE_LOG: case NETHERPERK_LOG: case VOID_PLANKS: case NETHERPERK_PLANKS:
+        case CRIMSON_LOG: case CRIMSON_PLANKS: return ToolKind::Axe;
         case POWERSTONE_ORE: case POWERSTONE_BLOCK:
             requiredTier = 2;  // a stone pickaxe
             return ToolKind::Pickaxe;
@@ -733,6 +747,7 @@ ItemId dropFor(ItemId block, float roll, ItemId tool) {
         case NETHER_SPROUTS: case CRIMSON_ROOTS: return AIR;
         case HARDENED_STONE: return HARDENED_STONE;
         case LIT_FURNACE: return FURNACE;
+        case POWERSTONE_FURNACE_ON: return POWERSTONE_FURNACE;
         default:
             if (isChest(block)) return CHEST;
             if (isDoor(block)) return block >= IRON_DOOR ? IRON_DOOR_ITEM : OAK_DOOR_ITEM;  // either half gives the door
@@ -742,8 +757,9 @@ ItemId dropFor(ItemId block, float roll, ItemId tool) {
             if (isSkeletonHead(block)) return SKELETON_HEAD;  // a double slab gives two
             if (isSlab(block)) return slabId((block - SLAB) / 3, 0);
             if (isStainedGlass(block)) return AIR;  // glass breaks
-            if (isWallCable(block)) return POWER_CABLE;
+            if (isWallCable(block) || isCeilingCable(block)) return POWER_CABLE;
             if (isWallSwitch(block)) return SWITCH;
+            if (isTorch(block)) return TORCH;
             return isPlaceable(block) ? block : (ItemId)AIR;
     }
 }

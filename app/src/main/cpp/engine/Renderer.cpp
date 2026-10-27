@@ -33,6 +33,7 @@ out float v_dist;
 out float v_block;
 out vec4 v_shadow;
 out float v_kind;
+out vec3 v_world;
 void main() {
     // 1.5.5: the mesher marks swaying vertices (leaves, plant tops) and water surfaces in a_block.
     float kind = floor(a_block * 0.5);
@@ -53,6 +54,7 @@ void main() {
     v_dist = length(p.xz - u_cam.xz);
     v_shadow = u_lightMvp * vec4(p, 1.0);
     v_kind = kind;
+    v_world = p;
 })";
 
 // The shadow pass: depth from the sun, leaves and glass cut out like in the world shader.
@@ -79,10 +81,11 @@ void main() {
 const char* kShadowFs = R"(#version 300 es
 precision mediump float;
 uniform sampler2D u_atlas;
+uniform float u_alphaTest;
 in vec2 v_uv;
 out vec4 o_color;
 void main() {
-    if (texture(u_atlas, v_uv).a < 0.5) discard;
+    if (u_alphaTest > 0.5 && texture(u_atlas, v_uv).a < 0.5) discard;
     o_color = vec4(1.0);
 })";
 
@@ -202,6 +205,8 @@ bool Renderer::setShader(GraphicsMode mode, const ShaderProfile& profile) {
     uWave_ = glGetUniformLocation(worldProg_, "u_wave");
     uWaveTime_ = glGetUniformLocation(worldProg_, "u_waveTime");
     uShadowStrength_ = glGetUniformLocation(worldProg_, "u_shadowStrength");
+    uHandLight_ = glGetUniformLocation(worldProg_, "u_handLight");
+    glUniform4f(uHandLight_, 0, 0, 0, 0);
     glUniform1f(uWave_, 0);
     glUniform1f(uShadowStrength_, 0);
     glUniformMatrix4fv(uLightMvp_, 1, GL_FALSE, Mat4::identity().m);
@@ -217,6 +222,7 @@ bool Renderer::init() {
         uShadowLightMvp_ = glGetUniformLocation(shadowProg_, "u_lightMvp");
         uShadowWave_ = glGetUniformLocation(shadowProg_, "u_wave");
         uShadowWaveTime_ = glGetUniformLocation(shadowProg_, "u_waveTime");
+        uShadowAlphaTest_ = glGetUniformLocation(shadowProg_, "u_alphaTest");
         glUseProgram(shadowProg_);
         glUniform1i(glGetUniformLocation(shadowProg_, "u_atlas"), 0);
     }
@@ -408,6 +414,7 @@ void Renderer::drawFirstPerson(const std::vector<Vertex>& skinVerts, const std::
     glUniform3f(uCamPos_, 0, 0, 0);
     glUniform2f(uFogRange_, 1000, 2000);  // no fog on the hand
     glUniform1f(uShadowStrength_, 0);  // the hand lives in its own space: no sun shadows, no swaying
+    glUniform4f(uHandLight_, 0, 0, 0, 0);
     glUniform1f(uWave_, 0);
     if (skin_ && !skinVerts.empty()) drawDynamic(skinVerts, skin_, &proj);
     if (!atlasVerts.empty()) drawDynamic(atlasVerts, atlas_, &proj);
@@ -492,6 +499,7 @@ void Renderer::drawShadowMap(const Mat4& lightMvp, const Vec3& centre, float wav
     glUniformMatrix4fv(uShadowLightMvp_, 1, GL_FALSE, lightMvp.m);
     glUniform1f(uShadowWave_, wave);
     glUniform1f(uShadowWaveTime_, shaderTime_);
+    glUniform1f(uShadowAlphaTest_, 1);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, atlas_);
     glDisable(GL_CULL_FACE);  // thin leaves and plants cast shadows from both sides
@@ -505,6 +513,13 @@ void Renderer::drawShadowMap(const Mat4& lightMvp, const Vec3& centre, float wav
             glBindVertexArray(m.vao[0]);
             glDrawArrays(GL_TRIANGLES, 0, m.count[0]);
         }
+    }
+    if (!casters_.empty()) {
+        // Players and mobs: their skins have see-through parts, so no alpha test.
+        glUniform1f(uShadowAlphaTest_, 0);
+        glUniform1f(uShadowWave_, 0);
+        streamDraw(casters_);
+        glDisable(GL_CULL_FACE);  // streamDraw turns it back on
     }
     glDisable(GL_POLYGON_OFFSET_FILL);
     glEnable(GL_CULL_FACE);
@@ -560,6 +575,7 @@ void Renderer::drawWorld(const Player& player, Dimension dim, const RayHit& sele
     glUniform1f(uWave_, wave);
     glUniform1f(uWaveTime_, shaderTime_);
     glUniform1f(uShadowStrength_, shadows ? sunStrength_ : 0.0f);
+    glUniform4f(uHandLight_, handLight_.x, handLight_.y, handLight_.z, handLightStrength_);
     glUniformMatrix4fv(uLightMvp_, 1, GL_FALSE, lightMvp.m);
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, shadows ? shadowTex_ : 0);

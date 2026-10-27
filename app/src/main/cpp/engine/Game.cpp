@@ -178,6 +178,8 @@ bool Game::onBack() {
         case Screen::Chest:
         case Screen::Trade: setScreen(Screen::Playing); break;
         case Screen::Document: setScreen(Screen::Playing); break;
+        case Screen::Credits:
+        case Screen::Trailers: setScreen(Screen::Title); break;
         case Screen::Death: break;
     }
     return true;
@@ -225,15 +227,14 @@ void Game::loadTextures() {
                 std::copy_n(&atlas.rgba[(sy * atlas.size + sx) * 4], 4, &oreBase_[((size_t)i * 256 + y * 16 + x) * 4]);
             }
     }
-    applyOreRedesign(session_ && session_->info().expOreRedesign);
 }
 
 void Game::applyShaders() {
     shadersDirty_ = false;
-    appliedGraphics_ = settings_.graphics;
+    appliedGraphics_ = playSettings().graphics;
     const std::string dir = packs_.shaderPackDir();
     shaderProfile_ = dir.empty() ? ShaderProfile{} : loadShaderPack(dir, &packWarnings_);
-    if (!renderer_.setShader(settings_.graphics, shaderProfile_))
+    if (!renderer_.setShader(appliedGraphics_, shaderProfile_))
         packWarnings_.push_back(shaderProfile_.name + ": world.fsh did not compile, the Vibrant shader is used");
 }
 
@@ -337,8 +338,20 @@ void Game::updateMusic(float dt) {
     musicBiomeNext_ = !musicBiomeNext_;
 }
 
+bool Game::saverActive() const {
+    const int level = batteryLevel_;
+    return settings_.batterySaver == 2 || (settings_.batterySaver == 1 && level >= 0 && level <= 35 && !charging_);
+}
+
 Settings Game::playSettings() const {
     Settings s = settings_;
+    if (saverActive()) {
+        // Battery saver: a shorter view, no clouds and the plain shader (no shadow pass).
+        s.renderDistance = std::min(s.renderDistance, 4);
+        s.clouds = false;
+        s.shadows = s.waves = false;
+        s.graphics = GraphicsMode::Classic;
+    }
     if (!profile_.isDeveloper()) {
         // Developer modes and experiments exist only for the developer account.
         s.devGodMode = s.devFly = s.devInstantMine = s.devDebug = s.devNoclip = false;
@@ -386,7 +399,6 @@ void Game::refreshWorldList() {
 void Game::startSession(const WorldInfo& info, const PlayerState& player) {
     endSession();
     session_ = std::make_unique<Session>(info, player);
-    applyOreRedesign(info.expOreRedesign);  // experiments belong to the world
     chat_.clear();  // a new world starts with an empty chat
     session_->onVibrate = [this](int ms) {
         if (onVibrate) onVibrate(ms);
@@ -423,7 +435,6 @@ void Game::endSession() {
     session_->save();
     backupWorld(session_->info().folder, dataDir_ + "/backups", 3);  // a copy of the last three plays
     session_.reset();
-    applyOreRedesign(false);
     profile_.save(profilePath_);
     meshedWorld_ = nullptr;
 }
@@ -452,8 +463,17 @@ void Game::frame(double time) {
     if (!hasSurface_) return;
     float dt = lastTime_ > 0 ? (float)std::min(time - lastTime_, 0.1) : 0.016f;
     lastTime_ = now_ = time;
-    if (shadersDirty_ || settings_.graphics != appliedGraphics_) applyShaders();
-    renderer_.setEffects(settings_.shadows, settings_.waves);
+    {
+        const Settings eff = playSettings();
+        if (shadersDirty_ || eff.graphics != appliedGraphics_) applyShaders();
+        renderer_.setEffects(eff.shadows, eff.waves);
+        const bool saver = saverActive();
+        if (saver && !saverWasOn_ && settings_.batterySaver == 1) {
+            toast_ = trf("Úsporný režim: baterie {0} %", {std::to_string((int)batteryLevel_)});
+            toastUntil_ = time + 5;
+        }
+        saverWasOn_ = saver;
+    }
     if (textureReload_.exchange(false) || texturesWinter_ != playSettings().addonWinter) loadTextures();
     if (packsReload_.exchange(false)) rebuildFromPacks();
     if (!languageSent_ && onLanguage) {
@@ -721,6 +741,8 @@ void Game::frame(double time) {
         case Screen::Invite: inviteScreen(); break;
         case Screen::OfflineGuide: offlineGuideScreen(); break;
         case Screen::Document: documentScreen(); break;
+        case Screen::Credits: creditsScreen(); break;
+        case Screen::Trailers: trailersScreen(); break;
         case Screen::Playing: break;
     }
 
@@ -1155,7 +1177,97 @@ void Game::titleScreen() {
     }
     ui_.text(3, H - 10, kVersion, kText);
     std::string note = "VoxelSoftworks";
-    ui_.text(W - ui_.textWidth(note) - 3, H - 10, note, kText);
+    ui_.text(W - ui_.textWidth(note) - 3, H - 10, note, kAccent);
+    // 1.5.7: the studio name opens the credits.
+    if (ui_.tapped(W - ui_.textWidth(note) - 8, H - 16, ui_.textWidth(note) + 8, 16)) {
+        creditsStart_ = now_;
+        setScreen(Screen::Credits);
+    }
+}
+
+void Game::creditsScreen() {
+    const float W = ui_.width(), H = ui_.height();
+    // Rolling credits over the dimmed menu, in the style of the game's pixel font.
+    ui_.fill(0, 0, W, H, {0.03f, 0.03f, 0.06f, 0.93f});
+    struct Line {
+        const char* text;
+        float scale;
+        Color color;
+        bool translate;
+    };
+    const Color gold{1.0f, 0.82f, 0.43f, 1}, white{1, 1, 1, 1}, dim{0.75f, 0.75f, 0.8f, 1}, green{0.63f, 0.92f, 0.5f, 1};
+    static const Line lines[] = {
+        {"VOXELSOFTWORKS", 2, white, false},
+        {"", 1, white, false},
+        {"VOXELCRAFT ALPHA", 3, gold, false},
+        {"- GAME CREDITS -", 2, gold, false},
+        {"", 1, white, false},
+        {"+ LEAD DEVELOPER +", 2, gold, false},
+        {"Hoppy_Hopsy21", 2, white, false},
+        {"", 1, white, false},
+        {"+ AI COLLABORATION +", 2, gold, false},
+        {"Claude, by Anthropic", 2, white, false},
+        {"", 1, white, false},
+        {"TECHNICAL STACK", 2, gold, false},
+        {"Custom C++ engine, OpenGL ES 3.0", 1, dim, false},
+        {"GLSL shader pipeline: Classic and Enhanced", 1, dim, false},
+        {"Native Android runtime (NDK)", 1, dim, false},
+        {"", 1, white, false},
+        {"GAME WORLD", 2, gold, false},
+        {"Overworld and Crimson Void", 1, dim, false},
+        {"Cornerstone Dimension", 1, dim, false},
+        {"Powerstone Wastelands", 1, dim, false},
+        {"", 1, white, false},
+        {"MUSIC, TEXTURES AND TRAILERS", 2, gold, false},
+        {"Made for VoxelCraft, our own", 1, dim, false},
+        {"", 1, white, false},
+        {"Made with love by and for people with autism", 1, green, false},
+        {"Special thanks to our community and modders!", 1, green, false},
+        {"", 1, white, false},
+        {"(c) 2026 VoxelSoftworks", 1, dim, false},
+    };
+    float y = H - (float)(now_ - creditsStart_) * 18;  // rolls up
+    float total = 0;
+    for (const Line& l : lines) total += (l.text[0] ? 10 : 6) * l.scale + 4;
+    for (const Line& l : lines) {
+        if (l.text[0] && y > -30 && y < H + 10) ui_.textCentered(W / 2, y, l.text, l.color, l.scale);
+        y += (l.text[0] ? 10 : 6) * l.scale + 4;
+    }
+    // Little blocks along the sides, like the corner art of the poster.
+    for (int k = 0; k < 3; ++k) {
+        static const int kTiles[3] = {T_GRASS_SIDE, T_COBBLE, T_PLANKS};
+        ui_.tile(6 + k * 14, 6, 12, kTiles[k], {1, 1, 1, 0.9f});
+        ui_.tile(W - 18 - k * 14, 6, 12, kTiles[k], {1, 1, 1, 0.9f});
+    }
+    // When the roll is over the special access opens by itself; Skip goes there at once.
+    if (now_ - creditsStart_ > (H + total) / 18) setScreen(Screen::Trailers);
+    if (ui_.button(W - 70, H - 26, 64, 20, "Přeskočit", true, true)) setScreen(Screen::Trailers);
+    if (ui_.button(6, H - 26, 64, 20, "Zpět")) setScreen(Screen::Title);
+}
+
+void Game::trailersScreen() {
+    float x, y, w, h;
+    menuWindow(x, y, w, h, false);
+    ui_.text(x + 2, y + 2, "Speciální přístup: trailery", kTitle, 1, false);
+    ui_.text(x + 2, y + 14, "Každá verze VoxelCraftu ve videu, od 0.1 po 1.5.5.", kTextDim, 1, false);
+    struct Trailer {
+        const char* title;
+        const char* asset;
+    };
+    static const Trailer trailers[] = {
+        {"0.1 - 1.2.0: šestiminutový příběh", "trailers/t01_0.1-1.2.0.mp4"},
+        {"1.3.0: vesnice a farmaření", "trailers/t02_1.3.0.mp4"},
+        {"1.4.0: módy, jeskyně a online", "trailers/t03_1.4.0.mp4"},
+        {"1.5.0: Forgotten Powerstone", "trailers/t04_1.5.0.mp4"},
+        {"1.5.1: opravená edice", "trailers/t05_1.5.1.mp4"},
+        {"1.5.5: The Shaders Update", "trailers/t06_1.5.5.mp4"},
+    };
+    const float rowH = 22, top = y + 28, colW = (w - 8) / 2;
+    for (int i = 0; i < 6; ++i) {
+        const float bx = x + (i % 2) * (colW + 8), by = top + (i / 2) * (rowH + 6);
+        if (ui_.button(bx, by, colW, rowH, trailers[i].title, (bool)onPlayVideo) && onPlayVideo) onPlayVideo(trailers[i].asset);
+    }
+    if (ui_.button(x + w / 2 - 60, y + h - 26, 120, 22, "Zpět")) setScreen(Screen::Title);
 }
 
 void Game::worldListScreen() {
@@ -1269,7 +1381,7 @@ void Game::worldListScreen() {
             newWorldName_ = "Můj svět";
             newWorldSeed_.clear();
             newWorldMode_ = GameMode::Survival;
-            newWorldFlat_ = newWorldCoords_ = newWorldKeepInventory_ = newWorldCommands_ = newWorldExpOres_ = newWorldExpOpen_ = false;
+            newWorldFlat_ = newWorldCoords_ = newWorldKeepInventory_ = newWorldCommands_ = newWorldExpLiquids_ = newWorldExpMaps_ = newWorldExpOpen_ = false;
             setScreen(Screen::CreateWorld);
         }
         // The Multiplayer tab is at the top; this place now imports a world (.vcworld).
@@ -1332,7 +1444,7 @@ void Game::createWorldScreen() {
     std::string info = trf("Biomy a Nether z {0} aktivních balíčků", {std::to_string(enabled)});
     ui_.text(x, cy + 108, info, kTextDim, 1, false, w);
     // 1.5.1: Experimental Features, for everyone, saved with the world.
-    if (ui_.button(x, cy + 120, col, 18, newWorldExpOres_ ? trf("Experimentální funkce ({0})", {"1"}) : tr("Experimentální funkce")))
+    if (ui_.button(x, cy + 120, col, 18, newWorldExpLiquids_ || newWorldExpMaps_ ? trf("Experimentální funkce ({0})", {std::to_string(newWorldExpLiquids_ + newWorldExpMaps_)}) : tr("Experimentální funkce")))
         newWorldExpOpen_ = !newWorldExpOpen_;
     if (newWorldExpOpen_) {
         const float ex = x + 8, ey = y + 24, ew = w - 16;
@@ -1340,12 +1452,16 @@ void Game::createWorldScreen() {
         ui_.text(ex + 6, ey + 6, "Experimentální funkce", kTitle, 1, false);
         ui_.text(ex + 6, ey + 18, "Rozpracovaný obsah dalších verzí. Platí jen pro tento svět a po vytvoření je nelze změnit.",
                  kTextDim, 1, false, ew - 12);
-        ui_.frame(ex + 6, ey + 40, ew - 12, 40, kPanelInner, kSeparator);
-        ui_.text(ex + 12, ey + 46, "Nový vzhled rud", kText, 1, false);
-        ui_.text(ex + 12, ey + 56, "Náhled 1.6.0 (nedokončeno): nové textury uhlí, železa, bronzu, oceli, rubínu a powerstonu.",
-                 kTextDim, 1, false, ew - 50);
-        ui_.checkbox(ex + ew - 30, ey + 50, newWorldExpOres_);
-        ui_.text(ex + 6, ey + 86, "Upozornění: experimenty se mohou změnit nebo zmizet.", Color{0.9f, 0.7f, 0.35f, 1}, 1, false, ew - 12);
+        // 1.5.7: the redesigned ores are standard now; these two are the new experiments.
+        auto experiment = [&](float ry, const char* name, const char* about, bool& on) {
+            ui_.frame(ex + 6, ry, ew - 12, 22, kPanelInner, kSeparator);
+            ui_.text(ex + 12, ry + 3, name, kText, 1, false);
+            ui_.text(ex + 12, ry + 12, about, kTextDim, 1, false, ew - 50);
+            ui_.checkbox(ex + ew - 30, ry + 3, on);
+        };
+        experiment(ey + 36, "Tekoucí voda a láva", "Kapaliny tečou dolů a do stran; láva s vodou ztvrdne.", newWorldExpLiquids_);
+        experiment(ey + 60, "Průzkumné mapy", "Náhled 1.6.0: mapy k dolům v truhlách a ve štěrku s nálezy.", newWorldExpMaps_);
+        ui_.text(ex + 6, ey + 86, "Upozornění: experimenty se mohou změnit nebo zmizet.", Color{0.9f, 0.7f, 0.35f, 1}, 1, false, ew - 70);
         if (ui_.button(ex + ew - 66, ey + 92, 60, 16, "Hotovo")) newWorldExpOpen_ = false;
         return;  // the panel covers the screen's other buttons
     }
@@ -1361,7 +1477,8 @@ void Game::createWorldScreen() {
         wi.showCoordinates = newWorldCoords_;
         wi.keepInventory = newWorldKeepInventory_;
         wi.allowCommands = newWorldCommands_;
-        wi.expOreRedesign = newWorldExpOres_;
+        wi.expFlowingLiquids = newWorldExpLiquids_;
+        wi.expExplorationMaps = newWorldExpMaps_;
         // The world keeps its own copy of the generator, so later pack edits do not reshape it.
         GenConfig config = packs_.buildConfig();
         config.flat = newWorldFlat_;
@@ -1396,29 +1513,34 @@ void Game::confirmDeleteScreen() {
 void Game::settingsScreen() {
     float x, y, w, h;
     menuWindow(x, y, w, h, true);
-    const char* tabs[] = {"Dotyk", "Video", "Zvuk", "Profil", "Globální zdroje"};
+    // 1.5.7: graphics and shaders have a tab of their own, shown after Video.
+    const char* tabs[] = {"Dotyk", "Video", "Zvuk", "Profil", "Globální zdroje", "Grafika"};
+    const int order[] = {0, 1, 5, 2, 3, 4};
     const float tabW = std::min(150.0f, std::floor(w * 0.3f));
-    for (int i = 0; i < 5; ++i)
-        if (ui_.button(x, y + i * 26, tabW, 22, tabs[i], true, settingsTab_ == i)) settingsTab_ = i;
+    for (int i = 0; i < 6; ++i)
+        if (ui_.button(x, y + i * 26, tabW, 22, tabs[order[i]], true, settingsTab_ == order[i])) settingsTab_ = order[i];
 
     float px = x + tabW + 8, pw = w - tabW - 8;
     ui_.frame(px, y, pw, h - 4, kPanelInner, kSeparator);
-    const char* titles[] = {"Nastavení dotyku", "Nastavení videa", "Zvuk", "Profil", "Globální zdroje"};
+    const char* titles[] = {"Nastavení dotyku", "Nastavení videa", "Zvuk", "Profil", "Globální zdroje", "Grafika a shadery"};
     ui_.text(px + 8, y + 7, titles[settingsTab_], kTitle, 1, false);
 
     float ry = y + 22;
     // The video tab has the most rows; they are a little tighter there.
-    const float rowH = settingsTab_ == 1 ? 19 : 22, cx = px + pw - 8;
+    const float rowH = settingsTab_ == 1 ? 23 : settingsTab_ == 5 ? 26 : 22, cx = px + pw - 8;
+    float subW = pw - 120;  // room for the control on the right
     auto row = [&](const std::string& label, const std::string& sub) {
-        ui_.text(px + 8, ry + (sub.empty() ? rowH / 2 - 4 : 2), label, kText, 1, false, pw - 120);
-        if (!sub.empty()) ui_.text(px + 8, ry + rowH - 9, sub, kTextDim, 1, false, pw - 120);
+        ui_.text(px + 8, ry + (sub.empty() ? rowH / 2 - 4 : 3), label, kText, 1, false, pw - 120);
+        if (!sub.empty()) ui_.text(px + 8, ry + rowH - 11, sub, kTextDim, 1, false, subW);
     };
     auto endRow = [&] {
         ry += rowH;
         ui_.separator(px + 6, ry - 1, pw - 12);
     };
     auto check = [&](const std::string& label, const std::string& sub, bool& v) {
+        subW = pw - 40;  // a checkbox is narrow
         row(label, sub);
+        subW = pw - 120;
         ui_.checkbox(cx - 12, ry + 5, v);
         endRow();
     };
@@ -1449,19 +1571,6 @@ void Game::settingsScreen() {
             applyGuiScale();
         }
         endRow();
-        // 1.5.5: Classic or Enhanced graphics, and the shader pack that tunes Enhanced.
-        row("Grafika", settings_.graphics == GraphicsMode::Enhanced ? tr("Vibrant shadery, živější barvy") : tr("Původní vzhled"));
-        if (ui_.dropdown(cx - 100, ry + 2, 100, 18, settings_.graphics == GraphicsMode::Enhanced ? "Vylepšená" : "Klasická")) {
-            settings_.graphics = settings_.graphics == GraphicsMode::Enhanced ? GraphicsMode::Classic : GraphicsMode::Enhanced;
-            shadersDirty_ = true;
-        }
-        endRow();
-        if (settings_.graphics == GraphicsMode::Enhanced) {
-            row("Shader pack", packs_.shaderPackDir().empty() ? tr("Žádný (Vibrant). Zapni balíček se složkou shaders") : shaderProfile_.name);
-            endRow();
-            check("Stíny", "Slunce a měsíc vrhají stíny", settings_.shadows);
-            check("Pohyb listí a vody", "Listí a tráva se vlní ve větru, voda se čeří", settings_.waves);
-        }
         float v = (settings_.brightness - 0.6f) / 0.9f;
         if (slider("Jas", std::to_string((int)std::round(settings_.brightness * 100)) + " %", v))
             settings_.brightness = 0.6f + v * 0.9f;
@@ -1475,9 +1584,38 @@ void Game::settingsScreen() {
         if (ui_.dropdown(cx - 100, ry + 2, 100, 18, cams[settings_.cameraMode])) settings_.cameraMode = (settings_.cameraMode + 1) % 3;
         endRow();
         check("Pohupování kamery", "", settings_.viewBobbing);
+        check("Mapa", "Vpravo nahoře, ťuknutím se zvětší", settings_.showMap);
+    } else if (settingsTab_ == 5) {
+        // 1.5.5: Classic or Enhanced graphics, and the shader pack that tunes Enhanced.
+        // 1.5.7: the battery saver.
+        {
+            const char* modes[3] = {"Vypnuto", "Automaticky", "Vždy"};
+            row("Úspora baterie", saverActive() ? tr("Zapnuto: 30 FPS, kratší dohled, bez stínů") : tr("Při 35 % a méně, když se nenabíjí"));
+            if (ui_.dropdown(cx - 100, ry + 4, 100, 18, modes[settings_.batterySaver])) settings_.batterySaver = (settings_.batterySaver + 1) % 3;
+            endRow();
+        }
+        row("Grafika", settings_.graphics == GraphicsMode::Enhanced ? tr("Vibrant shadery, živější barvy") : tr("Původní vzhled"));
+        if (ui_.dropdown(cx - 100, ry + 4, 100, 18, settings_.graphics == GraphicsMode::Enhanced ? "Vylepšená" : "Klasická")) {
+            settings_.graphics = settings_.graphics == GraphicsMode::Enhanced ? GraphicsMode::Classic : GraphicsMode::Enhanced;
+            shadersDirty_ = true;
+        }
+        endRow();
+        if (settings_.graphics == GraphicsMode::Enhanced) {
+            subW = pw - 16;
+            row("Shader pack", packs_.shaderPackDir().empty() ? tr("Žádný (Vibrant). Zapni balíček se složkou shaders") : shaderProfile_.name);
+            subW = pw - 120;
+            endRow();
+            check("Stíny", "Slunce a měsíc vrhají stíny", settings_.shadows);
+            check("Pohyb listí a vody", "Listí a tráva se vlní ve větru, voda se čeří", settings_.waves);
+        } else {
+            for (const std::string& line : wrapText("Stíny, pohyb listí a shader packy jsou ve Vylepšené grafice.", pw - 16)) {
+                ui_.text(px + 8, ry + 6, line, kTextDim, 1, false, pw - 16);
+                ry += 10;
+            }
+            ry += 8;
+        }
         check("Mraky", "", settings_.clouds);
         check("Skrýt GUI", "Jen svět, třeba na snímky", settings_.hideGui);
-        check("Mapa", "Vpravo nahoře, ťuknutím se zvětší", settings_.showMap);
     } else if (settingsTab_ == 2) {
         float v = settings_.musicVolume;
         if (slider("Hudba", std::to_string((int)std::round(v * 100)) + " %", v)) {
@@ -2852,6 +2990,7 @@ ItemStack* Game::stackAt(SlotRef ref) {
         case SlotArea::Inventory: return &inv.slots[ref.index];
         case SlotArea::Grid: return &grid_[ref.index];
         case SlotArea::Armor: return &session_->armor()[ref.index];
+        case SlotArea::Offhand: return &session_->offhand();
         case SlotArea::Chest: {
             ChestContents* c = screen_ == Screen::Chest ? session_->chest(session_->openChest) : nullptr;
             return c ? &(*c)[ref.index] : nullptr;
@@ -3189,6 +3328,12 @@ void Game::survivalInventoryScreen() {
     }
     ui_.frame(gx + kSlot + 2, gy, 50, top, {0.12f, 0.12f, 0.14f, 1}, {0, 0, 0, 1});
     drawSkinFigure(gx + kSlot + 2 + 25 - 12, gy + (top - 48) / 2, 1.5f, std::max(0, skinIndex(profile_.skin)), false);
+    {
+        // 1.5.7: the off hand, in the corner of the player's frame.
+        const float ox = gx + kSlot + 2 + 50 - kSlot, oy = gy + top - kSlot;
+        slot(ox, oy, {SlotArea::Offhand, 0});
+        if (session_->offhand().empty()) ui_.tile(ox + 2, oy + 2, kSlot - 4, T_SHIELD, {0, 0, 0, 0.25f});
+    }
     if (int points = session_->armorPoints(); points > 0) {
         ui_.icon(gx + kSlot + 5, gy + top - 11, Font::ArmorFull, {0.85f, 0.85f, 0.9f, 1});
         ui_.text(gx + kSlot + 15, gy + top - 11, std::to_string(points), kTextBright, 1, true);

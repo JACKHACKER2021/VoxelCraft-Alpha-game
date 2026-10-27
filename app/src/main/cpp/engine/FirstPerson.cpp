@@ -159,6 +159,24 @@ void HandAnimator::place() {
 
 void HandAnimator::use() { place_ = 0; }
 
+void buildOffhandFirstPerson(ItemId id, bool raised, const HandAnimator& hand, float light, std::vector<Vertex>& atlas) {
+    if (id == SHIELD) {
+        // Low in the lower left; crouching brings it up in front of the view.
+        Transform tr;
+        tr.t = raised ? Vec3(-0.22f, -0.32f, -0.62f) : Vec3(-0.62f, -0.66f, -0.85f);
+        tr.ry = raised ? 0.15f : 0.45f;
+        tr.t.y -= hand.bob() * 0.02f * std::fabs(std::sin(hand.bobPhase()));
+        appendItemModel(T_SHIELD, light, 1 / 16.0f, [&](const Vec3& q) { return tr.apply(q * 0.75f); }, atlas);
+    } else if (id == TORCH) {
+        Transform tr;
+        tr.t = {-0.5f, -0.4f, -0.75f};
+        tr.ry = 0.45f;
+        tr.rz = -0.3f;
+        tr.t.y -= hand.bob() * 0.02f * std::fabs(std::sin(hand.bobPhase()));
+        heldFlat(tr, id, light, atlas);
+    }
+}
+
 void buildFirstPerson(const HandAnimator& hand, float light, std::vector<Vertex>& skin, std::vector<Vertex>& atlas) {
     skin.clear();
     atlas.clear();

@@ -18,17 +18,22 @@ uniform vec3 u_fogColor;
 uniform vec2 u_fogRange;
 uniform float u_alpha;
 uniform float u_brightness;
+uniform vec4 u_handLight;
 in vec2 v_uv;
 in float v_light;
 in float v_dist;
 in float v_block;
+in vec3 v_world;
 out vec4 o_color;
 void main() {
     vec4 c = texture(u_atlas, v_uv);
     if (u_alpha >= 1.0 && c.a < 0.5) discard;
     float fog = clamp((v_dist - u_fogRange.x) / (u_fogRange.y - u_fogRange.x), 0.0, 1.0);
+    // A torch in the hand lights the blocks around the player.
+    float hand = u_handLight.w * pow(clamp(1.0 - distance(v_world, u_handLight.xyz) / 11.0, 0.0, 1.0), 1.4);
+    float block = max(v_block, hand);
     // The sky's light dims at night; lamps and lava keep their warm light.
-    vec3 lit = max(vec3(v_light * u_brightness), vec3(v_block, v_block * 0.9, v_block * 0.72));
+    vec3 lit = max(vec3(v_light * u_brightness), vec3(block, block * 0.9, block * 0.72));
     o_color = vec4(mix(min(c.rgb * lit, vec3(1.0)), u_fogColor, fog), c.a * u_alpha);
 })";
 
@@ -50,6 +55,8 @@ uniform vec3 u_shade;
 uniform float u_fogStrength;
 uniform highp sampler2DShadow u_shadowMap;
 uniform float u_shadowStrength;
+uniform vec4 u_handLight;
+in vec3 v_world;
 in vec2 v_uv;
 in float v_light;
 in float v_dist;
@@ -82,7 +89,9 @@ void main() {
     sky *= mix(vec3(1.0), vec3(1.0 + u_warmth, 1.0 + u_warmth * 0.35, 1.0 - u_warmth * 0.45), smoothstep(0.7, 1.0, v_light));
     // Lamps, lava and torches: a warm light that softly flickers.
     float flicker = 1.0 + 0.04 * sin(u_time * 7.0 + v_dist * 0.7);
-    vec3 lamp = vec3(v_block, v_block * 0.86, v_block * 0.62) * flicker;
+    float hand = u_handLight.w * pow(clamp(1.0 - distance(v_world, u_handLight.xyz) / 11.0, 0.0, 1.0), 1.4);
+    float block = max(v_block, hand);
+    vec3 lamp = vec3(block, block * 0.86, block * 0.62) * flicker;
     vec3 col = c.rgb * max(sky, lamp) + c.rgb * lamp * u_glow * (1.0 - v_light);
     float g = dot(col, vec3(0.299, 0.587, 0.114));
     col = mix(vec3(g), col, u_saturation);
@@ -118,6 +127,7 @@ A shader pack is a normal pack (Settings > Packs) with a "shaders" folder:
         uniform sampler2D u_atlas; vec3 u_fogColor; vec2 u_fogRange; float u_alpha;
         float u_brightness; float u_time; vec2 u_screen; in vec4 v_shadow and
         highp sampler2DShadow u_shadowMap with float u_shadowStrength (sun shadows, 0 = off);
+        in vec3 v_world and vec4 u_handLight (xyz where a held torch is, w its strength);
         and every number above as
         u_saturation, u_contrast, u_warmth, u_vignette, u_glow, vec3 u_shade, u_fogStrength
       and writes "out vec4 o_color". Discard pixels with alpha < 0.5 when u_alpha >= 1.

@@ -53,6 +53,11 @@ const Achievement kAchievements[] = {
     {"historian", "Kronikář", "Přečti starý dokument.", 20},
     {"lore_master", "Pád zapomenutého království", "Přečti všech osm starých dokumentů.", 150},
     {"husking_hunter", "Konec Huskinga", "Poraz Huskinga.", 50},
+    // 1.5.7
+    {"torch", "Světlo do tmy", "Postav pochodeň.", 10},
+    {"shield_block", "Kryt", "Zastav útok štítem.", 25},
+    {"hogman_trade", "Obchod s Prasákem", "Dej Prasákovi powerstone.", 40},
+    {"explorer", "Po stopách horníků", "Najdi důl podle průzkumné mapy.", 60},
 };
 const int kAchievementCount = sizeof(kAchievements) / sizeof(kAchievements[0]);
 

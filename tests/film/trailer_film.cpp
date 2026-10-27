@@ -3025,3 +3025,32 @@ void shaderTimelapse(const fs::path& out, int variant) {
 }
 SHOT(h05_timelapse_classic) { shaderTimelapse(out, 0); }
 SHOT(h05_timelapse_enhanced) { shaderTimelapse(out, 1); }
+
+// ---------------------------------------------------------------- 1.5.7 checks
+SHOT(k01_fortress) {
+    Director d(out, "k01");
+    d.openWorld("Fortress", 4242, GameMode::Creative);
+    goNether(d);
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    int fx, fy, fz;
+    w.nearestStructure((int)s.player().pos.x, (int)s.player().pos.z, fx, fy, fz);
+    Player& p = s.player();
+    p.flying = true;
+    travel(d, Vec3(fx + 0.5f, fy + 40.0f, fz + 0.5f));
+    // Lift the roof off for the view: everything above the walls of the wings.
+    for (int x = fx - 44; x <= fx + 44; ++x)
+        for (int z = fz - 44; z <= fz + 44; ++z)
+            for (int y = fy + 6; y < fy + 60; ++y)
+                if (w.getBlock(x, y, z) != AIR) w.setBlock(x, y, z, AIR);
+    d.settings().hideGui = true;
+    s.mobs().mobs().clear();
+    d.idle(30);
+    d.shot("k01_fortress");
+    d.seconds(5, [&](float k) {
+        p.flying = true;
+        const float a = k * 1.2f;
+        p.pos = Vec3(fx + std::sin(a) * 30, fy + 38.0f, fz + std::cos(a) * 30);
+        d.lookNow(Vec3(fx + 0.5f, fy + 2.0f, fz + 0.5f));
+    });
+}

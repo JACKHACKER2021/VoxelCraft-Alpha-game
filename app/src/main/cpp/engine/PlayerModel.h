@@ -19,6 +19,8 @@ struct PlayerPose {
     ItemId held = 0;        // item in the right hand (0 = empty)
     ItemId armor[4] = {};   // worn helmet, chestplate, leggings, boots
     bool riding = false;     // sitting in a boat
+    ItemId offhand = 0;      // 1.5.7: a shield or torch in the left hand (0 = none shown)
+    bool sneaking = false;   // 1.5.7: crouched, the shield raised in front
 };
 
 // Builds the textured boxes of a player model (base layer plus the slightly

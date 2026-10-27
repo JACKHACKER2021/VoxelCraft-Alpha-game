@@ -198,6 +198,7 @@ std::vector<std::string> runCommand(Session& s, const std::string& line, bool ch
         else if (a == "tnt_zombie") type = MobType::TntZombie;
         else if (a == "tar" || a == "tar_monster") type = MobType::TarMonster;
         else if (a == "husking") type = MobType::Husking;
+        else if (a == "hogman" || a == "hog_man") type = MobType::Hogman;
         else return usage();
         s.summon(type);
         return {trf("Přivoláno: {0}", {tr(mobInfo(type).name)})};

@@ -81,6 +81,9 @@ struct GenConfig {
     // Generator generations, so worlds keep the terrain they were made with: 1 = before 1.5.1,
     // 2 = the 1.5.1 Crimson Desert (dunes, rock formations, minerals, buried ruins).
     int crimsonDesert = 2;
+    // 1.5.7: bigger caves with openings to the surface, crimson mineshafts and the larger
+    // fortress. Worlds from before keep their old generator (1).
+    int generation = 2;
 
     // The built-in defaults (the same content as the default pack files).
     static const GenConfig& defaults();

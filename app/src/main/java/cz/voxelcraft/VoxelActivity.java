@@ -93,6 +93,24 @@ public class VoxelActivity extends NativeActivity {
     }
     /** System back gesture; the game decides what it means. */
     private static native void nativeBack();
+    private static native void nativeBattery(int percent, boolean charging);
+
+    // 1.5.7: the battery level for the game's battery saver.
+    private final android.content.BroadcastReceiver batteryReceiver = new android.content.BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            int level = intent.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1);
+            int scale = intent.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, 100);
+            int status = intent.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1);
+            boolean charging = status == android.os.BatteryManager.BATTERY_STATUS_CHARGING
+                    || status == android.os.BatteryManager.BATTERY_STATUS_FULL;
+            try {
+                nativeBattery(level < 0 || scale <= 0 ? -1 : level * 100 / scale, charging);
+            } catch (UnsatisfiedLinkError ignored) {
+                // the native library is not loaded yet
+            }
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -284,6 +302,61 @@ public class VoxelActivity extends NativeActivity {
     }
 
     /**
+     * 1.5.7, called from native code: plays a trailer from the APK's assets full screen. The
+     * music pauses meanwhile; a tap shows the controls, back or the end closes the video.
+     */
+    @SuppressWarnings("unused")
+    private static final String TRAILER_URL = "https://raw.githubusercontent.com/JACKHACKER2021/VoxelCraft-Alpha-game/master/";
+
+    public void playVideo(String asset) {
+        runOnUiThread(() -> {
+            final android.app.Dialog d = new android.app.Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+            final android.widget.VideoView v = new android.widget.VideoView(this);
+            final android.widget.FrameLayout frame = new android.widget.FrameLayout(this);
+            frame.setBackgroundColor(0xff000000);
+            frame.addView(v, new android.widget.FrameLayout.LayoutParams(android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT, Gravity.CENTER));
+            d.setContentView(frame);
+            // The trailers are not packed in the APK (it stays small): the first play downloads one
+            // from the game's GitHub repository into the cache, later plays use that copy.
+            final File out = new File(getCacheDir(), asset.replace('/', '_'));
+            if (!out.exists()) {
+                Toast.makeText(this, str(R.string.video_downloading), Toast.LENGTH_LONG).show();
+                new Thread(() -> {
+                    File part = new File(getCacheDir(), out.getName() + ".part");
+                    try (InputStream in = new java.net.URL(TRAILER_URL + asset).openStream()) {
+                        Files.copy(in, part.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                        if (!part.renameTo(out)) throw new IOException("rename");
+                        runOnUiThread(() -> playVideo(asset));
+                    } catch (IOException e) {
+                        //noinspection ResultOfMethodCallIgnored
+                        part.delete();
+                        runOnUiThread(() -> Toast.makeText(this, str(R.string.video_failed), Toast.LENGTH_LONG).show());
+                    }
+                }).start();
+                return;
+            }
+            try {
+                final boolean hadMusic = music != null && music.isPlaying();
+                if (hadMusic) music.pause();
+                android.widget.MediaController mc = new android.widget.MediaController(this);
+                mc.setAnchorView(v);
+                v.setMediaController(mc);
+                v.setVideoPath(out.getAbsolutePath());
+                v.setOnCompletionListener(p -> d.dismiss());
+                d.setOnDismissListener(x -> {
+                    v.stopPlayback();
+                    if (hadMusic && music != null) music.start();
+                });
+                d.show();
+                v.start();
+            } catch (IOException e) {
+                Toast.makeText(this, "Video: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
+    /**
      * Called from native code: plays a track, crossfading from the current one.
      * source is "asset:music/x.mp3" (inside the APK) or a file path; an empty source stops
      * the music. When a track that does not loop ends, the game is told (RESULT_MUSIC_ENDED).
@@ -358,12 +431,18 @@ public class VoxelActivity extends NativeActivity {
     protected void onPause() {
         super.onPause();
         if (music != null && music.isPlaying()) music.pause();
+        try {
+            unregisterReceiver(batteryReceiver);
+        } catch (IllegalArgumentException ignored) {
+            // was not registered
+        }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         if (music != null && musicVolume > 0) music.start();
+        registerReceiver(batteryReceiver, new android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED));
     }
 
     @Override

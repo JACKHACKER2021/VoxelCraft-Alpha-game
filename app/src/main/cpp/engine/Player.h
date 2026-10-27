@@ -32,6 +32,7 @@ public:
     bool headInLava = false;
     bool headInTar = false;
     bool flying = false;       // creative flight
+    bool sneaking = false;     // 1.5.7: crouched: slow, a little lower, the shield raised
     bool autoJump = false;     // hop up one-block steps automatically
     float fallDistance = 0;    // blocks fallen since last on the ground
     float landedFall = 0;      // set for one update when landing, for fall damage
@@ -40,7 +41,7 @@ public:
     bool noclip = false;    // developer: flying through blocks
     float walked = 0;          // horizontal distance moved by the last update
 
-    Vec3 eye() const { return pos + Vec3(0, kEyeHeight, 0); }
+    Vec3 eye() const { return pos + Vec3(0, sneaking && !flying ? kEyeHeight - 0.25f : kEyeHeight, 0); }
     Vec3 forward() const;
     bool touches(const World& world, ItemId block) const;  // e.g. cactus
     bool collides(const World& world, const Vec3& p) const;  // the body at `p` overlaps a block

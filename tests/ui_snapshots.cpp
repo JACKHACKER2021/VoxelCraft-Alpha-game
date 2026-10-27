@@ -1,6 +1,5 @@
 // Renders the menus and HUD to PNG files with a tiny software rasterizer,
 // so the UI can be reviewed without a phone. Output: build/snapshots/*.png
-#include <cstdlib>
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -114,19 +113,29 @@ int main(int argc, char** argv) {
 
     frames(3);
     shot("01_title");
+    tap(575, 265);  // VoxelSoftworks: the credits
+    frames(200);
+    shot("01b_credits");
+    tap(570, 255);  // Skip
+    frames(2);
+    shot("01c_trailers");
+    game.onBack();
+    frames(2);
     tap(378, 121);  // Nastavení
     shot("02_settings_touch");
     tap(103, 81);
     shot("03_settings_video");
     tap(103, 107);
-    shot("03b_settings_audio");
+    shot("03a_settings_graphics");
     tap(103, 133);
+    shot("03b_settings_audio");
+    tap(103, 159);
     shot("03c_settings_profile");
     tap(514, 120);  // Úspěchy: Otevřít
     shot("03d_achievements");
     game.onBack();
     frames(1);
-    tap(103, 159);
+    tap(103, 185);
     shot("04_settings_resources");
     tap(539, 244);  // Zpět
     tap(222, 149);  // Obchod
@@ -388,7 +397,7 @@ int main(int argc, char** argv) {
     }
     setLanguage(Language::German);
     tap(378, 121);  // Settings
-    tap(103, 143);  // Profile tab
+    tap(103, 169);  // Profile tab
     shot("31_settings_profile_de");
     setLanguage(Language::Russian);
     tap(103, 91);   // Video tab

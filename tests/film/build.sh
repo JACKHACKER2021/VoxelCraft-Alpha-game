@@ -7,4 +7,4 @@ ENGINE=$(sed -n 's/^ENGINE=(\(.*\))$/\1/p' tests/run_tests.sh)
 eval "ENGINE=($ENGINE)"
 mkdir -p build/tests
 g++ -std=c++17 -O2 -g0 -I$SRC -isystem build/tests/include tests/film/trailer_film.cpp tests/film/renderer_film.cpp \
-    tests/png_writer.cpp "${ENGINE[@]}" -o build/tests/trailer_film
+    tests/png_writer.cpp "${ENGINE[@]}" -o build/tests/trailer_film -lz

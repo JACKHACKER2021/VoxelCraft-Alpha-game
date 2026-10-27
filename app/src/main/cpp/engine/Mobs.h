@@ -21,6 +21,7 @@ enum class MobType : uint8_t {
     Pig, Sheep, PumpkinSlime, ForgottenMan, CrimsonMan, Chicken, Cow, Villager,
     Spider, Bat, TntZombie, TarMonster,  // 1.4.0
     Husking,                             // 1.5.0: armless, head bent aside, spits fireballs
+    Hogman,                              // 1.5.7: a pig man of the Cornerstone Dimension; calmed by powerstone
     Count
 };
 
@@ -53,12 +54,14 @@ struct Mob {
     uint16_t variant = 0;    // a mod's mob drawn on this body (ModRegistry::mob), 0 = the original
     int killer = -1;         // multiplayer: the guest who dealt the last blow
     bool cave = false;       // spawned underground: daylight does not send it away
+    float calm = 0;          // 1.5.7 hog man: seconds it stays peaceful after a gift of powerstone
+    float barter = 0;        // 1.5.7 hog man: > 0 while it looks over the powerstone, then it pays
     bool alive() const { return deathTime <= 0; }
 };
 
 // What happened during an update, for the game to react to.
 struct MobEvent {
-    enum Kind { HitPlayer, Died, BossRoar, Explode, TarSpread, Fireball } kind;
+    enum Kind { HitPlayer, Died, BossRoar, Explode, TarSpread, Fireball, Barter } kind;
     MobType type;
     Vec3 pos;
     float damage = 0;

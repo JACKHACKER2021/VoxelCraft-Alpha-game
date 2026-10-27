@@ -2,6 +2,8 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <unordered_map>
+#include <unordered_set>
 
 #include "Audio.h"
 #include "Boats.h"
@@ -56,6 +58,8 @@ public:
     bool survival() const { return info_.mode == GameMode::Survival; }
     Inventory& inventory() { return state_.inventory; }
     std::array<ItemStack, 4>& armor() { return state_.armor; }
+    ItemStack& offhand() { return state_.offhand; }  // 1.5.7: the off hand (shield, torch...)
+    void swapOffhand() { std::swap(state_.offhand, state_.inventory.slots[state_.selectedSlot]); }
     int armorPoints() const;
     // Puts on the armour piece from the selected slot (swapping with what is worn).
     bool equipArmor(int slot);
@@ -194,7 +198,7 @@ public:
 private:
     struct Touch {
         int id = -1;
-        enum Kind { None, DPad, Look, Jump, FlyDown, Hotbar, InventoryButton, Pause, Chat, Map } kind = None;
+        enum Kind { None, DPad, Look, Jump, FlyDown, Hotbar, InventoryButton, Pause, Chat, Map, Sneak } kind = None;
         float startX = 0, startY = 0, x = 0, y = 0, lastX = 0, lastY = 0;
         double startTime = 0, lastBreak = 0;
         bool moved = false;
@@ -280,6 +284,16 @@ private:
         float time;
     };
     std::vector<Timed> saplings_, fallingLeaves_;
+    // 1.5.7: sand and gravel fall; with the Flowing Liquids experiment water and lava spread.
+    // Flowing (non-source) liquid cells remember how far they are from their source.
+    std::vector<std::array<int, 3>> changes_[3];
+    std::vector<Timed> blockTicks_;
+    std::unordered_set<uint64_t> ticking_[3];
+    std::unordered_map<uint64_t, uint8_t> flow_[3];
+    void updateBlockPhysics(float dt);
+    void tickLiquid(int dim, int x, int y, int z);
+    void saveFlow() const;
+    void loadFlow();
     std::vector<Vertex> tntVerts_, arrowVerts_;
     std::vector<Arrow> arrows_;
     float bowCharge_ = 0;
@@ -310,6 +324,9 @@ private:
     bool useBucket(ItemStack& held);
     void saveTimers() const;
     void loadTimers();
+    ChestContents structureLoot(ItemId block, uint32_t seed) const;  // generateLoot plus experiment extras
+    bool shieldBlocks(const Vec3& push);  // 1.5.7: true when a raised shield stopped the hit
+    std::vector<Vertex> shadowCasters_;  // 1.5.7: models that cast sun shadows
     std::vector<Vertex> mobVerts_;
     double protectedToast_ = -10;  // when "the spawn is protected" was last shown
     bool tarWarned_ = false;  // "the tar spreads" was shown once

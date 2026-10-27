@@ -151,6 +151,30 @@ Structure mineshaft(Rng& r) {
     return s;
 }
 
+// 1.5.7: the same tunnels dug by the old kingdom through the Cornerstone Dimension: crimson
+// log posts and plank beams, a plank floor over the lava gaps and torches on the beams.
+Structure crimsonMineshaft(Rng& r) {
+    Structure s = mineshaft(r);
+    s.name = "Crimson mineshaft";
+    for (int y = 0; y < s.sy; ++y)
+        for (int z = 0; z < s.sz; ++z)
+            for (int x = 0; x < s.sx; ++x) {
+                ItemId& b = s.at(x, y, z);
+                if (b == FENCE) b = CRIMSON_LOG;
+                else if (b == PLANKS) b = CRIMSON_PLANKS;
+            }
+    for (int z = 1; z < s.sz - 1; ++z)
+        for (int x = 1; x < s.sx - 1; ++x) {
+            if (s.at(x, 1, z) == Structure::kVoid) continue;
+            s.at(x, 0, z) = (x * 7 + z * 3) % 11 == 0 ? NETHERRACK : CRIMSON_PLANKS;  // a worn floor
+            // A torch on the floor beside a post now and then.
+            const bool post = s.at(x - 1, 1, z) == CRIMSON_LOG || s.at(x + 1, 1, z) == CRIMSON_LOG || s.at(x, 1, z - 1) == CRIMSON_LOG ||
+                              s.at(x, 1, z + 1) == CRIMSON_LOG;
+            if (post && s.at(x, 1, z) == AIR && r.chance(4)) s.at(x, 1, z) = TORCH;
+        }
+    return s;
+}
+
 void fill(Structure& s, int x0, int y0, int z0, int x1, int y1, int z1, ItemId id) {
     for (int y = y0; y <= y1; ++y)
         for (int z = z0; z <= z1; ++z)
@@ -230,6 +254,82 @@ Structure fortress(Rng& r) {
         s.at(c + k, 1, c - 3) = CHISELED_POWERSTONE_BRICKS;
         s.at(c + k, 1, c + 3) = CHISELED_POWERSTONE_BRICKS;
     }
+    return s;
+}
+
+// 1.5.7: the great fortress of new worlds: the old fortress in the middle and four wings at
+// the ends of its corridors that tell what the Cornerstone Dimension was before it fell:
+//  north  the Archive: shelves of the kingdom's chronicle, reading desks, lamps that still burn;
+//  south  the Powerstone Forge: furnaces round a channel of lava, an anvil of steel, chests of chips;
+//  east   the Throne Hall of the last king: a powerstone throne on red carpet under glass windows;
+//  west   the Crypt: cells behind nether brick bars, skulls, and debris gravel full of finds.
+Structure greatFortress(Rng& r) {
+    const Structure core = fortress(r);
+    const int off = 16, n = core.sx + 2 * off, c = n / 2;
+    Structure s = box(n, core.sy, n);
+    s.name = "Great fortress";
+    for (int y = 0; y < core.sy; ++y)
+        for (int z = 0; z < core.sz; ++z)
+            for (int x = 0; x < core.sx; ++x) s.at(x + off, y, z + off) = core.at(x, y, z);
+    const ItemId redWool = (ItemId)(WOOL_ORANGE + 13);
+    // Corridors from the old outer rooms out to the wings, and the wings themselves (21 x 21).
+    room(s, c - 3, 0, 14, c + 3, 6, off + 1);           // north
+    room(s, c - 3, 0, n - off - 2, c + 3, 6, n - 15);  // south
+    room(s, n - off - 2, 0, c - 3, n - 15, 6, c + 3);  // east
+    room(s, 14, 0, c - 3, off + 1, 6, c + 3);           // west
+    fill(s, c - 2, 1, 12, c + 2, 4, off + 6, AIR);
+    fill(s, c - 2, 1, n - off - 7, c + 2, 4, n - 13, AIR);
+    fill(s, n - off - 7, 1, c - 2, n - 13, 4, c + 2, AIR);
+    fill(s, 12, 1, c - 2, off + 6, 4, c + 2, AIR);
+    // North: the Archive.
+    room(s, c - 10, 0, 0, c + 10, 9, 14);
+    fill(s, c - 2, 1, 13, c + 2, 4, 15, AIR);
+    for (int x = c - 8; x <= c + 8; x += 4)
+        for (int z = 2; z <= 10; z += 4) fill(s, x, 1, z, x, 4, z + 1, BOOKSHELF);
+    for (int z = 3; z <= 11; z += 4) s.at(c + 9, 1, z) = LOOT_CHEST_FORGOTTEN, s.at(c - 9, 1, z) = CRAFTING_TABLE;
+    for (int x = c - 6; x <= c + 6; x += 6) s.at(x, 8, 7) = POWERSTONE_LAMP_ON;
+    fill(s, c - 9, 0, 1, c + 9, 0, 13, POWERSTONE_BRICKS);
+    // South: the Powerstone Forge.
+    room(s, c - 10, 0, n - 15, c + 10, 9, n - 1);
+    fill(s, c - 2, 1, n - 16, c + 2, 4, n - 14, AIR);
+    fill(s, c - 8, 0, n - 8, c + 8, 0, n - 8, LAVA);  // the lava channel
+    for (int x = c - 8; x <= c + 8; x += 2) s.at(x, 1, n - 10) = s.at(x, 1, n - 6) = LIT_FURNACE;
+    s.at(c, 1, n - 12) = STEEL_BLOCK;  // the anvil
+    s.at(c, 2, n - 12) = POWERSTONE_BLOCK;
+    s.at(c - 7, 1, n - 3) = s.at(c + 7, 1, n - 3) = LOOT_CHEST_FORTRESS;
+    for (int x = c - 8; x <= c + 8; x += 4) s.at(x, 9, n - 8) = POWERSTONE_LIGHT;
+    // East: the Throne Hall of the last king.
+    room(s, n - 15, 0, c - 10, n - 1, 11, c + 10);
+    fill(s, n - 16, 1, c - 2, n - 14, 4, c + 2, AIR);
+    fill(s, n - 14, 0, c - 1, n - 4, 0, c + 1, redWool);  // the carpet up to the throne
+    fill(s, n - 4, 1, c - 2, n - 3, 1, c + 2, CHISELED_POWERSTONE_BRICKS);  // the dais
+    s.at(n - 3, 2, c) = POWERSTONE_BLOCK;  // the seat
+    fill(s, n - 2, 2, c - 1, n - 2, 5, c + 1, CHISELED_POWERSTONE_BRICKS);  // the high back
+    s.at(n - 2, 6, c) = POWERSTONE_LAMP_ON;
+    for (int z = c - 8; z <= c + 8; z += 4) {
+        fill(s, n - 15, 4, z, n - 15, 7, z, POWERSTONE_GLASS);
+        fill(s, n - 1, 4, z, n - 1, 7, z, POWERSTONE_GLASS);
+        s.at(n - 8, 1, z) = (ItemId)(SKELETON_HEAD + r.next(4));  // the guards that never left
+    }
+    s.at(n - 4, 2, c + 2) = LOOT_CHEST_PORTAL;  // the king's relics
+    // West: the Crypt.
+    room(s, 0, 0, c - 10, 14, 7, c + 10);
+    fill(s, 13, 1, c - 2, 15, 4, c + 2, AIR);
+    for (int z = c - 9; z <= c + 9; z += 4) {
+        fill(s, 1, 1, z, 5, 3, z, NETHER_BRICK_FENCE);  // the bars of the cells
+        s.at(2, 1, z + 2) = (ItemId)(SKELETON_HEAD + r.next(4));
+        if (z + 2 <= c + 9) s.at(3, 0, z + 2) = DEBRIS_GRAVEL;
+    }
+    for (int z = c - 8; z <= c + 8; z += 2) s.at(9 + r.next(3), 0, z) = DEBRIS_GRAVEL;
+    s.at(12, 1, c - 8) = s.at(12, 1, c + 8) = LOOT_CHEST_FORTRESS;
+    // Weathering of the new parts, like the old.
+    for (int y = 0; y < s.sy; ++y)
+        for (int z = 0; z < n; ++z)
+            for (int x = 0; x < n; ++x) {
+                ItemId& b = s.at(x, y, z);
+                if (b == FENCE) b = NETHER_BRICK_FENCE;
+                else if (b == NETHER_BRICK && r.chance(10)) b = CRACKED_NETHER_BRICKS;
+            }
     return s;
 }
 
@@ -682,6 +782,8 @@ Structure buildWorldStructure(WorldStructure kind, uint32_t seed) {
         case WorldStructure::ForgottenVillage: return forgottenVillage(r);
         case WorldStructure::DrownedRuins: return drownedRuins(r);
         case WorldStructure::BrokenPortal: return brokenPortal(r);
+        case WorldStructure::CrimsonMineshaft: return crimsonMineshaft(r);
+        case WorldStructure::GreatFortress: return greatFortress(r);
         default: return mineshaft(r);
     }
 }

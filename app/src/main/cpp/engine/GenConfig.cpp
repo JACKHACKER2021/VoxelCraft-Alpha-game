@@ -418,6 +418,19 @@ const char* kUpdate14 = R"({
   ]
 })";
 
+const char* kUpdate157 = R"({
+  // VoxelCraft 1.5.7: torches, the shield, crimson wood and an easier powerstone lamp.
+  "recipes": [
+    {"type": "shaped", "pattern": ["C", "S"], "key": {"C": "coal", "S": "stick"}, "result": "torch", "count": 4},
+    {"type": "shaped", "pattern": ["PIP", "PPP", ".P."], "key": {"P": "planks", "I": "iron_ingot"}, "result": "shield"},
+    {"type": "shapeless", "ingredients": ["crimson_log"], "result": "crimson_planks", "count": 4},
+    {"type": "shapeless", "ingredients": ["crimson_planks"], "result": "planks"},
+    {"type": "shaped", "pattern": ["D", "G", "T"], "key": {"D": "powerstone_dust", "G": "glass", "T": "torch"}, "result": "powerstone_lamp"},
+    {"type": "shaped", "pattern": [".C.", "CBC", ".C."], "key": {"C": "powerstone_chip", "B": "powerstone_block"}, "result": "powerstone_lamp", "count": 4},
+    {"type": "shaped", "pattern": ["CCC", "CFC", "BBB"], "key": {"C": "powerstone_chip", "F": "furnace", "B": "powerstone_bricks"}, "result": "powerstone_furnace"}
+  ]
+})";
+
 const char* kUpdate15 = R"({
   // VoxelCraft 1.5.0 Forgotten Powerstone: powerstone building blocks, fences, the brusher.
   "recipes": [
@@ -558,6 +571,7 @@ const std::vector<std::pair<std::string, std::string>>& defaultPackFiles() {
         {"recipes/update_1_3.json", kUpdate13},
         {"recipes/update_1_4.json", kUpdate14},
         {"recipes/update_1_5.json", kUpdate15},
+        {"recipes/update_1_5_7.json", kUpdate157},
     };
     return files;
 }
@@ -660,6 +674,7 @@ GenConfig GenConfig::fromJson(const Json& doc, std::vector<std::string>* w) {
     }
     c.flat = doc["flat"].boolean(false);
     c.crimsonDesert = std::clamp((int)doc["crimson_desert"].num(2), 1, 2);
+    c.generation = std::clamp((int)doc["generation"].num(2), 1, 2);
     return c;
 }
 
@@ -744,6 +759,7 @@ Json GenConfig::toJson() const {
     Json doc = Json::object();
     doc.set("flat", Json::fromBool(flat));
     doc.set("crimson_desert", Json::number(crimsonDesert));
+    doc.set("generation", Json::number(generation));
     doc.set("overworld", o);
     doc.set("nether", n);
     doc.set("biomes", bs);

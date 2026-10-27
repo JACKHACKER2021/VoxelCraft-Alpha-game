@@ -878,6 +878,7 @@ const char* const kSprite_hoe[16] = {
 void drawUpdate13(Canvas& a, int tile);
 void drawUpdate14(Canvas& a, int tile);
 void drawUpdate15(Canvas& a, int tile);
+void drawUpdate157(Canvas& a, int tile);
 Rgb barkPixel(int px, int py, Rgb base, int seed);
 
 void drawUpdate12(Canvas& a, int tile) {
@@ -1146,6 +1147,10 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
     const Rgb grassTop{92, 158, 52}, dirt{134, 96, 66}, plank{170, 132, 80};
 
     for (int tile = 0; tile < T_COUNT; ++tile) {
+        if (tile >= T_TORCH) {
+            drawUpdate157(a, tile);
+            continue;
+        }
         if (tile >= T_POWERSTONE_BRICKS) {
             drawUpdate15(a, tile);
             continue;
@@ -1580,6 +1585,16 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
             for (int px = 0; px < 16; ++px) {
                 const uint8_t* p = eye + (py * 16 + px) * 4;
                 a.put(tile, px, py, {p[0], p[1], p[2]}, p[3]);
+            }
+    }
+    // 1.5.7: the redesigned ores (once the 1.6.0 Preview experiment) are the standard look.
+    for (int i = 0; i < kOreRedesignCount; ++i) {
+        uint8_t ore[16 * 16 * 4];
+        oreRedesignTile(i, ore);
+        for (int py = 0; py < 16; ++py)
+            for (int px = 0; px < 16; ++px) {
+                const uint8_t* p = ore + (py * 16 + px) * 4;
+                a.put(kOreRedesignTiles[i], px, py, {p[0], p[1], p[2]});
             }
     }
     return a.image();
@@ -2129,6 +2144,136 @@ void drawUpdate15(Canvas& a, int tile) {
                 case T_FIREBALL: {
                     const float dx = px - 7.5f, dy = py - 7.5f, d = std::sqrt(dx * dx + dy * dy) + patch(px, py, 165, 3) * 2;
                     a.put(tile, px, py, d < 3.5f ? Rgb{255, 240, 140} : d < 6 ? Rgb{255, 150, 30} : Rgb{200, 50, 10});
+                    break;
+                }
+                default: a.put(tile, px, py, {255, 0, 255}); break;
+            }
+        }
+}
+
+// ---------------------------------------------------------------- 1.5.7
+
+const char* const kSprite_shield[16] = {
+    "................",
+    "..111111111111..",
+    "..133333113331..",
+    "..131111111131..",
+    "..131111111131..",
+    "..131111111131..",
+    "..133333333331..",
+    "..131111111131..",
+    "..131111111131..",
+    "...1311111131...",
+    "...1311111131...",
+    "....13111131....",
+    ".....131131.....",
+    "......1331......",
+    ".......11.......",
+    "................",
+};
+
+const char* const kSprite_explorer_map[16] = {
+    "................",
+    "..111111111111..",
+    "..133333333331..",
+    "..131113311131..",
+    "..133313333331..",
+    "..133311113331..",
+    "..133333313331..",
+    "..131133313311..",
+    "..133313333331..",
+    "..133331111331..",
+    "..131133333331..",
+    "..133313311131..",
+    "..133333333331..",
+    "..111111111111..",
+    "................",
+    "................",
+};
+
+void drawUpdate157(Canvas& a, int tile) {
+    switch (tile) {
+        case T_SHIELD: {
+            a.sprite(tile, kSprite_shield, {150, 104, 60}, {196, 200, 210});
+            // An iron boss in the middle.
+            for (int y = 6; y <= 8; ++y)
+                for (int x = 7; x <= 8; ++x) a.put(tile, x, y, y == 6 ? Rgb{230, 232, 240} : Rgb{170, 172, 184});
+            return;
+        }
+        case T_EXPLORER_MAP: {
+            a.sprite(tile, kSprite_explorer_map, {104, 84, 60}, {222, 206, 156});
+            // A red cross marks the mineshaft.
+            for (int k = 0; k < 4; ++k) a.put(tile, 9 + k, 8 + k, {200, 30, 30}), a.put(tile, 12 - k, 8 + k, {200, 30, 30});
+            return;
+        }
+        case T_EGG_HOGMAN: a.sprite(tile, kSprite_egg15, {226, 150, 140}, {60, 200, 220}); return;
+        default: break;
+    }
+    for (int py = 0; py < 16; ++py)
+        for (int px = 0; px < 16; ++px) {
+            const int n = (int)(hash3(px, py, tile, 157) % 9) - 4;
+            switch (tile) {
+                case T_TORCH: {
+                    // A stick in the middle columns (7..8) with a burning top: the shapes cut it out.
+                    Rgb c{0, 0, 0};
+                    bool on = false;
+                    if (px >= 7 && px <= 8 && py >= 6) c = Rgb{120, 84, 46}.scaled(px == 7 ? 1.1f : 0.85f), on = true;
+                    if (px >= 7 && px <= 8 && py >= 6 && py <= 7) c = py == 6 ? Rgb{255, 240, 150} : Rgb{255, 170, 40}, on = true;
+                    if (px >= 6 && px <= 9 && py >= 4 && py <= 5) c = Rgb{255, 200, 70}, on = true;  // the flame above
+                    if (on) a.put(tile, px, py, c);
+                    else a.clear(tile, px, py);
+                    break;
+                }
+                case T_CRIMSON_PLANKS: {
+                    const int row = py / 4;
+                    const bool seam = py % 4 == 3 || (px == (row * 5 + 3) % 16 && py % 4 != 3);
+                    a.put(tile, px, py, Rgb{164, 40, 52}.scaled(seam ? 0.55f : 0.92f + ((px + row * 3) % 5) * 0.025f).plus(n / 3));
+                    break;
+                }
+                case T_CRIMSON_LOG_SIDE: {
+                    const float stripe = std::sin(px * 1.9f + tilePatch(px, py, 175, 4) * 2.5f);
+                    Rgb c = Rgb{96, 24, 34}.scaled(0.85f + stripe * 0.12f + tilePatch(px, py, 176, 4) * 0.12f).plus(n / 2);
+                    if (hash3(px, py, 177, 3) % 29 == 0) c = Rgb{220, 70, 60};  // glowing sap
+                    a.put(tile, px, py, c);
+                    break;
+                }
+                case T_CRIMSON_LOG_TOP: {
+                    const float d = std::sqrt((px - 7.5f) * (px - 7.5f) + (py - 7.5f) * (py - 7.5f));
+                    Rgb c = d > 6.6f ? Rgb{96, 24, 34} : ((int)(d * 1.3f) % 2 ? Rgb{170, 50, 56} : Rgb{140, 36, 46});
+                    a.put(tile, px, py, c.plus(n / 3));
+                    break;
+                }
+                case T_PS_FURNACE_FRONT:
+                case T_PS_FURNACE_FRONT_ON: {
+                    // Blue-grey powerstone masonry with a cyan-rimmed mouth that glows when it works.
+                    const bool edge = px == 0 || py == 0 || px == 15 || py == 15;
+                    const bool mouth = px >= 4 && px <= 11 && py >= 7 && py <= 13;
+                    const bool rim = !mouth && px >= 3 && px <= 12 && py >= 6 && py <= 14;
+                    Rgb c = Rgb{86, 96, 104}.scaled(edge ? 0.7f : 0.95f + tilePatch(px, py, 180, 4) * 0.12f).plus(n / 3);
+                    if (rim) c = Rgb{40, 200, 230}.scaled(tile == T_PS_FURNACE_FRONT_ON ? 1.0f : 0.5f);
+                    if (mouth) c = tile == T_PS_FURNACE_FRONT_ON ? Rgb{120 + (13 - py) * 12, 230, 255} : Rgb{20, 24, 30};
+                    if (py == 3 && px >= 4 && px <= 11) c = {20, 24, 30};
+                    a.put(tile, px, py, c);
+                    break;
+                }
+                case T_HOGMAN_SKIN: a.put(tile, px, py, Rgb{226, 150, 140}.scaled(0.88f + patch(px, py, 178, 3) * 0.2f).plus(n / 3)); break;
+                case T_HOGMAN_FACE: {
+                    // A broad snout with nostrils, small angry eyes and two tusks.
+                    Rgb c = Rgb{226, 150, 140}.scaled(0.88f + patch(px, py, 178, 3) * 0.2f).plus(n / 3);
+                    if (py >= 4 && py <= 5 && ((px >= 3 && px <= 5) || (px >= 10 && px <= 12))) c = py == 4 ? Rgb{40, 20, 20} : Rgb{250, 250, 250};
+                    if (py == 5 && (px == 4 || px == 11)) c = {20, 10, 10};
+                    if (py >= 8 && py <= 11 && px >= 4 && px <= 11) c = Rgb{240, 170, 160};
+                    if (py >= 9 && py <= 10 && (px == 6 || px == 9)) c = {120, 50, 50};
+                    if (py >= 12 && py <= 14 && (px == 3 || px == 12)) c = {245, 240, 220};  // tusks
+                    a.put(tile, px, py, c);
+                    break;
+                }
+                case T_HOGMAN_TUNIC: {
+                    // A leather tunic with a powerstone-blue belt and gold studs.
+                    Rgb c = Rgb{110, 70, 40}.scaled(0.86f + patch(px, py, 179, 4) * 0.22f).plus(n / 2);
+                    if (py == 9 || py == 10) c = Rgb{40, 170, 200}.scaled(0.8f).plus(n / 3);
+                    if ((py == 3 || py == 13) && px % 4 == 1) c = {230, 190, 60};
+                    a.put(tile, px, py, c);
                     break;
                 }
                 default: a.put(tile, px, py, {255, 0, 255}); break;

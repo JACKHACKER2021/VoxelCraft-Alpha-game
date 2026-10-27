@@ -11,4 +11,6 @@
     <string name="modpack_imported">Paket installiert und aktiviert</string>
     <string name="modpack_invalid">Das Archiv hat weder manifest.json noch Ordner biomes, dimensions oder recipes</string>
     <string name="world_exported">Gespeichert unter Downloads/VoxelCraft: %s</string>
+    <string name="video_downloading">Trailer wird heruntergeladen…</string>
+    <string name="video_failed">Der Trailer konnte nicht geladen werden (kein Internet?)</string>
 </resources>

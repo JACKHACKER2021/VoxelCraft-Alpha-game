@@ -72,6 +72,12 @@ public:
     std::function<void(float volume)> onMusicVolume;
     // Plays a music track ("asset:music/x.mp3" or a file path, "" = silence), crossfading.
     std::function<void(const std::string& source, bool loop)> onPlayMusic;
+    // 1.5.7: plays a video from the app's assets full screen (the trailer gallery).
+    std::function<void(const std::string& asset)> onPlayVideo;
+    // 1.5.7 battery saver: the phone's battery (percent, -1 unknown) and whether it charges.
+    void onBattery(int percent, bool charging) { batteryLevel_ = percent; charging_ = charging; }
+    bool saverActive() const;
+    bool wantsLowFps() const { return saverActive(); }  // 30 frames a second instead of 60
     std::function<void()> onImportSkin;
     std::function<void()> onImportStructure;
     std::function<void()> onImportWorld;                                      // pick a .vcworld
@@ -90,11 +96,12 @@ private:
         Title, WorldList, CreateWorld, EditWorld, ConfirmDelete, Settings, Packs, PackFiles, JsonEditor, Store, Skins,
         Playing, Pause, Structures, Developer, Achievements, Joining, Loading, Inventory, Crafting, Furnace, Chest, Death, Trade,
         Invite, OfflineGuide,  // 1.4.0
-        Document               // 1.5.0: reading a page of the old documents
+        Document,              // 1.5.0: reading a page of the old documents
+        Credits, Trailers      // 1.5.7: the credits (tap VoxelSoftworks on the title) and the trailer gallery
     };
 
     // A slot in any open container, so items can be moved between them.
-    enum class SlotArea { Inventory, Grid, Result, FurnaceInput, FurnaceFuel, FurnaceOutput, Armor, Chest };
+    enum class SlotArea { Inventory, Grid, Result, FurnaceInput, FurnaceFuel, FurnaceOutput, Armor, Chest, Offhand };
     struct SlotRef {
         SlotArea area = SlotArea::Inventory;
         int index = -1;
@@ -155,6 +162,9 @@ private:
     void inviteScreen();        // host: room codes, PvP and spawn protection
     void offlineGuideScreen();  // how to play with a hotspot, without Wi-Fi or data
     void documentScreen();      // 1.5.0: a page of the forgotten kingdom's story
+    void creditsScreen();       // 1.5.7
+    void trailersScreen();      // 1.5.7
+    double creditsStart_ = 0;
     int documentPage_ = 0;
     void inventoryScreen();
     void creativeInventoryScreen();
@@ -278,7 +288,7 @@ private:
     std::string newWorldName_, newWorldSeed_;
     GameMode newWorldMode_ = GameMode::Creative;
     bool newWorldFlat_ = false, newWorldCoords_ = false, newWorldKeepInventory_ = false, newWorldCommands_ = false;
-    bool newWorldExpOres_ = false, newWorldExpOpen_ = false;  // 1.5.1 Experimental Features
+    bool newWorldExpLiquids_ = false, newWorldExpMaps_ = false, newWorldExpOpen_ = false;  // 1.5.1 Experimental Features
     int settingsTab_ = 0;
 
     // Packs screen and JSON editor
@@ -306,6 +316,9 @@ private:
     bool shadersDirty_ = true;
     ShaderProfile shaderProfile_;
     GraphicsMode appliedGraphics_ = GraphicsMode::Enhanced;
+    std::atomic<int> batteryLevel_{-1};
+    std::atomic<bool> charging_{false};
+    bool saverWasOn_ = false;
     void applyShaders();
     int splash_ = 0;
     bool languageSent_ = false;

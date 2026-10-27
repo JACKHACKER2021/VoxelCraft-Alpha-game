@@ -26,7 +26,9 @@ struct WorldInfo {
     bool keepInventory = false;
     bool allowCommands = false;  // cheat commands (/gamemode, /tp, /give...) in Survival
     // 1.5.1: Experimental Features chosen when the world was created (off by default).
-    bool expOreRedesign = false;  // 1.6.0 Preview: the redesigned ore textures
+    bool expOreRedesign = false;  // 1.5.1-1.5.5 only: the redesigned ores are standard since 1.5.7
+    bool expFlowingLiquids = false;  // 1.5.7: water and lava flow and spread
+    bool expExplorationMaps = false; // 1.5.7: explorer maps to mineshafts in chests and debris gravel
 };
 
 // Everything about the player that survives quitting the game.
@@ -40,6 +42,7 @@ struct PlayerState {
     int selectedSlot = 0;
     Inventory inventory;
     std::array<ItemStack, 4> armor{};  // helmet, chestplate, leggings, boots
+    ItemStack offhand{};               // 1.5.7: the off hand
     // Places on the minimap
     bool hasDeath = false;
     int deathX = 0, deathZ = 0;
@@ -78,6 +81,7 @@ struct Settings {
     GraphicsMode graphics = GraphicsMode::Enhanced;  // 1.5.5: Classic or Enhanced (Vibrant shaders)
     bool shadows = true;      // 1.5.5 Enhanced: shadows of the sun and moon
     bool waves = true;        // 1.5.5 Enhanced: leaves and plants sway, water ripples
+    int batterySaver = 1;     // 1.5.7: 0 off, 1 automatic (35 % or less and not charging), 2 always
     // Audio
     float musicVolume = 0.6f;
     float soundVolume = 0.8f;

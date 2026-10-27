@@ -196,7 +196,7 @@ void Player::update(const World& world, float dt, float moveX, float moveZ, bool
     headInLava = head == LAVA;
     headInTar = head == TAR;
 
-    float speed = (flying ? 10.0f : inTar ? 0.9f : inLava ? 1.2f : inWater ? 2.0f : 4.3f) * speedMul;
+    float speed = (flying ? 10.0f : inTar ? 0.9f : inLava ? 1.2f : inWater ? 2.0f : sneaking ? 1.3f : 4.3f) * speedMul;
     float s = std::sin(yaw), c = std::cos(yaw);
     // Forward on the horizontal plane is (sin yaw, -cos yaw), right is (cos yaw, sin yaw).
     vel.x = (s * moveZ + c * moveX) * speed;

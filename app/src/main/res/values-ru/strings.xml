@@ -11,4 +11,6 @@
     <string name="modpack_imported">Пакет установлен и включён</string>
     <string name="modpack_invalid">В архиве нет manifest.json и папок biomes, dimensions или recipes</string>
     <string name="world_exported">Сохранено в Загрузки/VoxelCraft: %s</string>
+    <string name="video_downloading">Загружаю трейлер…</string>
+    <string name="video_failed">Не удалось загрузить трейлер (нет интернета?)</string>
 </resources>

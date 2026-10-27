@@ -371,6 +371,18 @@ const TileSource kSources[] = {
     /* T_FIREBALL       */ {-1, "mobs", {"vc_fireball"}, 0},
     /* T_VOID_BRICK_EYE */ {-1, "blocks", {"vc_void_brick_eye"}, 0},
     /* T_CRIMSON_STONE  */ {-1, "blocks", {"vc_crimson_stone"}, 0},
+    /* T_TORCH          */ {-1, "blocks", {"vc_torch"}, 0},
+    /* T_CRIMSON_PLANKS */ {-1, "blocks", {"vc_crimson_planks"}, 0},
+    /* T_CRIMSON_LOG_SIDE */ {-1, "blocks", {"vc_crimson_log"}, 0},
+    /* T_CRIMSON_LOG_TOP */ {-1, "blocks", {"vc_crimson_log_top"}, 0},
+    /* T_SHIELD         */ {-1, "items", {"vc_shield"}, 0},
+    /* T_EXPLORER_MAP   */ {-1, "items", {"vc_explorer_map"}, 0},
+    /* T_EGG_HOGMAN     */ {-1, "items", {"vc_spawn_egg_hogman"}, 0},
+    /* T_HOGMAN_SKIN    */ {-1, "mobs", {"vc_hogman_skin"}, 0},
+    /* T_HOGMAN_FACE    */ {-1, "mobs", {"vc_hogman_face"}, 0},
+    /* T_HOGMAN_TUNIC   */ {-1, "mobs", {"vc_hogman_tunic"}, 0},
+    /* T_PS_FURNACE_FRONT */ {-1, "blocks", {"vc_powerstone_furnace_front"}, 0},
+    /* T_PS_FURNACE_FRONT_ON */ {-1, "blocks", {"vc_powerstone_furnace_front_on"}, 0},
 };
 static_assert(sizeof(kSources) / sizeof(kSources[0]) == T_COUNT, "a texture source for every tile");
 

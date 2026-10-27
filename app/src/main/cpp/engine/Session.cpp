@@ -41,6 +41,10 @@ Session::Session(const WorldInfo& info, const PlayerState& player)
     overworld_.setStorageDir(info.folder + "/overworld");
     nether_.setStorageDir(info.folder + "/nether");
     void_.setStorageDir(info.folder + "/void");
+    overworld_.changeLog = &changes_[0];
+    nether_.changeLog = &changes_[1];
+    void_.changeLog = &changes_[2];
+    loadFlow();
     rng_ ^= info.seed | 1;
     furnaces_ = loadFurnaces(info.folder);
     drops_.load(info.folder);
@@ -96,6 +100,7 @@ void Session::save() {
     mobs_.save(info_.folder);
     paperMaps_.save(info_.folder);
     saveTimers();
+    saveFlow();
 }
 
 Furnace* Session::furnace(const FurnaceKey& key) {
@@ -108,11 +113,23 @@ ChestContents* Session::chest(const FurnaceKey& key) {
     return it == chests_.end() ? nullptr : &it->second;
 }
 
+ChestContents Session::structureLoot(ItemId block, uint32_t seed) const {
+    ChestContents c = generateLoot(block, seed);
+    // 1.5.7 Exploration Maps experiment: a quarter of the structure chests hold a map to a mineshaft.
+    if (info_.expExplorationMaps && (seed >> 7) % 100 < 25)
+        for (ItemStack& slot : c)
+            if (slot.empty()) {
+                slot = {EXPLORER_MAP, 1, 0};
+                break;
+            }
+    return c;
+}
+
 ChestContents& Session::chestFor(const FurnaceKey& key) {
     if (!chests_.count(key)) {
         const ItemId block = worldAt(key.dim).getBlock(key.x, key.y, key.z);
         const uint32_t seed = info_.seed ^ (uint32_t)(key.x * 73856093) ^ (uint32_t)(key.y * 19349663) ^ (uint32_t)(key.z * 83492791);
-        chests_[key] = block != CHEST && isChest(block) ? generateLoot(block, seed) : ChestContents{};
+        chests_[key] = block != CHEST && isChest(block) ? structureLoot(block, seed) : ChestContents{};
     }
     return chests_[key];
 }
@@ -125,7 +142,7 @@ void Session::openChestAt(const FurnaceKey& key) {
     if (!chests_.count(key)) {
         // A structure chest: its loot is decided by the world seed and the position.
         uint32_t seed = info_.seed ^ (uint32_t)(key.x * 73856093) ^ (uint32_t)(key.y * 19349663) ^ (uint32_t)(key.z * 83492791);
-        chests_[key] = block != CHEST ? generateLoot(block, seed) : ChestContents{};
+        chests_[key] = block != CHEST ? structureLoot(block, seed) : ChestContents{};
         // The Anniversary modpack hides collectible tokens in structure chests.
         if (block != CHEST && settings_.addonAnniversary && seed % 100 < 40)
             for (ItemStack& slot : chests_[key])
@@ -151,7 +168,8 @@ void Session::uncoverFind(int x, int y, int z) {
     World& w = *world_;
     w.setBlock(x, y, z, GRAVEL);
     const uint32_t seed = info_.seed ^ (uint32_t)(x * 73856093) ^ (uint32_t)(y * 19349663) ^ (uint32_t)(z * 83492791);
-    const ItemStack find = archaeologyFind(seed);
+    ItemStack find = archaeologyFind(seed);
+    if (info_.expExplorationMaps && (seed >> 9) % 100 < 18) find = {EXPLORER_MAP, 1, 0};  // 1.5.7 experiment
     drops_.spawn(dimIndex(), Vec3(x + 0.5f, y + 1.1f, z + 0.5f), {0, 2.5f, 0}, find);
     particles_.spawnChips(w, x, y, z, 0, 1, 0, GRAVEL, 6);
     if (onMessage) onMessage(trf("Nález: {0}", {tr(itemName(find.id))}));
@@ -230,6 +248,17 @@ bool Session::placeSpecial(const RayHit& hit, ItemStack& held, int x, int y, int
         // The face looks back at the player.
         if (player_.intersectsBlock(x, y, z)) return true;
         w.setBlock(x, y, z, (ItemId)(SKELETON_HEAD + facing));
+    } else if (held.id == TORCH) {
+        // 1.5.7: on top of a block it stands; on a side it hangs on that wall; never under a ceiling.
+        const ItemId support = w.getBlock(hit.x, hit.y, hit.z);
+        if (!isOpaque(support) || hit.ny < 0) return true;
+        if (hit.ny > 0) {
+            w.setBlock(x, y, z, TORCH);
+        } else {
+            const int wall = hit.nz > 0 ? 0 : hit.nx < 0 ? 1 : hit.nz < 0 ? 2 : 3;  // where the wall is
+            w.setBlock(x, y, z, (ItemId)(TORCH_WALL + wall));
+        }
+        achieve("torch");
     } else if (held.id == CACTUS) {
         ItemId below = w.getBlock(x, y - 1, z);
         if (below != SAND && below != CACTUS) return true;
@@ -303,9 +332,22 @@ void Session::updateFurnaces(float dt) {
     // Furnaces keep smelting while their window is closed.
     if (settings_.expFastFurnace) dt *= 4;  // experiment
     for (auto& [k, f] : furnaces_) {
-        if (!f.update(dt)) continue;
         World& w = worldAt(k.dim);
-        if (isFurnace(w.getBlock(k.x, k.y, k.z))) w.setBlock(k.x, k.y, k.z, f.burning() ? LIT_FURNACE : FURNACE);
+        const ItemId here = w.getBlock(k.x, k.y, k.z);
+        const bool ps = isPowerstoneFurnace(here);
+        if (ps && !f.burning() && f.canSmelt()) {
+            // 1.5.7: wired to power (a live cable, a switch or a powerstone block) it needs no fuel.
+            bool powered = false;
+            const int d[6][3] = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
+            for (auto& o : d) {
+                const ItemId b = w.getBlock(k.x + o[0], k.y + o[1], k.z + o[2]);
+                powered |= cableOn(b) || switchOn(b) || b == POWERSTONE_BLOCK;
+            }
+            if (powered) f.burnLeft = f.burnTotal = 4;
+        }
+        if (!f.update(ps ? dt * 3 : dt)) continue;
+        if (ps) w.setBlock(k.x, k.y, k.z, f.burning() ? POWERSTONE_FURNACE_ON : POWERSTONE_FURNACE);
+        else if (isFurnace(here)) w.setBlock(k.x, k.y, k.z, f.burning() ? LIT_FURNACE : FURNACE);
     }
 }
 
@@ -500,6 +542,7 @@ void Session::powerChanged(int x, int y, int z) {
 }
 
 void Session::updateBlocksOverTime(float dt) {
+    updateBlockPhysics(dt);
     // Lit TNT: falls if nothing holds it, then goes off.
     for (size_t i = 0; i < tnt_.size(); ++i) {
         PrimedTnt& t = tnt_[i];
@@ -567,6 +610,143 @@ void Session::updateBlocksOverTime(float dt) {
     }
 }
 
+namespace {
+uint64_t cellKey(int x, int y, int z) {
+    return ((uint64_t)((uint32_t)x & 0xFFFFFFFu) << 36) | ((uint64_t)((uint32_t)z & 0xFFFFFFFu) << 8) | (uint64_t)(y & 0xFF);
+}
+bool fallsDown(ItemId b) { return b == SAND || b == GRAVEL || b == RED_SAND || b == DEBRIS_GRAVEL; }
+// What a falling block or a flowing liquid simply replaces.
+bool washedAway(ItemId b) { return b == AIR || isPlant(b) || isTorch(b) || b == SNOW_LAYER; }
+}  // namespace
+
+void Session::updateBlockPhysics(float dt) {
+    if (mobsFromHost) {  // a guest: the host moves the blocks and sends the results
+        for (auto& c : changes_) c.clear();
+        return;
+    }
+    const bool liquids = info_.expFlowingLiquids;
+    // New changes wake the blocks around them.
+    for (int d = 0; d < 3; ++d) {
+        if (changes_[d].empty()) continue;
+        World& w = worldAt(d);
+        std::vector<std::array<int, 3>> list;
+        list.swap(changes_[d]);
+        static const int kAround[7][3] = {{0, 0, 0}, {0, 1, 0}, {0, -1, 0}, {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
+        for (const auto& c : list)
+            for (const auto& o : kAround) {
+                const int x = c[0] + o[0], y = c[1] + o[1], z = c[2] + o[2];
+                if (y < 0 || y >= kChunkHeight) continue;
+                const ItemId b = w.getBlock(x, y, z);
+                const bool liquid = liquids && (b == WATER || b == LAVA);
+                if (!fallsDown(b) && !liquid && !flow_[d].count(cellKey(x, y, z))) continue;
+                if (!ticking_[d].insert(cellKey(x, y, z)).second || blockTicks_.size() > 20000) continue;
+                const float delay = fallsDown(b) ? 0.05f : b == LAVA ? (d == 1 ? 0.5f : 1.0f) : 0.25f;
+                blockTicks_.push_back({d, x, y, z, delay});
+            }
+    }
+    std::vector<Timed> due;
+    for (size_t i = 0; i < blockTicks_.size(); ++i)
+        if ((blockTicks_[i].time -= dt) <= 0) {
+            due.push_back(blockTicks_[i]);
+            blockTicks_[i] = blockTicks_.back();
+            blockTicks_.pop_back();
+            --i;
+        }
+    for (const Timed& t : due) {
+        ticking_[t.dim].erase(cellKey(t.x, t.y, t.z));
+        World& w = worldAt(t.dim);
+        const ItemId b = w.getBlock(t.x, t.y, t.z);
+        if (fallsDown(b)) {
+            // Sand and gravel drop one block at a time until something holds them.
+            const ItemId below = t.y > 0 ? w.getBlock(t.x, t.y - 1, t.z) : (ItemId)BEDROCK;
+            if (washedAway(below) || isLiquid(below)) {
+                w.setBlock(t.x, t.y - 1, t.z, b);
+                w.setBlock(t.x, t.y, t.z, AIR);
+            }
+        } else if (liquids) {
+            tickLiquid(t.dim, t.x, t.y, t.z);
+        } else {
+            flow_[t.dim].erase(cellKey(t.x, t.y, t.z));
+        }
+    }
+}
+
+void Session::tickLiquid(int d, int x, int y, int z) {
+    World& w = worldAt(d);
+    const ItemId b = w.getBlock(x, y, z);
+    const uint64_t key = cellKey(x, y, z);
+    auto it = flow_[d].find(key);
+    if (b != WATER && b != LAVA) {
+        if (it != flow_[d].end()) flow_[d].erase(it);
+        return;
+    }
+    const int level = it == flow_[d].end() ? 0 : it->second;  // 0 = a source
+    static const int kSide[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+    // Lava that touches water hardens: a source into obsidian, flowing lava into cobblestone.
+    const ItemId other = b == WATER ? (ItemId)LAVA : (ItemId)WATER;
+    auto harden = [&](int lx, int ly, int lz) {
+        const bool source = !flow_[d].count(cellKey(lx, ly, lz));
+        flow_[d].erase(cellKey(lx, ly, lz));
+        w.setBlock(lx, ly, lz, source ? OBSIDIAN : COBBLESTONE);
+        sound(Sound::Fuse);
+    };
+    for (int k = 0; k < 6; ++k) {
+        const int nx = x + (k < 4 ? kSide[k][0] : 0), ny = y + (k == 4 ? 1 : k == 5 ? -1 : 0), nz = z + (k < 4 ? kSide[k][1] : 0);
+        if (w.getBlock(nx, ny, nz) != other) continue;
+        if (b == LAVA) {
+            harden(x, y, z);
+            return;
+        }
+        harden(nx, ny, nz);
+    }
+    // A flowing cell needs liquid above it or a neighbour nearer the source; otherwise it drains.
+    if (level > 0) {
+        bool fed = w.getBlock(x, y + 1, z) == b;
+        for (const auto& o : kSide) {
+            if (w.getBlock(x + o[0], y, z + o[1]) != b) continue;
+            auto n = flow_[d].find(cellKey(x + o[0], y, z + o[1]));
+            fed |= n == flow_[d].end() || n->second < level;
+        }
+        if (!fed) {
+            flow_[d].erase(key);
+            w.setBlock(x, y, z, AIR);
+            return;
+        }
+    }
+    // Down first; only on solid ground does it spread to the sides.
+    const ItemId below = y > 0 ? w.getBlock(x, y - 1, z) : (ItemId)BEDROCK;
+    if (washedAway(below)) {
+        w.setBlock(x, y - 1, z, b);
+        flow_[d][cellKey(x, y - 1, z)] = 1;
+        return;
+    }
+    if (below == b) return;  // already falling into its own pool
+    const int reach = b == WATER ? 4 : d == 1 ? 4 : 2;
+    if (level >= reach) return;
+    for (const auto& o : kSide) {
+        const ItemId n = w.getBlock(x + o[0], y, z + o[1]);
+        if (!washedAway(n)) continue;
+        w.setBlock(x + o[0], y, z + o[1], b);
+        flow_[d][cellKey(x + o[0], y, z + o[1])] = (uint8_t)(level + 1);
+    }
+}
+
+void Session::saveFlow() const {
+    std::ofstream out(info_.folder + "/flow.dat");
+    out << "VCFLOW1\n";
+    for (int d = 0; d < 3; ++d)
+        for (const auto& [k, level] : flow_[d]) out << d << " " << k << " " << (int)level << "\n";
+}
+
+void Session::loadFlow() {
+    std::ifstream in(info_.folder + "/flow.dat");
+    std::string magic;
+    if (!(in >> magic) || magic != "VCFLOW1") return;
+    int d, level;
+    uint64_t k;
+    while (in >> d >> k >> level && d >= 0 && d < 3 && flow_[d].size() < 200000) flow_[d][k] = (uint8_t)level;
+}
+
 void Session::saveTimers() const {
     std::ofstream out(info_.folder + "/saplings.dat");
     out << "VCSAP1\n";
@@ -613,6 +793,10 @@ void Session::respawn() {
                          state_.armor[i]);
             state_.armor[i] = {};
         }
+        if (!state_.offhand.empty()) {
+            drops_.spawn(dimIndex(), player_.pos + Vec3(0, 0.8f, 0), {0, 3.5f, 0}, state_.offhand);
+            state_.offhand = {};
+        }
     }
     world_ = &overworld_;
     state_.health = kMaxHealth;
@@ -626,6 +810,7 @@ void Session::respawn() {
     player_.vel = {};
     player_.fallDistance = 0;
     player_.flying = false;
+    player_.sneaking = false;
     dead_ = false;
     camera_ = player_;
     hurtFlash_ = 0;
@@ -766,6 +951,11 @@ void Session::touchDown(int id, float x, float y, double time) {
     if (in(l.hotbarX, l.hotbarY, l.slot * 9, l.slot)) {
         t->kind = Touch::Hotbar;
         selectSlot((int)((x - l.hotbarX) / l.slot));
+    } else if (in(l.hotbarX - l.slot - 4, l.hotbarY, l.slot, l.slot)) {
+        // 1.5.7: the off-hand slot: a tap swaps it with the selected hotbar item.
+        t->kind = Touch::Hotbar;
+        swapOffhand();
+        sound(Sound::Click);
     } else if (in(l.hotbarX + l.slot * 9, l.hotbarY, l.slot, l.slot)) {
         t->kind = Touch::InventoryButton;
     } else if (in(l.pauseX, l.pauseY, l.pauseSize, l.pauseSize)) {
@@ -789,6 +979,10 @@ void Session::touchDown(int id, float x, float y, double time) {
         }
     } else if (player_.flying && in(l.flyDownX, l.jumpY, l.buttonSize, l.buttonSize)) {
         t->kind = Touch::FlyDown;
+    } else if (!player_.flying && riding_ < 0 && in(l.flyDownX, l.jumpY, l.buttonSize, l.buttonSize)) {
+        // 1.5.7: crouch on and off: walk slowly and raise a shield.
+        t->kind = Touch::Sneak;
+        player_.sneaking = !player_.sneaking;
     } else if (int dx, dz; dpadDirection(l, x, y, dx, dz)) {
         t->kind = Touch::DPad;
     } else {
@@ -835,8 +1029,18 @@ void Session::touchUp(int id, float x, float y, double time) {
             if (!t->moved && time - t->startTime < kHoldToBreak) {
                 int boat = pickBoat(x, y), mob = pickMob(x, y);
                 ItemStack& heldNow = state_.inventory.slots[state_.selectedSlot];
+                const bool powerstone = heldNow.id == POWERSTONE_DUST || heldNow.id == POWERSTONE_CHIP || heldNow.id == POWERSTONE_BLOCK;
                 if (mob >= 0 && mobs_.mobs()[mob].type == MobType::Villager) {
                     wantsTrade = mob;  // villagers trade instead of being hit
+                } else if (mob >= 0 && mobs_.mobs()[mob].type == MobType::Hogman && powerstone && mobs_.mobs()[mob].barter <= 0) {
+                    // 1.5.7: a hog man takes powerstone, calms down and pays for it after a look.
+                    Mob& hog = mobs_.mobs()[mob];
+                    hog.calm = 90;
+                    hog.barter = 2.5f;
+                    if (survival() && --heldNow.count == 0) heldNow = {};
+                    hand_.use();
+                    sound(Sound::Grunt);
+                    achieve("hogman_trade");
                 } else if (mob >= 0 && mobs_.mobs()[mob].type == MobType::Cow && heldNow.id == BUCKET) {
                     // Milking a cow.
                     if (heldNow.count > 1) {
@@ -962,8 +1166,24 @@ void Session::attackPlayer(int who) {
     if (onHitPlayer) onHitPlayer(who, heldDamage());
 }
 
+bool Session::shieldBlocks(const Vec3& push) {
+    // 1.5.7: a shield in either hand, raised by crouching, stops what comes at the player from the front.
+    ItemStack* shield = state_.offhand.id == SHIELD ? &state_.offhand
+                        : state_.inventory.slots[state_.selectedSlot].id == SHIELD ? &state_.inventory.slots[state_.selectedSlot] : nullptr;
+    if (!shield || hurtCooldown_ > 0 || !player_.sneaking) return false;  // raised only while crouching
+    const Vec3 f = player_.forward();
+    const Vec3 from = Vec3(-push.x, 0, -push.z).normalized();  // towards the attacker
+    if (Vec3(f.x, 0, f.z).normalized().x * from.x + Vec3(f.x, 0, f.z).normalized().z * from.z < 0.35f) return false;
+    if (++shield->damage >= toolDurability(SHIELD)) *shield = {};
+    hurtCooldown_ = 0.5f;
+    sound(Sound::Place);
+    achieve("shield_block");
+    return true;
+}
+
 void Session::hurtByPlayer(float damage, const Vec3& knock) {
     if (!survival() || dead_) return;
+    if (shieldBlocks(knock)) return;
     hurt(damage, false, true);
     player_.vel = player_.vel + knock;
 }
@@ -1076,7 +1296,7 @@ void Session::updateFireballs(float dt) {
             const Vec3 next = f.pos + f.vel * dt;
             const Vec3 p = player_.pos;
             if (std::fabs(next.x - p.x) < 0.55f && std::fabs(next.z - p.z) < 0.55f && next.y > p.y - 0.2f && next.y < p.y + 2.0f) {
-                if (survival() && !dead_) {
+                if (survival() && !dead_ && !shieldBlocks(f.vel)) {
                     hurt(f.damage, false, true);
                     player_.vel = player_.vel + Vec3(f.vel.x, 0, f.vel.z).normalized() * 3.5f + Vec3(0, 2.5f, 0);
                 }
@@ -1235,8 +1455,22 @@ void Session::updateMobs(float dt) {
     for (const MobEvent& e : events) {
         if (e.kind == MobEvent::HitPlayer) {
             if (!survival() || dead_) continue;
+            if (shieldBlocks(e.knock)) {
+                player_.vel = player_.vel + e.knock * 0.3f;  // pushed back a little
+                continue;
+            }
             hurt(e.damage, false, true);
             player_.vel = player_.vel + e.knock;
+        } else if (e.kind == MobEvent::Barter) {
+            // 1.5.7: what a hog man gives for powerstone.
+            static const ItemStack kOffers[] = {{CRIMSON_LOG, 6, 0}, {ANCIENT_COIN, 2, 0}, {OBSIDIAN, 2, 0}, {TORCH, 8, 0},
+                                                {IRON_INGOT, 3, 0}, {ARROW, 8, 0}, {RUBY, 1, 0}, {POWERSTONE_CHIP, 2, 0},
+                                                {COOKED_PORK, 3, 0}, {AIR, 1, 0}};
+            const float roll = spawnRandom();
+            ItemStack offer = kOffers[(int)(roll * 10) % 10];
+            if (offer.id == AIR) offer = info_.expExplorationMaps && roll > 0.95f ? ItemStack{EXPLORER_MAP, 1, 0} : ItemStack{SHIELD, 1, 0};
+            drops_.spawn(dim, e.pos, {0, 3, 0}, offer);
+            sound(Sound::Coin);
         } else if (e.kind == MobEvent::Died) {
             float roll = spawnRandom();
             std::vector<std::pair<ItemId, int>> loot = mobDrops(e.type, roll);
@@ -1342,6 +1576,19 @@ void Session::updateMobs(float dt) {
     } else if (dim == 1) {
         // 1.5.1: Huskings roam the Powerstone Wasteland of the Cornerstone Dimension. There is no
         // sky here, so look for a floor near the player's height.
+        // 1.5.7: hog men roam the rest of the Cornerstone Dimension in small bands.
+        if (!calm && mobs_.countType(1, MobType::Hogman, player_.pos, 64) < 3 && spawnRandom() < 0.2f) {
+            const float a = spawnRandom() * 2 * kPi, r = 16 + spawnRandom() * 18;
+            const int x = (int)std::floor(player_.pos.x + std::cos(a) * r), z = (int)std::floor(player_.pos.z + std::sin(a) * r);
+            if (w.getChunk(floorDiv(x, kChunkSize), floorDiv(z, kChunkSize)) && !w.wastelandAt(x, z))
+                for (int y = (int)player_.pos.y + 8; y > (int)player_.pos.y - 10 && y > 2; --y) {
+                    const ItemId ground = w.getBlock(x, y - 1, z);
+                    if (w.getBlock(x, y, z) == AIR && w.getBlock(x, y + 1, z) == AIR && isSolid(ground) && ground != LAVA) {
+                        mobs_.spawn(MobType::Hogman, 1, Vec3(x + 0.5f, (float)y, z + 0.5f));
+                        break;
+                    }
+                }
+        }
         if (!calm && mobs_.countType(1, MobType::Husking, player_.pos, 64) < 4 && spawnRandom() < 0.3f) {
             const float a = spawnRandom() * 2 * kPi, r = 14 + spawnRandom() * 18;
             const int x = (int)std::floor(player_.pos.x + std::cos(a) * r), z = (int)std::floor(player_.pos.z + std::sin(a) * r);
@@ -1557,6 +1804,7 @@ void Session::useItem(const RayHit& hit) {
             case EGG_TNT_ZOMBIE: mobs_.spawn(MobType::TntZombie, dimIndex(), feet); break;
             case EGG_TAR_MONSTER: mobs_.spawn(MobType::TarMonster, dimIndex(), feet); break;
             case EGG_HUSKING: mobs_.spawn(MobType::Husking, dimIndex(), feet); break;
+            case EGG_HOGMAN: mobs_.spawn(MobType::Hogman, dimIndex(), feet); break;
             default: mobs_.spawnVillager(dimIndex(), feet, (Profession)(rng_ % 3), feet); break;
         }
         rng_ = rng_ * 1664525u + 1013904223u;
@@ -1577,9 +1825,9 @@ void Session::useItem(const RayHit& hit) {
         return;
     }
     if (held.id == OAK_DOOR_ITEM || held.id == IRON_DOOR_ITEM || held.id == CACTUS || isTrapdoor(held.id) || held.id == BED_ITEM ||
-        isSkeletonHead(held.id)) {
+        isSkeletonHead(held.id) || held.id == TORCH) {
         ItemId existing = w.getBlock(x, y, z);
-        if ((existing == AIR || existing == TALL_GRASS || isLiquid(existing)) && !player_.intersectsBlock(x, y, z))
+        if ((existing == AIR || existing == TALL_GRASS || isLiquid(existing)) && (held.id == TORCH || !player_.intersectsBlock(x, y, z)))
             placeSpecial(hit, held, x, y, z);
         return;
     }
@@ -1621,6 +1869,7 @@ void Session::useItem(const RayHit& hit) {
         const int side = hit.nz == 1 ? 0 : hit.nx == -1 ? 1 : hit.nz == -1 ? 2 : 3;
         place = (ItemId)((held.id == POWER_CABLE ? WALL_CABLE : WALL_SWITCH) + side);
     }
+    if (held.id == POWER_CABLE && hit.ny < 0) place = CEILING_CABLE;  // 1.5.7: under a ceiling
     if (!w.setBlock(x, y, z, place)) return;
     // A sapling grows into a tree after 20 seconds (5 with the fast growth experiment).
     if (isSapling(held.id)) saplings_.push_back({dimIndex(), x, y, z, settings_.expFastGrowth ? 5.0f : 20.0f});
@@ -1669,6 +1918,16 @@ void Session::breakBlock(const RayHit& hit) {
         ItemId gives = isCrop(above) ? dropFor(above, 0.5f) : above;
         if (survival() && above != TALL_GRASS && gives != AIR) dropAt(hit.x, hit.y + 1, hit.z, {gives, 1, 0});
     }
+    // 1.5.7: torches standing on the block or hanging on its sides fall off.
+    {
+        const int around[5][4] = {{0, 1, 0, TORCH}, {0, 0, 1, TORCH_WALL + 0}, {-1, 0, 0, TORCH_WALL + 1}, {0, 0, -1, TORCH_WALL + 2},
+                                  {1, 0, 0, TORCH_WALL + 3}};
+        for (const auto& a : around)
+            if (w.getBlock(hit.x + a[0], hit.y + a[1], hit.z + a[2]) == (ItemId)a[3]) {
+                w.setBlock(hit.x + a[0], hit.y + a[1], hit.z + a[2], AIR);
+                if (survival()) dropAt(hit.x + a[0], hit.y + a[1], hit.z + a[2], {TORCH, 1, 0});
+            }
+    }
     if (settings_.vibrate && onVibrate) onVibrate(25);
     sound(Sound::Dig);
     // A broken frame makes the whole portal disappear.
@@ -1692,7 +1951,7 @@ void Session::breakBlock(const RayHit& hit) {
         FurnaceKey key{dimIndex(), hit.x, hit.y, hit.z};
         if (id != CHEST && !chests_.count(key)) {  // an unopened structure chest still spills its loot
             uint32_t seed = info_.seed ^ (uint32_t)(key.x * 73856093) ^ (uint32_t)(key.y * 19349663) ^ (uint32_t)(key.z * 83492791);
-            chests_[key] = generateLoot(id, seed);
+            chests_[key] = structureLoot(id, seed);
         }
         if (ChestContents* c = chest(key))
             for (const ItemStack& s : *c)
@@ -2185,6 +2444,19 @@ void Session::render(Renderer& renderer, Ui& ui, const Settings& settings, bool 
         renderer.setBrightness(settings.brightness * 0.8f);
     }
     renderer.setFogScale(settings.addonHalloween ? 0.3f : 1.0f);
+    // 1.5.7: the player (also in first person), other players and mobs cast shadows.
+    mobs_.buildVertices(dimIndex(), clock_, mobVerts_);
+    shadowCasters_ = buildPlayerModel(this->pose());
+    for (const RemoteAvatar& a : remotePlayers)
+        if (a.dim == dimIndex()) {
+            std::vector<Vertex> v = buildPlayerModel(a.pose);
+            shadowCasters_.insert(shadowCasters_.end(), v.begin(), v.end());
+        }
+    shadowCasters_.insert(shadowCasters_.end(), mobVerts_.begin(), mobVerts_.end());
+    renderer.setShadowCasters(shadowCasters_);
+    // 1.5.7: a torch in either hand lights up the dark around the player.
+    const bool torchInHand = state_.inventory.slots[state_.selectedSlot].id == TORCH || state_.offhand.id == TORCH;
+    renderer.setHandLight(player_.eye() - Vec3(0, 0.4f, 0), torchInHand ? 0.95f : 0.0f);
     renderer.drawWorld(camera_, world_->dimension(), target_, breakProgress_, settings.renderDistance * (float)kChunkSize,
                        settings.fov);
     if (particles_.count()) {
@@ -2262,7 +2534,6 @@ void Session::render(Renderer& renderer, Ui& ui, const Settings& settings, bool 
         }
     }
     if (!fireballVerts_.empty()) renderer.drawParticles(fireballVerts_);
-    mobs_.buildVertices(dimIndex(), clock_, mobVerts_);
     if (!mobVerts_.empty()) renderer.drawParticles(mobVerts_);
     boats_.buildVertices(dimIndex(), boatVerts_);
     if (!boatVerts_.empty()) renderer.drawParticles(boatVerts_);
@@ -2287,6 +2558,7 @@ void Session::render(Renderer& renderer, Ui& ui, const Settings& settings, bool 
                       : (int)std::floor(e.y) >= world_->skyHeight((int)std::floor(e.x), (int)std::floor(e.z)) ? 1.0f
                                                                                                              : 0.55f;
         buildFirstPerson(hand_, light, handSkin_, handAtlas_);
+        buildOffhandFirstPerson(state_.offhand.id, player_.sneaking, hand_, light, handAtlas_);
         renderer.drawFirstPerson(handSkin_, handAtlas_);
     }
     if (mapChanged_) {
@@ -2315,6 +2587,9 @@ PlayerPose Session::pose() const {
     pose.place = hand_.placeProgress();
     pose.held = hand_.shown();
     for (int i = 0; i < 4; ++i) pose.armor[i] = state_.armor[i].empty() ? (ItemId)0 : state_.armor[i].id;
+    // 1.5.7: only a shield or a torch shows in the off hand.
+    if (state_.offhand.id == SHIELD || state_.offhand.id == TORCH) pose.offhand = state_.offhand.id;
+    pose.sneaking = player_.sneaking && !player_.flying && riding_ < 0;
     pose.riding = riding_ >= 0;
     if (pose.riding) pose.feet.y -= 0.45f;  // sitting in the boat
     return pose;
@@ -2472,6 +2747,25 @@ void Session::drawHud(Ui& ui) const {
             ui.quad(TexNone, pts, uvs, {0.6f, 0.6f, 0.6f, 1});
         }
     }
+    if (state_.inventory.slots[state_.selectedSlot].id == EXPLORER_MAP || state_.offhand.id == EXPLORER_MAP) {
+        // 1.5.7: the explorer map: a paper with a red needle towards the nearest mineshaft.
+        const float cx = W / 2, cy = 52, r = 13;
+        ui.fill(cx - r - 3, cy - r - 3, 2 * r + 6, 2 * r + 6, {0.55f, 0.45f, 0.3f, 0.85f});
+        ui.fill(cx - r - 1, cy - r - 1, 2 * r + 2, 2 * r + 2, {0.87f, 0.81f, 0.62f, 0.95f});
+        int mx, my, mz;
+        if ((world_ == &overworld_ || world_ == &nether_) && world_->nearestMineshaft((int)player_.pos.x, (int)player_.pos.z, mx, my, mz)) {
+            const float a = std::atan2(mx + 0.5f - player_.pos.x, -(mz + 0.5f - player_.pos.z)) - player_.yaw;
+            const float sx = std::sin(a), sy = -std::cos(a), px = -sy, py = sx;
+            const float pts[4][2] = {{cx + sx * r, cy + sy * r}, {cx + px * 4, cy + py * 4}, {cx - sx * 4, cy - sy * 4}, {cx - px * 4, cy - py * 4}};
+            const float uvs[4][2] = {};
+            ui.quad(TexNone, pts, uvs, {0.8f, 0.12f, 0.1f, 1});
+            const int dist = (int)std::hypot(mx - player_.pos.x, mz - player_.pos.z);
+            ui.textCentered(cx, cy + r + 5, trf("Důl: {0} m", {std::to_string(dist)}), {1, 0.92f, 0.75f, 1});
+            if (dist < 16) achieve("explorer");
+        } else {
+            ui.textCentered(cx, cy - 4, "?", {0.4f, 0.3f, 0.2f, 1});
+        }
+    }
     if (const Mob* boss = mobs_.boss(dimIndex()); boss && (boss->pos - player_.pos).length() < 60) {
         // Boss bar under the pause button.
         const float bw = std::min(220.0f, W - 120), bx = std::floor((W - bw) / 2), by = 27;
@@ -2522,6 +2816,21 @@ void Session::drawHud(Ui& ui) const {
                 std::string n = std::to_string(s.count);
                 ui.text(x + l.slot - 1 - ui.textWidth(n), l.hotbarY + l.slot - 9, n);
             }
+        }
+    }
+    {
+        // 1.5.7: the off hand, left of the hotbar.
+        const float ox = l.hotbarX - l.slot - 4;
+        ui.fill(ox - 1, l.hotbarY - 1, l.slot + 2, l.slot + 2, {0, 0, 0, 0.6f});
+        ui.fill(ox + 1, l.hotbarY + 1, l.slot - 2, l.slot - 2, {0.14f, 0.13f, 0.12f, 0.75f});
+        if (!state_.offhand.empty()) {
+            ui.item(ox + 2, l.hotbarY + 2, l.slot - 4, state_.offhand.id);
+            if (survival() && state_.offhand.count > 1) {
+                std::string n = std::to_string(state_.offhand.count);
+                ui.text(ox + l.slot - 1 - ui.textWidth(n), l.hotbarY + l.slot - 9, n);
+            }
+        } else {
+            ui.tile(ox + 3, l.hotbarY + 3, l.slot - 6, T_SHIELD, {0, 0, 0, 0.3f});
         }
     }
     float sx = l.hotbarX + state_.selectedSlot * l.slot;
@@ -2590,6 +2899,10 @@ void Session::drawHud(Ui& ui) const {
     ui.hudGlyph(l.jumpX, l.jumpY, l.buttonSize, l.buttonSize, Font::ArrowUp);
     if (player_.flying) {
         ui.hudButton(l.flyDownX, l.jumpY, l.buttonSize, l.buttonSize, downHeld);
+        ui.hudGlyph(l.flyDownX, l.jumpY, l.buttonSize, l.buttonSize, Font::ArrowDown);
+    } else if (riding_ < 0) {
+        // 1.5.7: the crouch button stays pressed while crouching.
+        ui.hudButton(l.flyDownX, l.jumpY, l.buttonSize, l.buttonSize, player_.sneaking);
         ui.hudGlyph(l.flyDownX, l.jumpY, l.buttonSize, l.buttonSize, Font::ArrowDown);
     }
 

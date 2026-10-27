@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <array>
 #include <vector>
 
 #include "Blocks.h"
@@ -69,6 +70,8 @@ public:
     bool setBlockLoading(int x, int y, int z, ItemId id);
     // When set, every setBlock that changes a block is appended here (LAN games).
     std::vector<BlockEdit>* editLog = nullptr;
+    // 1.5.7: when set, the position of every changed block is appended here (falling blocks, flowing liquids).
+    std::vector<std::array<int, 3>>* changeLog = nullptr;
     // Highest y that is still lit by the sky in this column.
     int skyHeight(int x, int z) const;
 
@@ -95,6 +98,9 @@ public:
     std::string placeName(int x, int z) const;
     // The nearest fortress (Nether) or boss arena (Crimson Void) to (x, z): its centre and floor height.
     bool nearestStructure(int x, int z, int& outX, int& outY, int& outZ) const;
+    // 1.5.7: the middle of the nearest mineshaft (Overworld: the wooden one; Cornerstone
+    // Dimension: the crimson one), for explorer maps. False when none is within ~1000 blocks.
+    bool nearestMineshaft(int x, int z, int& outX, int& outY, int& outZ);
     static constexpr int kFortressRegion = 176, kArenaRegion = 640, kVoidLavaLevel = 57, kVillageRegion = 384;
     // The village of an overworld region, if it has one: the well in the middle (feet height).
     bool villageIn(int rx, int rz, int& cx, int& cy, int& cz) const;
@@ -102,7 +108,7 @@ public:
     // Persistence: modified chunks are stored as files in this directory and
     // loaded instead of generated. Empty = nothing is saved (menu background).
     void setStorageDir(const std::string& dir) { storageDir_ = dir; }
-    void saveModifiedChunks();
+    void saveModifiedChunks();  // also writes the region files
     uint32_t seed() const { return seed_; }
 
 private:
@@ -122,6 +128,9 @@ private:
     void stampBlueprint(Chunk& c, const Structure& s, int ox, int oy, int oz, bool pillars);
     const Structure& blueprint(int kind, int rx, int rz, uint32_t h);
     bool fortressIn(int rx, int rz, int& ox, int& oy, int& oz, uint32_t& h) const;
+    // 1.5.7: where the crimson mineshaft of a region of the Cornerstone Dimension starts (corner).
+    static constexpr int kCrimsonShaftRegion = 224;
+    bool crimsonShaftIn(int rx, int rz, int& ox, int& oy, int& oz) const;
     void arenaCentre(int rx, int rz, int& x, int& z) const;
     float arenaInfluence(int x, int z) const;  // 1 at an arena, 0 far away
     void placePine(Chunk& c, int x, int y, int z, uint32_t h, ItemId trunkBlock, ItemId leafBlock);
@@ -130,6 +139,17 @@ private:
     std::string chunkPath(int cx, int cz) const;
     bool loadChunk(Chunk& c) const;
     void saveChunk(Chunk& c) const;
+    // 1.5.7: chunks live in region files of 32 x 32 chunks ("r.<x>.<z>.vcr"), compressed, instead
+    // of a small file each: far less space on the phone. Old chunk files are read and moved over.
+    struct Region {
+        std::vector<std::vector<uint8_t>> blobs = std::vector<std::vector<uint8_t>>(1024);
+        bool dirty = false;
+    };
+    Region& region(int rx, int rz) const;
+    std::string regionPath(int rx, int rz) const;
+    void flushRegions() const;
+    mutable std::unordered_map<uint64_t, Region> regions_;
+    mutable std::vector<std::string> legacyFiles_;  // chunk files now kept in a region
 
     uint32_t seed_;
     Dimension dim_;
@@ -137,6 +157,7 @@ private:
     Noise terrain_, detail_, caves_, temperature_, humidity_;
     std::unordered_map<int64_t, std::unique_ptr<Chunk>> chunks_;
     std::unordered_map<uint64_t, std::shared_ptr<Structure>> blueprints_;  // generated structures, by region
+    std::unordered_map<uint64_t, std::array<int, 4>> mineshafts_;          // region -> found?, x, y, z
     std::string storageDir_;
 };
 

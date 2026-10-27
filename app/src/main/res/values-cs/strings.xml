@@ -11,4 +11,6 @@
     <string name="modpack_imported">Balíček nainstalován a zapnut</string>
     <string name="modpack_invalid">V archivu není manifest.json ani složky biomes, dimensions nebo recipes</string>
     <string name="world_exported">Uloženo do Stažené soubory/VoxelCraft: %s</string>
+    <string name="video_downloading">Stahuji trailer…</string>
+    <string name="video_failed">Trailer se nepodařilo stáhnout (bez internetu?)</string>
 </resources>

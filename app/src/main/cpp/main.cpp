@@ -210,6 +210,13 @@ void android_main(android_app* android) {
             env->DeleteLocalRef(s);
         });
     };
+    app.game->onPlayVideo = [android](const std::string& asset) {
+        callActivity(android, "playVideo", "(Ljava/lang/String;)V", [&](JNIEnv* env, jobject obj, jmethodID m) {
+            jstring a = toJavaString(env, asset);
+            env->CallVoidMethod(obj, m, a);
+            env->DeleteLocalRef(a);
+        });
+    };
     app.game->onImportSkin = [android] {
         callActivity(android, "importSkin", "()V", [](JNIEnv* env, jobject obj, jmethodID m) { env->CallVoidMethod(obj, m); });
     };
@@ -269,6 +276,9 @@ void android_main(android_app* android) {
             app.game->onResize(w, h);
         }
         app.game->frame(now());
+        // 1.5.7 battery saver: every second refresh (30 frames a second on a 60 Hz screen).
+        static int interval = 1;
+        if (const int want = app.game->wantsLowFps() ? 2 : 1; want != interval) eglSwapInterval(app.display, interval = want);
         eglSwapBuffers(app.display, app.surface);
     }
     g_game = nullptr;
@@ -292,6 +302,10 @@ extern "C" JNIEXPORT void JNICALL Java_cz_voxelcraft_VoxelActivity_nativeTextRes
 }
 
 extern "C" JNIEXPORT void JNICALL Java_cz_voxelcraft_VoxelActivity_nativeBack(JNIEnv*, jobject) { ++g_backRequests; }
+
+extern "C" JNIEXPORT void JNICALL Java_cz_voxelcraft_VoxelActivity_nativeBattery(JNIEnv*, jobject, jint percent, jboolean charging) {
+    if (vc::Game* game = g_game.load()) game->onBattery(percent, charging);
+}
 
 extern "C" JNIEXPORT void JNICALL Java_cz_voxelcraft_VoxelActivity_nativePacksChanged(JNIEnv*, jobject) {
     if (vc::Game* game = g_game.load()) game->requestPacksReload();

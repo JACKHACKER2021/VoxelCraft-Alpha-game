@@ -228,6 +228,18 @@ enum BlockId : uint16_t {
     // 1.5.1: an eye set into void bricks that watches the boss arenas (not craftable).
     VOID_BRICK_EYE = 1525,
     CRIMSON_STONE = 1526,    // the rock formations of the Crimson Desert
+    // 1.5.7: torches (on the floor, and on a wall: 1528..1531 hang on the wall to the 0 north,
+    // 1 east, 2 south, 3 west) and the crimson wood of the Cornerstone Dimension's mineshafts.
+    TORCH = 1527,
+    TORCH_WALL = 1528,
+    CRIMSON_PLANKS = 1532,
+    CRIMSON_LOG = 1533,
+    // 1.5.7: the powerstone furnace: three times faster, and fuelled by power when wired up.
+    POWERSTONE_FURNACE = 1534,
+    POWERSTONE_FURNACE_ON = 1535,
+    // 1.5.7: a power cable on a ceiling (off, on).
+    CEILING_CABLE = 1536,
+    CEILING_CABLE_ON = 1537,
     // 1.5.0 items
     BRUSHER = 1600,
     FORTRESS_COMPASS = 1601,
@@ -235,7 +247,12 @@ enum BlockId : uint16_t {
     ANCIENT_COIN = 1610,
     POWERSTONE_RELIC = 1611,
     POTTERY_SHARD = 1612,
+    // 1.5.7 items
+    SHIELD = 1613,           // in the off hand it stops attacks from the front
+    EXPLORER_MAP = 1614,     // points the way to the nearest mineshaft (Exploration Maps experiment)
+    EGG_HOGMAN = 1308,       // the hog man of the Cornerstone Dimension
 };
+inline bool isTorch(ItemId id) { return id >= TORCH && id < TORCH_WALL + 4; }
 constexpr int kDocumentPages = 8;
 inline bool isDocument(ItemId id) { return id >= OLD_DOCUMENT && id < OLD_DOCUMENT + kDocumentPages; }
 inline bool isSkeletonHead(ItemId id) { return id >= SKELETON_HEAD && id < SKELETON_HEAD + 4; }
@@ -283,7 +300,7 @@ int modFood(ItemId id);
 inline bool isNewBlock(ItemId id) {
     if (id >= kModIdBase) return modIsBlock(id);
     return isStairs(id) || isSlab(id) || (id >= TAR && id <= SNOW_LAYER) || isStainedGlass(id) || (id >= WALL_CABLE && id < WALL_CABLE + 8) || (id >= WALL_SWITCH && id < WALL_SWITCH + 8) ||
-           (id >= ANNIV_LOGO && id <= PAINTED_PLANKS + 3) || (id >= POWERSTONE_BRICKS && id <= CRIMSON_STONE && id != 1518 && id != 1519);
+           (id >= ANNIV_LOGO && id <= PAINTED_PLANKS + 3) || (id >= POWERSTONE_BRICKS && id <= CEILING_CABLE_ON && id != 1518 && id != 1519);
 }
 // The full block a stair or slab is cut from (its texture, hardness and tool).
 inline ItemId shapeMaterial(ItemId id) {
@@ -352,6 +369,8 @@ enum Tile : uint16_t {
     T_POWERSTONE_RELIC, T_POTTERY_SHARD, T_EGG_HUSKING, T_HUSKING_SKIN, T_HUSKING_FACE, T_HUSKING_ROBE, T_FIREBALL,
     // 1.5.1
     T_VOID_BRICK_EYE, T_CRIMSON_STONE,
+    T_TORCH, T_CRIMSON_PLANKS, T_CRIMSON_LOG_SIDE, T_CRIMSON_LOG_TOP, T_SHIELD, T_EXPLORER_MAP, T_EGG_HOGMAN,
+    T_HOGMAN_SKIN, T_HOGMAN_FACE, T_HOGMAN_TUNIC, T_PS_FURNACE_FRONT, T_PS_FURNACE_FRONT_ON,
     T_COUNT
 };
 static_assert(T_COUNT <= kAtlasCols * kAtlasCols, "the atlas has room for every tile");
@@ -368,13 +387,15 @@ inline bool isChest(ItemId id) {
 inline bool isSapling(ItemId id) { return id >= OAK_SAPLING && id <= NETHERPERK_SAPLING; }
 inline bool isWallCable(ItemId id) { return id >= WALL_CABLE && id < WALL_CABLE + 8; }
 inline bool isWallSwitch(ItemId id) { return id >= WALL_SWITCH && id < WALL_SWITCH + 8; }
-inline bool isCable(ItemId id) { return id == POWER_CABLE || id == POWER_CABLE_ON || isWallCable(id); }
+inline bool isCeilingCable(ItemId id) { return id == CEILING_CABLE || id == CEILING_CABLE_ON; }
+inline bool isCable(ItemId id) { return id == POWER_CABLE || id == POWER_CABLE_ON || isWallCable(id) || isCeilingCable(id); }
 inline bool isSwitch(ItemId id) { return id == SWITCH || id == SWITCH_ON || isWallSwitch(id); }
-inline bool cableOn(ItemId id) { return id == POWER_CABLE_ON || (isWallCable(id) && id - WALL_CABLE >= 4); }
+inline bool cableOn(ItemId id) { return id == POWER_CABLE_ON || id == CEILING_CABLE_ON || (isWallCable(id) && id - WALL_CABLE >= 4); }
 inline bool switchOn(ItemId id) { return id == SWITCH_ON || (isWallSwitch(id) && id - WALL_SWITCH >= 4); }
 // The same cable with or without power, the same switch flipped.
 inline ItemId cableWithPower(ItemId id, bool on) {
     if (isWallCable(id)) return (ItemId)(WALL_CABLE + (id - WALL_CABLE) % 4 + (on ? 4 : 0));
+    if (isCeilingCable(id)) return on ? (ItemId)CEILING_CABLE_ON : (ItemId)CEILING_CABLE;
     return on ? (ItemId)POWER_CABLE_ON : (ItemId)POWER_CABLE;
 }
 inline ItemId toggledSwitch(ItemId id) {
@@ -387,7 +408,7 @@ inline bool isLamp(ItemId id) { return id == POWERSTONE_LAMP || id == POWERSTONE
 inline bool isTnt(ItemId id) { return id == TNT || id == NUKE_TNT; }
 inline bool isSword(ItemId id) { return id >= WOOD_SWORD && id <= RUBY_SWORD; }
 inline bool isSpawnEgg(ItemId id) {
-    return (id >= EGG_PIG && id <= EGG_FORGOTTEN) || (id >= EGG_CHICKEN && id <= EGG_VILLAGER) || (id >= EGG_SPIDER && id <= EGG_HUSKING);
+    return (id >= EGG_PIG && id <= EGG_FORGOTTEN) || (id >= EGG_CHICKEN && id <= EGG_VILLAGER) || (id >= EGG_SPIDER && id <= EGG_HOGMAN);
 }
 // Wheat: seeds (stage 0) grow through two more stages into ripe wheat (stage 3), on farmland only.
 inline int cropStage(ItemId id) {
@@ -403,11 +424,11 @@ inline bool isBed(ItemId id) { return id >= BED && id < BED + 8; }
 inline bool isShaped(ItemId id) {
     return isDoor(id) || isTrapdoor(id) || isChest(id) || isFence(id) || isSkeletonHead(id) || id == CACTUS || isBed(id) || isCable(id) ||
            isSwitch(id) || id == CAKE || id == FARMLAND || isStairs(id) || (isSlab(id) && !isDoubleSlab(id)) ||
-           isBalloon(id) || id == PARTY_LANTERN || id == SNOW_LAYER;
+           isBalloon(id) || id == PARTY_LANTERN || id == SNOW_LAYER || isTorch(id);
 }
 inline bool isLeaves(ItemId id) { return id == LEAVES || id == SPRUCE_LEAVES || id == VOID_LEAVES || id == NETHERPERK_CAP; }
 inline bool isLog(ItemId id) {
-    return id == LOG || id == SPRUCE_LOG || id == VOID_LOG || id == EYE_LOG || id == NETHERPERK_LOG;
+    return id == LOG || id == SPRUCE_LOG || id == VOID_LOG || id == EYE_LOG || id == NETHERPERK_LOG || id == CRIMSON_LOG;
 }
 inline bool isPortal(ItemId id) { return id == PORTAL || id == VOID_PORTAL; }
 // Small plants: drawn as two crossed planes, no collision, but they can be targeted and broken.
@@ -427,15 +448,17 @@ inline bool isOpaque(ItemId id) {
 inline bool isEmissive(ItemId id) {
     return id == LAVA || isPortal(id) || id == LIT_FURNACE || id == EYE_LOG || id == POWERSTONE_LIGHT ||
            id == POWERSTONE_LAMP_ON || id == NETHERPERK_CAP || cableOn(id) || id == POWERSTONE_BLOCK ||
-           id == PARTY_LANTERN || id == ANNIV_LOGO || id == VOID_BRICK_EYE || (id >= kModIdBase && modIsEmissive(id));
+           id == PARTY_LANTERN || id == ANNIV_LOGO || id == VOID_BRICK_EYE || isTorch(id) || (id >= kModIdBase && modIsEmissive(id));
 }
-inline bool isFurnace(ItemId id) { return id == FURNACE || id == LIT_FURNACE; }
+inline bool isFurnace(ItemId id) { return id == FURNACE || id == LIT_FURNACE || id == POWERSTONE_FURNACE || id == POWERSTONE_FURNACE_ON; }
+inline bool isPowerstoneFurnace(ItemId id) { return id == POWERSTONE_FURNACE || id == POWERSTONE_FURNACE_ON; }
 // How far a block lights up its surroundings (0..15), day and night.
 inline int lightLevel(ItemId id) {
     switch (id) {
         case POWERSTONE_LAMP_ON: case POWERSTONE_LIGHT: case PARTY_LANTERN: return 15;
         case LAVA: return 14;
-        case LIT_FURNACE: case POWERSTONE_BLOCK: return 12;
+        case TORCH: case TORCH_WALL: case TORCH_WALL + 1: case TORCH_WALL + 2: case TORCH_WALL + 3: return 14;
+        case LIT_FURNACE: case POWERSTONE_BLOCK: case POWERSTONE_FURNACE_ON: return 12;
         case NETHERPERK_CAP: case PORTAL: case VOID_PORTAL: return 10;
         case EYE_LOG: case ANNIV_LOGO: case VOID_BRICK_EYE: return 8;
         case POWER_CABLE_ON: return 6;
@@ -635,6 +658,14 @@ inline int tileFor(ItemId id, Face face) {
                 case PARTY_POPPER: return T_PARTY_POPPER;
                 case EGG_HUSKING: return T_EGG_HUSKING;
                 case CRIMSON_STONE: return T_CRIMSON_STONE;
+                case CRIMSON_PLANKS: return T_CRIMSON_PLANKS;
+                case POWERSTONE_FURNACE: case POWERSTONE_FURNACE_ON:
+                    if (face == F_NORTH || face == F_SOUTH) return id == POWERSTONE_FURNACE_ON ? T_PS_FURNACE_FRONT_ON : T_PS_FURNACE_FRONT;
+                    return face == F_TOP || face == F_BOTTOM ? T_CHISELED_POWERSTONE_BRICKS : T_POWERSTONE_BRICKS;
+                case CRIMSON_LOG: return face == F_TOP || face == F_BOTTOM ? T_CRIMSON_LOG_TOP : T_CRIMSON_LOG_SIDE;
+                case SHIELD: return T_SHIELD;
+                case EXPLORER_MAP: return T_EXPLORER_MAP;
+                case EGG_HOGMAN: return T_EGG_HOGMAN;
                 case VOID_BRICK_EYE: return face == F_TOP || face == F_BOTTOM ? T_VOID_STONE_BRICKS : T_VOID_BRICK_EYE;
                 case POWERSTONE_BRICKS: case POWERSTONE_FENCE: return T_POWERSTONE_BRICKS;
                 case CRACKED_POWERSTONE_BRICKS: return T_CRACKED_POWERSTONE_BRICKS;
@@ -658,11 +689,12 @@ inline int tileFor(ItemId id, Face face) {
                 case POTTERY_SHARD: return T_POTTERY_SHARD;
                 default:
                     if (isDocument(id)) return T_DOCUMENT;
+                    if (isTorch(id)) return T_TORCH;
                     if (isSkeletonHead(id)) {
                         static const Face kFront[4] = {F_SOUTH, F_WEST, F_NORTH, F_EAST};
                         return face == kFront[id - SKELETON_HEAD] ? T_SKULL_FACE : T_SKULL;
                     }
-                    if (isWallCable(id)) return cableOn(id) ? T_CABLE_LINE_ON : T_CABLE_LINE;
+                    if (isWallCable(id) || isCeilingCable(id)) return cableOn(id) ? T_CABLE_LINE_ON : T_CABLE_LINE;
                     if (isWallSwitch(id)) {
                         // The lever shows on the side that faces away from the wall.
                         static const Face kOut[4] = {F_SOUTH, F_WEST, F_NORTH, F_EAST};

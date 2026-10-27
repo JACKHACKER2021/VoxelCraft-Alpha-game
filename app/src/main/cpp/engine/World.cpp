@@ -1,5 +1,7 @@
 #include "World.h"
 
+#include <zlib.h>
+
 #include "WorldStructures.h"
 
 #include <algorithm>
@@ -54,6 +56,7 @@ bool World::setBlock(int x, int y, int z, ItemId id) {
     if (!c) return false;
     int lx = floorMod(x, kChunkSize), lz = floorMod(z, kChunkSize);
     if (editLog && c->get(lx, y, lz) != id) editLog->push_back({x, y, z, id});
+    if (changeLog && c->get(lx, y, lz) != id && changeLog->size() < 65536) changeLog->push_back({x, y, z});
     // A lamp lights up to 15 blocks away: the neighbouring chunks' meshes change too.
     if (lightLevel(id) > 0 || lightLevel(c->get(lx, y, lz)) > 0)
         for (int dx = -1; dx <= 1; ++dx)
@@ -176,19 +179,31 @@ void World::generateOverworld(Chunk& c) {
 
                 // Worm-like caves carved by 3D noise, kept away from the sea floor.
                 bool carved = false;
-                if (config_.overworld.caves && id != AIR && id != WATER && id != BEDROCK && y < h - 4 && y > 4) {
+                // 1.5.7 (generation 2): wider tunnels in two crossing networks, and sinkholes where
+                // the tunnels break through to the surface so caves can be walked into.
+                const bool gen2 = config_.generation >= 2;
+                const bool sinkhole = gen2 && h > sea + 2 && caves_.perlin2(wx / 64.0f + 900.0f, wz / 64.0f - 300.0f) > 0.42f;
+                const int roof = sinkhole ? h + 1 : h - 4;
+                if (config_.overworld.caves && id != AIR && id != WATER && id != BEDROCK && y < roof && y > 4) {
                     float n = caves_.perlin3(wx / 24.0f, y / 16.0f, wz / 24.0f);
-                    if (std::fabs(n) < config_.overworld.caveSize) id = AIR, carved = true;
+                    const float size = config_.overworld.caveSize * (gen2 ? 1.35f : 1.0f) * (sinkhole && y > h - 8 ? 1.6f : 1.0f);
+                    if (std::fabs(n) < size) id = AIR, carved = true;
+                    if (gen2 && !carved && y < h - 6) {
+                        float m = caves_.perlin3(wx / 30.0f - 170.0f, y / 13.0f + 40.0f, wz / 30.0f + 260.0f);
+                        if (std::fabs(m) < config_.overworld.caveSize * 1.1f) id = AIR, carved = true;
+                    }
                 }
                 // Caves 2.0: big caverns from a slow noise, wider the deeper they are. Their floors
                 // below kCaveLakeLevel fill with water, or with tar in some regions.
                 if (config_.overworld.caverns && !carved && id != AIR && id != WATER && id != BEDROCK && y < h - 10 && y > 5) {
                     const float depth = 1.0f - (float)y / (float)std::max(h, 1);
-                    float n = caves_.perlin3(wx / 52.0f + 500.0f, y / 22.0f, wz / 52.0f);
-                    if (n > 0.43f - depth * 0.14f) id = AIR, carved = true;
+                    float n = caves_.perlin3(wx / 52.0f + 500.0f, y / (gen2 ? 28.0f : 22.0f), wz / 52.0f);
+                    if (n > 0.43f - depth * (gen2 ? 0.2f : 0.14f)) id = AIR, carved = true;
                 }
                 if (carved && config_.overworld.caverns && y <= kCaveLakeLevel)
                     id = tarRegion ? (ItemId)TAR : (ItemId)WATER;
+                // 1.5.7: the deepest hollows glow with lava pools.
+                if (carved && gen2 && y <= 7 && caves_.perlin2(wx / 40.0f - 700.0f, wz / 40.0f) > -0.1f) id = LAVA;
                 c.set(x, y, z, id);
             }
             cols[x][z] = col;
@@ -272,6 +287,48 @@ void World::generateOverworld(Chunk& c) {
     uint32_t salt = 0xC0A1u;
     for (const OreDef& ore : config_.overworld.ores) placeOres(c, ore, salt += 0x9E37u);
     stampStructures(c);
+}
+
+bool World::nearestMineshaft(int x, int z, int& outX, int& outY, int& outZ) {
+    long best = -1;
+    if (dim_ == Dimension::Nether) {
+        const int br = floorDiv(x, kCrimsonShaftRegion), bz = floorDiv(z, kCrimsonShaftRegion);
+        for (int rx = br - 4; rx <= br + 4; ++rx)
+            for (int rz = bz - 4; rz <= bz + 4; ++rz) {
+                int ox, oy, oz;
+                if (!crimsonShaftIn(rx, rz, ox, oy, oz)) continue;
+                ox += 48, oy += 2, oz += 48;  // the central room
+                const long d = (long)(ox - x) * (ox - x) + (long)(oz - z) * (oz - z);
+                if (best < 0 || d < best) best = d, outX = ox, outY = oy, outZ = oz;
+            }
+        return best >= 0;
+    }
+    if (dim_ != Dimension::Overworld || !config_.overworld.structures) return false;
+    const int region = 288, maxSize = 97;
+    const int br = floorDiv(x, region), bz = floorDiv(z, region);
+    for (int rx = br - 3; rx <= br + 3; ++rx)
+        for (int rz = bz - 3; rz <= bz + 3; ++rz) {
+            const uint64_t key = ((uint64_t)(uint32_t)rx << 32) | (uint32_t)rz;
+            auto it = mineshafts_.find(key);
+            if (it == mineshafts_.end()) {
+                // The same choices as stampStructures makes for a mineshaft.
+                std::array<int, 4> found{0, 0, 0, 0};
+                const uint32_t h = hash3(rx, (int)WorldStructure::Mineshaft * 977 + 13, rz, seed_ ^ 0x57A7u);
+                if ((int)(h % 100) < 65) {
+                    const int ox = rx * region + (int)((h >> 8) % (uint32_t)(region - maxSize));
+                    const int oz = rz * region + (int)((h >> 16) % (uint32_t)(region - maxSize));
+                    const Structure s = buildWorldStructure(WorldStructure::Mineshaft, h * 2654435761u).rotated((int)(h >> 28));
+                    const int oy = 16 + (int)((h >> 4) % 14);
+                    if (column(ox + s.sx / 2, oz + s.sz / 2).height >= oy + s.sy + 8) found = {1, ox + s.sx / 2, oy + 2, oz + s.sz / 2};
+                }
+                if (mineshafts_.size() > 256) mineshafts_.clear();
+                it = mineshafts_.emplace(key, found).first;
+            }
+            if (!it->second[0]) continue;
+            const long d = (long)(it->second[1] - x) * (it->second[1] - x) + (long)(it->second[3] - z) * (it->second[3] - z);
+            if (best < 0 || d < best) best = d, outX = it->second[1], outY = it->second[2], outZ = it->second[3];
+        }
+    return best >= 0;
 }
 
 void World::stampStructures(Chunk& c) {
@@ -501,12 +558,20 @@ void World::generateNether(Chunk& c) {
     // Fortresses of nether bricks.
     if (!config_.overworld.structures) return;
     const int x0 = c.cx * kChunkSize, z0 = c.cz * kChunkSize;
-    for (int rx = floorDiv(x0 - 60, kFortressRegion); rx <= floorDiv(x0 + 15, kFortressRegion); ++rx)
-        for (int rz = floorDiv(z0 - 60, kFortressRegion); rz <= floorDiv(z0 + 15, kFortressRegion); ++rz) {
+    const WorldStructure fortressKind = config_.generation >= 2 ? WorldStructure::GreatFortress : WorldStructure::Fortress;
+    for (int rx = floorDiv(x0 - 90, kFortressRegion); rx <= floorDiv(x0 + 15, kFortressRegion); ++rx)
+        for (int rz = floorDiv(z0 - 90, kFortressRegion); rz <= floorDiv(z0 + 15, kFortressRegion); ++rz) {
             int ox, oy, oz;
             uint32_t h;
             if (!fortressIn(rx, rz, ox, oy, oz, h)) continue;
-            stampBlueprint(c, blueprint((int)WorldStructure::Fortress, rx, rz, h), ox, oy, oz, true);
+            stampBlueprint(c, blueprint((int)fortressKind, rx, rz, h), ox, oy, oz, true);
+        }
+    // 1.5.7: crimson mineshafts tunnel through the rock.
+    for (int rx = floorDiv(x0 - 96, kCrimsonShaftRegion); rx <= floorDiv(x0 + 15, kCrimsonShaftRegion); ++rx)
+        for (int rz = floorDiv(z0 - 96, kCrimsonShaftRegion); rz <= floorDiv(z0 + 15, kCrimsonShaftRegion); ++rz) {
+            int ox, oy, oz;
+            if (!crimsonShaftIn(rx, rz, ox, oy, oz)) continue;
+            stampBlueprint(c, blueprint((int)WorldStructure::CrimsonMineshaft, rx, rz, hash3(rx, 1577, rz, seed_ ^ 0xC21Du)), ox, oy, oz, false);
         }
     // 1.5.1: forgotten villages lie in hollows of the wasteland, on cornerstone foundations.
     if (nd.fill != NETHERRACK) return;
@@ -553,11 +618,21 @@ bool World::forgottenVillageIn(int rx, int rz, int& cx, int& cy, int& cz) const 
 
 bool World::netherGrassAt(int x, int z) const { return temperature_.perlin2(x / 96.0f, z / 96.0f) > 0.05f; }
 
+bool World::crimsonShaftIn(int rx, int rz, int& ox, int& oy, int& oz) const {
+    if (dim_ != Dimension::Nether || !config_.overworld.structures || config_.generation < 2) return false;
+    const uint32_t h = hash3(rx, 1577, rz, seed_ ^ 0xC21Du);
+    if (h % 100 >= 50) return false;
+    ox = rx * kCrimsonShaftRegion + 8 + (int)((h >> 8) % (uint32_t)(kCrimsonShaftRegion - 96 - 16));
+    oz = rz * kCrimsonShaftRegion + 8 + (int)((h >> 16) % (uint32_t)(kCrimsonShaftRegion - 96 - 16));
+    oy = config_.nether.lavaLevel + 4 + (int)((h >> 4) % 18);
+    return true;
+}
+
 bool World::fortressIn(int rx, int rz, int& ox, int& oy, int& oz, uint32_t& h) const {
     h = hash3(rx, 4441, rz, seed_ ^ 0xF0F7u);
     // The region around the world's centre always has one, so the first trip finds it.
     if (!(rx == 0 && rz == 0) && h % 100 >= 55) return false;
-    const int size = 53;
+    const int size = config_.generation >= 2 ? 85 : 53;
     ox = rx * kFortressRegion + 8 + (int)((h >> 8) % (uint32_t)(kFortressRegion - size - 16));
     oz = rz * kFortressRegion + 8 + (int)((h >> 16) % (uint32_t)(kFortressRegion - size - 16));
     oy = 40 + (int)((h >> 4) % 14);
@@ -685,12 +760,13 @@ bool World::nearestStructure(int x, int z, int& outX, int& outY, int& outZ) cons
                 int ox, oy, oz;
                 uint32_t h;
                 if (!fortressIn(rx, rz, ox, oy, oz, h)) continue;
-                long d = (long)(ox + 26 - x) * (ox + 26 - x) + (long)(oz + 26 - z) * (oz + 26 - z);
+                const int half = config_.generation >= 2 ? 42 : 26;  // the great hall in the middle
+                long d = (long)(ox + half - x) * (ox + half - x) + (long)(oz + half - z) * (oz + half - z);
                 if (best < 0 || d < best) {
                     best = d;
-                    outX = ox + 26;
+                    outX = ox + half;
                     outY = oy + 1;
-                    outZ = oz + 26;
+                    outZ = oz + half;
                 }
             }
     } else if (dim_ == Dimension::Overworld) {
@@ -917,75 +993,179 @@ int World::ensureChunksAround(int cx, int cz, int radius, int budget) {
 }
 
 void World::unloadFarChunks(int cx, int cz, int radius) {
+    bool regionsTouched = false;
     for (auto it = chunks_.begin(); it != chunks_.end();) {
         int dx = it->second->cx - cx, dz = it->second->cz - cz;
         if (dx * dx + dz * dz > radius * radius) {
             if (it->second->modified) saveChunk(*it->second);
             it = chunks_.erase(it);
+            regionsTouched = true;
         } else {
             ++it;
         }
     }
+    if (regionsTouched) flushRegions();  // what leaves memory is on disk right away
 }
 
 std::string World::chunkPath(int cx, int cz) const {
     return storageDir_ + "/c." + std::to_string(cx) + "." + std::to_string(cz) + ".bin";
 }
 
+// 1.5.7 chunk file: "VCC4", the uncompressed size (4 bytes, little endian), then the VCC3 runs
+// below packed with zlib: worlds take a fraction of the space.
 // Chunk file: "VCC3", then runs of (count - 1, id low byte, id high byte) over the 32768
 // blocks in Chunk::index order. Older files: "VCC2" (1.3.0) and "VCC1" have (count - 1, id)
 // byte pairs, and VCC1 still holds the Nether blocks removed in 1.2.0.
+namespace {
+// One chunk as bytes: "VCC4", the size of the runs, then the runs packed with zlib.
+std::vector<uint8_t> encodeChunk(const Chunk& c) {
+    const size_t total = sizeof c.blocks / sizeof c.blocks[0];
+    std::vector<uint8_t> runs;
+    for (size_t i = 0; i < total;) {
+        size_t run = 1;
+        while (i + run < total && run < 256 && c.blocks[i + run] == c.blocks[i]) ++run;
+        runs.push_back((uint8_t)(run - 1));
+        runs.push_back((uint8_t)(c.blocks[i] & 0xFF));
+        runs.push_back((uint8_t)(c.blocks[i] >> 8));
+        i += run;
+    }
+    uLongf packedSize = compressBound((uLong)runs.size());
+    std::vector<uint8_t> out(8 + packedSize);
+    out[0] = 'V', out[1] = 'C', out[2] = 'C', out[3] = '4';
+    for (int k = 0; k < 4; ++k) out[4 + k] = (uint8_t)(runs.size() >> (8 * k));
+    if (compress2(out.data() + 8, &packedSize, runs.data(), (uLong)runs.size(), 6) != Z_OK) return {};
+    out.resize(8 + packedSize);
+    return out;
+}
+
+// Reads any chunk format into c.blocks: VCC4, VCC3 (runs of 3 bytes), VCC2/VCC1 (2 bytes).
+bool decodeChunk(const std::vector<uint8_t>& data, Chunk& c) {
+    if (data.size() < 4 || data[0] != 'V' || data[1] != 'C' || data[2] != 'C' || data[3] < '1' || data[3] > '4') return false;
+    int version = data[3] - '0';
+    std::vector<uint8_t> unpacked;
+    const uint8_t* p = data.data() + 4;
+    size_t n = data.size() - 4;
+    if (version == 4) {
+        if (data.size() < 8) return false;
+        const uLongf want = (uLongf)(data[4] | data[5] << 8 | data[6] << 16 | (uint32_t)data[7] << 24);
+        if (want >= (1u << 20)) return false;
+        unpacked.resize(want);
+        uLongf got = want;
+        if (uncompress(unpacked.data(), &got, data.data() + 8, (uLong)(data.size() - 8)) != Z_OK || got != want) return false;
+        p = unpacked.data(), n = unpacked.size(), version = 3;
+    }
+    const size_t total = sizeof c.blocks / sizeof c.blocks[0], recSize = version >= 3 ? 3 : 2;
+    size_t pos = 0;
+    for (size_t at = 0; pos < total && at + recSize <= n; at += recSize) {
+        const size_t count = std::min<size_t>(p[at] + 1, total - pos);
+        ItemId id = version >= 3 ? (ItemId)(p[at + 1] | p[at + 2] << 8) : p[at + 1];
+        if (version == 1) id = upgradeLegacyBlock(id);  // 1.3.0 reused the ids of removed Nether blocks
+        std::fill(c.blocks + pos, c.blocks + pos + count, id);
+        pos += count;
+    }
+    return pos == total;
+}
+
+std::vector<uint8_t> readAll(const std::string& path) {
+    std::vector<uint8_t> out;
+    FILE* f = std::fopen(path.c_str(), "rb");
+    if (!f) return out;
+    uint8_t buf[8192];
+    for (size_t n; (n = std::fread(buf, 1, sizeof buf, f)) > 0;) out.insert(out.end(), buf, buf + n);
+    std::fclose(f);
+    return out;
+}
+
+uint32_t le32(const uint8_t* p) { return p[0] | p[1] << 8 | p[2] << 16 | (uint32_t)p[3] << 24; }
+}  // namespace
+
+std::string World::regionPath(int rx, int rz) const {
+    return storageDir_ + "/r." + std::to_string(rx) + "." + std::to_string(rz) + ".vcr";
+}
+
+// Region file: "VCR1", 1024 entries of (offset, length) as little-endian uint32 (chunk
+// (cx & 31) + (cz & 31) * 32), then the chunks' bytes.
+World::Region& World::region(int rx, int rz) const {
+    const uint64_t key = ((uint64_t)(uint32_t)rx << 32) | (uint32_t)rz;
+    auto it = regions_.find(key);
+    if (it != regions_.end()) return it->second;
+    Region& r = regions_[key];
+    const std::vector<uint8_t> file = readAll(regionPath(rx, rz));
+    if (file.size() >= 4 + 1024 * 8 && file[0] == 'V' && file[1] == 'C' && file[2] == 'R' && file[3] == '1')
+        for (int i = 0; i < 1024; ++i) {
+            const uint32_t off = le32(&file[4 + i * 8]), len = le32(&file[8 + i * 8]);
+            if (len && (size_t)off + len <= file.size()) r.blobs[i].assign(file.begin() + off, file.begin() + off + len);
+        }
+    return r;
+}
+
+void World::flushRegions() const {
+    if (storageDir_.empty()) return;
+    std::error_code ec;
+    for (auto& [key, r] : regions_) {
+        if (!r.dirty) continue;
+        const int rx = (int32_t)(key >> 32), rz = (int32_t)(uint32_t)key;
+        std::vector<uint8_t> out = {'V', 'C', 'R', '1'};
+        out.resize(4 + 1024 * 8, 0);
+        for (int i = 0; i < 1024; ++i) {
+            if (r.blobs[i].empty()) continue;
+            const uint32_t off = (uint32_t)out.size(), len = (uint32_t)r.blobs[i].size();
+            for (int k = 0; k < 4; ++k) out[4 + i * 8 + k] = (uint8_t)(off >> (8 * k)), out[8 + i * 8 + k] = (uint8_t)(len >> (8 * k));
+            out.insert(out.end(), r.blobs[i].begin(), r.blobs[i].end());
+        }
+        std::filesystem::create_directories(storageDir_, ec);
+        const std::string path = regionPath(rx, rz), tmp = path + ".tmp";
+        FILE* f = std::fopen(tmp.c_str(), "wb");
+        if (!f) continue;
+        bool ok = std::fwrite(out.data(), 1, out.size(), f) == out.size();
+        ok = std::fclose(f) == 0 && ok;
+        if (ok) {
+            std::filesystem::rename(tmp, path, ec);
+            r.dirty = false;
+        } else {
+            std::filesystem::remove(tmp, ec);
+        }
+    }
+    // The old one-file-per-chunk copies are not needed once their region is written.
+    for (const std::string& f : legacyFiles_) std::filesystem::remove(f, ec);
+    legacyFiles_.clear();
+    if (regions_.size() > 64)  // keep memory small: drop the regions already on disk
+        for (auto it = regions_.begin(); it != regions_.end();) it = it->second.dirty ? std::next(it) : regions_.erase(it);
+}
+
 bool World::loadChunk(Chunk& c) const {
     if (storageDir_.empty()) return false;
-    FILE* f = std::fopen(chunkPath(c.cx, c.cz).c_str(), "rb");
-    if (!f) return false;
-    char magic[4];
-    bool ok = std::fread(magic, 1, 4, f) == 4 && magic[0] == 'V' && magic[1] == 'C' && magic[2] == 'C' &&
-              magic[3] >= '1' && magic[3] <= '3';
-    const int version = ok ? magic[3] - '0' : 0;
-    const size_t total = sizeof c.blocks / sizeof c.blocks[0];
-    size_t pos = 0;
-    uint8_t rec[3];
-    const size_t recSize = version >= 3 ? 3 : 2;
-    while (ok && pos < total && std::fread(rec, 1, recSize, f) == recSize) {
-        size_t n = std::min<size_t>(rec[0] + 1, total - pos);
-        ItemId id = version >= 3 ? (ItemId)(rec[1] | rec[2] << 8) : rec[1];
-        if (version == 1) id = upgradeLegacyBlock(id);  // 1.3.0 reused the ids of removed Nether blocks
-        std::fill(c.blocks + pos, c.blocks + pos + n, id);
-        pos += n;
+    const std::vector<uint8_t>& blob = region(floorDiv(c.cx, 32), floorDiv(c.cz, 32)).blobs[(c.cx & 31) + (c.cz & 31) * 32];
+    bool ok = !blob.empty() && decodeChunk(blob, c);
+    if (!ok) {
+        // Before 1.5.7 every chunk had a file of its own.
+        const std::string legacy = chunkPath(c.cx, c.cz);
+        ok = decodeChunk(readAll(legacy), c);
+        if (ok) {
+            Region& r = region(floorDiv(c.cx, 32), floorDiv(c.cz, 32));
+            r.blobs[(c.cx & 31) + (c.cz & 31) * 32] = encodeChunk(c);
+            r.dirty = true;
+            legacyFiles_.push_back(legacy);
+        }
     }
-    std::fclose(f);
-    if (!ok || pos != total) return false;
+    if (!ok) return false;
     c.modified = true;  // keep saving it, it no longer matches the generator
     return true;
 }
 
 void World::saveChunk(Chunk& c) const {
     if (storageDir_.empty()) return;
-    std::error_code ec;
-    std::filesystem::create_directories(storageDir_, ec);
-    std::string path = chunkPath(c.cx, c.cz), tmp = path + ".tmp";
-    FILE* f = std::fopen(tmp.c_str(), "wb");
-    if (!f) return;
-    const size_t total = sizeof c.blocks / sizeof c.blocks[0];
-    std::vector<uint8_t> out = {'V', 'C', 'C', '3'};
-    for (size_t i = 0; i < total;) {
-        size_t run = 1;
-        while (i + run < total && run < 256 && c.blocks[i + run] == c.blocks[i]) ++run;
-        out.push_back((uint8_t)(run - 1));
-        out.push_back((uint8_t)(c.blocks[i] & 0xFF));
-        out.push_back((uint8_t)(c.blocks[i] >> 8));
-        i += run;
-    }
-    bool ok = std::fwrite(out.data(), 1, out.size(), f) == out.size();
-    ok = std::fclose(f) == 0 && ok;
-    if (ok) std::filesystem::rename(tmp, path, ec);
-    else std::filesystem::remove(tmp, ec);
+    Region& r = region(floorDiv(c.cx, 32), floorDiv(c.cz, 32));
+    std::vector<uint8_t> blob = encodeChunk(c);
+    if (blob.empty()) return;
+    r.blobs[(c.cx & 31) + (c.cz & 31) * 32] = std::move(blob);
+    r.dirty = true;
 }
 
 void World::saveModifiedChunks() {
     for (auto& [k, c] : chunks_)
         if (c->modified) saveChunk(*c);
+    flushRegions();
 }
 
 }  // namespace vc

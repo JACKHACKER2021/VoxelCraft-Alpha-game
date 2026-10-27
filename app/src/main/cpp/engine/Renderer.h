@@ -82,6 +82,10 @@ public:
     // how strong it is (0 = no shadows: night, rain, other dimensions); the player's settings.
     void setSun(const Vec3& dir, float strength) { sunDir_ = dir; sunStrength_ = strength; }
     void setEffects(bool shadows, bool waves) { shadows_ = shadows; waves_ = waves; }
+    // 1.5.7: models (players, mobs) that cast shadows in the next drawWorld, solid boxes.
+    void setShadowCasters(const std::vector<Vertex>& verts) { casters_ = verts; }
+    // 1.5.7: a torch in the player's hand lights the world around `pos` (strength 0 = none).
+    void setHandLight(const Vec3& pos, float strength) { handLight_ = pos; handLightStrength_ = strength; }
 
     int width() const { return width_; }
     int height() const { return height_; }
@@ -105,6 +109,10 @@ private:
     Vec3 sunDir_{0, 1, 0};
     float sunStrength_ = 0;
     bool shadows_ = true, waves_ = true;
+    std::vector<Vertex> casters_;
+    GLint uShadowAlphaTest_ = -1, uHandLight_ = -1;
+    Vec3 handLight_;
+    float handLightStrength_ = 0;
     std::vector<Vertex> skySunMoon_, skyStars_, skyClouds_;
     float starAlpha_ = 0;
 

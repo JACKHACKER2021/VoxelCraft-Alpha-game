@@ -71,4 +71,4 @@ target_link_options(voxelcraft PRIVATE
     -u ANativeActivity_onCreate
     -Wl,-z,max-page-size=16384)
 
-target_link_libraries(voxelcraft native_app_glue android EGL GLESv3 log)
+target_link_libraries(voxelcraft native_app_glue android EGL GLESv3 log z)
