@@ -3026,6 +3026,376 @@ void shaderTimelapse(const fs::path& out, int variant) {
 SHOT(h05_timelapse_classic) { shaderTimelapse(out, 0); }
 SHOT(h05_timelapse_enhanced) { shaderTimelapse(out, 1); }
 
+// ---------------------------------------------------------------- 1.5.7 trailer
+
+// Torches at dusk: the player walks a dark stone corridor placing torches, the held torch lights it.
+SHOT(j01_torches) {
+    Director d(out, "j01");
+    d.openWorld("Torches", 4242, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    int x, y, z;
+    meadow(d, x, y, z);
+    flatten(w, x - 4, z - 20, x + 4, z + 2, y, COBBLESTONE);
+    for (int dz = -20; dz <= 0; ++dz)
+        for (int dx = -3; dx <= 3; ++dx)
+            for (int dy = 0; dy <= 4; ++dy)
+                if (std::abs(dx) == 3 || dy == 4) w.setBlock(x + dx, y + dy, z + dz, dy == 4 ? STONE_BRICKS : (dz % 4 == 0 ? LOG : STONE_BRICKS));
+    s.inventory().clear();
+    d.give(0, TORCH, 64);
+    s.selectedSlot() = 0;
+    s.offhand() = {TORCH, 16, 0};
+    Player& p = s.player();
+    p.flying = false;
+    p.pos = Vec3(x + 0.5f, (float)y, z + 0.5f);
+    p.yaw = 0, p.pitch = -0.1f;
+    s.setTimeOfDay(18800);
+    s.mobs().mobs().clear();
+    d.idle(30);
+    d.shot("j01_torches");
+    for (int k = 0; k < 4; ++k) {
+        d.use(Vec3(x + 2.95f, y + 2.2f, z - 3.5f - k * 4));
+        d.seconds(0.3f);
+        d.use(Vec3(x - 1.95f, y + 2.2f, z - 5.5f - k * 4));
+        p.yaw = 0;
+        d.walk(true);
+        d.seconds(0.9f, [&](float) { heal(d); p.yaw = 0; p.pitch = -0.1f; });
+        d.walk(false);
+    }
+    d.seconds(1.0f);
+}
+
+// The shield in the off hand: crouch, the shield comes up while a zombie attacks (third person).
+SHOT(j02_shield) {
+    Director d(out, "j02");
+    d.settings().cameraMode = 2;
+    d.openWorld("Shield", 4242, GameMode::Survival);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    Session& s = d.s();
+    Player& p = s.player();
+    s.inventory().clear();
+    d.give(0, IRON_SWORD);
+    s.selectedSlot() = 0;
+    s.offhand() = {SHIELD, 1, 0};
+    for (int i = 0; i < 4; ++i) s.armor()[i] = {armorItem(2, i), 1};
+    s.setTimeOfDay(8000);
+    s.mobs().mobs().clear();
+    p.yaw = 0.6f;
+    d.idle(20);
+    d.shot("j02_shield");
+    d.walk(true);
+    d.seconds(2.0f, [&](float k) { heal(d); p.yaw = 0.6f + k * 0.4f; });
+    d.walk(false);
+    d.seconds(0.6f);
+    p.sneaking = true;
+    d.walk(true);
+    d.seconds(2.5f, [&](float) { heal(d); p.sneaking = true; });
+    d.walk(false);
+    d.seconds(1.5f, [&](float) { p.sneaking = true; });
+    p.sneaking = false;
+    d.settings().cameraMode = 1;
+    d.seconds(1.5f, [&](float k) { p.yaw += 0.02f; });
+}
+
+// Flowing water and lava (experiment): a spring runs down a stepped hill, lava meets it and hardens.
+SHOT(j03_flowing) {
+    Director d(out, "j03");
+    d.expFlow = true;
+    d.openWorld("Flowing", 4242, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    int x, y, z;
+    meadow(d, x, y, z);
+    flatten(w, x - 8, z - 16, x + 8, z + 4, y, STONE);
+    for (int step = 0; step < 4; ++step)
+        for (int dx = -6; dx <= 6; ++dx)
+            for (int dz = -16; dz <= -12 + step * 0; ++dz)
+                for (int dy = 0; dy < 4 - step; ++dy) w.setBlock(x + dx, y + dy, z + dz + step * 3, STONE);
+    Player& p = s.player();
+    p.flying = true;
+    p.pos = Vec3(x + 0.5f, y + 6.0f, z + 6.5f);
+    s.setTimeOfDay(7000);
+    d.settings().hideGui = true;
+    s.mobs().mobs().clear();
+    d.idle(20);
+    d.shot("j03_flowing");
+    w.setBlock(x - 3, y + 4, z - 15, WATER);
+    d.seconds(3.0f, [&](float) { p.flying = true; d.lookNow(Vec3(x + 0.5f, y + 1.0f, z - 8.0f)); });
+    w.setBlock(x + 4, y + 4, z - 15, LAVA);
+    d.seconds(5.0f, [&](float k) {
+        p.flying = true;
+        p.pos = Vec3(x + 0.5f + k * 3, y + 6.0f, z + 6.5f - k * 2);
+        d.lookNow(Vec3(x + 0.5f, y + 1.0f, z - 8.0f));
+    });
+}
+
+// Sand and gravel fall: a column of sand is undermined and drops.
+SHOT(j04_falling) {
+    Director d(out, "j04");
+    d.openWorld("Falling", 4242, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    int x, y, z;
+    meadow(d, x, y, z);
+    flatten(w, x - 4, z - 8, x + 4, z + 2, y);
+    for (int dy = 0; dy < 6; ++dy) w.setBlock(x - 1, y + dy, z - 4, dy == 0 ? DIRT : SAND), w.setBlock(x + 1, y + dy, z - 4, dy == 0 ? DIRT : GRAVEL);
+    s.inventory().clear();
+    d.give(0, IRON_SHOVEL);
+    s.selectedSlot() = 0;
+    Player& p = s.player();
+    p.flying = false;
+    p.pos = Vec3(x + 0.5f, (float)y, z + 0.5f);
+    s.setTimeOfDay(6000);
+    s.mobs().mobs().clear();
+    d.idle(20);
+    d.lookNow(centre(x, y + 2, z - 4));
+    d.shot("j04_falling");
+    d.seconds(0.6f);
+    d.mine(x - 1, y, z - 4);
+    d.seconds(1.4f, [&](float) { d.look(centre(x - 1, y + 1, z - 4)); });
+    d.mine(x + 1, y, z - 4);
+    d.seconds(2.0f, [&](float) { d.look(centre(x + 1, y + 1, z - 4)); });
+}
+
+// Bigger caves: flying down through a surface opening into a lava-lit cave.
+SHOT(j05_caves) {
+    Director d(out, "j05");
+    d.openWorld("Caves", 777, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    Session& s = d.s();
+    Player& p = s.player();
+    // A column open to the sky whose ground lies far below the land around it (as the world
+    // test finds them), looked up in a separate copy of the world.
+    World w(777, Dimension::Overworld);
+    w.ensureChunksAround(0, 0, 4, 1000);
+    auto top = [&](int x, int z) {
+        int y = kChunkHeight - 1;
+        while (y > 1 && w.getBlock(x, y, z) == AIR) --y;
+        return y;
+    };
+    int bx = 0, bz = 0, by = 0, best = 0;
+    for (int x = -48; x < 48; ++x)
+        for (int z = -48; z < 48; ++z) {
+            const int t = top(x, z), a = std::min({top(x - 8, z), top(x + 8, z), top(x, z - 8), top(x, z + 8)});
+            if (a > w.seaLevel() + 2 && w.getBlock(x, t, z) != WATER && a - t > best) best = a - t, bx = x, bz = z, by = a;
+        }
+    std::printf("sinkhole depth %d at %d %d\n", best, bx, bz);
+    p.flying = true;
+    travel(d, Vec3(bx + 0.5f, by + 8.0f, bz + 8.5f));
+    s.setTimeOfDay(6000);
+    d.settings().hideGui = true;
+    s.mobs().mobs().clear();
+    s.offhand() = {TORCH, 1, 0};
+    d.idle(30);
+    d.shot("j05_caves");
+    d.seconds(7, [&](float k) {
+        p.flying = true;
+        p.pos = Vec3(bx + 0.5f, by + 8.0f - k * (best + 4), bz + 8.5f - k * 8);
+        d.lookNow(Vec3(bx + 0.5f, by - best - 2.0f, bz - 2.0f));
+    });
+}
+
+// The crimson-wood mineshaft deep in the Cornerstone Dimension.
+SHOT(j06_crimson_mineshaft) {
+    Director d(out, "j06");
+    d.openWorld("Crimson shaft", 777, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    goNether(d);
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    int mx, my, mz;
+    if (!w.nearestMineshaft((int)s.player().pos.x, (int)s.player().pos.z, mx, my, mz)) return;
+    Player& p = s.player();
+    p.flying = true;
+    travel(d, Vec3(mx + 0.5f, (float)my, mz + 0.5f));
+    // Find the corridor direction: the longest run of air.
+    int dirX = 1, dirZ = 0, len = 0;
+    for (int k = 0; k < 4; ++k) {
+        const int ax = k == 0 ? 1 : k == 1 ? -1 : 0, az = k == 2 ? 1 : k == 3 ? -1 : 0;
+        int n = 0;
+        while (n < 40 && w.getBlock(mx + ax * n, my, mz + az * n) == AIR) ++n;
+        if (n > len) len = n, dirX = ax, dirZ = az;
+    }
+    s.inventory().clear();
+    d.give(0, TORCH, 16);
+    s.selectedSlot() = 0;
+    d.settings().hideGui = true;
+    s.mobs().mobs().clear();
+    p.pos = Vec3(mx + 0.5f, my - 0.3f, mz + 0.5f);
+    d.idle(30);
+    d.shot("j06_crimson_mineshaft");
+    d.seconds(6, [&](float k) {
+        p.flying = true;
+        p.pos = Vec3(mx + 0.5f + dirX * k * (len - 3), my - 0.3f, mz + 0.5f + dirZ * k * (len - 3));
+        d.lookNow(p.pos + Vec3(dirX * 6.0f, 0.6f, dirZ * 6.0f));
+    });
+}
+
+// Hogmen: one charges, a powerstone chip calms it and it pays back.
+SHOT(j07_hogman) {
+    Director d(out, "j07");
+    d.openWorld("Hogman", 4242, GameMode::Survival);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    goNether(d);
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z) + 6;
+    const int y = feetY(w, x, z - 6);
+    flatten(w, x - 6, z - 12, x + 6, z, y, NETHER_GRASS);
+    p.pos = Vec3(x + 0.5f, (float)y, z + 0.5f);
+    s.mobs().mobs().clear();
+    s.inventory().clear();
+    d.give(0, POWERSTONE_CHIP, 16);
+    s.selectedSlot() = 0;
+    s.offhand() = {SHIELD, 1, 0};
+    s.mobs().spawn(MobType::Hogman, 1, Vec3(x + 0.5f, (float)y, z - 9.5f));
+    s.mobs().spawn(MobType::Hogman, 1, Vec3(x + 3.5f, (float)y, z - 11.5f));
+    p.yaw = 0, p.pitch = 0;
+    d.idle(4);
+    d.shot("j07_hogman");
+    d.seconds(2.0f, [&](float) { heal(d); d.look(s.mobs().mobs()[0].pos + Vec3(0, 1.4f, 0)); });
+    d.use(s.mobs().mobs()[0].pos + Vec3(0, 1.0f, 0));
+    d.seconds(3.5f, [&](float) { heal(d); if (!s.mobs().mobs().empty()) d.look(s.mobs().mobs()[0].pos + Vec3(0, 1.4f, 0)); });
+}
+
+// The powerstone furnace and bendable cable: up a wall and along the ceiling to a lamp.
+SHOT(j08_powerstone) {
+    Director d(out, "j08");
+    d.openWorld("Powerstone", 4242, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    int x, y, z;
+    meadow(d, x, y, z);
+    flatten(w, x - 5, z - 8, x + 5, z + 2, y, POWERSTONE_BRICKS);
+    for (int dx = -5; dx <= 5; ++dx)
+        for (int dy = 0; dy < 5; ++dy) w.setBlock(x + dx, y + dy, z - 6, POWERSTONE_BRICKS);
+    for (int dx = -5; dx <= 5; ++dx)
+        for (int dz = -6; dz <= -3; ++dz) w.setBlock(x + dx, y + 4, z + dz, POWERSTONE_BRICKS);
+    w.setBlock(x - 3, y, z - 5, POWERSTONE_FURNACE_ON);
+    w.setBlock(x - 2, y, z - 5, POWERSTONE_BLOCK);
+    s.inventory().clear();
+    d.give(0, POWER_CABLE, 64);
+    d.give(1, POWERSTONE_LAMP, 4);
+    s.selectedSlot() = 0;
+    Player& p = s.player();
+    p.flying = false;
+    p.pos = Vec3(x + 0.5f, (float)y, z + 0.5f);
+    s.setTimeOfDay(17500);
+    s.mobs().mobs().clear();
+    d.idle(20);
+    d.shot("j08_powerstone");
+    d.use(topOf(x - 1, y - 1, z - 5));
+    d.use(topOf(x, y - 1, z - 5));
+    d.use(Vec3(x + 0.5f, y + 1.5f, z - 5.02f));
+    d.use(Vec3(x + 0.5f, y + 2.5f, z - 5.02f));
+    d.use(Vec3(x + 0.5f, y + 3.5f, z - 5.02f));
+    d.use(Vec3(x + 0.5f, y + 3.98f, z - 3.5f));
+    s.selectedSlot() = 1;
+    d.use(Vec3(x + 0.5f, y + 3.98f, z - 2.5f));
+    d.seconds(2.5f, [&](float) { d.look(Vec3(x - 1.0f, y + 2.0f, z - 4.0f)); });
+}
+
+// The big world map: explored land, named places, zoom.
+SHOT(j09_world_map) {
+    Director d(out, "j09");
+    d.openWorld("Atlas", 4242, GameMode::Creative);
+    Session& s = d.s();
+    Player& p = s.player();
+    s.inventory().clear();
+    d.give(0, MAP, 1);
+    s.selectedSlot() = 0;
+    p.flying = true;
+    // Draw a good piece of the map (not filmed): fly a loop with the map in hand.
+    const Vec3 home = p.pos;
+    for (int k = 0; k < 8; ++k) {
+        travel(d, home + Vec3(std::cos(k * 0.785f) * 120, 30, std::sin(k * 0.785f) * 120));
+        d.idle(30);
+    }
+    travel(d, home + Vec3(0, 30, 0));
+    d.idle(30);
+    s.waypoints().push_back({0, (int)home.x + 60, (int)home.z - 40, "Our village"});
+    s.waypoints().push_back({0, (int)home.x - 80, (int)home.z + 30, "Mine entrance"});
+    s.waypoints().push_back({0, (int)home.x + 20, (int)home.z + 90, "Lighthouse"});
+    s.wantsWorldMap = true;
+    d.idle(4);
+    d.shot("j09_world_map");
+    d.seconds(1.5f);
+    // Pan with a finger, then zoom out.
+    d.down(1, 300, 180);
+    d.seconds(1.2f, [&](float k) { d.move(1, 300 - k * 90, 180 - k * 50); });
+    d.up(1, 210, 130);
+    d.seconds(1.0f);
+    d.tap(518, 34);  // "-": zoom out
+    d.seconds(1.5f);
+    d.tap(518, 34);
+    d.seconds(2.0f);
+}
+
+// The chat window.
+SHOT(j10_chat) {
+    Director d(out, "j10");
+    d.openWorld("Chat", 4242, GameMode::Creative);
+    Session& s = d.s();
+    s.player().yaw = 1.0f;
+    d.idle(10);
+    d.say("Hello everyone!");
+    d.say("/time set day");
+    s.wantsChat = true;
+    d.idle(4);
+    d.shot("j10_chat");
+    d.seconds(1.2f);
+    d.say("Anyone up for a trip to the crimson mineshaft?");
+    d.seconds(1.4f);
+    d.say("/weather clear");
+    d.seconds(1.4f);
+    d.say("I found a Hogman who trades powerstone!");
+    d.seconds(2.0f);
+}
+
+// Book and quill: written pages, then the signed book.
+SHOT(j11_book) {
+    Director d(out, "j11");
+    d.openWorld("Book", 4242, GameMode::Survival);
+    Session& s = d.s();
+    s.inventory().clear();
+    s.inventory().slots[0] = {WRITABLE_BOOK, 1, 0};
+    s.selectedSlot() = 0;
+    d.idle(10);
+    d.use(s.player().eye() + Vec3(0, -3, 0.2f));
+    d.idle(4);
+    const int id = s.inventory().slots[0].damage;
+    if (id <= 0) return;
+    Session::Book& b = s.book(id);
+    b.pages = {"Day 1\nWe found a deep cave behind the village, lit it with torches and followed the old crimson rails.",
+               "Day 2\nA Hogman charged at us. One powerstone chip later he was our friend and paid us with gold.",
+               "Day 3\nBuilt a powerstone furnace. It smelts faster than anything we had before."};
+    d.shot("j11_book");
+    d.seconds(2.5f);
+    d.tap(456, 135);
+    d.seconds(2.0f);
+    d.tap(456, 135);
+    d.seconds(1.5f);
+    s.signBook(id, "Our Adventures", "Hoppy_Hopsy21");
+    d.tap(144, 135);
+    d.tap(144, 135);
+    d.seconds(2.5f);
+}
+
+// Credits (tap VoxelSoftworks on the title).
+SHOT(j12_credits) {
+    Director d(out, "j12");
+    d.idle(200);
+    d.game->toolOpenCredits();
+    d.idle(2);
+    d.shot("j12_credits");
+    d.seconds(7.0f);
+}
+
 // ---------------------------------------------------------------- 1.5.7 checks
 SHOT(k01_fortress) {
     Director d(out, "k01");

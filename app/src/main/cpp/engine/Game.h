@@ -60,6 +60,7 @@ public:
     Settings& toolSettings() { return settings_; }
     PackManager& toolPacks() { return packs_; }
     void toolRebuildPacks() { rebuildFromPacks(); }
+    void toolOpenCredits() { setScreen(Screen::Credits); }
 
     // Platform hooks, all called on the game thread.
     std::function<void()> onTexturePackButton;
