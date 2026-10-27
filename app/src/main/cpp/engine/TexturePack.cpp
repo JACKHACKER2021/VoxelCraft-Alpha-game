@@ -383,6 +383,8 @@ const TileSource kSources[] = {
     /* T_HOGMAN_TUNIC   */ {-1, "mobs", {"vc_hogman_tunic"}, 0},
     /* T_PS_FURNACE_FRONT */ {-1, "blocks", {"vc_powerstone_furnace_front"}, 0},
     /* T_PS_FURNACE_FRONT_ON */ {-1, "blocks", {"vc_powerstone_furnace_front_on"}, 0},
+    /* T_WRITABLE_BOOK  */ {-1, "items", {"vc_writable_book"}, 0},
+    /* T_WRITTEN_BOOK   */ {-1, "items", {"vc_written_book"}, 0},
 };
 static_assert(sizeof(kSources) / sizeof(kSources[0]) == T_COUNT, "a texture source for every tile");
 

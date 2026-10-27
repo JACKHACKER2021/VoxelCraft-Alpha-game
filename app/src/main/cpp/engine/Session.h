@@ -119,6 +119,15 @@ public:
     bool wantsChest = false;     // tapped a chest, see openChest
     bool travelled = false;      // went through a portal (the game shows the loading screen)
     int wantsTrade = -1;         // a villager was tapped: index into mobs() for the trading screen
+    // 1.5.7 book and quill: the books of this world (the item's `damage` is the number).
+    struct Book {
+        std::string title, author;
+        std::vector<std::string> pages{""};
+    };
+    int wantsBook = 0;           // a book in hand was opened: its number
+    Book& book(int id) { return books_[id]; }
+    bool bookSigned(int id) const;
+    void signBook(int id, const std::string& title, const std::string& author);
     int wantsDocument = -1;      // 1.5.0: an old document was read: its page (0..7) for the reading screen
     void readDocument(int page);
     FurnaceKey openChest;
@@ -184,6 +193,14 @@ public:
     void exitBoat();
     const Minimap& minimap() const { return minimap_; }
     const PaperMaps& paperMaps() const { return paperMaps_; }
+    // 1.5.7: named places the player marks on the world map, saved with the world.
+    struct Waypoint {
+        int dim, x, z;
+        std::string name;
+    };
+    std::vector<Waypoint>& waypoints() { return waypoints_; }
+    bool wantsWorldMap = false;              // the paper map in hand was tapped
+    void refreshMapTexture() { mapChanged_ = true; }
     bool showingPaperMap() const { return paperShown_; }
     std::vector<MapMarker> mapMarkers() const;
 
@@ -356,6 +373,9 @@ public:
 private:
     Minimap minimap_;
     PaperMaps paperMaps_;       // the map item
+    std::vector<Waypoint> waypoints_;
+    std::map<int, Book> books_;
+    int nextBook_ = 1;
     bool paperShown_ = false;   // the map texture holds a paper sheet (map in hand)
     int paperOriginX_ = 0, paperOriginZ_ = 0;
     bool mapChanged_ = false, mapBig_ = false;

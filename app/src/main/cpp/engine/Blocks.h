@@ -250,6 +250,8 @@ enum BlockId : uint16_t {
     // 1.5.7 items
     SHIELD = 1613,           // in the off hand it stops attacks from the front
     EXPLORER_MAP = 1614,     // points the way to the nearest mineshaft (Exploration Maps experiment)
+    WRITABLE_BOOK = 1615,    // 1.5.7 book and quill: `damage` holds the book's number in the world's books
+    WRITTEN_BOOK = 1616,     // a signed book: read only
     EGG_HOGMAN = 1308,       // the hog man of the Cornerstone Dimension
 };
 inline bool isTorch(ItemId id) { return id >= TORCH && id < TORCH_WALL + 4; }
@@ -371,6 +373,7 @@ enum Tile : uint16_t {
     T_VOID_BRICK_EYE, T_CRIMSON_STONE,
     T_TORCH, T_CRIMSON_PLANKS, T_CRIMSON_LOG_SIDE, T_CRIMSON_LOG_TOP, T_SHIELD, T_EXPLORER_MAP, T_EGG_HOGMAN,
     T_HOGMAN_SKIN, T_HOGMAN_FACE, T_HOGMAN_TUNIC, T_PS_FURNACE_FRONT, T_PS_FURNACE_FRONT_ON,
+    T_WRITABLE_BOOK, T_WRITTEN_BOOK,
     T_COUNT
 };
 static_assert(T_COUNT <= kAtlasCols * kAtlasCols, "the atlas has room for every tile");
@@ -665,6 +668,8 @@ inline int tileFor(ItemId id, Face face) {
                 case CRIMSON_LOG: return face == F_TOP || face == F_BOTTOM ? T_CRIMSON_LOG_TOP : T_CRIMSON_LOG_SIDE;
                 case SHIELD: return T_SHIELD;
                 case EXPLORER_MAP: return T_EXPLORER_MAP;
+                case WRITABLE_BOOK: return T_WRITABLE_BOOK;
+                case WRITTEN_BOOK: return T_WRITTEN_BOOK;
                 case EGG_HOGMAN: return T_EGG_HOGMAN;
                 case VOID_BRICK_EYE: return face == F_TOP || face == F_BOTTOM ? T_VOID_STONE_BRICKS : T_VOID_BRICK_EYE;
                 case POWERSTONE_BRICKS: case POWERSTONE_FENCE: return T_POWERSTONE_BRICKS;

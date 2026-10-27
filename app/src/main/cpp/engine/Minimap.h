@@ -48,6 +48,9 @@ public:
     // A kSize x kSize view centred on (x, z), put together from the sheets around it.
     void view(int dim, int x, int z, std::vector<uint8_t>& rgba, int& originX, int& originZ) const;
     int explored(int dim, int x, int z) const;  // pixels drawn on that sheet
+    // 1.5.7, the world map: a size x size picture centred on (cx, cz) with `scale` blocks per
+    // pixel (1 = close up, 8 = far out); unexplored land is parchment.
+    void render(int dim, float cx, float cz, float scale, int size, std::vector<uint8_t>& rgba) const;
     void save(const std::string& folder) const;
     void load(const std::string& folder);
 

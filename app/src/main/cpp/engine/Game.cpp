@@ -1,6 +1,7 @@
 #include "Game.h"
 
 #include <algorithm>
+#include <sstream>
 #include <cmath>
 #include <cctype>
 #include <ctime>
@@ -180,6 +181,12 @@ bool Game::onBack() {
         case Screen::Document: setScreen(Screen::Playing); break;
         case Screen::Credits:
         case Screen::Trailers: setScreen(Screen::Title); break;
+        case Screen::WorldMap:
+            session_->refreshMapTexture();
+            setScreen(Screen::Playing);
+            break;
+        case Screen::Chat:
+        case Screen::Book: setScreen(Screen::Playing); break;
         case Screen::Death: break;
     }
     return true;
@@ -597,6 +604,13 @@ void Game::frame(double time) {
                 std::string address;
                 int port = 0;
                 internetCode_ = net::parseJoinAddress(text, address, port) ? net::roomCode(address, lan_.port()) : "";
+            } else if (id == PromptWaypoint && session_ && !text.empty()) {
+                session_->waypoints().push_back({session_->dimIndex(), (int)std::floor(mapCx_), (int)std::floor(mapCz_), text.substr(0, 32)});
+            } else if (id == PromptBookPage && session_ && bookId_ > 0 && !session_->bookSigned(bookId_)) {
+                auto& pages = session_->book(bookId_).pages;
+                if (bookPage_ >= 0 && bookPage_ < (int)pages.size()) pages[bookPage_] = text.substr(0, 512);
+            } else if (id == PromptBookTitle && session_ && bookId_ > 0 && !text.empty()) {
+                session_->signBook(bookId_, text, profile_.name);
             } else if (id == PromptChat) {
                 submitChat(text);
             } else if (id == PromptCode) {
@@ -648,7 +662,7 @@ void Game::frame(double time) {
                                screen_ == Screen::Structures || (screen_ == Screen::Developer && devReturn_ == Screen::Pause) ||
                                screen_ == Screen::Crafting || screen_ == Screen::Furnace || screen_ == Screen::Chest ||
                                screen_ == Screen::Death || screen_ == Screen::Trade || screen_ == Screen::Invite ||
-                               screen_ == Screen::Document ||
+                               screen_ == Screen::Document || screen_ == Screen::WorldMap || screen_ == Screen::Chat || screen_ == Screen::Book ||
                                (screen_ == Screen::Settings && settingsReturn_ == Screen::Pause));
     if (inGame) {
         if (screen_ == Screen::Playing) {
@@ -668,13 +682,24 @@ void Game::frame(double time) {
                 documentPage_ = session_->wantsDocument;
                 setScreen(Screen::Document);
             }
+            else if (session_->wantsBook > 0) {
+                bookId_ = session_->wantsBook, bookPage_ = 0;
+                setScreen(Screen::Book);
+            }
+            session_->wantsBook = 0;
             session_->wantsTrade = -1;
             session_->wantsDocument = -1;
             session_->wantsPause = session_->wantsInventory = session_->wantsCrafting = session_->wantsFurnace = false;
             session_->wantsChest = false;
             if (session_->wantsChat) {
                 session_->wantsChat = false;
-                if (onTextPrompt) onTextPrompt(PromptChat, tr("Chat (příkazy začínají /)"), "");
+                chatScroll_ = 0;
+                setScreen(Screen::Chat);  // 1.5.7: a chat window instead of a bare line
+            }
+            if (session_->wantsWorldMap) {
+                session_->wantsWorldMap = false;
+                mapCx_ = session_->player().pos.x, mapCz_ = session_->player().pos.z, mapScale_ = 1, mapSelected_ = -1, mapDirty_ = true;
+                setScreen(Screen::WorldMap);
             }
             if (session_->travelled) {
                 session_->travelled = false;
@@ -743,6 +768,9 @@ void Game::frame(double time) {
         case Screen::Document: documentScreen(); break;
         case Screen::Credits: creditsScreen(); break;
         case Screen::Trailers: trailersScreen(); break;
+        case Screen::WorldMap: worldMapScreen(); break;
+        case Screen::Chat: chatScreen(); break;
+        case Screen::Book: bookScreen(); break;
         case Screen::Playing: break;
     }
 
@@ -1243,6 +1271,177 @@ void Game::creditsScreen() {
     if (now_ - creditsStart_ > (H + total) / 18) setScreen(Screen::Trailers);
     if (ui_.button(W - 70, H - 26, 64, 20, "Přeskočit", true, true)) setScreen(Screen::Trailers);
     if (ui_.button(6, H - 26, 64, 20, "Zpět")) setScreen(Screen::Title);
+}
+
+void Game::worldMapScreen() {
+    // 1.5.7: everything the map item has drawn, zoomed and panned with a finger, with the
+    // places the player named.
+    const float W = ui_.width(), H = ui_.height();
+    ui_.fill(0, 0, W, H, {0, 0, 0, 0.55f});
+    constexpr int kImg = 192;
+    const float ms = std::floor(std::min(H - 50.0f, W - 150.0f)), mx = std::floor(12 + (W - 150 - ms) / 2), my = 24;
+    // Dragging pans (the picture follows the finger).
+    const float k = ms / kImg;
+    const float dx = ui_.dragX(mx, my, ms, ms), dz = ui_.dragY(mx, my, ms, ms);
+    if (dx != 0 || dz != 0) mapCx_ -= dx / k * mapScale_, mapCz_ -= dz / k * mapScale_, mapDirty_ = true;
+    if (mapDirty_) {
+        session_->paperMaps().render(session_->dimIndex(), mapCx_, mapCz_, mapScale_, kImg, mapImage_);
+        renderer_.setMapTexture(mapImage_, kImg, kImg);
+        mapDirty_ = false;
+    }
+    ui_.fill(mx - 5, my - 5, ms + 10, ms + 10, {0.42f, 0.3f, 0.18f, 0.95f});
+    ui_.image(TexMap, mx, my, ms, ms, 0, 0, 1, 1);
+    auto toScreen = [&](float wx, float wz, float& sx, float& sy) {
+        sx = mx + ms / 2 + (wx - mapCx_) / mapScale_ * k;
+        sy = my + ms / 2 + (wz - mapCz_) / mapScale_ * k;
+        return sx >= mx && sy >= my && sx < mx + ms && sy < my + ms;
+    };
+    // The player.
+    float px, py;
+    if (toScreen(session_->player().pos.x, session_->player().pos.z, px, py)) {
+        const float fx = std::sin(session_->player().yaw), fz = -std::cos(session_->player().yaw), r = 5.0f;
+        const float pts[4][2] = {{px + fx * r, py + fz * r},
+                                 {px - fx * r * 0.7f + fz * r * 0.7f, py - fz * r * 0.7f - fx * r * 0.7f},
+                                 {px - fx * r * 0.25f, py - fz * r * 0.25f},
+                                 {px - fx * r * 0.7f - fz * r * 0.7f, py - fz * r * 0.7f + fx * r * 0.7f}};
+        const float uv[4][2] = {};
+        ui_.quad(TexNone, pts, uv, {0.75f, 0.1f, 0.1f, 1});
+    }
+    // Named places: a pin and the name; tap one to select it.
+    auto& marks = session_->waypoints();
+    for (int i = 0; i < (int)marks.size(); ++i) {
+        if (marks[i].dim != session_->dimIndex()) continue;
+        float sx, sy;
+        if (!toScreen(marks[i].x + 0.5f, marks[i].z + 0.5f, sx, sy)) continue;
+        const Color c = i == mapSelected_ ? Color{1, 0.85f, 0.2f, 1} : Color{0.15f, 0.35f, 0.85f, 1};
+        ui_.fill(sx - 3, sy - 3, 6, 6, {0, 0, 0, 0.8f});
+        ui_.fill(sx - 2, sy - 2, 4, 4, c);
+        ui_.text(sx + 5, sy - 4, marks[i].name, {0.15f, 0.1f, 0.05f, 1}, 1, false);
+        if (ui_.tapped(sx - 8, sy - 8, 16 + ui_.textWidth(marks[i].name), 16)) mapSelected_ = i;
+    }
+    // The middle of the view (where a new place is marked).
+    ui_.fill(mx + ms / 2 - 4, my + ms / 2, 9, 1, {0, 0, 0, 0.6f});
+    ui_.fill(mx + ms / 2, my + ms / 2 - 4, 1, 9, {0, 0, 0, 0.6f});
+    ui_.text(mx, my - 14, trf("Mapa světa  {0}, {1}  (1:{2})", {std::to_string((int)mapCx_), std::to_string((int)mapCz_), std::to_string((int)mapScale_)}),
+             kTextBright, 1, false);
+    // Controls on the right.
+    const float bx = mx + ms + 14, bw = W - bx - 8;
+    float by = my;
+    if (ui_.button(bx, by, bw / 2 - 2, 20, "+", mapScale_ > 1)) mapScale_ /= 2, mapDirty_ = true;
+    if (ui_.button(bx + bw / 2 + 2, by, bw / 2 - 2, 20, "-", mapScale_ < 16)) mapScale_ *= 2, mapDirty_ = true;
+    by += 26;
+    if (ui_.button(bx, by, bw, 20, "Na mě")) mapCx_ = session_->player().pos.x, mapCz_ = session_->player().pos.z, mapDirty_ = true;
+    by += 26;
+    if (ui_.button(bx, by, bw, 20, "Označit místo", (bool)onTextPrompt, true) && onTextPrompt)
+        onTextPrompt(PromptWaypoint, tr("Název místa"), "");
+    by += 26;
+    if (mapSelected_ >= 0 && mapSelected_ < (int)marks.size()) {
+        ui_.text(bx, by, marks[mapSelected_].name, kAccent, 1, false, bw);
+        ui_.text(bx, by + 10, std::to_string(marks[mapSelected_].x) + ", " + std::to_string(marks[mapSelected_].z), kTextDim, 1, false);
+        by += 24;
+        if (ui_.button(bx, by, bw, 20, "Ukázat")) mapCx_ = (float)marks[mapSelected_].x, mapCz_ = (float)marks[mapSelected_].z, mapDirty_ = true;
+        by += 26;
+        if (ui_.button(bx, by, bw, 20, "Smazat značku")) {
+            marks.erase(marks.begin() + mapSelected_);
+            mapSelected_ = -1;
+        }
+    }
+    if (ui_.button(bx, H - 28, bw, 22, "Zpět")) {
+        session_->refreshMapTexture();
+        setScreen(Screen::Playing);
+    }
+}
+
+void Game::chatScreen() {
+    // 1.5.7: a chat window: the conversation, a line to write in and quick commands.
+    const float W = ui_.width(), H = ui_.height();
+    const float pw = std::min(W - 20, 420.0f), ph = H - 30, px = std::floor((W - pw) / 2), py = 10;
+    ui_.frame(px, py, pw, ph, kPanel, kSeparator);
+    ui_.text(px + 8, py + 6, "Chat", kTitle, 1, false);
+    const float listY = py + 20, listH = ph - 20 - 58;
+    ui_.frame(px + 6, listY, pw - 12, listH, kPanelInner, kSeparator);
+    // Newest at the bottom; dragging scrolls back through older messages.
+    chatScroll_ = std::max(0.0f, chatScroll_ + ui_.dragY(px + 6, listY, pw - 12, listH));
+    std::vector<std::string> lines;
+    for (const ChatLine& c : chat_)
+        for (const std::string& l : wrapText(c.text, pw - 24)) lines.push_back(l);
+    const int visible = (int)((listH - 6) / 10), skip = std::min((int)(chatScroll_ / 10), std::max(0, (int)lines.size() - visible));
+    const int last = (int)lines.size() - skip, first = std::max(0, last - visible);
+    float ly = listY + listH - 4 - (last - first) * 10;
+    for (int i = first; i < last; ++i, ly += 10) ui_.text(px + 12, ly, lines[i], kText, 1, false, pw - 24);
+    if (lines.empty()) ui_.textCentered(px + pw / 2, listY + listH / 2 - 4, "Zatím tu nic není. Napiš zprávu nebo příkaz.", kTextDim);
+    // The line to write in (the phone's keyboard opens on a tap).
+    const float iy = listY + listH + 6;
+    if (ui_.textBox(px + 6, iy, pw - 80, 18, "", "Napiš zprávu nebo /příkaz...") && onTextPrompt)
+        onTextPrompt(PromptChat, tr("Chat (příkazy začínají /)"), "");
+    if (ui_.button(px + pw - 70, iy, 64, 18, "Odeslat", (bool)onTextPrompt, true) && onTextPrompt)
+        onTextPrompt(PromptChat, tr("Chat (příkazy začínají /)"), "");
+    // Quick commands.
+    const char* quick[] = {"/help", "/time set day", "/weather clear", "/gamemode creative", "/gamemode survival"};
+    float qx = px + 6;
+    for (const char* q : quick) {
+        const float qw = ui_.textWidth(q) + 10;
+        if (qx + qw > px + pw - 6) break;
+        if (ui_.button(qx, iy + 22, qw, 16, q)) onTextResult(PromptChat, q);
+        qx += qw + 4;
+    }
+    if (ui_.button(px + pw - 50, py + 4, 44, 14, "Zpět")) setScreen(Screen::Playing);
+}
+
+void Game::bookScreen() {
+    // 1.5.7 book and quill: one page at a time; while unsigned a page can be written (the
+    // phone's keyboard), pages added, and the book signed with a title, after which it is read only.
+    if (!session_ || bookId_ <= 0) return setScreen(Screen::Playing);
+    Session::Book& b = session_->book(bookId_);
+    const bool locked = session_->bookSigned(bookId_);
+    bookPage_ = std::clamp(bookPage_, 0, (int)b.pages.size() - 1);
+    const float W = ui_.width(), H = ui_.height();
+    ui_.fill(0, 0, W, H, {0, 0, 0, 0.5f});
+    const float pw = std::min(W - 120, 260.0f), ph = std::min(H - 16, 240.0f);
+    const float px = std::floor((W - pw) / 2), py = std::floor((H - ph) / 2);
+    const Color ink{0.2f, 0.14f, 0.08f, 1}, paper{0.93f, 0.89f, 0.76f, 1};
+    ui_.fill(px + 3, py + 3, pw, ph, {0, 0, 0, 0.4f});
+    ui_.fill(px, py, pw, ph, locked ? Color{0.24f, 0.45f, 0.28f, 1} : Color{0.47f, 0.28f, 0.16f, 1});
+    ui_.fill(px + 4, py + 4, pw - 8, ph - 8, paper);
+    float ty = py + 10;
+    if (locked && bookPage_ == 0) {
+        ui_.textCentered(px + pw / 2, ty, b.title, {0.5f, 0.3f, 0.12f, 1});
+        ui_.textCentered(px + pw / 2, ty + 11, trf("od {0}", {b.author}), {0.45f, 0.4f, 0.32f, 1});
+        ty += 28;
+    }
+    ui_.textCentered(px + pw / 2, py + ph - 16, trf("Strana {0} z {1}", {std::to_string(bookPage_ + 1), std::to_string(b.pages.size())}),
+                     {0.45f, 0.4f, 0.32f, 1});
+    std::vector<std::string> lines;
+    std::string para;
+    std::istringstream text(b.pages[bookPage_]);
+    while (std::getline(text, para))
+        for (const std::string& l : wrapText(para, pw - 24)) lines.push_back(l);
+    for (const std::string& l : lines) {
+        if (ty > py + ph - 30) break;
+        ui_.text(px + 12, ty, l, ink, 1, false);
+        ty += 11;
+    }
+    if (!locked && b.pages[bookPage_].empty()) ui_.textCentered(px + pw / 2, py + ph / 2 - 4, "Klepni na Psát a napiš stránku.", {0.55f, 0.5f, 0.4f, 1});
+    // Turning pages.
+    if (ui_.button(px - 44, py + ph / 2 - 12, 36, 24, "<", bookPage_ > 0)) --bookPage_;
+    if (ui_.button(px + pw + 8, py + ph / 2 - 12, 36, 24, ">", bookPage_ + 1 < (int)b.pages.size())) ++bookPage_;
+    // Writing.
+    float bx = 8, by = 8;
+    const float bw = std::max(50.0f, px - 16);
+    if (!locked) {
+        if (ui_.button(bx, by, bw, 20, "Psát", (bool)onTextPrompt, true) && onTextPrompt)
+            onTextPrompt(PromptBookPage, tr("Text stránky"), b.pages[bookPage_]);
+        by += 26;
+        if (ui_.button(bx, by, bw, 20, "+ Strana", b.pages.size() < 50)) {
+            b.pages.insert(b.pages.begin() + bookPage_ + 1, "");
+            ++bookPage_;
+        }
+        by += 26;
+        if (ui_.button(bx, by, bw, 20, "- Strana", b.pages.size() > 1)) b.pages.erase(b.pages.begin() + bookPage_);
+        by += 26;
+        if (ui_.button(bx, by, bw, 20, "Podepsat", (bool)onTextPrompt) && onTextPrompt) onTextPrompt(PromptBookTitle, tr("Název knihy"), "");
+    }
+    if (ui_.button(bx, H - 28, bw, 22, "Hotovo")) setScreen(Screen::Playing);
 }
 
 void Game::trailersScreen() {

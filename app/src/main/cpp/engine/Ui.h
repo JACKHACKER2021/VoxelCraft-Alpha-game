@@ -109,6 +109,7 @@ public:
     bool held(float x, float y, float w, float h) const;
     // Vertical drag distance this frame for fingers that started inside.
     float dragY(float x, float y, float w, float h) const;
+    float dragX(float x, float y, float w, float h) const;  // 1.5.7: the same sideways
     // For a dialog over a screen: hold this frame's taps back while the screen under it is
     // drawn, then give them back for the dialog's own buttons.
     void holdTaps(bool hold) {
@@ -119,7 +120,7 @@ public:
 private:
     struct Pointer {
         int id = -1;
-        float x = 0, y = 0, startX = 0, startY = 0, frameDy = 0;
+        float x = 0, y = 0, startX = 0, startY = 0, frameDy = 0, frameDx = 0;
         bool moved = false;
     };
     struct Tap {

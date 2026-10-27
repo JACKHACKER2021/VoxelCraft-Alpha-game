@@ -97,7 +97,9 @@ private:
         Playing, Pause, Structures, Developer, Achievements, Joining, Loading, Inventory, Crafting, Furnace, Chest, Death, Trade,
         Invite, OfflineGuide,  // 1.4.0
         Document,              // 1.5.0: reading a page of the old documents
-        Credits, Trailers      // 1.5.7: the credits (tap VoxelSoftworks on the title) and the trailer gallery
+        Credits, Trailers,     // 1.5.7: the credits (tap VoxelSoftworks on the title) and the trailer gallery
+        WorldMap, Chat,        // 1.5.7: the big map of explored land, the chat window
+        Book                   // 1.5.7: book and quill
     };
 
     // A slot in any open container, so items can be moved between them.
@@ -112,7 +114,7 @@ private:
                     PromptPlayerName = 6, PromptSkinImported = 7, PromptEditWorldName = 8,
                     PromptStructureImported = 9, PromptDevName = 10, PromptDevPassword = 11, PromptMusicEnded = 12,
                     PromptJoinAddress = 13, PromptChat = 14, PromptCode = 15, PromptPublicIp = 16, PromptWorldImported = 17,
-                    PromptShaderPackName = 18 };
+                    PromptShaderPackName = 18, PromptWaypoint = 19, PromptBookPage = 20, PromptBookTitle = 21 };
 
     void setScreen(Screen s);
     Settings playSettings() const;  // settings_ without developer options for normal players
@@ -164,6 +166,15 @@ private:
     void documentScreen();      // 1.5.0: a page of the forgotten kingdom's story
     void creditsScreen();       // 1.5.7
     void trailersScreen();      // 1.5.7
+    void worldMapScreen();
+    void chatScreen();
+    void bookScreen();
+    int bookId_ = 0, bookPage_ = 0;
+    float mapCx_ = 0, mapCz_ = 0, mapScale_ = 1;
+    int mapSelected_ = -1;
+    bool mapDirty_ = true;
+    std::vector<uint8_t> mapImage_;
+    float chatScroll_ = 0;
     double creditsStart_ = 0;
     int documentPage_ = 0;
     void inventoryScreen();

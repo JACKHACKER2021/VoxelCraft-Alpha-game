@@ -180,6 +180,24 @@ void PaperMaps::view(int dim, int x, int z, std::vector<uint8_t>& rgba, int& ori
         }
 }
 
+void PaperMaps::render(int dim, float cx, float cz, float scale, int size, std::vector<uint8_t>& rgba) const {
+    rgba.assign((size_t)size * size * 4, 255);
+    const Sheet* last = nullptr;
+    int lastAx = 1 << 30, lastAz = 1 << 30;
+    for (int vz = 0; vz < size; ++vz)
+        for (int vx = 0; vx < size; ++vx) {
+            const int wx = (int)std::floor(cx + (vx - size / 2 + 0.5f) * scale), wz = (int)std::floor(cz + (vz - size / 2 + 0.5f) * scale);
+            const int ax = floorDiv(wx, kSize), az = floorDiv(wz, kSize);
+            if (ax != lastAx || az != lastAz) last = find(dim, ax, az), lastAx = ax, lastAz = az;
+            uint8_t* o = &rgba[((size_t)vz * size + vx) * 4];
+            const uint8_t* c = last ? &last->rgba[((size_t)floorMod(wz, kSize) * kSize + floorMod(wx, kSize)) * 4] : nullptr;
+            if (!c || (c[0] == kParchment[0] && c[1] == kParchment[1] && c[2] == kParchment[2]))
+                std::copy(kParchment, kParchment + 3, o);
+            else
+                std::copy(c, c + 3, o);
+        }
+}
+
 int PaperMaps::explored(int dim, int x, int z) const {
     const Sheet* s = find(dim, floorDiv(x, kSize), floorDiv(z, kSize));
     return s ? s->drawn : 0;

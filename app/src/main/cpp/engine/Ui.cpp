@@ -25,7 +25,7 @@ void Ui::begin(float width, float height) {
 
 void Ui::endFrame() {
     taps_.clear();
-    for (Pointer& p : pointers_) p.frameDy = 0;
+    for (Pointer& p : pointers_) p.frameDy = p.frameDx = 0;
 }
 
 void Ui::touchDown(int id, float x, float y) {
@@ -40,6 +40,7 @@ void Ui::touchMove(int id, float x, float y) {
     for (Pointer& p : pointers_)
         if (p.id == id) {
             p.frameDy += y - p.y;
+            p.frameDx += x - p.x;
             p.x = x;
             p.y = y;
             if (std::hypot(x - p.startX, y - p.startY) > kDragThreshold) p.moved = true;
@@ -196,6 +197,13 @@ bool Ui::held(float x, float y, float w, float h) const {
     for (const Pointer& p : pointers_)
         if (p.id >= 0 && inside(p.startX, p.startY, x, y, w, h) && inside(p.x, p.y, x, y, w, h)) return true;
     return false;
+}
+
+float Ui::dragX(float x, float y, float w, float h) const {
+    float d = 0;
+    for (const Pointer& p : pointers_)
+        if (p.id >= 0 && p.moved && inside(p.startX, p.startY, x, y, w, h)) d += p.frameDx;
+    return d;
 }
 
 float Ui::dragY(float x, float y, float w, float h) const {

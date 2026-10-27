@@ -427,7 +427,8 @@ const char* kUpdate157 = R"({
     {"type": "shapeless", "ingredients": ["crimson_planks"], "result": "planks"},
     {"type": "shaped", "pattern": ["D", "G", "T"], "key": {"D": "powerstone_dust", "G": "glass", "T": "torch"}, "result": "powerstone_lamp"},
     {"type": "shaped", "pattern": [".C.", "CBC", ".C."], "key": {"C": "powerstone_chip", "B": "powerstone_block"}, "result": "powerstone_lamp", "count": 4},
-    {"type": "shaped", "pattern": ["CCC", "CFC", "BBB"], "key": {"C": "powerstone_chip", "F": "furnace", "B": "powerstone_bricks"}, "result": "powerstone_furnace"}
+    {"type": "shaped", "pattern": ["CCC", "CFC", "BBB"], "key": {"C": "powerstone_chip", "F": "furnace", "B": "powerstone_bricks"}, "result": "powerstone_furnace"},
+    {"type": "shapeless", "ingredients": ["feather", "coal", "wheat"], "result": "writable_book"}
   ]
 })";
 

@@ -2206,6 +2206,17 @@ void drawUpdate157(Canvas& a, int tile) {
             for (int k = 0; k < 4; ++k) a.put(tile, 9 + k, 8 + k, {200, 30, 30}), a.put(tile, 12 - k, 8 + k, {200, 30, 30});
             return;
         }
+        case T_WRITABLE_BOOK:
+        case T_WRITTEN_BOOK: {
+            // A leather book (brown, or green once signed) with pale pages and, unsigned, a quill.
+            const Rgb cover = tile == T_WRITTEN_BOOK ? Rgb{60, 120, 70} : Rgb{120, 72, 40};
+            for (int y = 3; y <= 13; ++y)
+                for (int x = 3; x <= 11; ++x) a.put(tile, x, y, x == 3 ? cover.scaled(0.7f) : y == 13 || x == 11 ? Rgb{236, 228, 200} : cover);
+            for (int x = 5; x <= 9; ++x) a.put(tile, x, 6, cover.scaled(1.3f));
+            if (tile == T_WRITABLE_BOOK)
+                for (int k = 0; k < 7; ++k) a.put(tile, 13 - k, 2 + k, k < 2 ? Rgb{30, 30, 30} : Rgb{245, 245, 245});
+            return;
+        }
         case T_EGG_HOGMAN: a.sprite(tile, kSprite_egg15, {226, 150, 140}, {60, 200, 220}); return;
         default: break;
     }

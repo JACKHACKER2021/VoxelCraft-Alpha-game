@@ -45,6 +45,33 @@ Session::Session(const WorldInfo& info, const PlayerState& player)
     nether_.changeLog = &changes_[1];
     void_.changeLog = &changes_[2];
     loadFlow();
+    {
+        std::ifstream in(info.folder + "/waypoints.txt");
+        Waypoint w;
+        while (in >> w.dim >> w.x >> w.z && std::getline(in, w.name) && waypoints_.size() < 200) {
+            if (!w.name.empty() && w.name[0] == ' ') w.name.erase(0, 1);
+            waypoints_.push_back(w);
+        }
+    }
+    {
+        std::ifstream in(info.folder + "/books.txt");
+        std::string word, s;
+        int id = 0;
+        size_t pages = 0;
+        auto line = [&]() {
+            std::getline(in, s);
+            std::replace(s.begin(), s.end(), '\x01', '\n');
+            return s;
+        };
+        while (in >> word >> id >> pages && word == "book" && pages <= 100) {
+            std::getline(in, s);
+            Book& b = books_[id];
+            b.title = line(), b.author = line();
+            b.pages.clear();
+            for (size_t i = 0; i < pages; ++i) b.pages.push_back(line());
+            if (b.pages.empty()) b.pages.push_back("");
+        }
+    }
     rng_ ^= info.seed | 1;
     furnaces_ = loadFurnaces(info.folder);
     drops_.load(info.folder);
@@ -101,6 +128,24 @@ void Session::save() {
     paperMaps_.save(info_.folder);
     saveTimers();
     saveFlow();
+    {
+        std::ofstream out(info_.folder + "/waypoints.txt");
+        for (const Waypoint& w : waypoints_) out << w.dim << " " << w.x << " " << w.z << " " << w.name << "\n";
+    }
+    {
+        // books.txt: "book <id> <pages>", then the title, the author and each page on a line
+        // ('\n' inside a page is written as '\x01').
+        std::ofstream out(info_.folder + "/books.txt");
+        auto line = [&](std::string s) {
+            std::replace(s.begin(), s.end(), '\n', '\x01');
+            out << s << "\n";
+        };
+        for (const auto& [id, b] : books_) {
+            out << "book " << id << " " << b.pages.size() << "\n";
+            line(b.title), line(b.author);
+            for (const std::string& p : b.pages) line(p);
+        }
+    }
 }
 
 Furnace* Session::furnace(const FurnaceKey& key) {
@@ -177,6 +222,18 @@ void Session::uncoverFind(int x, int y, int z) {
     hand_.use();
     sound(Sound::Coin);
     achieve("archaeologist");
+}
+
+bool Session::bookSigned(int id) const {
+    auto it = books_.find(id);
+    return it != books_.end() && !it->second.title.empty();
+}
+
+void Session::signBook(int id, const std::string& title, const std::string& author) {
+    if (title.empty() || !books_.count(id)) return;
+    books_[id].title = title.substr(0, 32), books_[id].author = author;
+    for (ItemStack& s : state_.inventory.slots)
+        if (s.id == WRITABLE_BOOK && s.damage == id) s.id = WRITTEN_BOOK;
 }
 
 void Session::readDocument(int page) {
@@ -951,6 +1008,11 @@ void Session::touchDown(int id, float x, float y, double time) {
     if (in(l.hotbarX, l.hotbarY, l.slot * 9, l.slot)) {
         t->kind = Touch::Hotbar;
         selectSlot((int)((x - l.hotbarX) / l.slot));
+    } else if (paperShown_ && in(guiW_ / 2 - std::min(guiH_ * 0.62f, 170.0f) / 2, 26, std::min(guiH_ * 0.62f, 170.0f),
+                                 std::min(guiH_ * 0.62f, 170.0f))) {
+        // 1.5.7: tapping the map in hand opens the big world map.
+        t->kind = Touch::Hotbar;
+        wantsWorldMap = true;
     } else if (in(l.hotbarX - l.slot - 4, l.hotbarY, l.slot, l.slot)) {
         // 1.5.7: the off-hand slot: a tap swaps it with the selected hotbar item.
         t->kind = Touch::Hotbar;
@@ -1740,6 +1802,17 @@ void Session::useItem(const RayHit& hit) {
     if (held.empty()) return;
     if (isDocument(held.id)) {
         readDocument(held.id - OLD_DOCUMENT);
+        return;
+    }
+    if (held.id == WRITABLE_BOOK || held.id == WRITTEN_BOOK) {
+        ItemStack& slot = state_.inventory.slots[state_.selectedSlot];
+        if (slot.damage == 0 || !books_.count(slot.damage)) {
+            while (books_.count(nextBook_)) ++nextBook_;
+            slot.damage = (uint16_t)nextBook_;
+            books_[nextBook_];
+        }
+        wantsBook = slot.damage;
+        hand_.use();
         return;
     }
     if (isArmor(held.id)) {

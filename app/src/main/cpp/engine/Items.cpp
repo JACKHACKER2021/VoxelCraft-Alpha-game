@@ -32,7 +32,7 @@ const ItemId kCreativeItems[] = {
     BRONZE_PICKAXE, BRONZE_AXE, BRONZE_SHOVEL, STEEL_PICKAXE, STEEL_AXE, STEEL_SHOVEL, RUBY_PICKAXE, RUBY_AXE, RUBY_SHOVEL,
     FLINT_AND_STEEL, VOID_FLINT_AND_STEEL,
     WOOD_SWORD, STONE_SWORD, IRON_SWORD, BRONZE_SWORD, STEEL_SWORD, RUBY_SWORD, BUCKET, WATER_BUCKET, LAVA_BUCKET, BOSS_COMPASS,
-    HOE, BOW, ARROW, MAP, BRUSHER, FORTRESS_COMPASS, SHIELD, EXPLORER_MAP,
+    HOE, BOW, ARROW, MAP, BRUSHER, FORTRESS_COMPASS, SHIELD, EXPLORER_MAP, WRITABLE_BOOK,
     // Armour
     228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247,
     // Materials
@@ -45,9 +45,9 @@ const ItemId kCreativeItems[] = {
     OLD_DOCUMENT + 7, ANCIENT_COIN, POWERSTONE_RELIC, POTTERY_SHARD, EGG_HUSKING, EGG_HOGMAN,
 };
 const int kCreativeItemCount = sizeof(kCreativeItems) / sizeof(kCreativeItems[0]);
-static_assert(sizeof(kCreativeItems) / sizeof(kCreativeItems[0]) == 111 + 53 + 38 + 20 + 49, "the creative tabs cover the whole catalog");
+static_assert(sizeof(kCreativeItems) / sizeof(kCreativeItems[0]) == 111 + 53 + 39 + 20 + 49, "the creative tabs cover the whole catalog");
 const CreativeTab kCreativeTabs[] = {
-    {"Stavební", 0, 111}, {"Příroda", 111, 53}, {"Nástroje", 164, 38}, {"Brnění", 202, 20}, {"Suroviny", 222, 49},
+    {"Stavební", 0, 111}, {"Příroda", 111, 53}, {"Nástroje", 164, 39}, {"Brnění", 203, 20}, {"Suroviny", 223, 49},
 };
 const int kCreativeTabCount = sizeof(kCreativeTabs) / sizeof(kCreativeTabs[0]);
 
@@ -126,7 +126,7 @@ const KeyEntry kKeys[] = {
     {NETHER_BRICK_FENCE, "nether_brick_fence"}, {POWERSTONE_FENCE, "powerstone_fence"},
     {BRUSHER, "brusher"}, {FORTRESS_COMPASS, "fortress_compass"}, {ANCIENT_COIN, "ancient_coin"},
     {POWERSTONE_RELIC, "powerstone_relic"}, {POTTERY_SHARD, "pottery_shard"}, {EGG_HUSKING, "husking_spawn_egg"}, {VOID_BRICK_EYE, "void_brick_eye"}, {CRIMSON_STONE, "crimson_stone"},
-    {TORCH, "torch"}, {CRIMSON_PLANKS, "crimson_planks"}, {CRIMSON_LOG, "crimson_log"}, {SHIELD, "shield"}, {EXPLORER_MAP, "explorer_map"},
+    {TORCH, "torch"}, {CRIMSON_PLANKS, "crimson_planks"}, {CRIMSON_LOG, "crimson_log"}, {SHIELD, "shield"}, {EXPLORER_MAP, "explorer_map"}, {WRITABLE_BOOK, "writable_book"}, {WRITTEN_BOOK, "written_book"},
     {EGG_HOGMAN, "hogman_spawn_egg"}, {POWERSTONE_FURNACE, "powerstone_furnace"}, {POWERSTONE_FURNACE_ON, "lit_powerstone_furnace"},
     {CEILING_CABLE, "ceiling_power_cable"}, {CEILING_CABLE_ON, "lit_ceiling_power_cable"},
 };
@@ -288,6 +288,8 @@ const char* itemName(ItemId id) {
         case CRIMSON_LOG: return "Karmínový kmen";
         case SHIELD: return "Štít";
         case EXPLORER_MAP: return "Průzkumná mapa";
+        case WRITABLE_BOOK: return "Kniha a brk";
+        case WRITTEN_BOOK: return "Podepsaná kniha";
         case EGG_HOGMAN: return "Vejce: Prasák";
         case POWERSTONE_FURNACE: case POWERSTONE_FURNACE_ON: return "Powerstonová pec";
         default: if (isTorch(id)) return "Pochodeň"; break;
@@ -538,7 +540,7 @@ float armorReduction(const ItemStack armor[4]) {
 int maxStack(ItemId id) {
     if (const ModItem* m = id >= kModIdBase ? ModRegistry::get().item(id) : nullptr) return m->stack;
     if (id == WATER_BUCKET || id == LAVA_BUCKET || id == BOSS_COMPASS || id == CAKE || id == MILK_BUCKET || id == MAP || id == ANNIV_MEDAL ||
-        id == FORTRESS_COMPASS || id == EXPLORER_MAP)
+        id == FORTRESS_COMPASS || id == EXPLORER_MAP || id == WRITABLE_BOOK || id == WRITTEN_BOOK)
         return 1;
     if (isSkeletonHead(id) || isDocument(id) || id == POWERSTONE_RELIC) return 16;
     if (id == BUCKET || isSpawnEgg(id)) return 16;
