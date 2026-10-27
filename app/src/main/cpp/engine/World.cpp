@@ -176,17 +176,29 @@ void World::generateOverworld(Chunk& c) {
                 // High mountains: hardened stone above the peak height, snow on the very top.
                 if (b.peakBlock && y > b.peakHeight && y <= h && id != BEDROCK) id = b.peakBlock;
                 if (y == h && h > b.snowHeight) id = SNOW_BLOCK;
+                // 1.6.0 (generation 4): the deep layer of deepstone, with a wavy top.
+                const bool gen4 = config_.generation >= 4;
+                if (gen4 && id == STONE && y < 12 + (int)(detail_.perlin2(wx / 23.0f + 41.0f, wz / 23.0f) * 3))
+                    id = DEEPSTONE;
 
                 // Worm-like caves carved by 3D noise, kept away from the sea floor.
                 bool carved = false;
                 // 1.5.7 (generation 2): wider tunnels in two crossing networks, and sinkholes where
                 // the tunnels break through to the surface so caves can be walked into.
                 const bool gen2 = config_.generation >= 2;
-                const bool sinkhole = gen2 && h > sea + 2 && caves_.perlin2(wx / 64.0f + 900.0f, wz / 64.0f - 300.0f) > 0.42f;
-                const int roof = sinkhole ? h + 1 : h - 4;
+                // 1.6.0 (generation 4): more sinkholes, and now and then a great shaft straight down into
+                // a deep hall. Only on dry land away from the shore, so the surface is not torn up.
+                const bool landOk = h > sea + 3 && !b.peakBlock;
+                const bool sinkhole = gen2 && h > sea + 2 && caves_.perlin2(wx / 64.0f + 900.0f, wz / 64.0f - 300.0f) > (gen4 ? 0.36f : 0.42f);
+                const float shaftN = gen4 && landOk ? caves_.perlin2(wx / 44.0f - 1500.0f, wz / 44.0f + 2100.0f) : -1.0f;
+                const bool shaft = shaftN > 0.6f;
+                const int roof = sinkhole || shaft ? h + 1 : h - 4;
                 if (config_.overworld.caves && id != AIR && id != WATER && id != BEDROCK && y < roof && y > 4) {
                     float n = caves_.perlin3(wx / 24.0f, y / 16.0f, wz / 24.0f);
-                    const float size = config_.overworld.caveSize * (gen2 ? 1.35f : 1.0f) * (sinkhole && y > h - 8 ? 1.6f : 1.0f);
+                    // The shaft: open from the surface down to the deep halls, its walls ragged.
+                    if (shaft && y > 12 && shaftN + caves_.perlin3(wx / 6.0f, y / 6.0f, wz / 6.0f) * 0.05f > 0.62f) id = AIR, carved = true;
+                    const float size = config_.overworld.caveSize * (gen4 ? 1.9f : gen2 ? 1.35f : 1.0f) *
+                                       (sinkhole && y > h - 8 ? 1.6f : 1.0f);
                     if (std::fabs(n) < size) id = AIR, carved = true;
                     if (gen2 && !carved && y < h - 6) {
                         float m = caves_.perlin3(wx / 30.0f - 170.0f, y / 13.0f + 40.0f, wz / 30.0f + 260.0f);
@@ -199,6 +211,11 @@ void World::generateOverworld(Chunk& c) {
                     const float depth = 1.0f - (float)y / (float)std::max(h, 1);
                     float n = caves_.perlin3(wx / 52.0f + 500.0f, y / (gen2 ? 28.0f : 22.0f), wz / 52.0f);
                     if (n > 0.43f - depth * (gen2 ? 0.2f : 0.14f)) id = AIR, carved = true;
+                    // 1.6.0: great halls, tall and wide, between the deep layer and the surface.
+                    if (gen4 && !carved && y > 8 && y < h - 14) {
+                        const float g = caves_.perlin3(wx / 70.0f - 1300.0f, y / 30.0f, wz / 70.0f + 800.0f);
+                        if (g > 0.44f - depth * 0.14f) id = AIR, carved = true;
+                    }
                 }
                 if (carved && config_.overworld.caverns && y <= kCaveLakeLevel)
                     id = tarRegion ? (ItemId)TAR : (ItemId)WATER;
@@ -284,9 +301,105 @@ void World::generateOverworld(Chunk& c) {
                 }
             }
     }
+    if (config_.generation >= 4 && config_.overworld.caves) decorateCaves(c, cols);
     uint32_t salt = 0xC0A1u;
     for (const OreDef& ore : config_.overworld.ores) placeOres(c, ore, salt += 0x9E37u);
+    if (config_.generation >= 4) {
+        // Hardium: small, rare veins, only in deepstone.
+        OreDef hardium;
+        hardium.block = HARDIUM_ORE;
+        hardium.veins = 2;
+        hardium.size = 4;
+        hardium.minY = 3;
+        hardium.maxY = 10;
+        placeOres(c, hardium, 0x4A2Du);
+    }
     stampStructures(c);
+}
+
+void World::decorateCaves(Chunk& c, const Column cols[kChunkSize][kChunkSize]) {
+    // 1.6.0 Caves and Tunes: what lives in the caves of new worlds. Mossy caves (moss floors,
+    // mossy rock, vines from the ceiling) come in regions; glowing fungus grows deep down;
+    // gravel lies on cave floors; lava and tar gather in pools.
+    const int cx = c.cx, cz = c.cz;
+    auto rock = [](ItemId b) { return b == STONE || b == DEEPSTONE; };
+    for (int x = 0; x < kChunkSize; ++x)
+        for (int z = 0; z < kChunkSize; ++z) {
+            const int wx = cx * kChunkSize + x, wz = cz * kChunkSize + z, top = cols[x][z].height - 6;
+            const bool lush = detail_.perlin2(wx / 64.0f - 410.0f, wz / 64.0f + 95.0f) > 0.18f;
+            const bool gravelPatch = detail_.perlin2(wx / 9.0f + 77.0f, wz / 9.0f - 31.0f) > 0.35f;
+            // Pools come in two sizes: small pockets anywhere in the deeper caves, and wide lakes
+            // on the floors of the deep chambers. Kept rare so caves stay walkable.
+            const float pocket = detail_.perlin2(wx / 5.0f - 260.0f, wz / 5.0f + 610.0f);
+            const float lake = detail_.perlin2(wx / 26.0f + 140.0f, wz / 26.0f - 75.0f);
+            const bool tarPools = detail_.perlin2(wx / 150.0f + 33.0f, wz / 150.0f) > 0.2f;
+            for (int y = 6; y < top && y < kChunkHeight - 2; ++y) {
+                if (c.get(x, y, z) != AIR) continue;
+                const uint32_t r = hash3(wx, y, wz, seed_ ^ 0xCA7Eu) % 1000;
+                const ItemId below = c.get(x, y - 1, z), above = c.get(x, y + 1, z);
+                if (rock(below)) {
+                    // A cave floor.
+                    // (The water and tar lakes up to kCaveLakeLevel stay as they are.)
+                    const bool inside = x > 0 && x < 15 && z > 0 && z < 15 && y > kCaveLakeLevel + 1;
+                    const bool bigLake = inside && y <= 24 && lake > 0.42f;
+                    const bool smallPool = inside && y < (tarPools ? 40 : 32) && pocket > 0.6f;
+                    if (bigLake || smallPool) {
+                        // The floor turns to liquid (two deep in a lake) on a bed of rock.
+                        const ItemId liquid = tarPools ? (ItemId)TAR : (ItemId)LAVA;
+                        const int deep = bigLake ? 2 : 1;
+                        for (int d = 1; d <= deep; ++d) c.set(x, y - d, z, liquid);
+                        c.set(x, y - deep - 1, z, tarPools ? (ItemId)TAR_BLOCK : (ItemId)DEEPSTONE);
+                    } else if (lush) {
+                        c.set(x, y - 1, z, r < 650 ? (ItemId)MOSS_BLOCK : (ItemId)MOSSY_DEEPSTONE);
+                    } else if (gravelPatch) {
+                        c.set(x, y - 1, z, GRAVEL);
+                    } else if (y < 22 && r < 25) {
+                        c.set(x, y - 1, z, FUNGAL_DEEPSTONE);
+                    }
+                }
+                if (rock(above)) {
+                    // A cave ceiling: mossy in the mossy caves, with vines hanging down.
+                    if (lush) {
+                        if (r < 300) c.set(x, y + 1, z, MOSSY_DEEPSTONE);
+                        if (r % 7 < 3) {
+                            const int len = 1 + (int)(r % 5);
+                            for (int k = 0; k < len && y - k > 1 && c.get(x, y - k, z) == AIR; ++k) c.set(x, y - k, z, VINES);
+                        }
+                    } else if (y < 22 && r < 15) {
+                        c.set(x, y + 1, z, FUNGAL_DEEPSTONE);
+                    }
+                }
+            }
+            // Ore showing in the cave walls now and then, by depth: coal high up, iron and bronze
+            // in the middle, steel lower, ruby rarely and only deep. Small veins of 1 to 3.
+            for (int y = 6; y < top; ++y) {
+                if (!rock(c.get(x, y, z))) continue;
+                const bool open = (x > 0 && c.get(x - 1, y, z) == AIR) || (x < 15 && c.get(x + 1, y, z) == AIR) ||
+                                  (z > 0 && c.get(x, y, z - 1) == AIR) || (z < 15 && c.get(x, y, z + 1) == AIR) ||
+                                  c.get(x, y + 1, z) == AIR || c.get(x, y - 1, z) == AIR;
+                if (!open) continue;
+                const uint32_t r = hash3(wx, y, wz, seed_ ^ 0x0E5Eu);
+                if (r % 1000 >= 5) continue;
+                const uint32_t pick = (r >> 10) % 100;
+                ItemId ore = y > 40 ? (ItemId)COAL_ORE
+                             : y > 26 ? (pick < 55 ? (ItemId)IRON_ORE : (ItemId)COAL_ORE)
+                             : y > 14 ? (pick < 45 ? (ItemId)BRONZE_ORE : pick < 80 ? (ItemId)IRON_ORE : (ItemId)STEEL_ORE)
+                                      : (pick < 50 ? (ItemId)STEEL_ORE : pick < 62 ? (ItemId)RUBY_ORE : (ItemId)IRON_ORE);
+                c.set(x, y, z, ore);
+                const int more = (int)((r >> 20) % 3);
+                for (int k = 0; k < more; ++k) {
+                    const int dx = (int)((r >> (22 + k * 3)) % 3) - 1, dy = (int)((r >> (23 + k * 3)) % 3) - 1;
+                    if (x + dx >= 0 && x + dx < 16 && rock(c.get(x + dx, y + dy, z))) c.set(x + dx, y + dy, z, ore);
+                }
+            }
+            // Mossy walls in the mossy caves: rock beside the cave air.
+            if (lush)
+                for (int y = 6; y < top; ++y)
+                    if (rock(c.get(x, y, z)) && hash3(wx, y, wz, seed_ ^ 0x11Fu) % 3 == 0 &&
+                        ((x > 0 && c.get(x - 1, y, z) == AIR) || (x < 15 && c.get(x + 1, y, z) == AIR) ||
+                         (z > 0 && c.get(x, y, z - 1) == AIR) || (z < 15 && c.get(x, y, z + 1) == AIR)))
+                        c.set(x, y, z, MOSSY_DEEPSTONE);
+        }
 }
 
 bool World::nearestMineshaft(int x, int z, int& outX, int& outY, int& outZ) {
@@ -351,11 +464,13 @@ void World::stampStructures(Chunk& c) {
         {WorldStructure::DrownedRuins, 176, 60, kDrownedRuinsSize},
         {WorldStructure::BrokenPortal, 240, 60, kBrokenPortalSize},
         {WorldStructure::RuinedVillage, 400, 45, kVillageSize},  // 1.5.9 (generation 3)
+        {WorldStructure::CaveDungeon, 72, 55, 11},               // 1.6.0 (generation 4)
     };
     const int sea = config_.overworld.seaLevel;
     const int x0 = c.cx * kChunkSize, z0 = c.cz * kChunkSize, x1 = x0 + kChunkSize - 1, z1 = z0 + kChunkSize - 1;
     for (const Kind& k : kinds) {
         if (k.type == WorldStructure::RuinedVillage && config_.generation < 3) continue;
+        if (k.type == WorldStructure::CaveDungeon && config_.generation < 4) continue;
         for (int rx = floorDiv(x0 - k.maxSize, k.region); rx <= floorDiv(x1, k.region); ++rx)
             for (int rz = floorDiv(z0 - k.maxSize, k.region); rz <= floorDiv(z1, k.region); ++rz) {
                 uint32_t h = hash3(rx, (int)k.type * 977 + 13, rz, seed_ ^ 0x57A7u);
@@ -403,6 +518,10 @@ void World::stampStructures(Chunk& c) {
                 } else if (k.type == WorldStructure::Dungeon) {
                     oy = 10 + (int)((h >> 4) % 24);
                     if (middle.height < oy + s.sy + 6) continue;
+                } else if (k.type == WorldStructure::CaveDungeon) {
+                    // Deep in the rock, under solid ground, often beside a cave.
+                    oy = 8 + (int)((h >> 4) % 30);
+                    if (middle.height < oy + s.sy + 10) continue;
                 } else {
                     oy = 16 + (int)((h >> 4) % 14);
                     if (middle.height < oy + s.sy + 8) continue;
@@ -419,6 +538,10 @@ void World::stampStructures(Chunk& c) {
                             if (c.get(lx, wy, lz) == BEDROCK || c.get(lx, wy, lz) == WORLD_END) continue;
                             if (id == AIR && wy <= sea && (k.type == WorldStructure::Shipwreck || k.type == WorldStructure::DrownedRuins)) id = WATER;
                             if (id == AIR && k.type == WorldStructure::Ruin && wy > middle.height + 4) continue;
+                            // 1.6.0: the old mineshafts' planks have rotted in places.
+                            if (id == PLANKS && k.type == WorldStructure::Mineshaft && config_.generation >= 4 &&
+                                hash3(ox + x, wy, oz + z, seed_ ^ 0x207Fu) % 5 < 2)
+                                id = ROTTEN_PLANKS;
                             // A buried portal ruin keeps the earth around its lower half.
                             if (id == AIR && k.type == WorldStructure::BrokenPortal && (wy <= middle.height || wy > middle.height + 9)) continue;
                             c.set(lx, wy, lz, id);
@@ -442,7 +565,9 @@ void World::placeOres(Chunk& c, const OreDef& ore, uint32_t salt) {
         int x = 1 + (int)(h % 14), z = 1 + (int)((h >> 4) % 14);
         int y = ore.minY + (int)((h >> 8) % (uint32_t)std::max(1, ore.maxY - ore.minY));
         for (int i = 0; i < ore.size; ++i) {
-            if (c.get(x, y, z) == STONE) c.set(x, y, z, ore.block);
+            // 1.6.0: the ores reach into the deepstone too; hardium is found only there.
+            const ItemId here = c.get(x, y, z);
+            if (ore.block == HARDIUM_ORE ? here == DEEPSTONE : (here == STONE || here == DEEPSTONE)) c.set(x, y, z, ore.block);
             uint32_t step = hash3(v, i, c.cx ^ c.cz, seed_ ^ salt ^ h);
             switch (step % 6) {
                 case 0: x = std::min(x + 1, kChunkSize - 1); break;
@@ -695,7 +820,10 @@ void World::stampBlueprint(Chunk& c, const Structure& s, int ox, int oy, int oz,
 World::VoidBiome World::voidBiomeAt(int x, int z) const {
     float lava = std::max(arenaInfluence(x, z) * 1.4f, (terrain_.perlin2(x / 260.0f + 40, z / 260.0f) + 0.6f) * 0.55f);
     if (lava > 0.6f) return VoidBiome::Lava;
-    return temperature_.perlin2(x / 180.0f + 50, z / 180.0f) > -0.05f ? VoidBiome::Purple : VoidBiome::Crimson;
+    const bool purple = temperature_.perlin2(x / 180.0f + 50, z / 180.0f) > -0.05f;
+    // 1.6.0: inside the purple lands, broken pieces of a forgotten overworld drift.
+    if (purple && config_.generation >= 4 && detail_.perlin2(x / 150.0f - 620.0f, z / 150.0f + 410.0f) > 0.28f) return VoidBiome::Forgotten;
+    return purple ? VoidBiome::Purple : VoidBiome::Crimson;
 }
 
 int World::voidHeight(int x, int z) const {
@@ -730,6 +858,7 @@ std::string World::placeName(int x, int z) const {
             switch (voidBiomeAt(x, z)) {
                 case VoidBiome::Purple: return "Fialový les";
                 case VoidBiome::Crimson: return "Karmínová poušť";
+                case VoidBiome::Forgotten: return "Zapomenutý Overworld";
                 default: return "Lávová pustina";
             }
         default: {
@@ -807,6 +936,28 @@ bool World::nearestStructure(int x, int z, int& outX, int& outY, int& outZ) cons
     return best >= 0;
 }
 
+ItemId World::forgottenBlock(int wx, int y, int wz, int h) const {
+    // 1.6.0: the Forgotten Overworld: the land is cut into pieces of 8 x 8 columns. Some are
+    // gone (a drop to the void floor far below), the others float at their own height on a
+    // ragged underside: souled grass, a few layers of souled dirt and then souled stone.
+    if (y == 0) return WORLD_END;
+    if (y < 3) return (hash3(wx, y, wz, seed_ ^ 0x701Du) & 1) ? (ItemId)BEDROCK : (ItemId)VOID_STONE;
+    if (y < 26) return VOID_STONE;
+    const uint32_t cell = hash3(floorDiv(wx, 8), 0, floorDiv(wz, 8), seed_ ^ 0xF06Fu);
+    if (cell % 100 < 28) return AIR;  // a missing piece
+    const int top = forgottenTop(wx, wz, h);
+    const int bottom = top - 10 - (int)(hash3(wx, 1, wz, seed_ ^ 0xF07Fu) % 5) - (int)(cell % 4);
+    if (y > top || y < bottom) return AIR;
+    if (y == top) return SOULED_GRASS;
+    if (y >= top - 3) return SOULED_DIRT;
+    return SOULED_STONE;
+}
+
+int World::forgottenTop(int wx, int wz, int h) const {
+    const uint32_t cell = hash3(floorDiv(wx, 8), 0, floorDiv(wz, 8), seed_ ^ 0xF06Fu);
+    return h + (int)((cell >> 8) % 9) - 4;  // each piece at its own height
+}
+
 void World::generateVoid(Chunk& c) {
     // The Crimson Void: void stone everywhere; a purple forest of eye trees, a red sand
     // desert and lava lands with the boss arena.
@@ -830,6 +981,7 @@ void World::generateVoid(Chunk& c) {
                 else if (b == VoidBiome::Lava && y <= kVoidLavaLevel) id = LAVA;
                 if (b == VoidBiome::Crimson && y < h && y >= h - 4) id = RED_SAND;
                 if (b == VoidBiome::Lava && y == h && r % 9 == 0) id = OBSIDIAN;
+                if (b == VoidBiome::Forgotten) id = forgottenBlock(wx, y, wz, h);
                 if (id == VOID_STONE) {
                     // Caves, and the richest ores of the game deep down.
                     if (y > 4 && y < h - 5 && std::fabs(caves_.perlin3(wx / 26.0f, y / 14.0f, wz / 26.0f)) < 0.05f) id = AIR;
@@ -845,6 +997,15 @@ void World::generateVoid(Chunk& c) {
             const int wx = cx * kChunkSize + x, wz = cz * kChunkSize + z, h = heights[x][z];
             if (h + 12 >= kChunkHeight) continue;
             uint32_t r = hash3(wx, 0, wz, seed_ ^ 0xE7E5u);
+            if (biomes[x][z] == VoidBiome::Forgotten) {
+                // Oaks and grass of the lost world on its floating pieces.
+                const int t = forgottenTop(wx, wz, h);
+                if (t + 12 < kChunkHeight && c.get(x, t, z) == SOULED_GRASS && c.get(x, t + 1, z) == AIR) {
+                    if (r % 1000 < 16) placeTree(c, x, t + 1, z, r, LOG, LEAVES);
+                    else if (r % 1000 < 90) c.set(x, t + 1, z, TALL_GRASS);
+                }
+                continue;
+            }
             if (c.get(x, h + 1, z) != AIR) continue;
             if (biomes[x][z] == VoidBiome::Purple && c.get(x, h, z) == VOID_GRASS) {
                 if (r % 1000 < 22) {
@@ -901,6 +1062,29 @@ void World::generateVoid(Chunk& c) {
                 c.set(x, h + tall + 1, z, EYE_LOG);
             }
         }
+    // 1.6.0: the frames of the portal to the Celestial Reach lie in the Forgotten Overworld, flat
+    // in the ground like the End's: twelve frame blocks round a dark hole (opens in 1.7.0).
+    if (config_.generation >= 4) {
+        const int region = 240;
+        for (int rx = floorDiv(cx * kChunkSize, region); rx <= floorDiv(cx * kChunkSize + 15, region); ++rx)
+            for (int rz = floorDiv(cz * kChunkSize, region); rz <= floorDiv(cz * kChunkSize + 15, region); ++rz) {
+                const uint32_t hh = hash3(rx, 1552, rz, seed_ ^ 0xCE1Eu);
+                const int px = rx * region + 16 + (int)(hh % (uint32_t)(region - 32)), pz = rz * region + 16 + (int)((hh >> 12) % (uint32_t)(region - 32));
+                const int lx = px - cx * kChunkSize, lz = pz - cz * kChunkSize;
+                if (lx < 3 || lx > 12 || lz < 3 || lz > 12 || voidBiomeAt(px, pz) != VoidBiome::Forgotten) continue;
+                const int top = forgottenTop(px, pz, heights[lx][lz]);
+                if (c.get(lx, top, lz) == AIR) continue;  // on a missing piece: none here
+                for (int dx = -2; dx <= 2; ++dx)
+                    for (int dz = -2; dz <= 2; ++dz) {
+                        const bool corner = std::abs(dx) == 2 && std::abs(dz) == 2, inside = std::abs(dx) <= 1 && std::abs(dz) <= 1;
+                        for (int y = top + 1; y < top + 6; ++y) c.set(lx + dx, y, lz + dz, AIR);
+                        if (corner) c.set(lx + dx, top, lz + dz, SOULED_STONE);
+                        else if (inside) c.set(lx + dx, top, lz + dz, AIR), c.set(lx + dx, top - 1, lz + dz, VOID_STONE);
+                        else c.set(lx + dx, top, lz + dz, CELESTIAL_FRAME);
+                        c.set(lx + dx, top - 2, lz + dz, SOULED_STONE);
+                    }
+            }
+    }
     // Dungeons underground and towers on the surface (away from the arena).
     {
         const int bx0 = cx * kChunkSize, bz0 = cz * kChunkSize;
@@ -930,7 +1114,7 @@ void World::generateVoid(Chunk& c) {
                         oy = 16 + (int)((h >> 4) % 10);
                         if (voidHeight(mx, mz) < oy + 16) continue;
                     } else {
-                        if (voidBiomeAt(mx, mz) == VoidBiome::Lava) continue;
+                        if (voidBiomeAt(mx, mz) == VoidBiome::Lava || voidBiomeAt(mx, mz) == VoidBiome::Forgotten) continue;
                         // Watchtowers keep to the crimson lands; the old towers stand anywhere.
                         if (k.type == WorldStructure::VoidWatchtower && voidBiomeAt(mx, mz) != VoidBiome::Crimson) continue;
                         oy = voidHeight(mx, mz);

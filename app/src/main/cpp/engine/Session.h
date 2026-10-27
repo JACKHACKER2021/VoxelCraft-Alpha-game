@@ -351,6 +351,8 @@ private:
     double protectedToast_ = -10;  // when "the spawn is protected" was last shown
     bool tarWarned_ = false;  // "the tar spreads" was shown once
     float spawnTimer_ = 0, attackCooldown_ = 0;
+    void tickSpawners();
+    bool bossHealHint_ = false;
     uint32_t spawnRng_ = 12345;
     float spawnRandom();
     void updateMobs(float dt);

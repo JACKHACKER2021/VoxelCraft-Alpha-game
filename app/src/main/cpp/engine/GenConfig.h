@@ -84,7 +84,9 @@ struct GenConfig {
     // 1.5.7: bigger caves with openings to the surface, crimson mineshafts and the larger
     // fortress. Worlds from before keep their old generator (1).
     // 1.5.9 (3): Crimson Void mineshafts and watchtowers, ruined villages in the Overworld.
-    int generation = 3;
+    // 1.6.0 (4) Caves and Tunes: deepstone, hardium, bigger caves, mossy caves with vines,
+    // lava and tar pools, gravel floors, rotten mineshaft planks.
+    int generation = 4;
 
     // The built-in defaults (the same content as the default pack files).
     static const GenConfig& defaults();

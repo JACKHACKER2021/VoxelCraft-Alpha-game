@@ -61,7 +61,7 @@ struct Mob {
 
 // What happened during an update, for the game to react to.
 struct MobEvent {
-    enum Kind { HitPlayer, Died, BossRoar, Explode, TarSpread, Fireball, Barter } kind;
+    enum Kind { HitPlayer, Died, BossRoar, Explode, TarSpread, Fireball, Barter, BossWave, BossSummon } kind;  // 1.6.0: wave, summon
     MobType type;
     Vec3 pos;
     float damage = 0;

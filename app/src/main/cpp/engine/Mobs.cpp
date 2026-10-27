@@ -254,7 +254,8 @@ void MobSystem::update(const World& world, int dim, const Vec3& target, bool hun
                 const Vec3 at = mobs_[(size_t)prey].pos;
                 if (hurt(prey, info.damage, m.pos)) events.push_back({MobEvent::TarSpread, m.type, at, 0, {}});
             } else if (prey < 0 && dist < reach && std::fabs(toPlayer.y) < (info.boss ? 3.0f : 1.8f) && m.attackCooldown <= 0) {
-                Vec3 knock = Vec3(toPlayer.x, 0, toPlayer.z).normalized() * (info.boss ? 9.0f : 4.0f) + Vec3(0, info.boss ? 6.0f : 3.5f, 0);
+                // 1.6.0: the Crimson Man's blow throws the player far back.
+                Vec3 knock = Vec3(toPlayer.x, 0, toPlayer.z).normalized() * (info.boss ? 15.0f : 4.0f) + Vec3(0, info.boss ? 9.0f : 3.5f, 0);
                 events.push_back({MobEvent::HitPlayer, m.type, m.pos, info.damage, knock});
                 m.attackCooldown = info.boss ? 1.6f : 1.0f;
                 m.attackAnim = 1;
@@ -264,6 +265,13 @@ void MobSystem::update(const World& world, int dim, const Vec3& target, bool hun
                 m.vel = Vec3(toPlayer.x, 0, toPlayer.z).normalized() * 9.0f + Vec3(0, 11, 0);
                 events.push_back({MobEvent::BossRoar, m.type, m.pos, 0, {}});
             }
+            // 1.6.0: a roaring wave that knocks everything around him away, and a call that
+            // brings forgotten men to fight for him.
+            if (info.boss && dist < 14 && std::fmod(m.age + 4.0f, 9.0f) < dt) {
+                m.attackAnim = 1;
+                events.push_back({MobEvent::BossWave, m.type, m.pos, 4.0f, {}});
+            }
+            if (info.boss && std::fmod(m.age + 1.0f, 16.0f) < dt) events.push_back({MobEvent::BossSummon, m.type, m.pos, 0, {}});
         } else if (m.panic > 0) {
             m.panic -= dt;
             m.yaw = turnTo(m.yaw, yawTo(target, m.pos), dt * 8);

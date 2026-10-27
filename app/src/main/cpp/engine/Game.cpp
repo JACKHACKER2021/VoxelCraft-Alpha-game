@@ -27,7 +27,7 @@
 namespace vc {
 
 namespace {
-const char* kVersion = "VoxelCraft 1.5.9 build 3";
+const char* kVersion = "VoxelCraft 1.6.0 Caves and Tunes";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -320,12 +320,31 @@ void Game::updateMusic(float dt) {
         musicGap_ = 20 + (float)(std::fmod(now_ * 7.3, 25.0));
     }
     if ((musicGap_ -= dt) > 0) return;
-    if (context == "nether" || context == "void") {
-        // The Crimson Void has the Nether's dark music unless the player adds a "void" track.
-        std::string own = findMusic(context);
-        if (own.empty()) own = findMusic("nether");
-        play(own.empty() ? soundsDir_ + "/biome_nether.wav" : own, false);
+    if (context == "void") {
+        // 1.6.0: the Crimson Void has its own song (the VoxelCraft theme remix), unless the
+        // player adds a "void" track.
+        std::string own = findMusic("void");
+        play(own.empty() ? "asset:music/void_theme.mp3" : own, false);
         return;
+    }
+    if (context == "nether") {
+        // 1.6.0: the Cornerstone Dimension's own song, unless the player adds a "nether" track.
+        std::string own = findMusic(context);
+        play(own.empty() ? "asset:music/cornerstone_theme.mp3" : own, false);
+        return;
+    }
+    // 1.6.0 Caves and Tunes: deep under the ground the cave tune plays.
+    {
+        const Vec3 p = session_->player().pos;
+        const int px = (int)std::floor(p.x), pz = (int)std::floor(p.z);
+        const World& w = session_->currentWorld();
+        int roof = 0;
+        for (int y = (int)p.y + 2; y < kChunkHeight && roof < 8; ++y) roof += isOpaque(w.getBlock(px, y, pz));
+        if (roof >= 8 && p.y < w.config().overworld.seaLevel - 6) {
+            std::string own = findMusic("caves");
+            play(own.empty() ? soundsDir_ + "/biome_caves.wav" : own, false);
+            return;
+        }
     }
     // Overworld: the Overworld song and the music of the biome take turns.
     if (!musicBiomeNext_) {
@@ -1448,7 +1467,7 @@ void Game::trailersScreen() {
     float x, y, w, h;
     menuWindow(x, y, w, h, false);
     ui_.text(x + 2, y + 2, "Speciální přístup: trailery", kTitle, 1, false);
-    ui_.text(x + 2, y + 14, "Každá verze VoxelCraftu ve videu, od 0.1 po 1.5.5.", kTextDim, 1, false);
+    ui_.text(x + 2, y + 14, "Každá verze VoxelCraftu ve videu, od 0.1 po 1.6.0.", kTextDim, 1, false);
     struct Trailer {
         const char* title;
         const char* asset;
@@ -1460,9 +1479,11 @@ void Game::trailersScreen() {
         {"1.5.0: Forgotten Powerstone", "trailers/t04_1.5.0.mp4"},
         {"1.5.1: opravená edice", "trailers/t05_1.5.1.mp4"},
         {"1.5.5: The Shaders Update", "trailers/t06_1.5.5.mp4"},
+        {"1.5.7: louče, štít a Prasák", "trailers/t07_1.5.7.mp4"},
+        {"1.6.0: Caves and Tunes", "trailers/t08_1.6.0.mp4"},
     };
     const float rowH = 22, top = y + 28, colW = (w - 8) / 2;
-    for (int i = 0; i < 6; ++i) {
+    for (int i = 0; i < (int)(sizeof(trailers) / sizeof(trailers[0])); ++i) {
         const float bx = x + (i % 2) * (colW + 8), by = top + (i / 2) * (rowH + 6);
         if (ui_.button(bx, by, colW, rowH, trailers[i].title, (bool)onPlayVideo) && onPlayVideo) onPlayVideo(trailers[i].asset);
     }

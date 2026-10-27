@@ -15,7 +15,7 @@ std::vector<uint8_t> synthesizeMusic();  // a calm loop of about 48 seconds
 
 // Biome music in the VoxelCraft style (C major family like the theme songs):
 // plucked strings, soft pads, bass, a bell melody and echo, about a minute each.
-enum class MusicStyle { Plains, Forest, Desert, Mountains, Ocean, Nether, Count };
+enum class MusicStyle { Plains, Forest, Desert, Mountains, Ocean, Nether, Caves, Count };  // 1.6.0: Caves
 const char* musicStyleName(MusicStyle s);  // file name: "biome_plains", ...
 std::vector<float> synthesizeBiomeSamples(MusicStyle s);  // mono, kSampleRate
 std::vector<uint8_t> synthesizeBiomeMusic(MusicStyle s);  // WAV

@@ -432,6 +432,21 @@ const char* kUpdate157 = R"({
   ]
 })";
 
+const char* kUpdate160 = R"({
+  // VoxelCraft 1.6.0 Caves and Tunes: deepstone masonry, moss and the hardium pickaxe.
+  "recipes": [
+    {"type": "shaped", "pattern": ["DD", "DD"], "key": {"D": "deepstone"}, "result": "deepstone_bricks", "count": 4},
+    {"type": "shaped", "pattern": ["VV", "VV"], "key": {"V": "vines"}, "result": "moss_block"},
+    {"type": "shaped", "pattern": ["HHH", ".S.", ".S."], "key": {"H": "hardium", "S": "stick"}, "result": "hardium_pickaxe"},
+    {"type": "shapeless", "ingredients": ["deepstone", "vines"], "result": "mossy_deepstone"},
+    {"type": "shapeless", "ingredients": ["deepstone_bricks", "vines"], "result": "mossy_deepstone_bricks"},
+    {"type": "shapeless", "ingredients": ["rotten_planks"], "result": "stick", "count": 2}
+  ],
+  "smelting": [
+    {"input": "deepstone_bricks", "output": "cracked_deepstone_bricks"}
+  ]
+})";
+
 const char* kUpdate15 = R"({
   // VoxelCraft 1.5.0 Forgotten Powerstone: powerstone building blocks, fences, the brusher.
   "recipes": [
@@ -573,6 +588,7 @@ const std::vector<std::pair<std::string, std::string>>& defaultPackFiles() {
         {"recipes/update_1_4.json", kUpdate14},
         {"recipes/update_1_5.json", kUpdate15},
         {"recipes/update_1_5_7.json", kUpdate157},
+        {"recipes/update_1_6_0.json", kUpdate160},
     };
     return files;
 }
@@ -625,7 +641,7 @@ const GenConfig& GenConfig::defaults() {
             else if (path.rfind("biomes/", 0) == 0) biomes.push(j);
         }
         doc.set("biomes", biomes);
-        doc.set("generation", Json::number(3));  // new worlds get the newest generator
+        doc.set("generation", Json::number(4));  // new worlds get the newest generator
         return fromJson(doc);
     }();
     return cfg;
@@ -676,7 +692,7 @@ GenConfig GenConfig::fromJson(const Json& doc, std::vector<std::string>* w) {
     }
     c.flat = doc["flat"].boolean(false);
     c.crimsonDesert = std::clamp((int)doc["crimson_desert"].num(2), 1, 2);
-    c.generation = std::clamp((int)doc["generation"].num(2), 1, 3);
+    c.generation = std::clamp((int)doc["generation"].num(2), 1, 4);
     return c;
 }
 

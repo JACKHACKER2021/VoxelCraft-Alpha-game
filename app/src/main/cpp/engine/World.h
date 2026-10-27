@@ -85,7 +85,7 @@ public:
     int surfaceHeight(int x, int z) const;  // overworld generator height (top block), for spawning
 
     // 1.1.0: the Nether's grassy meadows and the three lands of the Crimson Void.
-    enum class VoidBiome { Purple, Crimson, Lava };
+    enum class VoidBiome { Purple, Crimson, Lava, Forgotten };  // 1.6.0: the Forgotten Overworld (generation 4)
     VoidBiome voidBiomeAt(int x, int z) const;
     int voidHeight(int x, int z) const;
     bool netherGrassAt(int x, int z) const;
@@ -135,6 +135,9 @@ private:
     float arenaInfluence(int x, int z) const;  // 1 at an arena, 0 far away
     void placePine(Chunk& c, int x, int y, int z, uint32_t h, ItemId trunkBlock, ItemId leafBlock);
     void placeTree(Chunk& c, int x, int y, int z, uint32_t h, ItemId trunk, ItemId leaves);
+    ItemId forgottenBlock(int wx, int y, int wz, int h) const;
+    int forgottenTop(int wx, int wz, int h) const;
+    void decorateCaves(Chunk& c, const Column cols[kChunkSize][kChunkSize]);
     void placeOres(Chunk& c, const OreDef& ore, uint32_t salt);
     std::string chunkPath(int cx, int cz) const;
     bool loadChunk(Chunk& c) const;

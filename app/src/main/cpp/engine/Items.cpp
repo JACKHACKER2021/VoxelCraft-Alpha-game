@@ -23,6 +23,7 @@ const ItemId kCreativeItems[] = {
     POWERSTONE_BRICKS, CRACKED_POWERSTONE_BRICKS, CHISELED_POWERSTONE_BRICKS, POWERSTONE_GLASS, STAIRS_EXTRA, 1136,
     CRACKED_NETHER_BRICKS, CHISELED_NETHER_BRICKS, SPRUCE_FENCE, VOID_FENCE, NETHERPERK_FENCE, NETHER_BRICK_FENCE,
     POWERSTONE_FENCE, SKELETON_HEAD, VOID_BRICK_EYE, TORCH, CRIMSON_PLANKS, POWERSTONE_FURNACE,
+    DEEPSTONE_BRICKS, CRACKED_DEEPSTONE_BRICKS, MOSSY_DEEPSTONE_BRICKS, ROTTEN_PLANKS, MOB_SPAWNER, CELESTIAL_FRAME,
     // Nature
     GRASS, DIRT, SAND, GRAVEL, CLAY, SNOW_BLOCK, ICE, CACTUS, LEAVES, SPRUCE_LEAVES, TALL_GRASS, DANDELION, POPPY, WATER, LAVA,
     COAL_ORE, IRON_ORE, BRONZE_ORE, STEEL_ORE, RUBY_ORE, NETHERRACK, NETHER_BRICK,
@@ -30,12 +31,13 @@ const ItemId kCreativeItems[] = {
     NETHERPERK_LOG, NETHERPERK_CAP, OAK_SAPLING, PINE_SAPLING, VOID_SAPLING, NETHERPERK_SAPLING, POWERSTONE_ORE, WORLD_END,
     FARMLAND, WHEAT_SEEDS, TAR, DRIPSTONE_BLOCK, DRIPSTONE_UP, SNOW_LAYER,
     WASTELAND_GRASS, DRY_GRASS, GRASSER_FLOWER, FERN, DEBRIS_GRAVEL, CRIMSON_STONE, CRIMSON_LOG,
+    DEEPSTONE, HARDIUM_ORE, MOSSY_DEEPSTONE, MOSS_BLOCK, FUNGAL_DEEPSTONE, VINES, SOULED_GRASS, SOULED_DIRT, SOULED_STONE,
     // Tools
     WOOD_PICKAXE, WOOD_AXE, WOOD_SHOVEL, STONE_PICKAXE, STONE_AXE, STONE_SHOVEL, IRON_PICKAXE, IRON_AXE, IRON_SHOVEL,
     BRONZE_PICKAXE, BRONZE_AXE, BRONZE_SHOVEL, STEEL_PICKAXE, STEEL_AXE, STEEL_SHOVEL, RUBY_PICKAXE, RUBY_AXE, RUBY_SHOVEL,
     FLINT_AND_STEEL, VOID_FLINT_AND_STEEL,
     WOOD_SWORD, STONE_SWORD, IRON_SWORD, BRONZE_SWORD, STEEL_SWORD, RUBY_SWORD, BUCKET, WATER_BUCKET, LAVA_BUCKET, BOSS_COMPASS,
-    HOE, BOW, ARROW, MAP, BRUSHER, FORTRESS_COMPASS, SHIELD, EXPLORER_MAP, WRITABLE_BOOK,
+    HOE, BOW, ARROW, MAP, BRUSHER, FORTRESS_COMPASS, SHIELD, EXPLORER_MAP, WRITABLE_BOOK, HARDIUM_PICKAXE,
     // Armour
     228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247,
     // Materials
@@ -45,12 +47,12 @@ const ItemId kCreativeItems[] = {
     FEATHER, WHEAT, BREAD, RAW_CHICKEN, COOKED_CHICKEN, RAW_BEEF, STEAK, MILK_BUCKET, EGG_CHICKEN, EGG_COW, EGG_VILLAGER,
     STRING, TAR_BALL, EGG_SPIDER, EGG_BAT, EGG_TNT_ZOMBIE, EGG_TAR_MONSTER,
     OLD_DOCUMENT, OLD_DOCUMENT + 1, OLD_DOCUMENT + 2, OLD_DOCUMENT + 3, OLD_DOCUMENT + 4, OLD_DOCUMENT + 5, OLD_DOCUMENT + 6,
-    OLD_DOCUMENT + 7, ANCIENT_COIN, POWERSTONE_RELIC, POTTERY_SHARD, EGG_HUSKING, EGG_HOGMAN,
+    OLD_DOCUMENT + 7, ANCIENT_COIN, POWERSTONE_RELIC, POTTERY_SHARD, EGG_HUSKING, EGG_HOGMAN, HARDIUM,
 };
 const int kCreativeItemCount = sizeof(kCreativeItems) / sizeof(kCreativeItems[0]);
-static_assert(sizeof(kCreativeItems) / sizeof(kCreativeItems[0]) == 111 + 53 + 39 + 20 + 49, "the creative tabs cover the whole catalog");
+static_assert(sizeof(kCreativeItems) / sizeof(kCreativeItems[0]) == 117 + 62 + 40 + 20 + 50, "the creative tabs cover the whole catalog");
 const CreativeTab kCreativeTabs[] = {
-    {"Stavební", 0, 111}, {"Příroda", 111, 53}, {"Nástroje", 164, 39}, {"Brnění", 203, 20}, {"Suroviny", 223, 49},
+    {"Stavební", 0, 117}, {"Příroda", 117, 62}, {"Nástroje", 179, 40}, {"Brnění", 219, 20}, {"Suroviny", 239, 50},
 };
 const int kCreativeTabCount = sizeof(kCreativeTabs) / sizeof(kCreativeTabs[0]);
 
@@ -207,7 +209,7 @@ const KeyEntry kKeys[] = {
     {NETHER_BRICK_FENCE, "nether_brick_fence"}, {POWERSTONE_FENCE, "powerstone_fence"},
     {BRUSHER, "brusher"}, {FORTRESS_COMPASS, "fortress_compass"}, {ANCIENT_COIN, "ancient_coin"},
     {POWERSTONE_RELIC, "powerstone_relic"}, {POTTERY_SHARD, "pottery_shard"}, {EGG_HUSKING, "husking_spawn_egg"}, {VOID_BRICK_EYE, "void_brick_eye"}, {CRIMSON_STONE, "crimson_stone"},
-    {TORCH, "torch"}, {CRIMSON_PLANKS, "crimson_planks"}, {CRIMSON_LOG, "crimson_log"}, {SHIELD, "shield"}, {EXPLORER_MAP, "explorer_map"}, {WRITABLE_BOOK, "writable_book"}, {WRITTEN_BOOK, "written_book"},
+    {TORCH, "torch"}, {CRIMSON_PLANKS, "crimson_planks"}, {CRIMSON_LOG, "crimson_log"}, {SHIELD, "shield"}, {EXPLORER_MAP, "explorer_map"}, {WRITABLE_BOOK, "writable_book"}, {DEEPSTONE, "deepstone"}, {HARDIUM_ORE, "hardium_ore"}, {MOSSY_DEEPSTONE, "mossy_deepstone"}, {MOSS_BLOCK, "moss_block"}, {FUNGAL_DEEPSTONE, "fungal_deepstone"}, {DEEPSTONE_BRICKS, "deepstone_bricks"}, {CRACKED_DEEPSTONE_BRICKS, "cracked_deepstone_bricks"}, {MOSSY_DEEPSTONE_BRICKS, "mossy_deepstone_bricks"}, {ROTTEN_PLANKS, "rotten_planks"}, {VINES, "vines"}, {HARDIUM, "hardium"}, {HARDIUM_PICKAXE, "hardium_pickaxe"}, {MOB_SPAWNER, "spawner"}, {SOULED_GRASS, "souled_grass"}, {SOULED_DIRT, "souled_dirt"}, {SOULED_STONE, "souled_stone"}, {CELESTIAL_FRAME, "celestial_portal_frame"}, {WRITTEN_BOOK, "written_book"},
     {EGG_HOGMAN, "hogman_spawn_egg"}, {POWERSTONE_FURNACE, "powerstone_furnace"}, {POWERSTONE_FURNACE_ON, "lit_powerstone_furnace"},
     {CEILING_CABLE, "ceiling_power_cable"}, {CEILING_CABLE_ON, "lit_ceiling_power_cable"},
 };
@@ -370,6 +372,23 @@ const char* itemName(ItemId id) {
         case SHIELD: return "Štít";
         case EXPLORER_MAP: return "Průzkumná mapa";
         case WRITABLE_BOOK: return "Kniha a brk";
+        case DEEPSTONE: return "Hlubinný kámen";
+        case HARDIUM_ORE: return "Hardiová ruda";
+        case MOSSY_DEEPSTONE: return "Mechový hlubinný kámen";
+        case MOSS_BLOCK: return "Blok mechu";
+        case FUNGAL_DEEPSTONE: return "Houbový hlubinný kámen";
+        case DEEPSTONE_BRICKS: return "Cihly z hlubinného kamene";
+        case CRACKED_DEEPSTONE_BRICKS: return "Popraskané cihly z hlubinného kamene";
+        case MOSSY_DEEPSTONE_BRICKS: return "Mechové cihly z hlubinného kamene";
+        case ROTTEN_PLANKS: return "Shnilá prkna";
+        case VINES: return "Liány";
+        case HARDIUM: return "Hardium";
+        case HARDIUM_PICKAXE: return "Hardiový krumpáč";
+        case MOB_SPAWNER: return "Líheň příšer";
+        case SOULED_GRASS: return "Duševní tráva";
+        case SOULED_DIRT: return "Duševní hlína";
+        case SOULED_STONE: return "Duševní kámen";
+        case CELESTIAL_FRAME: return "Rám nebeského portálu";
         case WRITTEN_BOOK: return "Podepsaná kniha";
         case EGG_HOGMAN: return "Vejce: Prasák";
         case POWERSTONE_FURNACE: case POWERSTONE_FURNACE_ON: return "Powerstonová pec";
@@ -554,7 +573,7 @@ const char* itemName(ItemId id) {
 
 ToolKind toolKind(ItemId id) {
     switch (id) {
-        case WOOD_PICKAXE: case STONE_PICKAXE: case IRON_PICKAXE: return ToolKind::Pickaxe;
+        case WOOD_PICKAXE: case STONE_PICKAXE: case IRON_PICKAXE: case HARDIUM_PICKAXE: return ToolKind::Pickaxe;
         case WOOD_AXE: case STONE_AXE: case IRON_AXE: return ToolKind::Axe;
         case WOOD_SHOVEL: case STONE_SHOVEL: case IRON_SHOVEL: return ToolKind::Shovel;
         default:
@@ -573,6 +592,7 @@ int toolTier(ItemId id) {
         case BRONZE_PICKAXE: case BRONZE_AXE: case BRONZE_SHOVEL: return 3;  // like iron, but tougher
         case STEEL_PICKAXE: case STEEL_AXE: case STEEL_SHOVEL: return 4;
         case RUBY_PICKAXE: case RUBY_AXE: case RUBY_SHOVEL: return 5;
+        case HARDIUM_PICKAXE: return 6;
         case WOOD_SWORD: return 1;
         case STONE_SWORD: return 2;
         case IRON_SWORD: case BRONZE_SWORD: return 3;
@@ -597,6 +617,7 @@ int toolDurability(ItemId id) {
         case 3: return 250;
         case 4: return 700;
         case 5: return 1500;
+        case 6: return 2400;
         default: return id == FLINT_AND_STEEL ? 64 : id == VOID_FLINT_AND_STEEL ? 16 : id == HOE ? 250 : id == BOW ? 384 : 0;
     }
 }
@@ -683,6 +704,17 @@ float hardness(ItemId id) {
         case CRACKED_NETHER_BRICKS: case CHISELED_NETHER_BRICKS: case NETHER_BRICK_FENCE: return 2.0f;
         case VOID_BRICK_EYE: return 3.0f;
         case CRIMSON_STONE: return 1.5f;
+        case DEEPSTONE: case MOSSY_DEEPSTONE: case FUNGAL_DEEPSTONE: return 4.5f;  // twice as hard as stone
+        case MOB_SPAWNER: return 5.0f;
+        case SOULED_GRASS: return 0.6f;
+        case SOULED_DIRT: return 0.5f;
+        case SOULED_STONE: return 1.5f;
+        case CELESTIAL_FRAME: return -1.0f;  // unbreakable, like the End's frames
+        case MOSS_BLOCK: return 0.6f;
+        case DEEPSTONE_BRICKS: case CRACKED_DEEPSTONE_BRICKS: case MOSSY_DEEPSTONE_BRICKS: return 4.0f;
+        case HARDIUM_ORE: return 7.0f;
+        case ROTTEN_PLANKS: return 1.0f;
+        case VINES: return 0.2f;
         case BRONZE_ORE: case STEEL_ORE: case RUBY_ORE: return 3.0f;
         case BRONZE_BLOCK: case STEEL_BLOCK: case RUBY_BLOCK: return 5.0f;
         default:
@@ -733,6 +765,21 @@ ToolKind preferredTool(ItemId id, int& requiredTier) {
         case RUBY_ORE: case RUBY_BLOCK:
             requiredTier = 4;  // steel
             return ToolKind::Pickaxe;
+        case HARDIUM_ORE:
+            requiredTier = 4;  // steel or better
+            return ToolKind::Pickaxe;
+        case DEEPSTONE: case MOSSY_DEEPSTONE: case FUNGAL_DEEPSTONE: case DEEPSTONE_BRICKS: case CRACKED_DEEPSTONE_BRICKS:
+        case MOSSY_DEEPSTONE_BRICKS:
+            requiredTier = 2;  // at least a stone pickaxe
+            return ToolKind::Pickaxe;
+        case MOB_SPAWNER:
+            requiredTier = 1;
+            return ToolKind::Pickaxe;
+        case MOSS_BLOCK: case SOULED_GRASS: case SOULED_DIRT: return ToolKind::Shovel;
+        case SOULED_STONE:
+            requiredTier = 1;
+            return ToolKind::Pickaxe;
+        case ROTTEN_PLANKS: return ToolKind::Axe;
         case BOOKSHELF: case FENCE: case SPRUCE_LOG: case SPRUCE_PLANKS: return ToolKind::Axe;
         case HARDENED_STONE:
             requiredTier = 2;  // at least a stone pickaxe
@@ -814,6 +861,10 @@ ItemId dropFor(ItemId block, float roll, ItemId tool) {
         case WHEAT_RIPE: return WHEAT;  // and seeds, see Session::breakBlock
         case GRAVEL: return roll < 0.1f ? FLINT : GRAVEL;
         case COAL_ORE: return COAL;
+        case HARDIUM_ORE: return HARDIUM;
+        case MOB_SPAWNER: return AIR;
+        case SOULED_GRASS: return SOULED_DIRT;
+        case ROTTEN_PLANKS: return roll < 0.5f ? (ItemId)STICK : (ItemId)ROTTEN_PLANKS;  // they crumble
         case RUBY_ORE: return RUBY;
         case ICE: return AIR;  // melts
         case SPRUCE_LEAVES: return roll < 0.08f ? (ItemId)PINE_SAPLING : (ItemId)AIR;

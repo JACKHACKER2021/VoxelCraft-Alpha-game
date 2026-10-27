@@ -1486,7 +1486,7 @@ void Session::spawnInCave() {
                           w.getBlock(x + dx, y - 1, z + dz) == TAR_BLOCK;
         const float roll = spawnRandom();
         MobType type;
-        if (tarNear && roll < 0.35f) type = MobType::TarMonster;
+        if (tarNear && roll < (overworld_.config().generation >= 4 ? 0.5f : 0.35f)) type = MobType::TarMonster;  // 1.6.0: tar lakes wake it more often
         else if (roll < 0.3f) type = MobType::Bat;
         else if (roll < 0.6f) type = MobType::Spider;
         else type = MobType::ForgottenMan;
@@ -1498,6 +1498,32 @@ void Session::spawnInCave() {
         mobs_.mobs().back().cave = true;
         return;
     }
+}
+
+void Session::tickSpawners() {
+    // 1.6.0: spawners within 12 blocks of the player wake a monster now and then: at most three
+    // around each one, and few in the whole area, so a dungeon is a fight but not a flood.
+    World& w = *world_;
+    if (mobs_.count(0, true, player_.pos, 48) >= 10) return;
+    const int px = (int)std::floor(player_.pos.x), py = (int)std::floor(player_.pos.y), pz = (int)std::floor(player_.pos.z);
+    for (int x = px - 12; x <= px + 12; ++x)
+        for (int z = pz - 12; z <= pz + 12; ++z)
+            for (int y = std::max(1, py - 12); y <= std::min(kChunkHeight - 2, py + 12); ++y) {
+                if (w.getBlock(x, y, z) != MOB_SPAWNER) continue;
+                const Vec3 at(x + 0.5f, (float)y, z + 0.5f);
+                if (spawnRandom() > 0.25f || mobs_.count(0, true, at, 8) >= 3) continue;
+                // A free spot beside the cage.
+                const int sx = x + (int)(spawnRandom() * 5) - 2, sz = z + (int)(spawnRandom() * 5) - 2;
+                int sy = y + 1;
+                while (sy > y - 3 && !isSolid(w.getBlock(sx, sy - 1, sz))) --sy;
+                if (w.getBlock(sx, sy, sz) != AIR || w.getBlock(sx, sy + 1, sz) != AIR || !isSolid(w.getBlock(sx, sy - 1, sz))) continue;
+                static const MobType kinds[3] = {MobType::Spider, MobType::ForgottenMan, MobType::TntZombie};
+                const MobType type = kinds[(uint32_t)(x * 31 + y * 17 + z * 7) % 3];  // each spawner has its own kind
+                mobs_.spawn(type, 0, Vec3(sx + 0.5f, (float)sy, sz + 0.5f));
+                mobs_.mobs().back().cave = true;
+                particles_.spawnChips(w, x, y, z, 0, 1, 0, MOB_SPAWNER, 6);
+                return;  // one a second at most
+            }
 }
 
 void Session::updateMobs(float dt) {
@@ -1559,6 +1585,33 @@ void Session::updateMobs(float dt) {
             }
         } else if (e.kind == MobEvent::BossRoar) {
             sound(Sound::Hurt);
+        } else if (e.kind == MobEvent::BossWave) {
+            // A ring of force around the Crimson Man: hurts and throws back whoever is near.
+            sound(Sound::Grunt);
+            for (int k = 0; k < 16; ++k) {
+                const float a = k * kPi / 8;
+                particles_.spawnChips(*world_, (int)std::floor(e.pos.x + std::cos(a) * 3), (int)e.pos.y, (int)std::floor(e.pos.z + std::sin(a) * 3),
+                                      0, 1, 0, VOID_STONE_BRICKS, 2);
+            }
+            const Vec3 away = player_.pos - e.pos;
+            const float d = away.length();
+            if (d < 10 && survival() && !dead_) {
+                const Vec3 push = Vec3(away.x, 0, away.z).normalized() * (14.0f - d) + Vec3(0, 7, 0);
+                if (shieldBlocks(push)) player_.vel = player_.vel + push * 0.4f;
+                else hurt(e.damage, false, true), player_.vel = player_.vel + push;
+            }
+        } else if (e.kind == MobEvent::BossSummon) {
+            // Two forgotten men rise near the player.
+            if (mobs_.countType(dim, MobType::ForgottenMan, player_.pos, 24) < 4)
+                for (int k = 0; k < 2; ++k) {
+                    const float a = spawnRandom() * 2 * kPi;
+                    const int x = (int)std::floor(player_.pos.x + std::cos(a) * 5), z = (int)std::floor(player_.pos.z + std::sin(a) * 5);
+                    int y = (int)std::floor(player_.pos.y) + 3;
+                    while (y > 1 && !isSolid(world_->getBlock(x, y - 1, z))) --y;
+                    if (world_->getBlock(x, y, z) == AIR && world_->getBlock(x, y + 1, z) == AIR)
+                        mobs_.spawn(MobType::ForgottenMan, dim, Vec3(x + 0.5f, (float)y, z + 0.5f));
+                }
+            if (onMessage) onMessage(tr("Karmínový muž volá zapomenuté na pomoc!"));
         } else if (e.kind == MobEvent::Explode) {
             explode(e.pos, 3.5f * (settings_.expBigBoom ? 2.0f : 1.0f), false);
         } else if (e.kind == MobEvent::TarSpread) {
@@ -1573,6 +1626,7 @@ void Session::updateMobs(float dt) {
     // Spawning, once a second.
     if ((spawnTimer_ -= dt) > 0) return;
     spawnTimer_ = 1;
+    if (!calm && dim == 0) tickSpawners();
     const float t = (float)std::fmod(state_.dayTime, 24000.0);
     const bool night = isNight(t) || t >= 13000;
     mobs_.despawn(dim, player_.pos, 80, dim == 0 && !night && !halloween);
@@ -1668,6 +1722,28 @@ void Session::updateMobs(float dt) {
         if (!calm && biome != World::VoidBiome::Lava && mobs_.count(2, true, player_.pos, 64) < 6 && spawnRandom() < 0.45f &&
             spot(16, 36, at, ground))
             mobs_.spawn(biome == World::VoidBiome::Crimson || spawnRandom() < 0.3f ? MobType::PumpkinSlime : MobType::ForgottenMan, 2, at);
+        // 1.6.0: while the eyes on the arena's obsidian pillars watch, they heal the Crimson Man;
+        // break them to win.
+        for (Mob& m : mobs_.mobs()) {
+            if (m.dim != 2 || m.type != MobType::CrimsonMan || !m.alive()) continue;
+            int eyes = 0;
+            const int bx = (int)std::floor(m.pos.x), by = (int)std::floor(m.pos.y), bz = (int)std::floor(m.pos.z);
+            for (int x = bx - 22; x <= bx + 22; ++x)
+                for (int z = bz - 22; z <= bz + 22; ++z)
+                    for (int y = by - 2; y <= by + 12; ++y)
+                        if (void_.getBlock(x, y, z) == EYE_LOG && void_.getBlock(x, y - 1, z) == OBSIDIAN) {
+                            ++eyes;
+                            if (spawnRandom() < 0.3f) particles_.spawnChips(void_, x, y, z, 0, -1, 0, EYE_LOG, 2);
+                        }
+            const float maxHp = mobInfo(MobType::CrimsonMan).health;
+            if (eyes > 0 && m.health < maxHp) {
+                m.health = std::min(maxHp, m.health + eyes * 0.6f);
+                if (!bossHealHint_ && onMessage) {
+                    bossHealHint_ = true;
+                    onMessage(tr("Oči na sloupech léčí Karmínového muže. Znič je!"));
+                }
+            }
+        }
         // The Crimson Man wakes when the player steps into an arena he still guards.
         int ax, ay, az;
         if (!mobs_.boss(2) && void_.nearestStructure((int)player_.pos.x, (int)player_.pos.z, ax, ay, az)) {
@@ -1753,6 +1829,12 @@ void Session::useItem(const RayHit& hit) {
         }
         if (isChest(block)) {
             openChestAt({dimIndex(), hit.x, hit.y, hit.z});
+            return;
+        }
+        if (block == CELESTIAL_FRAME) {
+            // 1.6.0: the frame waits for the Celestial Reach.
+            if (onMessage) onMessage(tr("Nebeská říše je zatím zavřená. Otevře se ve VoxelCraftu 1.7.0."));
+            hand_.use();
             return;
         }
         if (isDoor(block) || isTrapdoor(block)) {
@@ -1930,8 +2012,10 @@ void Session::useItem(const RayHit& hit) {
     }
     if (isPlant(held.id)) {
         ItemId below = w.getBlock(x, y - 1, z);
+        ItemId above = w.getBlock(x, y + 1, z);
         bool ok = isSapling(held.id) ? saplingCanGrowOn(held.id, below)
                   : isCrop(held.id)    ? below == FARMLAND
+                  : held.id == VINES   ? isSolid(above) || above == VINES || hit.ny == 0  // under a ceiling or on a wall
                                        : (below == GRASS || below == DIRT);
         if (!ok || isLiquid(existing)) return;
     }

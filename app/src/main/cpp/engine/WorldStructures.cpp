@@ -818,6 +818,40 @@ Structure ruinedVillage(Rng& r) {
     return s;
 }
 
+// 1.6.0: a cave dungeon. Rooms of different sizes and stone (cobblestone or deepstone
+// bricks, mossy and cracked in places), a spawner in the middle, one or two loot chests and
+// one to three narrow ways in. What lies outside the room is left as it is.
+Structure caveDungeon(Rng& r) {
+    const int w = 7 + 2 * r.next(3), d = 7 + 2 * r.next(3), h = 5;  // 7, 9 or 11 wide
+    Structure s = box(11, h, 11);
+    const bool deep = r.chance(50);
+    const ItemId stone = deep ? (ItemId)DEEPSTONE_BRICKS : (ItemId)COBBLESTONE;
+    const ItemId mossy = deep ? (ItemId)MOSSY_DEEPSTONE_BRICKS : (ItemId)MOSSY_COBBLESTONE;
+    const ItemId cracked = deep ? (ItemId)CRACKED_DEEPSTONE_BRICKS : (ItemId)STONE_BRICKS;
+    const int x0 = (11 - w) / 2, z0 = (11 - d) / 2;
+    for (int y = 0; y < h; ++y)
+        for (int z = z0; z < z0 + d; ++z)
+            for (int x = x0; x < x0 + w; ++x) {
+                const bool shell = x == x0 || x == x0 + w - 1 || z == z0 || z == z0 + d - 1 || y == 0 || y == h - 1;
+                const int roll = r.next(100);
+                s.at(x, y, z) = !shell ? (ItemId)AIR : roll < 30 ? mossy : roll < 45 ? cracked : stone;
+            }
+    s.at(5, 1, 5) = MOB_SPAWNER;
+    // Chests against the walls.
+    s.at(x0 + 1, 1, z0 + 1 + r.next(d - 2)) = LOOT_CHEST_DUNGEON;
+    if (r.chance(55)) s.at(x0 + w - 2, 1, z0 + 1 + r.next(d - 2)) = LOOT_CHEST_DUNGEON;
+    // Ways in: narrow holes one block wide and two high.
+    const int ways = 1 + r.next(3);
+    for (int k = 0; k < ways; ++k) {
+        const int side = r.next(4);
+        const int along = 1 + r.next((side % 2 ? d : w) - 2);
+        const int hx = side == 0 ? x0 + along : side == 1 ? x0 + w - 1 : side == 2 ? x0 + along : x0;
+        const int hz = side == 0 ? z0 : side == 1 ? z0 + along : side == 2 ? z0 + d - 1 : z0 + along;
+        s.at(hx, 1, hz) = s.at(hx, 2, hz) = AIR;
+    }
+    return s;
+}
+
 Structure buildWorldStructure(WorldStructure kind, uint32_t seed) {
     Rng r{seed | 1};
     switch (kind) {
@@ -840,6 +874,7 @@ Structure buildWorldStructure(WorldStructure kind, uint32_t seed) {
         case WorldStructure::VoidMineshaft: return voidMineshaft(r);
         case WorldStructure::VoidWatchtower: return voidWatchtower(r);
         case WorldStructure::RuinedVillage: return ruinedVillage(r);
+        case WorldStructure::CaveDungeon: return caveDungeon(r);
         default: return mineshaft(r);
     }
 }

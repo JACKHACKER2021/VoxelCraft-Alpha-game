@@ -24,6 +24,7 @@ enum class WorldStructure {
     GreatFortress,  // 1.5.7: the fortress of new worlds, with four new wings (85 x 85)
     // 1.5.9: mineshafts and watchtowers of the Crimson Void, ruined villages in the Overworld.
     VoidMineshaft, VoidWatchtower, RuinedVillage,
+    CaveDungeon,  // 1.6.0: a small room in the rock with a monster spawner and loot
     Count
 };
 

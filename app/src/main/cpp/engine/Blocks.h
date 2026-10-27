@@ -240,6 +240,24 @@ enum BlockId : uint16_t {
     // 1.5.7: a power cable on a ceiling (off, on).
     CEILING_CABLE = 1536,
     CEILING_CABLE_ON = 1537,
+    // 1.6.0 Caves and Tunes: the deep layer of the Overworld and what grows in its caves.
+    DEEPSTONE = 1538,              // below the stone, near the bottom of the world
+    HARDIUM_ORE = 1539,            // only in deepstone; a steel pickaxe or better
+    MOSSY_DEEPSTONE = 1540,
+    MOSS_BLOCK = 1541,             // deepstone almost hidden under moss
+    FUNGAL_DEEPSTONE = 1542,       // glowing cave fungus
+    DEEPSTONE_BRICKS = 1543,
+    CRACKED_DEEPSTONE_BRICKS = 1544,
+    MOSSY_DEEPSTONE_BRICKS = 1545,
+    ROTTEN_PLANKS = 1546,          // the old mineshafts' wood
+    VINES = 1547,                  // hang from cave ceilings; climbable
+    MOB_SPAWNER = 1548,            // an iron cage in cave dungeons that wakes monsters near players
+    // 1.6.0: the Forgotten Overworld of the Crimson Void (broken pieces of a lost overworld),
+    // and the frame of the portal to the Celestial Reach (the dimension comes in 1.7.0).
+    SOULED_GRASS = 1549,
+    SOULED_DIRT = 1550,
+    SOULED_STONE = 1551,
+    CELESTIAL_FRAME = 1552,
     // 1.5.0 items
     BRUSHER = 1600,
     FORTRESS_COMPASS = 1601,
@@ -252,6 +270,9 @@ enum BlockId : uint16_t {
     EXPLORER_MAP = 1614,     // points the way to the nearest mineshaft (Exploration Maps experiment)
     WRITABLE_BOOK = 1615,    // 1.5.7 book and quill: `damage` holds the book's number in the world's books
     WRITTEN_BOOK = 1616,     // a signed book: read only
+    // 1.6.0 items
+    HARDIUM = 1617,          // a shard from hardium ore
+    HARDIUM_PICKAXE = 1618,  // the hardest pickaxe: tier 6
     EGG_HOGMAN = 1308,       // the hog man of the Cornerstone Dimension
 };
 inline bool isTorch(ItemId id) { return id >= TORCH && id < TORCH_WALL + 4; }
@@ -302,7 +323,7 @@ int modFood(ItemId id);
 inline bool isNewBlock(ItemId id) {
     if (id >= kModIdBase) return modIsBlock(id);
     return isStairs(id) || isSlab(id) || (id >= TAR && id <= SNOW_LAYER) || isStainedGlass(id) || (id >= WALL_CABLE && id < WALL_CABLE + 8) || (id >= WALL_SWITCH && id < WALL_SWITCH + 8) ||
-           (id >= ANNIV_LOGO && id <= PAINTED_PLANKS + 3) || (id >= POWERSTONE_BRICKS && id <= CEILING_CABLE_ON && id != 1518 && id != 1519);
+           (id >= ANNIV_LOGO && id <= PAINTED_PLANKS + 3) || (id >= POWERSTONE_BRICKS && id <= CELESTIAL_FRAME && id != 1518 && id != 1519);
 }
 // The full block a stair or slab is cut from (its texture, hardness and tool).
 inline ItemId shapeMaterial(ItemId id) {
@@ -374,6 +395,10 @@ enum Tile : uint16_t {
     T_TORCH, T_CRIMSON_PLANKS, T_CRIMSON_LOG_SIDE, T_CRIMSON_LOG_TOP, T_SHIELD, T_EXPLORER_MAP, T_EGG_HOGMAN,
     T_HOGMAN_SKIN, T_HOGMAN_FACE, T_HOGMAN_TUNIC, T_PS_FURNACE_FRONT, T_PS_FURNACE_FRONT_ON,
     T_WRITABLE_BOOK, T_WRITTEN_BOOK,
+    // 1.6.0
+    T_DEEPSTONE, T_HARDIUM_ORE, T_MOSSY_DEEPSTONE, T_MOSS_BLOCK, T_FUNGAL_DEEPSTONE, T_DEEPSTONE_BRICKS,
+    T_CRACKED_DEEPSTONE_BRICKS, T_MOSSY_DEEPSTONE_BRICKS, T_ROTTEN_PLANKS, T_VINES, T_HARDIUM, T_HARDIUM_PICKAXE, T_SPAWNER,
+    T_SOULED_GRASS_TOP, T_SOULED_GRASS_SIDE, T_SOULED_DIRT, T_SOULED_STONE, T_CELESTIAL_FRAME_TOP, T_CELESTIAL_FRAME_SIDE,
     T_COUNT
 };
 static_assert(T_COUNT <= kAtlasCols * kAtlasCols, "the atlas has room for every tile");
@@ -437,7 +462,7 @@ inline bool isPortal(ItemId id) { return id == PORTAL || id == VOID_PORTAL; }
 // Small plants: drawn as two crossed planes, no collision, but they can be targeted and broken.
 inline bool isPlant(ItemId id) {
     return id == TALL_GRASS || id == DANDELION || id == POPPY || id == NETHER_SPROUTS || id == CRIMSON_ROOTS || isSapling(id) ||
-           isCrop(id) || isDripstoneSpike(id) || id == DRY_GRASS || id == GRASSER_FLOWER || id == FERN;
+           isCrop(id) || isDripstoneSpike(id) || id == DRY_GRASS || id == GRASSER_FLOWER || id == FERN || id == VINES;
 }
 inline bool isSolid(ItemId id) { return id != AIR && !isLiquid(id) && !isPortal(id) && !isPlant(id); }
 // What a tap or a mining finger can hit.
@@ -451,7 +476,7 @@ inline bool isOpaque(ItemId id) {
 inline bool isEmissive(ItemId id) {
     return id == LAVA || isPortal(id) || id == LIT_FURNACE || id == EYE_LOG || id == POWERSTONE_LIGHT ||
            id == POWERSTONE_LAMP_ON || id == NETHERPERK_CAP || cableOn(id) || id == POWERSTONE_BLOCK ||
-           id == PARTY_LANTERN || id == ANNIV_LOGO || id == VOID_BRICK_EYE || isTorch(id) || (id >= kModIdBase && modIsEmissive(id));
+           id == PARTY_LANTERN || id == ANNIV_LOGO || id == VOID_BRICK_EYE || isTorch(id) || id == FUNGAL_DEEPSTONE || (id >= kModIdBase && modIsEmissive(id));
 }
 inline bool isFurnace(ItemId id) { return id == FURNACE || id == LIT_FURNACE || id == POWERSTONE_FURNACE || id == POWERSTONE_FURNACE_ON; }
 inline bool isPowerstoneFurnace(ItemId id) { return id == POWERSTONE_FURNACE || id == POWERSTONE_FURNACE_ON; }
@@ -670,6 +695,23 @@ inline int tileFor(ItemId id, Face face) {
                 case EXPLORER_MAP: return T_EXPLORER_MAP;
                 case WRITABLE_BOOK: return T_WRITABLE_BOOK;
                 case WRITTEN_BOOK: return T_WRITTEN_BOOK;
+                case DEEPSTONE: return T_DEEPSTONE;
+                case HARDIUM_ORE: return T_HARDIUM_ORE;
+                case MOSSY_DEEPSTONE: return T_MOSSY_DEEPSTONE;
+                case MOSS_BLOCK: return T_MOSS_BLOCK;
+                case FUNGAL_DEEPSTONE: return T_FUNGAL_DEEPSTONE;
+                case DEEPSTONE_BRICKS: return T_DEEPSTONE_BRICKS;
+                case CRACKED_DEEPSTONE_BRICKS: return T_CRACKED_DEEPSTONE_BRICKS;
+                case MOSSY_DEEPSTONE_BRICKS: return T_MOSSY_DEEPSTONE_BRICKS;
+                case ROTTEN_PLANKS: return T_ROTTEN_PLANKS;
+                case VINES: return T_VINES;
+                case MOB_SPAWNER: return T_SPAWNER;
+                case SOULED_GRASS: return face == F_TOP ? T_SOULED_GRASS_TOP : face == F_BOTTOM ? T_SOULED_DIRT : T_SOULED_GRASS_SIDE;
+                case SOULED_DIRT: return T_SOULED_DIRT;
+                case SOULED_STONE: return T_SOULED_STONE;
+                case CELESTIAL_FRAME: return face == F_TOP ? T_CELESTIAL_FRAME_TOP : T_CELESTIAL_FRAME_SIDE;
+                case HARDIUM: return T_HARDIUM;
+                case HARDIUM_PICKAXE: return T_HARDIUM_PICKAXE;
                 case EGG_HOGMAN: return T_EGG_HOGMAN;
                 case VOID_BRICK_EYE: return face == F_TOP || face == F_BOTTOM ? T_VOID_STONE_BRICKS : T_VOID_BRICK_EYE;
                 case POWERSTONE_BRICKS: case POWERSTONE_FENCE: return T_POWERSTONE_BRICKS;

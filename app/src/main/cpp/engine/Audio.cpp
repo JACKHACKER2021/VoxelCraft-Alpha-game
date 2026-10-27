@@ -12,7 +12,7 @@ namespace {
 
 constexpr int kRate = 22050;
 constexpr float kTau = 6.2831853f;
-const char* kVersionTag = "synth-v2";
+const char* kVersionTag = "synth-v3";  // 1.6.0: the cave tune
 
 std::vector<uint8_t> toWav(const std::vector<float>& samples) {
     std::vector<uint8_t> out;
@@ -254,6 +254,8 @@ Style styleOf(MusicStyle s) {
         case MusicStyle::Desert:    return {40, {0, 1, 3, 5, 7, 8, 10}, {0, 1, 0, 6}, 72, true, 0.5f, 0.6f, 0.3f};    // E phrygian: Em F Em D
         case MusicStyle::Mountains: return {41, {0, 2, 4, 6, 7, 9, 11}, {0, 1, 2, 1}, 60, false, 0.7f, 0.35f, 0.42f}; // F lydian: F G Am G
         case MusicStyle::Ocean:     return {43, {0, 2, 4, 5, 7, 9, 10}, {0, 6, 3, 0}, 58, false, 0.75f, 0.3f, 0.45f}; // G mixolydian: G F C G
+        // 1.6.0 Caves and Tunes: D dorian, slow, dark plucks and a long echo, like drops in a cave.
+        case MusicStyle::Caves:     return {38, {0, 2, 3, 5, 7, 9, 10}, {0, 3, 5, 4}, 52, false, 0.8f, 0.3f, 0.6f};   // Dm G Bb A
         default:                    return {36, {0, 1, 3, 5, 7, 8, 10}, {0, 1, 0, 6}, 56, false, 0.85f, 0.25f, 0.5f}; // C phrygian, dark
     }
 }
@@ -261,7 +263,7 @@ Style styleOf(MusicStyle s) {
 }  // namespace
 
 const char* musicStyleName(MusicStyle s) {
-    static const char* kNames[] = {"biome_plains", "biome_forest", "biome_desert", "biome_mountains", "biome_ocean", "biome_nether"};
+    static const char* kNames[] = {"biome_plains", "biome_forest", "biome_desert", "biome_mountains", "biome_ocean", "biome_nether", "biome_caves"};
     return kNames[(int)s];
 }
 

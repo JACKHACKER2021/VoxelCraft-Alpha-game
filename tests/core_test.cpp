@@ -613,7 +613,7 @@ static int testJsonAndPacks() {
     std::vector<std::string> warn;
     GenConfig round = GenConfig::fromJson(def.toJson(), &warn);
     CHECK(warn.empty() && round.biomes.size() == 7 && round.biomes[2].surface == def.biomes[2].surface);
-    CHECK(RecipeBook::defaults().shaped.size() == 12 + 35 + 6 + 2 + 16 + 6 + 24 + 16 + 3 + 10 + 12 + 5 && RecipeBook::defaults().shapeless.size() == 2 + 4 + 1 + 1 + 6 + 1 + 1 + 3 + 1 + 3);  // 1.5.7: + book and quill: torch, shield, lamp; crimson planks  // 1.5.1: no planks from Eye Logs
+    CHECK(RecipeBook::defaults().shaped.size() == 12 + 35 + 6 + 2 + 16 + 6 + 24 + 16 + 3 + 10 + 12 + 5 + 3 && RecipeBook::defaults().shapeless.size() == 2 + 4 + 1 + 1 + 6 + 1 + 1 + 3 + 1 + 3 + 3);  // 1.5.7: + book and quill; 1.6.0: + 3: torch, shield, lamp; crimson planks  // 1.5.1: no planks from Eye Logs
 
     // Biomes really show up in the world: deserts are sandy, forests have trees.
     World w(1234, Dimension::Overworld);
@@ -633,7 +633,7 @@ static int testJsonAndPacks() {
     pm.ensureDefaultPack();
     auto list = pm.list();
     CHECK(list.size() == 1 && list[0].builtin && list[0].enabled && list[0].name == "VoxelCraft Default");
-    CHECK(pm.files("default").size() == 20 && pm.files("default")[0] == "manifest.json");
+    CHECK(pm.files("default").size() == 21 && pm.files("default")[0] == "manifest.json");
     warn.clear();
     GenConfig cfg = pm.buildConfig(&warn);
     CHECK(warn.empty() && cfg.biomes.size() == 7);
@@ -998,7 +998,7 @@ static int testPlants() {
             for (int z = 0; z < 16; ++z)
                 for (int y = 1; y < kChunkHeight; ++y) {
                     ItemId b = c->get(x, y, z);
-                    if (!isPlant(b) || isDripstoneSpike(b)) continue;
+                    if (!isPlant(b) || isDripstoneSpike(b) || b == VINES) continue;  // vines hang from ceilings
                     (b == TALL_GRASS || b == DRY_GRASS || b == FERN ? grass : flowers)++;
                     ItemId below = c->get(x, y - 1, z);
                     if (below != GRASS && below != DIRT && below != WASTELAND_GRASS) {
@@ -3914,12 +3914,71 @@ static int testPhysics157() {
     return 0;
 }
 
+static int testCaves160() {
+    // 1.6.0 Caves and Tunes: deepstone at the bottom, hardium in it, mossy caves with vines,
+    // pools, bigger caves than generation 3; old worlds unchanged; the new recipes and items.
+    GenConfig g3 = GenConfig::defaults();
+    g3.generation = 3;
+    CHECK(GenConfig::defaults().generation == 4);
+    World nw(777, Dimension::Overworld), ow(777, Dimension::Overworld, g3);
+    nw.ensureChunksAround(0, 0, 5, 100000);
+    ow.ensureChunksAround(0, 0, 5, 100000);
+    std::map<ItemId, long> n, o;
+    for (auto& [k, c] : nw.chunks())
+        for (int y = 0; y < 70; ++y)
+            for (int z = 0; z < kChunkSize; ++z)
+                for (int x = 0; x < kChunkSize; ++x) ++n[c->get(x, y, z)];
+    for (auto& [k, c] : ow.chunks())
+        for (int y = 0; y < 70; ++y)
+            for (int z = 0; z < kChunkSize; ++z)
+                for (int x = 0; x < kChunkSize; ++x) ++o[c->get(x, y, z)];
+    std::printf("caves 1.6.0: air %ld (gen 3: %ld), deepstone %ld, hardium %ld, moss %ld, mossy %ld, vines %ld, fungal %ld, lava %ld (%ld), tar %ld (%ld)\n",
+                n[AIR], o[AIR], n[DEEPSTONE], n[HARDIUM_ORE], n[MOSS_BLOCK], n[MOSSY_DEEPSTONE], n[VINES], n[FUNGAL_DEEPSTONE], n[LAVA], o[LAVA],
+                n[TAR], o[TAR]);
+    CHECK(n[AIR] > o[AIR] * 1.1 && n[DEEPSTONE] > 10000 && n[HARDIUM_ORE] > 0 && o[DEEPSTONE] == 0 && o[HARDIUM_ORE] == 0);
+    CHECK(n[MOSS_BLOCK] + n[MOSSY_DEEPSTONE] > 0 && n[VINES] > 0 && n[FUNGAL_DEEPSTONE] > 0 && n[LAVA] + n[TAR] > o[LAVA] + o[TAR]);
+    CHECK(canHarvest(HARDIUM_ORE, STEEL_PICKAXE) && !canHarvest(HARDIUM_ORE, IRON_PICKAXE) && dropFor(HARDIUM_ORE, 0.5f, STEEL_PICKAXE) == HARDIUM);
+    CHECK(toolTier(HARDIUM_PICKAXE) == 6 && toolKind(HARDIUM_PICKAXE) == ToolKind::Pickaxe && maxStack(HARDIUM_PICKAXE) == 1);
+    CHECK(smeltResult(DEEPSTONE_BRICKS) == CRACKED_DEEPSTONE_BRICKS && isPlant(VINES) && isEmissive(FUNGAL_DEEPSTONE) && !isItemOnly(VINES) && isItemOnly(HARDIUM));
+    CHECK(std::string(musicStyleName(MusicStyle::Caves)) == "biome_caves");
+    // Cave dungeons with a spawner and loot; spawners are found in new worlds only.
+    const Structure cd = buildWorldStructure(WorldStructure::CaveDungeon, 11);
+    CHECK(std::count(cd.cells.begin(), cd.cells.end(), (ItemId)MOB_SPAWNER) == 1 &&
+          std::count(cd.cells.begin(), cd.cells.end(), (ItemId)LOOT_CHEST_DUNGEON) >= 1);
+    std::printf("caves 1.6.0: spawners %ld (gen 3: %ld), ruby %ld (%ld), coal %ld (%ld)\n", n[MOB_SPAWNER], o[MOB_SPAWNER], n[RUBY_ORE], o[RUBY_ORE],
+                n[COAL_ORE], o[COAL_ORE]);
+    CHECK(n[MOB_SPAWNER] > 0 && o[MOB_SPAWNER] == 0 && n[RUBY_ORE] < n[COAL_ORE]);
+    // The Forgotten Overworld in the Crimson Void of new worlds, with portal frames.
+    {
+        World nv(777, Dimension::Void), ov(777, Dimension::Void, g3);
+        long souled = 0, frames = 0, oldSouled = 0;
+        int fx = 0, fz = 0;
+        bool found = false;
+        for (int r = 0; r < 4000 && !found; r += 40)
+            for (int a = 0; a < 16 && !found; ++a) {
+                const int x = (int)(std::cos(a * 0.3927f) * r), z = (int)(std::sin(a * 0.3927f) * r);
+                if (nv.voidBiomeAt(x, z) == World::VoidBiome::Forgotten) fx = x, fz = z, found = true;
+            }
+        CHECK(found);
+        nv.ensureChunksAround(floorDiv(fx, 16), floorDiv(fz, 16), 6, 100000);
+        ov.ensureChunksAround(floorDiv(fx, 16), floorDiv(fz, 16), 2, 100000);
+        for (auto& [k, c] : nv.chunks())
+            for (ItemId b : c->blocks) souled += b == SOULED_GRASS || b == SOULED_STONE, frames += b == CELESTIAL_FRAME;
+        for (auto& [k, c] : ov.chunks())
+            for (ItemId b : c->blocks) oldSouled += b == SOULED_GRASS;
+        std::printf("caves 1.6.0: forgotten overworld at %d %d, souled %ld, portal frames %ld\n", fx, fz, souled, frames);
+        CHECK(souled > 1000 && oldSouled == 0 && frames % 12 == 0);
+    }
+    CHECK(!canHarvest(DEEPSTONE, WOOD_PICKAXE) && breakTime(DEEPSTONE, STONE_PICKAXE) > breakTime(STONE, STONE_PICKAXE));
+    return 0;
+}
+
 static int testWorld159() {
     // 1.5.9: Crimson Void mineshafts and watchtowers in generation 3 only; ruined villages; every
     // creative item sits in exactly one category.
     GenConfig oldCfg = GenConfig::defaults();
     oldCfg.generation = 2;
-    CHECK(GenConfig::defaults().generation == 3);
+    CHECK(GenConfig::defaults().generation >= 3);
     const Structure vm = buildWorldStructure(WorldStructure::VoidMineshaft, 7), vw = buildWorldStructure(WorldStructure::VoidWatchtower, 7);
     const Structure rv = buildWorldStructure(WorldStructure::RuinedVillage, 7);
     auto count = [](const Structure& s, ItemId id) { return (int)std::count(s.cells.begin(), s.cells.end(), id); };
@@ -4050,7 +4109,7 @@ static int testStorage157() {
 int main() {
     if (testOverworld() || testNether() || testPortal() || testTexturePacks() || testFontAndItems() || testSaves() ||
         testSurvivalSession() || testMenuFlow() || testCrafting() || testWorkbenchInSession() ||
-        testJsonAndPacks() || testSkinsStoreAudio() || testThirdPersonCamera() || testWaterEscape() || testLeavesMesh() || testPlants() || testDigParticles() || testDPad() || testStructures() || testInventoryAndHand() || testMetalsAndArmor() || testDeveloperAccess() || testEnglishEverywhere() || testMusic() || testDoorsChests() || testNewBiomes() || testWorldStructures() || testBoat() || testAchievements() || testLanGame() || testCommands() || testUpdate11() || testUpdate12() || testUpdate13() || testUpdate14() || testUpdate15() || testExperiments151() || testShaders155() || testPhysics157() || testWorld157() || testWorld159() || testStorage157())
+        testJsonAndPacks() || testSkinsStoreAudio() || testThirdPersonCamera() || testWaterEscape() || testLeavesMesh() || testPlants() || testDigParticles() || testDPad() || testStructures() || testInventoryAndHand() || testMetalsAndArmor() || testDeveloperAccess() || testEnglishEverywhere() || testMusic() || testDoorsChests() || testNewBiomes() || testWorldStructures() || testBoat() || testAchievements() || testLanGame() || testCommands() || testUpdate11() || testUpdate12() || testUpdate13() || testUpdate14() || testUpdate15() || testExperiments151() || testShaders155() || testPhysics157() || testWorld157() || testWorld159() || testCaves160() || testStorage157())
         return 1;
     std::printf("all tests passed\n");
     return 0;

@@ -210,6 +210,12 @@ void Player::update(const World& world, float dt, float moveX, float moveZ, bool
         vel.y -= (thick ? 3.0f : 6.0f) * dt;
         vel.y = std::max(vel.y, thick ? -1.0f : -2.0f);
         if (jump) vel.y = inTar ? 1.2f : inLava ? 1.5f : 2.5f;
+    } else if (body == VINES || feetIn == VINES) {
+        // 1.6.0: vines are climbed: up while jumping or walking, slowly down otherwise, and
+        // holding on (no fall) while crouched.
+        const bool moving = moveX != 0 || moveZ != 0;
+        vel.y = jump || moving ? 3.0f : sneaking ? 0.0f : -2.0f;
+        fallDistance = 0;
     } else {
         vel.y -= 28.0f * gravityMul * dt;
         vel.y = std::max(vel.y, -60.0f);

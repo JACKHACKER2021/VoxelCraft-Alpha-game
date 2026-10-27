@@ -8,6 +8,8 @@
 
 namespace vc {
 
+#include "CaveTextures.inc"
+
 namespace {
 
 #include "ItemSprites.inc"
@@ -1585,6 +1587,52 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
             for (int px = 0; px < 16; ++px) {
                 const uint8_t* p = eye + (py * 16 + px) * 4;
                 a.put(tile, px, py, {p[0], p[1], p[2]}, p[3]);
+            }
+    }
+    // 1.6.0 Caves and Tunes: the user's cave textures (and new looks for gravel, tar blocks,
+    // dripstone, debris gravel and the powerstone dust and chip).
+    {
+        static const int kCaveTiles[] = {T_DEEPSTONE, T_HARDIUM_ORE, T_MOSSY_DEEPSTONE, T_MOSS_BLOCK, T_FUNGAL_DEEPSTONE,
+                                         T_DEEPSTONE_BRICKS, T_CRACKED_DEEPSTONE_BRICKS, T_MOSSY_DEEPSTONE_BRICKS, T_GRAVEL,
+                                         T_ROTTEN_PLANKS, T_VINES, T_TAR_BLOCK, T_DRIPSTONE, T_DEBRIS_GRAVEL, T_POWERSTONE_DUST,
+                                         T_POWERSTONE_CHIP};
+        for (int i = 0; i < (int)(sizeof(kCaveTiles) / sizeof(kCaveTiles[0])); ++i)
+            for (int py = 0; py < 16; ++py)
+                for (int px = 0; px < 16; ++px) {
+                    const uint8_t* p = kCaveTextures[i] + (py * 16 + px) * 4;
+                    if (p[3] < 128) a.clear(kCaveTiles[i], px, py);
+                    else a.put(kCaveTiles[i], px, py, {p[0], p[1], p[2]});
+                }
+        a.sprite(T_HARDIUM, kSprite_gem, {70, 200, 225}, {225, 250, 255});
+        a.sprite(T_HARDIUM_PICKAXE, kSprite_pickaxe, {80, 205, 230});
+        // The Forgotten Overworld: grass, dirt and stone of a lost world, pale and with ghostly
+        // cyan specks of souls in them.
+        for (int py = 0; py < 16; ++py)
+            for (int px = 0; px < 16; ++px) {
+                const int n = (int)(hash3(px, py, 1549, 5) % 14) - 7;
+                const bool soul = hash3(px, py, 1550, 7) % 23 == 0;
+                const Rgb soulC{150, 235, 235};
+                const Rgb grass = Rgb{96, 128, 112}.plus(n), dirt = Rgb{92, 82, 78}.plus(n), stone = Rgb{112, 116, 128}.plus(n);
+                a.put(T_SOULED_GRASS_TOP, px, py, soul ? soulC : grass);
+                const int fringe = 3 + (int)(hash3(px, 0, 1551, 9) % 3);
+                a.put(T_SOULED_GRASS_SIDE, px, py, py < fringe ? grass : soul ? soulC : dirt);
+                a.put(T_SOULED_DIRT, px, py, soul ? soulC : dirt);
+                const bool crack = (px * 3 + py * 5) % 17 == 0;
+                a.put(T_SOULED_STONE, px, py, soul ? soulC : crack ? stone.scaled(0.7f) : stone);
+                // The portal frame: void stone with a gold rim and a pale star socket on top.
+                const Rgb vs = Rgb{58, 40, 82}.plus(n);
+                const bool rim = px == 0 || py == 0 || px == 15 || py == 15;
+                const int dx = std::abs(px * 2 - 15), dy = std::abs(py * 2 - 15);
+                const bool star = (dx <= 2 && dy <= 9) || (dy <= 2 && dx <= 9) || (dx + dy <= 9);
+                a.put(T_CELESTIAL_FRAME_TOP, px, py, rim ? Rgb{214, 180, 90} : star ? Rgb{235, 240, 255} : vs);
+                a.put(T_CELESTIAL_FRAME_SIDE, px, py, py < 3 ? Rgb{214, 180, 90}.scaled(py == 2 ? 0.75f : 1.0f) : vs);
+            }
+        // The spawner: a dark iron cage with a faint glow inside.
+        for (int py = 0; py < 16; ++py)
+            for (int px = 0; px < 16; ++px) {
+                const bool bar = px % 5 == 0 || py % 5 == 0 || px == 15 || py == 15;
+                if (bar) a.put(T_SPAWNER, px, py, Rgb{52, 58, 70}.scaled((px + py) % 3 == 0 ? 1.25f : 1.0f));
+                else a.put(T_SPAWNER, px, py, Rgb{30, 12, 40}.plus((int)(hash3(px, py, 1548, 3) % 20)));
             }
     }
     // 1.5.7: the redesigned ores (once the 1.6.0 Preview experiment) are the standard look.

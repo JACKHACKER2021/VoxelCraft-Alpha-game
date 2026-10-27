@@ -3396,6 +3396,322 @@ SHOT(j12_credits) {
     d.seconds(7.0f);
 }
 
+// ---------------------------------------------------------------- 1.6.0 Caves and Tunes trailer
+
+// Finds a block of `id` in a fresh copy of the Overworld (seed 777) that has `air` cave air
+// around it; the nearest to the origin first.
+static bool findCaveBlock(ItemId id, int& fx, int& fy, int& fz, int maxR = 24, int needAir = 30) {
+    World w(777, Dimension::Overworld);
+    for (int r = 0; r <= maxR; ++r)
+        for (int cx = -r; cx <= r; ++cx)
+            for (int cz = -r; cz <= r; ++cz) {
+                if (std::abs(cx) != r && std::abs(cz) != r) continue;
+                w.ensureChunksAround(cx, cz, 1, 100000);
+                for (int x = 2; x < 14; ++x)
+                    for (int z = 2; z < 14; ++z)
+                        for (int y = 4; y < 60; ++y) {
+                            const int wx = cx * 16 + x, wz = cz * 16 + z;
+                            if (w.getBlock(wx, y, wz) != id) continue;
+                            int air = 0;
+                            for (int dx = -3; dx <= 3; ++dx)
+                                for (int dz = -3; dz <= 3; ++dz)
+                                    for (int dy = 1; dy <= 3; ++dy) air += w.getBlock(wx + dx, y + dy, wz + dz) == AIR;
+                            if (air < needAir) continue;
+                            fx = wx, fy = y, fz = wz;
+                            std::printf("found %d at %d %d %d (air %d)\n", id, fx, fy, fz, air);
+                            return true;
+                        }
+            }
+    return false;
+}
+
+static void caveFly(const fs::path& out, const char* name, ItemId id, float secs, int needAir, float lift, bool torch) {
+    Director d(out, name);
+    d.openWorld("Caves", 777, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    int x, y, z;
+    if (!findCaveBlock(id, x, y, z, 24, needAir)) return;
+    Session& s = d.s();
+    Player& p = s.player();
+    p.flying = true;
+    travel(d, Vec3(x + 0.5f, y + lift, z + 0.5f));
+    s.inventory().clear();
+    if (torch) d.give(0, TORCH, 16), s.selectedSlot() = 0, s.offhand() = {TORCH, 16, 0};
+    d.settings().hideGui = true;
+    s.mobs().mobs().clear();
+    d.idle(30);
+    d.shot(name);
+    d.seconds(secs, [&](float k) {
+        p.flying = true;
+        const float a = k * 2.2f;
+        p.pos = Vec3(x + 0.5f + std::cos(a) * 3.5f, y + lift, z + 0.5f + std::sin(a) * 3.5f);
+        d.lookNow(Vec3(x + 0.5f, y + 0.5f, z + 0.5f));
+    });
+}
+SHOT(m01_mossy_cave) { caveFly(out, "m01_mossy_cave", VINES, 6, 40, 1.6f, true); }
+SHOT(m02_lava_lake) { caveFly(out, "m02_lava_lake", LAVA, 6, 60, 3.5f, false); }
+SHOT(m03_tar_lake) {
+    Director d(out, "m03_tar_lake");
+    d.openWorld("Caves", 777, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    int x, y, z;
+    if (!findCaveBlock(TAR, x, y, z, 24, 40)) return;
+    Session& s = d.s();
+    Player& p = s.player();
+    p.flying = true;
+    travel(d, Vec3(x + 4.5f, y + 2.5f, z + 4.5f));
+    d.settings().hideGui = true;
+    s.offhand() = {TORCH, 16, 0};
+    s.mobs().mobs().clear();
+    s.mobs().spawn(MobType::TarMonster, 0, Vec3(x + 0.5f, y + 1.0f, z + 0.5f));
+    d.idle(20);
+    d.shot("m03_tar_lake");
+    d.seconds(5, [&](float k) {
+        p.flying = true;
+        p.pos = Vec3(x + 4.5f - k * 2, y + 2.5f, z + 4.5f - k * 1.5f);
+        if (!s.mobs().mobs().empty()) d.lookNow(s.mobs().mobs()[0].pos + Vec3(0, 1, 0));
+    });
+}
+SHOT(m04_hardium) {
+    Director d(out, "m04_hardium");
+    d.openWorld("Caves", 777, GameMode::Survival);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    int x, y, z;
+    if (!findCaveBlock(HARDIUM_ORE, x, y, z, 24, 0)) return;
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    travel(d, Vec3(x + 0.5f, (float)y, z + 2.5f));
+    // A little room cut into the deepstone in front of the ore, closed all round.
+    for (int dx = -4; dx <= 4; ++dx)
+        for (int dz = -2; dz <= 6; ++dz)
+            for (int dy = -2; dy <= 4; ++dy)
+                if (dx || dz || dy) w.setBlock(x + dx, y + dy, z + dz, dz < 0 && std::abs(dx) <= 1 && dy >= 0 && dy <= 1 && (dx + dy) % 2 ? HARDIUM_ORE : DEEPSTONE);
+    for (int dx = -2; dx <= 2; ++dx)
+        for (int dz = 1; dz <= 4; ++dz)
+            for (int dy = 0; dy <= 2; ++dy) w.setBlock(x + dx, y + dy, z + dz, AIR);
+    for (int dx = -2; dx <= 2; ++dx)
+        for (int dz = 1; dz <= 4; ++dz) w.setBlock(x + dx, y - 1, z + dz, DEEPSTONE);
+    w.setBlock(x + 2, y + 2, z + 1, TORCH);
+    s.inventory().clear();
+    d.give(0, STEEL_PICKAXE);
+    s.selectedSlot() = 0;
+    s.offhand() = {TORCH, 1, 0};
+    p.pos = Vec3(x + 0.5f, (float)y, z + 3.2f);
+    s.mobs().mobs().clear();
+    d.idle(20);
+    d.lookNow(centre(x, y, z));
+    d.shot("m04_hardium");
+    d.seconds(0.8f, [&](float) { heal(d); });
+    d.mine(x, y, z);
+    d.seconds(2.0f, [&](float) { heal(d); });
+}
+SHOT(m05_dungeon) {
+    Director d(out, "m05_dungeon");
+    d.openWorld("Caves", 777, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    int x, y, z;
+    if (!findCaveBlock(MOB_SPAWNER, x, y, z, 30, 0)) return;
+    Session& s = d.s();
+    Player& p = s.player();
+    travel(d, Vec3(x + 2.5f, (float)y, z + 2.5f));
+    s.inventory().clear();
+    d.give(0, IRON_SWORD);
+    s.selectedSlot() = 0;
+    s.offhand() = {TORCH, 1, 0};
+    for (int i = 0; i < 4; ++i) s.armor()[i] = {armorItem(2, i), 1};
+    p.pos = Vec3(x + 2.5f, (float)y, z + 2.5f);
+    s.mobs().mobs().clear();
+    // Torches in the room's corners, so the camera sees the cage.
+    for (int dx : {-2, 2})
+        for (int dz : {-2, 2})
+            if (s.currentWorld().getBlock(x + dx, y, z + dz) == AIR) s.currentWorld().setBlock(x + dx, y, z + dz, TORCH);
+    s.mobs().spawn(MobType::Spider, 0, Vec3(x - 1.5f, (float)y, z + 0.5f));
+    d.idle(10);
+    d.shot("m05_dungeon");
+    d.seconds(7, [&](float k) {
+        heal(d);
+        d.look(Vec3(x + 0.5f, y + 0.5f, z + 0.5f));
+    });
+}
+SHOT(m06_shaft) {
+    Director d(out, "m06_shaft");
+    d.openWorld("Caves", 777, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    Session& s = d.s();
+    Player& p = s.player();
+    World w(777, Dimension::Overworld);
+    w.ensureChunksAround(0, 0, 8, 100000);
+    auto top = [&](int x, int z) {
+        int y = kChunkHeight - 1;
+        while (y > 1 && w.getBlock(x, y, z) == AIR) --y;
+        return y;
+    };
+    int bx = 0, bz = 0, by = 0, best = 0;
+    for (int x = -120; x < 120; x += 2)
+        for (int z = -120; z < 120; z += 2) {
+            const int t = top(x, z), a = std::min({top(x - 10, z), top(x + 10, z), top(x, z - 10), top(x, z + 10)});
+            if (a > w.seaLevel() + 3 && w.getBlock(x, t, z) != WATER && w.getBlock(x, t, z) != LAVA && a - t > best) best = a - t, bx = x, bz = z, by = a;
+        }
+    std::printf("shaft depth %d at %d %d\n", best, bx, bz);
+    p.flying = true;
+    travel(d, Vec3(bx + 0.5f, by + 10.0f, bz + 10.5f));
+    s.setTimeOfDay(6000);
+    d.settings().hideGui = true;
+    s.mobs().mobs().clear();
+    d.idle(30);
+    d.shot("m06_shaft");
+    d.seconds(8, [&](float k) {
+        p.flying = true;
+        p.pos = Vec3(bx + 0.5f, by + 10.0f - k * (best + 6), bz + 10.5f - k * 10);
+        d.lookNow(Vec3(bx + 0.5f, by - best - 3.0f, bz - 1.0f));
+    });
+}
+SHOT(m07_boss) {
+    Director d(out, "m07_boss");
+    d.openWorld("Boss", 4242, GameMode::Survival);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    goNether(d);
+    goVoid(d);
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    int ax, ay, az;
+    if (!w.nearestStructure((int)p.pos.x, (int)p.pos.z, ax, ay, az)) return;
+    for (int i = 0; i < 4; ++i) s.armor()[i] = {armorItem(4, i), 1};
+    s.inventory().clear();
+    d.give(0, RUBY_SWORD);
+    s.selectedSlot() = 0;
+    s.offhand() = {SHIELD, 1, 0};
+    p.flying = false;
+    travel(d, Vec3(ax + 0.5f, (float)ay + 1, az + 10.5f));
+    d.idle(60);  // the boss wakes
+    d.settings().cameraMode = 1;
+    d.shot("m07_boss");
+    d.seconds(9, [&](float k) {
+        heal(d);
+        for (Mob& m : s.mobs().mobs())
+            if (m.type == MobType::CrimsonMan) {
+                d.look(m.pos + Vec3(0, 2, 0));
+                if (m.health < 30) m.health = 30;
+            }
+    });
+    d.settings().cameraMode = 0;
+}
+SHOT(m08_forgotten) {
+    Director d(out, "m08_forgotten");
+    d.openWorld("Forgotten", 777, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    goNether(d);
+    goVoid(d);
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    int fx = 0, fz = 0;
+    bool found = false;
+    for (int r = 0; r < 4000 && !found; r += 40)
+        for (int a = 0; a < 16 && !found; ++a) {
+            const int x = (int)p.pos.x + (int)(std::cos(a * 0.3927f) * r), z = (int)p.pos.z + (int)(std::sin(a * 0.3927f) * r);
+            if (w.voidBiomeAt(x, z) == World::VoidBiome::Forgotten && w.voidBiomeAt(x + 40, z) == World::VoidBiome::Forgotten) fx = x, fz = z, found = true;
+        }
+    if (!found) return;
+    p.flying = true;
+    travel(d, Vec3(fx + 0.5f, (float)w.voidHeight(fx, fz) + 14, fz + 0.5f));
+    // A portal frame on the nearest piece, for the camera.
+    const int h = w.voidHeight(fx + 12, fz);
+    int t = h + 6;
+    while (t > 26 && w.getBlock(fx + 12, t, fz) == AIR) --t;
+    if (t > 26)
+        for (int dx = -2; dx <= 2; ++dx)
+            for (int dz = -2; dz <= 2; ++dz) {
+                const bool corner = std::abs(dx) == 2 && std::abs(dz) == 2, inside = std::abs(dx) <= 1 && std::abs(dz) <= 1;
+                for (int y = t + 1; y < t + 5; ++y) w.setBlock(fx + 12 + dx, y, fz + dz, AIR);
+                w.setBlock(fx + 12 + dx, t, fz + dz, corner ? (ItemId)SOULED_STONE : inside ? (ItemId)AIR : (ItemId)CELESTIAL_FRAME);
+                if (inside) w.setBlock(fx + 12 + dx, t - 1, fz + dz, VOID_STONE);
+            }
+    d.settings().hideGui = true;
+    s.mobs().mobs().clear();
+    d.idle(30);
+    const Vec3 start = p.pos;
+    d.shot("m08_forgotten");
+    d.seconds(8, [&](float k) {
+        p.flying = true;
+        p.pos = start + Vec3(k * 10, -k * 4, 8 - k * 8);
+        d.lookNow(Vec3(fx + 12.5f, (float)t, fz + 0.5f));
+    });
+}
+SHOT(m09_blocks) {
+    Director d(out, "m09_blocks");
+    d.openWorld("Blocks", 4242, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    int x, y, z;
+    meadow(d, x, y, z);
+    flatten(w, x - 8, z - 10, x + 8, z + 2, y, DEEPSTONE_BRICKS);
+    const ItemId row[] = {DEEPSTONE, HARDIUM_ORE, MOSSY_DEEPSTONE, MOSS_BLOCK, FUNGAL_DEEPSTONE, DEEPSTONE_BRICKS, CRACKED_DEEPSTONE_BRICKS,
+                          MOSSY_DEEPSTONE_BRICKS, ROTTEN_PLANKS, GRAVEL, TAR_BLOCK, MOB_SPAWNER, SOULED_GRASS, SOULED_STONE};
+    for (int i = 0; i < 14; ++i)
+        for (int dy = 0; dy < 2; ++dy) w.setBlock(x - 7 + i, y + dy, z - 6, row[i]);
+    for (int i = 0; i < 5; ++i) w.setBlock(x - 7 + i * 3, y + 2, z - 6, VINES);
+    Player& p = s.player();
+    p.flying = true;
+    p.pos = Vec3(x + 0.5f, y + 2.0f, z + 2.5f);
+    s.setTimeOfDay(8000);
+    d.settings().hideGui = true;
+    s.mobs().mobs().clear();
+    d.idle(20);
+    d.shot("m09_blocks");
+    d.seconds(6, [&](float k) {
+        p.flying = true;
+        p.pos = Vec3(x - 6.0f + k * 12, y + 1.4f, z - 2.0f);
+        d.lookNow(Vec3(x - 5.0f + k * 12, y + 0.8f, z - 6.0f));
+    });
+}
+
+// ---------------------------------------------------------------- the 10-minute story trailer
+// Every mob of the game in a row on a stage, the camera passing along them.
+SHOT(n01_mobs) {
+    Director d(out, "n01_mobs");
+    d.openWorld("Mobs", 4242, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    int x, y, z;
+    meadow(d, x, y, z);
+    flatten(w, x - 4, z - 8, x + 44, z + 4, y, STONE_BRICKS);
+    const MobType kinds[] = {MobType::Pig, MobType::Sheep, MobType::Chicken, MobType::Cow, MobType::Villager, MobType::PumpkinSlime,
+                             MobType::Bat, MobType::ForgottenMan, MobType::Spider, MobType::TntZombie, MobType::TarMonster,
+                             MobType::Husking, MobType::Hogman, MobType::CrimsonMan};
+    const int n = (int)(sizeof(kinds) / sizeof(kinds[0]));
+    s.mobs().mobs().clear();
+    for (int i = 0; i < n; ++i) s.mobs().spawn(kinds[i], 0, Vec3(x + 0.5f + i * 3.0f, (float)y, z - 4.5f));
+    auto hold = [&] {
+        for (int i = 0; i < (int)s.mobs().mobs().size() && i < n; ++i) {
+            Mob& m = s.mobs().mobs()[i];
+            m.pos = Vec3(x + 0.5f + i * 3.0f, (float)y + (m.type == MobType::Bat ? 1.5f : 0.0f), z - 4.5f);
+            m.vel = Vec3(0, 0, 0);
+            m.yaw = kPi;  // facing the camera
+            m.health = 1000;
+        }
+    };
+    Player& p = s.player();
+    p.flying = true;
+    s.setTimeOfDay(6000);
+    d.settings().hideGui = true;
+    d.settings().calmMode = false;
+    hold();
+    d.idle(20);
+    hold();
+    d.shot("n01_mobs");
+    d.seconds(14, [&](float k) {
+        hold();
+        p.flying = true;
+        p.pos = Vec3(x - 1.0f + k * (n - 1) * 3.0f, y + 1.8f, z + 2.5f);
+        d.lookNow(Vec3(x + 1.0f + k * (n - 1) * 3.0f, y + 1.2f, z - 4.5f));
+    });
+}
+
 // ---------------------------------------------------------------- 1.5.7 checks
 SHOT(k01_fortress) {
     Director d(out, "k01");
