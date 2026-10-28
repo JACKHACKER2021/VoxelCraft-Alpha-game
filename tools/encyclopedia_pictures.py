@@ -12,10 +12,12 @@ import zlib
 from PIL import Image
 
 ROOT = sys.argv[1] if len(sys.argv) > 1 else os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PICTURES = [("plains", "e01_plains"), ("dappled", "e02_forest"), ("mountains", "e06_mountains"),
+PICTURES = [("plains", "e01_plains"), ("dappled", "v05_dappled"), ("mountains", "e06_mountains"),
             ("void_purple", "e07_void_purple"), ("void_crimson", "e08_void_crimson"), ("crimsonium", "e09_crimsonium"),
             ("shattered", "e10_shattered"), ("shard_desert", "e11_shard_desert"), ("celestial", "e13_celestial"),
-            ("old_world", "e14_old_world")]
+            ("old_world", "e14_old_world"), ("forest", "f01_forest"), ("desert", "f02_desert"), ("taiga", "f03_taiga"),
+            ("ice", "f04_ice"), ("cornerstone", "f05_cornerstone"), ("shrine", "f06_shrine"), ("portal", "f08_portal"),
+            ("camp", "v06_camp"), ("bridges", "v09_bridges"), ("concrete", "v04_concrete"), ("cutters", "v07_cutters")]
 W, H = 192, 108
 
 out = ["// Encyclopedia pictures (1.7.2 build 3): screenshots from the game itself (tests/film), 192 x 108 RGB,",

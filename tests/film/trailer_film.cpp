@@ -5445,6 +5445,109 @@ SHOT(v13_encyclopedia) {
     d.seconds(2.0f);
 }
 
+
+// ---------------------------------------------------------------- encyclopedia, more pictures
+// The whole area round the spot must be the biome (one point used to land on its edge).
+static bool overAll(World& w, int x, int z, const char* id) {
+    for (int dx = -24; dx <= 24; dx += 12)
+        for (int dz = -24; dz <= 24; dz += 12) {
+            const BiomeDef* b = w.biomeAt(x + dx, z + dz);
+            if (!b || b->id != std::string(id)) return false;
+        }
+    return true;
+}
+#define ENC_AREA(NAME, ID)                                                                                   \
+    SHOT(NAME) {                                                                                             \
+        Director d(out, #NAME);                                                                              \
+        d.openWorld("Enc", 4242, GameMode::Creative);                                                        \
+        d.settings().graphics = GraphicsMode::Enhanced;                                                      \
+        if (!flyToBiome(d, [](World& w, int x, int z) { return overAll(w, x, z, ID); })) std::printf("not found\n"); \
+        picture(d, #NAME);                                                                                   \
+    }
+ENC_AREA(f01_forest, "forest")
+ENC_AREA(f02_desert, "desert")
+SHOT(f03_taiga) {
+    Director d(out, "f03");
+    d.openWorld("Enc", 4242, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    flyToBiome(d, [](World& w, int x, int z) { return overAll(w, x, z, "snowy_taiga"); });
+    d.s().player().pos.y += 14;  // above the tall spruces
+    d.s().player().pitch = -0.4f;
+    picture(d, "f03_taiga");
+}
+ENC_AREA(f04_ice, "ice_plains")
+SHOT(f05_cornerstone) {
+    Director d(out, "f05");
+    d.openWorld("Enc", 4242, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    goNether(d);
+    Player& p = d.s().player();
+    p.flying = true;
+    p.pos = p.pos + Vec3(0, 8, 0) - p.forward() * 6;
+    p.pitch = -0.25f;
+    picture(d, "f05_cornerstone");
+}
+// A structure of the Crimson Void expansion: find its chest and look at it from above.
+static void voidChest(Director& d, World::VoidBiome biome, ItemId chest, const char* name) {
+    goNether(d);
+    goVoid(d);
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    flyToBiome(d, [biome](World& w2, int x, int z) { return w2.voidBiomeAt(x, z) == biome; });
+    Vec3 at = p.pos;
+    bool found = false;
+    for (int r = 4; r <= 16 && !found; r += 4) {
+        w.ensureChunksAround((int)std::floor(p.pos.x) >> 4, (int)std::floor(p.pos.z) >> 4, r, 4000);
+        for (auto& [k, c] : w.chunks()) {
+            for (int x = 0; x < kChunkSize && !found; ++x)
+                for (int z = 0; z < kChunkSize && !found; ++z)
+                    for (int y = 2; y < kChunkHeight && !found; ++y)
+                        if (c->get(x, y, z) == chest) found = true, at = Vec3(c->cx * kChunkSize + x + 0.5f, (float)y, c->cz * kChunkSize + z + 0.5f);
+            if (found) break;
+        }
+    }
+    if (!found) std::printf("no %s\n", name);
+    p.flying = true;
+    p.pos = at + Vec3(7, chest == LOOT_CHEST_CHAMBER ? 1.5f : 6, 7);
+    if (chest == LOOT_CHEST_CHAMBER) {  // look into the chamber: clear a window in its wall
+        for (int y = 0; y < 4; ++y)
+            for (int k = 0; k < 7; ++k) w.setBlock((int)at.x + 3, (int)at.y + y, (int)at.z - 3 + k, AIR);
+        p.pos = at + Vec3(6, 1.6f, 0);
+    }
+    d.lookNow(at);
+    picture(d, name);
+}
+SHOT(f06_shrine) {
+    Director d(out, "f06");
+    d.openWorld("Enc", 4242, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    voidChest(d, World::VoidBiome::CrimsoniumForest, LOOT_CHEST_SHRINE, "f06_shrine");
+}
+SHOT(f07_chamber) {
+    Director d(out, "f07");
+    d.openWorld("Enc", 4242, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    voidChest(d, World::VoidBiome::ShardDesert, LOOT_CHEST_CHAMBER, "f07_chamber");
+}
+SHOT(f08_portal) {
+    // An obsidian portal, lit, in the Overworld.
+    Director d(out, "f08");
+    d.openWorld("Enc", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z) - 6, y = feetY(w, x, z);
+    for (int dx = -2; dx <= 1; ++dx)
+        for (int dy = 0; dy <= 4; ++dy) {
+            const bool frame = dx == -2 || dx == 1 || dy == 0 || dy == 4;
+            w.setBlock(x + dx, y + dy, z, frame ? (ItemId)OBSIDIAN : (ItemId)PORTAL);
+        }
+    p.yaw = 0, p.pitch = 0.1f;
+    s.setTimeOfDay(13000);
+    picture(d, "f08_portal");
+}
+
 // ---------------------------------------------------------------- 1.5.7 checks
 SHOT(k01_fortress) {
     Director d(out, "k01");
