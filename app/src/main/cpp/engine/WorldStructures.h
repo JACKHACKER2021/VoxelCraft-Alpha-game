@@ -25,6 +25,7 @@ enum class WorldStructure {
     // 1.5.9: mineshafts and watchtowers of the Crimson Void, ruined villages in the Overworld.
     VoidMineshaft, VoidWatchtower, RuinedVillage,
     CaveDungeon,  // 1.6.0: a small room in the rock with a monster spawner and loot
+    Camp,         // 1.7.2 build 3: a travellers' camp: a wool tent, a fire pit, a loot barrel
     Count
 };
 

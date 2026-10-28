@@ -178,7 +178,7 @@ ChestContents& Session::chestFor(const FurnaceKey& key) {
     if (!chests_.count(key)) {
         const ItemId block = worldAt(key.dim).getBlock(key.x, key.y, key.z);
         const uint32_t seed = info_.seed ^ (uint32_t)(key.x * 73856093) ^ (uint32_t)(key.y * 19349663) ^ (uint32_t)(key.z * 83492791);
-        chests_[key] = block != CHEST && isChest(block) ? structureLoot(block, seed) : ChestContents{};
+        chests_[key] = (block != CHEST && isChest(block)) || block == LOOT_BARREL_CAMP ? structureLoot(block, seed) : ChestContents{};
     }
     return chests_[key];
 }
@@ -199,6 +199,10 @@ void Session::openChestAt(const FurnaceKey& key) {
                     slot = {ANNIV_TOKEN, 1, 0};
                     break;
                 }
+    }
+    if (block == LOOT_BARREL_CAMP) {
+        w.setBlock(key.x, key.y, key.z, BARREL);
+        achieve("loot_camp");
     }
     if (block != CHEST && isChest(block)) {
         w.setBlock(key.x, key.y, key.z, CHEST);
@@ -675,7 +679,7 @@ namespace {
 uint64_t cellKey(int x, int y, int z) {
     return ((uint64_t)((uint32_t)x & 0xFFFFFFFu) << 36) | ((uint64_t)((uint32_t)z & 0xFFFFFFFu) << 8) | (uint64_t)(y & 0xFF);
 }
-bool fallsDown(ItemId b) { return b == SAND || b == GRAVEL || b == RED_SAND || b == DEBRIS_GRAVEL; }
+bool fallsDown(ItemId b) { return b == SAND || b == GRAVEL || b == RED_SAND || b == DEBRIS_GRAVEL || b == DARK_SAND || isConcretePowder(b); }  // 1.7.2 build 2: dusty concrete is a powder
 // What a falling block or a flowing liquid simply replaces.
 bool washedAway(ItemId b) { return b == AIR || isPlant(b) || isTorch(b) || b == SNOW_LAYER; }
 }  // namespace
@@ -698,6 +702,15 @@ void Session::updateBlockPhysics(float dt) {
                 const int x = c[0] + o[0], y = c[1] + o[1], z = c[2] + o[2];
                 if (y < 0 || y >= kChunkHeight) continue;
                 const ItemId b = w.getBlock(x, y, z);
+                if (isConcretePowder(b)) {
+                    // 1.7.2 build 3: concrete powder that touches water sets into hard concrete.
+                    bool wet = false;
+                    for (const auto& k : kAround) wet |= w.getBlock(x + k[0], y + k[1], z + k[2]) == WATER;
+                    if (wet) {
+                        w.setBlock(x, y, z, hardenedConcrete(b));
+                        continue;
+                    }
+                }
                 const bool liquid = liquids && (b == WATER || b == LAVA);
                 if (!fallsDown(b) && !liquid && !flow_[d].count(cellKey(x, y, z))) continue;
                 if (!ticking_[d].insert(cellKey(x, y, z)).second || blockTicks_.size() > 20000) continue;
@@ -882,6 +895,26 @@ void Session::respawn() {
 
 Session::Layout Session::layout() const {
     Layout l;
+    if (oldMode()) {
+        // 1.8.0 Old World: the HUD of 0.1-0.3. Nine big slots at the bottom, one tall jump
+        // button bottom right, the grass block (the menu) top right; no map, chat or D-pad.
+        l.slot = 26;
+        l.hotbarX = std::floor((guiW_ - l.slot * 9) / 2);
+        l.hotbarY = guiH_ - l.slot - 2;
+        l.buttonSize = 48;
+        l.jumpX = guiW_ - l.buttonSize - 24;
+        l.jumpY = guiH_ - l.buttonSize - 24;
+        l.flyDownX = -1000;
+        l.pauseSize = 26;
+        l.pauseX = guiW_ - l.pauseSize - 6;
+        l.pauseY = 6;
+        l.chatX = -1000;
+        l.mapSize = 0;
+        l.mapX = l.mapY = -1000;
+        l.padX = l.padY = -1000;
+        l.padButton = 0;
+        return l;
+    }
     l.slot = 20;
     // Nine hotbar slots plus the "..." inventory button, like Pocket Edition.
     l.hotbarX = std::floor((guiW_ - l.slot * 10) / 2);
@@ -1009,6 +1042,24 @@ void Session::touchDown(int id, float x, float y, double time) {
 
     Layout l = layout();
     auto in = [&](float rx, float ry, float rw, float rh) { return x >= rx && y >= ry && x < rx + rw && y < ry + rh; };
+    if (oldMode()) {
+        // 1.8.0 Old World: hotbar, menu block, jump; the left half is a joystick, the rest looks around.
+        if (in(l.hotbarX, l.hotbarY, l.slot * 9, l.slot)) {
+            t->kind = Touch::Hotbar;
+            selectSlot((int)((x - l.hotbarX) / l.slot));
+        } else if (in(l.pauseX, l.pauseY, l.pauseSize, l.pauseSize)) {
+            t->kind = Touch::Pause;
+        } else if (in(l.jumpX, l.jumpY, l.buttonSize, l.buttonSize)) {
+            t->kind = Touch::Jump;
+        } else if ((settings_.lefty ? x > guiW_ * 0.6f : x < guiW_ * 0.4f) && y > guiH_ * 0.35f) {  // as in 0.3
+            t->kind = Touch::Joystick;
+        } else {
+            t->kind = Touch::Look;
+            target_ = pick(x, y);
+            breakProgress_ = 0;
+        }
+        return;
+    }
     if (in(l.hotbarX, l.hotbarY, l.slot * 9, l.slot)) {
         t->kind = Touch::Hotbar;
         selectSlot((int)((x - l.hotbarX) / l.slot));
@@ -1532,6 +1583,11 @@ void Session::tickSpawners() {
 
 void Session::updateMobs(float dt) {
     attackCooldown_ = std::max(0.0f, attackCooldown_ - dt);
+    if (oldMode()) {
+        // 1.8.0 Old World: 0.1-0.3 had no mobs at all; nothing spawns and nothing is left over.
+        mobs_.mobs().clear();
+        return;
+    }
     const int dim = dimIndex();
     const bool halloween = settings_.addonHalloween;
     const bool calm = settings_.calmMode;  // no monsters at all
@@ -1831,8 +1887,13 @@ void Session::useItem(const RayHit& hit) {
             openFurnaceAt({dimIndex(), hit.x, hit.y, hit.z});
             return;
         }
-        if (isChest(block)) {
+        if (isChest(block) || block == BARREL || block == LOOT_BARREL_CAMP) {  // 1.7.2 build 2: the barrel keeps 27 stacks too
             openChestAt({dimIndex(), hit.x, hit.y, hit.z});
+            return;
+        }
+        if (block == CUTTER || block == WOOD_CUTTER) {
+            wantsCutter = true;
+            cutterWood = block == WOOD_CUTTER;
             return;
         }
         if (block == CELESTIAL_FRAME && held.id == CRIMSON_HEAD) {
@@ -2140,9 +2201,9 @@ void Session::breakBlock(const RayHit& hit) {
         int other = doorState(id).upper ? hit.y - 1 : hit.y + 1;
         if (isDoor(w.getBlock(hit.x, other, hit.z))) w.setBlock(hit.x, other, hit.z, AIR);
     }
-    if (isChest(id)) {
+    if (isChest(id) || id == BARREL || id == LOOT_BARREL_CAMP) {
         FurnaceKey key{dimIndex(), hit.x, hit.y, hit.z};
-        if (id != CHEST && !chests_.count(key)) {  // an unopened structure chest still spills its loot
+        if (id != CHEST && id != BARREL && !chests_.count(key)) {  // an unopened structure chest still spills its loot
             uint32_t seed = info_.seed ^ (uint32_t)(key.x * 73856093) ^ (uint32_t)(key.y * 19349663) ^ (uint32_t)(key.z * 83492791);
             chests_[key] = structureLoot(id, seed);
         }
@@ -2487,6 +2548,17 @@ void Session::update(float dt, double time, float guiW, float guiH, const Settin
     player_.gravityMul = settings.expLowGravity ? 0.3f : 1.0f;
     player_.noclip = settings.devNoclip;
     if (survival() && player_.flying && !settings.devFly) player_.flying = false;
+    if (oldMode()) {
+        // 1.8.0 Old World: creative only, the nine blocks of 0.3 in the hotbar, no flying and
+        // the old jump (no auto-jump).
+        static const ItemId kOldBlocks[kHotbarSize] = {GRASS, COBBLESTONE, PLANKS, LOG, GLASS, BRICKS, NETHERRACK, OBSIDIAN, FLINT_AND_STEEL};
+        info_.mode = GameMode::Creative;
+        for (int i = 0; i < kHotbarSize; ++i) state_.inventory.slots[i] = ItemStack{kOldBlocks[i], 1};
+        player_.flying = false;
+        player_.autoJump = false;
+        player_.speedMul = 1;
+        player_.noclip = false;
+    }
     if (dt > 0) fps_ += (1 / dt - fps_) * std::min(1.0f, dt * 4);
     if (dead_) return;
 
@@ -2501,6 +2573,11 @@ void Session::update(float dt, double time, float guiW, float guiH, const Settin
             dpadDirection(lay, t.x, t.y, dx, dz);
             moveX += (float)dx;
             moveZ += (float)dz;
+        } else if (t.kind == Touch::Joystick) {
+            // 1.8.0 Old World: an invisible joystick where the finger first touched.
+            const float r = 26;
+            moveX += std::clamp((t.x - t.startX) / r, -1.0f, 1.0f);
+            moveZ += std::clamp(-(t.y - t.startY) / r, -1.0f, 1.0f);
         } else if (t.kind == Touch::Jump) {
             jump = true;
         } else if (t.kind == Touch::FlyDown) {
@@ -2649,7 +2726,16 @@ void Session::updateCamera(float dt, bool walking) {
 void Session::render(Renderer& renderer, Ui& ui, const Settings& settings, bool hud) {
     renderer.dropUnloadedMeshes(*world_);
     renderer.updateMeshes(*world_, 3);
-    if (world_ == &overworld_) {
+    if (world_ == &overworld_ && oldMode()) {
+        // 1.8.0 Old World: the sky of 0.3: always day, one pale blue that the distance fades into
+        // (the same fog: from 60 % of the view distance), no sun, moon, stars, clouds or shadows.
+        static const float kOldSky[3] = {0.53f, 0.74f, 1.0f};
+        renderer.setFogColors(kOldSky, config_.nether.fog);
+        renderer.setBrightness(settings.brightness);
+        renderer.setSky({}, {}, 0, {});
+        renderer.setSun(Vec3(0, 1, 0), 0);
+        dayLight_ = 1;
+    } else if (world_ == &overworld_) {
         // Morning, day, evening, night and midnight: the sky, the light, sun, moon, stars and clouds.
         SkyState sky = computeSky((float)std::fmod(state_.dayTime, kDayTicks), config_.overworld.sky, skyRain_);
         if (settings.addonHalloween) {
@@ -2688,7 +2774,10 @@ void Session::render(Renderer& renderer, Ui& ui, const Settings& settings, bool 
     if (world_ == &void_) {
         // Purple darkness in the eye-tree forest, red haze over the desert, glowing ash over the lava,
         // pale grey over the Forgotten Overworld (1.7.0: it had no entry, and the screen went green).
-        static const float kFog[4][3] = {{0.16f, 0.05f, 0.24f}, {0.45f, 0.10f, 0.07f}, {0.42f, 0.13f, 0.04f}, {0.34f, 0.38f, 0.40f}};
+        // 1.7.2 build 3: deep red in the Crimsonium Forest, violet dust over the Shattered Void, dark
+        // purple haze over the shard desert.
+        static const float kFog[7][3] = {{0.16f, 0.05f, 0.24f}, {0.45f, 0.10f, 0.07f}, {0.42f, 0.13f, 0.04f}, {0.34f, 0.38f, 0.40f},
+                                         {0.38f, 0.05f, 0.08f}, {0.22f, 0.16f, 0.30f}, {0.16f, 0.11f, 0.20f}};
         const float* want = kFog[(int)void_.voidBiomeAt((int)std::floor(player_.pos.x), (int)std::floor(player_.pos.z))];
         for (int i = 0; i < 3; ++i) voidFog_[i] += (want[i] - voidFog_[i]) * 0.03f;
         renderer.setVoidFog(voidFog_);
@@ -2802,7 +2891,7 @@ void Session::render(Renderer& renderer, Ui& ui, const Settings& settings, bool 
         playerExtras_ = buildPlayerExtras(a.pose);
         if (!playerExtras_.empty()) renderer.drawParticles(playerExtras_);
     }
-    if (settings.cameraMode == 0 && !settings.hideGui) {
+    if (settings.cameraMode == 0 && !settings.hideGui && !oldMode()) {  // 0.3 showed no hand
         // The hand is lit like the place the player stands in.
         Vec3 e = player_.eye();
         float light = world_->dimension() != Dimension::Overworld ? 0.8f
@@ -2854,6 +2943,10 @@ Precipitation Session::precipitation() const {
     if (!b) return Precipitation::Rain;
     // Deserts stay dry; snowy lands and high mountain tops get snow instead of rain.
     if (b->cactusDensity > 0 || b->id == "desert") return Precipitation::None;
+    // 1.7.2 build 3: the Dappled Forest gets snow most of the time; about one day in five it
+    // rains there instead, and only lightly (see updateWeather).
+    if (b->id == "dappled_forest")
+        return hash3((int)(state_.dayTime / kDayTicks), 7, (int)info_.seed, 0xDA99u) % 5 == 0 ? Precipitation::Rain : Precipitation::Snow;
     if (b->freeze || b->id == "snowy_taiga" || b->id == "ice_plains" || (b->peakBlock && player_.pos.y > b->snowHeight - 12))
         return Precipitation::Snow;
     return Precipitation::Rain;
@@ -2870,7 +2963,21 @@ void Session::updateWeather(float dt) {
     const Precipitation kind = precipitation();
     const bool falling = (state_.raining || settings_.addonWinter) && kind != Precipitation::None;
     updateSnowCover(dt, falling && kind == Precipitation::Snow);
-    rain_ += ((falling ? 1.0f : 0.0f) - rain_) * std::min(1.0f, dt * 0.4f);
+    if (falling && kind == Precipitation::Rain && world_ == &overworld_) {
+        // 1.7.2 build 3: rain sets concrete powder that lies under the open sky.
+        rainTimer_ += dt;
+        while (rainTimer_ >= 0.05f) {
+            rainTimer_ -= 0.05f;
+            const int x = (int)std::floor(player_.pos.x) + (int)(spawnRandom() * 33) - 16;
+            const int z = (int)std::floor(player_.pos.z) + (int)(spawnRandom() * 33) - 16;
+            const int y = overworld_.skyHeight(x, z) - 1;
+            const ItemId b = overworld_.getBlock(x, y, z);
+            if (isConcretePowder(b)) overworld_.setBlock(x, y, z, hardenedConcrete(b));
+        }
+    }
+    const BiomeDef* here = world_ == &overworld_ ? overworld_.biomeAt((int)std::floor(player_.pos.x), (int)std::floor(player_.pos.z)) : nullptr;
+    const float most = here && here->id == "dappled_forest" && kind == Precipitation::Rain ? 0.3f : 1.0f;  // a light drizzle there
+    rain_ += ((falling ? most : 0.0f) - rain_) * std::min(1.0f, dt * 0.4f);
     // The sky greys only where it rains or snows (not over a desert).
     skyRain_ += ((falling ? 1.0f : 0.0f) - skyRain_) * std::min(1.0f, dt * 0.3f);
 }
@@ -2896,7 +3003,7 @@ void Session::updateSnowCover(float dt, bool snowing) {
         } else if (below == SNOW_LAYER || here == SNOW_LAYER) {
             const int sy = here == SNOW_LAYER ? y : y - 1;
             const BiomeDef* b = w.biomeAt(x, z);
-            const bool cold = settings_.addonWinter || (b && (b->freeze || b->id == "snowy_taiga" || b->id == "ice_plains"));
+            const bool cold = settings_.addonWinter || (b && (b->freeze || b->id == "snowy_taiga" || b->id == "ice_plains" || b->id == "dappled_forest"));
             if (!cold) w.setBlock(x, sy, z, AIR);
         }
     }
@@ -2940,7 +3047,56 @@ std::vector<MapMarker> Session::mapMarkers() const {
     return m;
 }
 
+void Session::drawOldHud(Ui& ui) const {
+    // 1.8.0 Old World: the HUD of VoxelCraft 0.1-0.3 (as in the creator's screenshots): nine
+    // dark slots with a white frame round the chosen one, a grass block top right that opens
+    // the menu, and a see-through jump button with a small step glyph. Nothing else.
+    const Layout l = layout();
+    bool jumpHeld = false, pauseHeld = false;
+    for (const Touch& t : touches_) {
+        if (t.id < 0) continue;
+        jumpHeld |= t.kind == Touch::Jump;
+        pauseHeld |= t.kind == Touch::Pause;
+    }
+    ui.fill(l.hotbarX - 2, l.hotbarY - 2, l.slot * 9 + 4, l.slot + 4, {0.12f, 0.12f, 0.12f, 0.85f});
+    for (int i = 0; i < kHotbarSize; ++i) {
+        const float x = l.hotbarX + i * l.slot;
+        ui.fill(x + 1, l.hotbarY + 1, l.slot - 2, l.slot - 2, {0.22f, 0.22f, 0.22f, 0.9f});
+        const ItemStack& st = state_.inventory.slots[i];
+        if (!st.empty()) ui.tile(x + 3, l.hotbarY + 3, l.slot - 6, tileFor(st.id, F_NORTH));  // flat, as in 0.3
+    }
+    const float sx = l.hotbarX + state_.selectedSlot * l.slot;
+    const Color white{0.95f, 0.95f, 0.95f, 1};
+    ui.fill(sx - 1, l.hotbarY - 1, l.slot + 2, 2, white);
+    ui.fill(sx - 1, l.hotbarY + l.slot - 1, l.slot + 2, 2, white);
+    ui.fill(sx - 1, l.hotbarY - 1, 2, l.slot + 2, white);
+    ui.fill(sx + l.slot - 1, l.hotbarY - 1, 2, l.slot + 2, white);
+    // The menu: a grass block on a slate square.
+    ui.fill(l.pauseX - 2, l.pauseY - 2, l.pauseSize + 4, l.pauseSize + 4, pauseHeld ? Color{0.5f, 0.6f, 0.75f, 0.9f} : Color{0.3f, 0.38f, 0.5f, 0.85f});
+    ui.tile(l.pauseX + 2, l.pauseY + 2, l.pauseSize - 4, T_GRASS_SIDE);
+    // Jump: a pale see-through square with the step glyph.
+    ui.fill(l.jumpX, l.jumpY, l.buttonSize, l.buttonSize, {1, 1, 1, jumpHeld ? 0.35f : 0.18f});
+    const float gx = l.jumpX + l.buttonSize / 2, gy = l.jumpY + l.buttonSize / 2;
+    ui.fill(gx - 2, gy - 8, 4, 9, {1, 1, 1, 0.85f});
+    ui.fill(gx - 9, gy + 1, 18, 4, {1, 1, 1, 0.85f});
+    // The floating joystick of 0.3, wherever the left thumb went down.
+    for (const Touch& t : touches_) {
+        if (t.id < 0 || t.kind != Touch::Joystick) continue;
+        const float r = 26;
+        ui.fill(t.startX - r, t.startY - r, 2 * r, 2 * r, {1, 1, 1, 0.18f});
+        const float kx = t.startX + std::clamp(t.x - t.startX, -r, r), ky = t.startY + std::clamp(t.y - t.startY, -r, r);
+        ui.fill(kx - 9, ky - 9, 18, 18, {1, 1, 1, 0.5f});
+    }
+    // Crosshair.
+    ui.fill(guiW_ / 2 - 4, guiH_ / 2, 9, 1, {1, 1, 1, 0.8f});
+    ui.fill(guiW_ / 2, guiH_ / 2 - 4, 1, 9, {1, 1, 1, 0.8f});
+}
+
 void Session::drawHud(Ui& ui) const {
+    if (oldMode()) {
+        drawOldHud(ui);
+        return;
+    }
     Layout l = layout();
     const float W = guiW_, H = guiH_;
 
@@ -3074,7 +3230,8 @@ void Session::drawHud(Ui& ui) const {
     if (hurtFlash_ > 0 && !settings_.calmMode) ui.fill(0, 0, W, H, {0.8f, 0, 0, hurtFlash_});
 
     // Hotbar: nine slots and the "..." inventory button.
-    ui.frame(l.hotbarX - 3, l.hotbarY - 3, l.slot * 9 + 6, l.slot + 6, {0.08f, 0.07f, 0.06f, 0.55f}, {0.85f, 0.85f, 0.8f, 0.4f});
+    if (Ui::preAlpha) ui.fill(l.hotbarX - 2, l.hotbarY - 2, l.slot * 9 + 4, l.slot + 4, {0.12f, 0.12f, 0.12f, 0.85f});  // 0.3 look
+    else ui.frame(l.hotbarX - 3, l.hotbarY - 3, l.slot * 9 + 6, l.slot + 6, {0.08f, 0.07f, 0.06f, 0.55f}, {0.85f, 0.85f, 0.8f, 0.4f});
     for (int i = 0; i < kHotbarSize; ++i) {
         float x = l.hotbarX + i * l.slot;
         // Sunken slot: dark top-left edge, light bottom-right edge.
@@ -3107,7 +3264,7 @@ void Session::drawHud(Ui& ui) const {
     }
     float sx = l.hotbarX + state_.selectedSlot * l.slot;
     // Selected slot: the theme's moss green frame.
-    const Color sel = theme::kGreenBorder;
+    const Color sel = Ui::preAlpha ? Color{0.95f, 0.95f, 0.95f, 1} : theme::kGreenBorder;
     ui.fill(sx - 1, l.hotbarY - 1, l.slot + 2, 2, sel);
     ui.fill(sx - 1, l.hotbarY + l.slot - 1, l.slot + 2, 2, sel);
     ui.fill(sx - 1, l.hotbarY - 1, 2, l.slot + 2, sel);

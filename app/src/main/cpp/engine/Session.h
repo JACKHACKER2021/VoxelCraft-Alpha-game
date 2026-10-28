@@ -59,6 +59,10 @@ public:
     bool explorationMaps() const { return info_.expExplorationMaps || overworld_.config().generation >= 3; }
     GameMode mode() const { return info_.mode; }
     bool survival() const { return info_.mode == GameMode::Survival; }
+    // 1.8.0: a world made as "Old (historic generation)". It plays like VoxelCraft 0.1-0.3, apart
+    // from the current game: its own HUD (nine fixed blocks, a jump button, a grass block for the
+    // menu), a joystick on the left half, creative only, no inventory, map, chat or flying.
+    bool oldMode() const { return overworld_.config().oldWorld; }
     Inventory& inventory() { return state_.inventory; }
     std::array<ItemStack, 4>& armor() { return state_.armor; }
     ItemStack& offhand() { return state_.offhand; }  // 1.5.7: the off hand (shield, torch...)
@@ -118,6 +122,8 @@ public:
     bool wantsChat = false;
     bool wantsInventory = false;
     bool wantsCrafting = false;  // tapped a crafting table
+    bool wantsCutter = false;    // 1.7.2 build 2: tapped a cutter
+    bool cutterWood = false;     // ... the wood cutter
     bool wantsFurnace = false;   // tapped a furnace, see openFurnace
     bool wantsChest = false;     // tapped a chest, see openChest
     bool travelled = false;      // went through a portal (the game shows the loading screen)
@@ -218,7 +224,7 @@ public:
 private:
     struct Touch {
         int id = -1;
-        enum Kind { None, DPad, Look, Jump, FlyDown, Hotbar, InventoryButton, Pause, Chat, Map, Sneak } kind = None;
+        enum Kind { None, DPad, Look, Jump, FlyDown, Hotbar, InventoryButton, Pause, Chat, Map, Sneak, Joystick } kind = None;
         float startX = 0, startY = 0, x = 0, y = 0, lastX = 0, lastY = 0;
         double startTime = 0, lastBreak = 0;
         bool moved = false;
@@ -257,6 +263,7 @@ private:
     void travelThroughPortal();
     void findSpawn();
     void drawHud(Ui& ui) const;
+    void drawOldHud(Ui& ui) const;  // 1.8.0 Old World
     void updateCamera(float dt, bool walking);
     void sound(Sound s) const { if (onSound) onSound(s); }
     void damageHeldTool();
@@ -337,6 +344,7 @@ private:
     void spawnInCave();
     void updateShowcase();
     void updateSnowCover(float dt, bool snowing);
+    float rainTimer_ = 0;  // 1.7.2 build 3: rain sets concrete powder
     float snowTimer_ = 0;  // Anniversary modpack: builds the showcase once
     void updateBlocksOverTime(float dt);
     void scheduleLeafDecay(int x, int y, int z);

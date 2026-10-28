@@ -144,7 +144,14 @@ void buildPrecipitation(const World& world, const Vec3& eye, Precipitation kind,
             const int x = ex + dx, z = ez + dz;
             const uint32_t h = hash3(x, 3, z, 0x4A1Du);
             if ((h % 1000) / 1000.0f > intensity * 0.85f) continue;
-            const float ground = (float)world.skyHeight(x, z);
+            // 1.7.2 build 3: rain and snow stop on any solid block (slabs, stairs, leaves, glass),
+            // not only on full opaque ones, so nothing falls under a roof.
+            float ground = (float)world.skyHeight(x, z);
+            for (int y = std::min(kChunkHeight - 1, (int)eye.y + 14); y >= (int)ground; --y)
+                if (isSolid(world.getBlock(x, y, z))) {
+                    ground = (float)(y + 1);
+                    break;
+                }
             const float top = eye.y + 14, bottom = std::max(ground, eye.y - 10);
             if (bottom >= top) continue;  // under a roof
             const float offset = (h >> 10) % 1000 / 1000.0f;
@@ -162,6 +169,22 @@ void buildPrecipitation(const World& world, const Vec3& eye, Precipitation kind,
                         Vertex a{cxp - ox, ya, czp - oz, u0, va, light}, b{cxp + ox, ya, czp + oz, u0 + kTile, va, light};
                         Vertex c{cxp + ox, yb, czp + oz, u0 + kTile, vb, light}, d{cxp - ox, yb, czp - oz, u0, vb, light};
                         out.insert(out.end(), {a, b, c, a, c, d});
+                    }
+                }
+                // 1.7.2 build 3: where a drop hits open ground it splashes: a few droplets jump up
+                // and out from the spot and fall back (close to the player only).
+                if (bottom == ground && dx * dx + dz * dz <= 25) {
+                    const float phase = std::fmod(seconds * 1.7f + offset * 7.0f, 1.0f);
+                    if (phase < 0.3f) {
+                        const float t = phase / 0.3f;
+                        const float sx = x + 0.2f + (h >> 4) % 60 / 100.0f, sz = z + 0.2f + (h >> 14) % 60 / 100.0f;
+                        for (int k = 0; k < 3; ++k) {
+                            const float ang = k * 2.094f + offset * 6.28f;
+                            const Vec3 at(sx + std::cos(ang) * 0.28f * t, ground + 0.02f + 1.2f * t * (1 - t) * 0.5f, sz + std::sin(ang) * 0.28f * t);
+                            Vec3 to = at - eye;
+                            Vec3 right = cross(to, Vec3(0, 1, 0)).normalized() * 0.035f;
+                            quad(out, at, right, Vec3(0, 0.035f, 0), T_SNOWFLAKE, light * 0.9f);
+                        }
                     }
                 }
             } else {

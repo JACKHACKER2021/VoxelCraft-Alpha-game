@@ -1658,6 +1658,115 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
                 a.put(T_CELESTIAL_DIRT, px, py, soul ? soulC : dirt);
                 leafPixel(a, T_CELESTIAL_LEAVES, px, py, {120, 200, 235}, 81, false);
             }
+        // 1.8.0 Concrete & Old World.
+        for (int py = 0; py < 16; ++py)
+            for (int px = 0; px < 16; ++px) {
+                const int n = (int)(hash3(px, py, 1563, 5) % 12) - 6;
+                // Dusty concrete: muted grey-beige, rough speckles of grit and a few pale dust patches.
+                const uint32_t g = hash3(px, py, 1563, 11);
+                Rgb dusty = Rgb{150, 146, 138}.plus(n);
+                if (g % 9 == 0) dusty = dusty.scaled(0.82f);                           // grit
+                if (hash3(px / 3, py / 3, 1563, 3) % 5 == 0) dusty = dusty.scaled(1.08f);  // dust patches
+                a.put(T_DUSTY_CONCRETE, px, py, dusty);
+                // Hardened concrete: even, cool grey, barely any noise, one faint form-board line.
+                Rgb hard = Rgb{128, 132, 136}.plus(n / 3);
+                if (py == 7 && hash3(px, 0, 1564, 2) % 4 != 0) hard = hard.scaled(0.94f);
+                a.put(T_HARDENED_CONCRETE, px, py, hard);
+                // Gray wood of the Dappled Forest: ash-grey bark with dark furrows; rings on top.
+                const int furrow = (px * 5 + (int)(hash3(px, py / 3, 1565, 7) % 3)) % 6;
+                Rgb bark = Rgb{118, 116, 112}.plus(n);
+                if (furrow == 0) bark = Rgb{78, 76, 74}.plus(n / 2);
+                if (furrow == 1) bark = bark.scaled(1.1f);
+                a.put(T_GRAY_LOG_SIDE, px, py, bark);
+                const float rr = std::sqrt((px - 7.5f) * (px - 7.5f) + (py - 7.5f) * (py - 7.5f));
+                a.put(T_GRAY_LOG_TOP, px, py, rr > 7 ? Rgb{96, 94, 90}.plus(n) : ((int)rr % 2 ? Rgb{176, 170, 160} : Rgb{150, 144, 134}).plus(n / 2));
+                // Gray planks, redone: four boards with staggered end joints, a lit top edge and a dark
+                // seam under each, fine grain lines along the board and nail holes at the joints.
+                const int row = py / 4, inRow = py % 4;
+                const int joint = (row * 7 + 3) % 16;
+                Rgb plank = Rgb{164, 160, 152}.scaled(0.94f + 0.04f * (float)(row % 3));
+                if (hash3(px / 2, py, 1566, 4) % 4 == 0) plank = plank.scaled(0.95f);  // grain
+                if (inRow == 0) plank = plank.scaled(1.08f);
+                if (inRow == 3 || px == joint) plank = Rgb{92, 90, 86};
+                if (inRow == 1 && (px == (joint + 2) % 16 || px == (joint + 14) % 16)) plank = Rgb{70, 68, 66};
+                a.put(T_GRAY_PLANKS, px, py, plank.plus(n / 3));
+                // 1.7.2 build 2: the cutter (stone body, a steel saw blade across the top) and the barrel
+                // (oak staves bound by two iron hoops; the lid shows the boards and a dark bung).
+                const Rgb stoneC = Rgb{124, 124, 124}.plus(n), wood = Rgb{150, 108, 62}.plus(n / 2);
+                const bool blade = py >= 7 && py <= 8 && px >= 1 && px <= 14, tooth = py == 6 && px % 2 == 0 && px >= 2 && px <= 13;
+                a.put(T_CUTTER_TOP, px, py, blade || tooth ? Rgb{200, 204, 212} : (px == 0 || px == 15 || py == 0 || py == 15) ? stoneC.scaled(0.75f) : Rgb{96, 72, 44}.plus(n / 2));
+                a.put(T_CUTTER_SIDE, px, py, py < 4 ? Rgb{120, 88, 52}.plus(n / 2) : (py == 4 ? stoneC.scaled(0.7f) : stoneC));
+                const bool hoop = py == 3 || py == 12, stave = px % 4 == 0;
+                a.put(T_BARREL_SIDE, px, py, hoop ? Rgb{70, 70, 76}.plus(n / 3) : stave ? wood.scaled(0.72f) : wood);
+                const float br = std::sqrt((px - 7.5f) * (px - 7.5f) + (py - 7.5f) * (py - 7.5f));
+                a.put(T_BARREL_TOP, px, py, br > 7.2f ? Rgb{70, 70, 76} : br < 1.6f ? Rgb{50, 34, 20} : (py % 4 == 0 ? wood.scaled(0.75f) : wood.scaled(1.08f)));
+                // The wood cutter: a plank bench with a round saw (darker blade, teeth all round) on top.
+                const float sr = std::sqrt((px - 7.5f) * (px - 7.5f) + (py - 7.5f) * (py - 7.5f));
+                const Rgb bench = Rgb{168, 126, 76}.plus(n / 2);
+                a.put(T_WOOD_CUTTER_TOP, px, py, sr < 1.3f ? Rgb{60, 60, 66} : sr < 5.2f ? Rgb{186, 190, 198}.plus(n / 3) :
+                                                 (sr < 6.4f && (px + py) % 2 == 0) ? Rgb{150, 154, 162} : (py % 4 == 3 ? bench.scaled(0.75f) : bench));
+                a.put(T_WOOD_CUTTER_SIDE, px, py, py < 3 ? Rgb{150, 154, 162}.plus(n / 3) : (px < 2 || px > 13) ? bench.scaled(0.7f) : (py % 4 == 3 ? bench.scaled(0.8f) : bench));
+                // Autumn leaves.
+                leafPixel(a, T_RED_LEAVES, px, py, {186, 46, 38}, 91, false);
+                leafPixel(a, T_ORANGE_LEAVES, px, py, {222, 120, 36}, 92, false);
+                leafPixel(a, T_YELLOW_LEAVES, px, py, {226, 190, 52}, 93, false);
+            }
+        // 1.7.2 build 3: concrete in the 16 wool colours: the powder grainy with pale and dark
+        // specks, the hard concrete flat and even; dyes as little piles of colour.
+        for (int c = 0; c < 16; ++c) {
+            const Rgb base = kWoolColors[c];
+            for (int py = 0; py < 16; ++py)
+                for (int px = 0; px < 16; ++px) {
+                    const uint32_t g = hash3(px, py, 1930 + c, 5);
+                    const int n = (int)(g % 10) - 5;
+                    Rgb powder = base.scaled(0.95f).plus(n * 2);
+                    if (g % 7 == 0) powder = powder.scaled(1.12f);
+                    else if (g % 11 == 0) powder = powder.scaled(0.8f);
+                    a.put(T_CONCRETE_POWDER + c, px, py, powder);
+                    a.put(T_CONCRETE + c, px, py, base.scaled(0.88f).plus(n / 3));
+                }
+            a.sprite(T_DYE + c, kSprite_dust, base, base.scaled(1.15f));
+        }
+        // 1.7.2 build 3: the Crimson Void Expansion.
+        for (int py = 0; py < 16; ++py)
+            for (int px = 0; px < 16; ++px) {
+                const int n = (int)(hash3(px, py, 1978, 5) % 14) - 7;
+                const uint32_t g = hash3(px, py, 1981, 9);
+                // Crimsonium wood: deep red bark in twisting strands; rings of bright red inside.
+                const int strand = (px * 3 + (int)(std::sin(py * 0.7f + px) * 2)) % 5;
+                a.put(T_CRIMSONIUM_LOG_SIDE, px, py, strand == 0 ? Rgb{70, 14, 20}.plus(n / 2) : Rgb{128, 26, 34}.plus(n));
+                const float rr = std::sqrt((px - 7.5f) * (px - 7.5f) + (py - 7.5f) * (py - 7.5f));
+                a.put(T_CRIMSONIUM_LOG_TOP, px, py, rr > 7 ? Rgb{90, 18, 26}.plus(n) : ((int)rr % 2 ? Rgb{196, 52, 58} : Rgb{160, 36, 44}).plus(n / 2));
+                const bool seam = py % 4 == 3 || (px == ((py / 4) * 5 + 3) % 16 && py % 4 != 3);
+                a.put(T_CRIMSONIUM_PLANKS, px, py, seam ? Rgb{92, 20, 28} : Rgb{168, 44, 52}.scaled(0.94f + 0.04f * ((py / 4) % 3)).plus(n / 3));
+                leafPixel(a, T_CRIMSONIUM_LEAVES, px, py, {200, 30, 42}, 95, false);
+                // Shattered stone: dark grey-violet rock split by bright cracks.
+                const bool crack = std::abs((px * 7 + py * 3) % 13 - 6) == 0 && g % 3 != 0;
+                const Rgb sh = Rgb{62, 56, 72}.plus(n);
+                a.put(T_SHATTERED_STONE, px, py, crack ? Rgb{150, 110, 190} : sh);
+                const bool mortar = py % 8 == 7 || (px + (py / 8) * 4) % 8 == 7;
+                a.put(T_SHATTERED_BRICKS, px, py, mortar ? Rgb{36, 32, 42} : sh.scaled(1.15f));
+                // Void shards: violet crystal with light facets.
+                const int facet = (px + py) % 6, facet2 = (px - py + 16) % 7;
+                a.put(T_VOID_SHARD_BLOCK, px, py, facet == 0 || facet2 == 0 ? Rgb{230, 200, 255} : Rgb{150, 80, 220}.plus(n));
+                // Dark sand and sandstone.
+                const Rgb ds = Rgb{58, 46, 62}.plus(n);
+                a.put(T_DARK_SAND, px, py, g % 13 == 0 ? Rgb{160, 110, 220} : ds);
+                a.put(T_DARK_SANDSTONE, px, py, py < 3 ? ds.scaled(1.2f) : py % 5 == 4 ? ds.scaled(0.75f) : ds.scaled(1.05f));
+                // Crimsonium ore: void stone with blood-red crystals.
+                const bool gem = hash3(px / 2, py / 2, 1987, 4) % 5 == 0;
+                a.put(T_CRIMSONIUM_ORE, px, py, gem ? Rgb{235, 40, 60}.plus(n) : Rgb{60, 40, 70}.plus(n));
+                // Shard cluster (a plant): three violet spikes, see-through around.
+                const bool spike = (std::abs(px - 4) <= (15 - py) / 5 && py > 6) || (std::abs(px - 8) <= (15 - py) / 4 && py > 2) ||
+                                   (std::abs(px - 12) <= (15 - py) / 5 && py > 7);
+                if (spike) a.put(T_SHARD_CLUSTER, px, py, (px + py) % 4 == 0 ? Rgb{230, 200, 255} : Rgb{160, 90, 230}.plus(n));
+                else a.clear(T_SHARD_CLUSTER, px, py);
+            }
+        a.sprite(T_VOID_SHARD, kSprite_gem, {150, 80, 220}, {235, 210, 255});
+        a.sprite(T_CRIMSONIUM, kSprite_gem, {200, 30, 50}, {255, 170, 170});
+        // 1.7.2 build 2: saplings of the new trees.
+        a.sprite(T_GRAY_SAPLING, kSprite_sapling, {214, 110, 40});
+        a.sprite(T_CELESTIAL_SAPLING, kSprite_sapling, {120, 200, 235});
         // The metal of worn hardium armour: icy plates with bright seams.
         for (int py = 0; py < 16; ++py)
             for (int px = 0; px < 16; ++px) {
@@ -2506,6 +2615,118 @@ void oreRedesignTile(int index, uint8_t out[16 * 16 * 4]) {
         for (int k = 0; k < 3; ++k) out[i * 4 + k] = kOreRedesign[index][i * 3 + k];
         out[i * 4 + 3] = 255;
     }
+}
+
+// 1.8.0 Old World: the procedural textures of VoxelCraft 0.2-0.3 (FallbackAtlas.cpp at commit
+// feed712), for the blocks that existed back then. Drawn over a finished atlas of any tile size.
+void applyLegacyTiles(std::vector<uint8_t>& rgba, int size) {
+    const int t = size / kAtlasCols;
+    auto put = [&](int tile, int px, int py, int r, int g, int b, int a = 255) {
+        auto c8 = [](int v) { return (uint8_t)(v < 0 ? 0 : v > 255 ? 255 : v); };
+        for (int sy = py * t / 16; sy < (py + 1) * t / 16; ++sy)
+            for (int sx = px * t / 16; sx < (px + 1) * t / 16; ++sx) {
+                uint8_t* p = &rgba[((size_t)((tile / kAtlasCols) * t + sy) * size + (tile % kAtlasCols) * t + sx) * 4];
+                p[0] = c8(r), p[1] = c8(g), p[2] = c8(b), p[3] = (uint8_t)a;
+            }
+    };
+    const int tiles[] = {T_STONE, T_GRASS_TOP, T_DIRT, T_GRASS_SIDE, T_COBBLE, T_PLANKS, T_BEDROCK, T_WATER, T_SAND, T_GRAVEL,
+                         T_LOG_SIDE, T_LOG_TOP, T_LEAVES, T_GLASS, T_BRICKS, T_LAVA, T_OBSIDIAN, T_NETHERRACK, T_PORTAL,
+                         T_NETHER_BRICK, T_COAL_ORE, T_IRON_ORE, T_FLINT_AND_STEEL};
+    for (const int tile : tiles)
+        for (int py = 0; py < 16; ++py)
+            for (int px = 0; px < 16; ++px) {
+                const int n = (int)(hash3(px, py, tile, 1234) % 32) - 16;
+                switch (tile) {
+                    case T_STONE: put(tile, px, py, 125 + n, 125 + n, 125 + n); break;
+                    case T_GRASS_TOP: put(tile, px, py, 95 + n, 159 + n, 53 + n / 2); break;
+                    case T_DIRT: put(tile, px, py, 134 + n, 96 + n, 67 + n); break;
+                    case T_GRASS_SIDE:
+                        if (py < 3 + (int)(hash3(px, 0, 99, 7) % 3)) put(tile, px, py, 95 + n, 159 + n, 53 + n / 2);
+                        else put(tile, px, py, 134 + n, 96 + n, 67 + n);
+                        break;
+                    case T_COBBLE: {
+                        const bool mortar = (px % 5 == 0) != (py % 4 == 0) && (hash3(px / 5, py / 4, 3, 5) & 1);
+                        const int v = mortar ? 85 : 130;
+                        put(tile, px, py, v + n, v + n, v + n);
+                        break;
+                    }
+                    case T_PLANKS: {
+                        const int v = (py % 4 == 3) ? -40 : 0;
+                        put(tile, px, py, 168 + n / 2 + v, 133 + n / 2 + v, 82 + n / 2 + v);
+                        break;
+                    }
+                    case T_BEDROCK: put(tile, px, py, 60 + n * 3, 60 + n * 3, 60 + n * 3); break;
+                    case T_WATER: put(tile, px, py, 40 + n / 2, 80 + n / 2, 220 + n / 2, 180); break;
+                    case T_SAND: put(tile, px, py, 219 + n / 2, 207 + n / 2, 163 + n / 2); break;
+                    case T_GRAVEL: put(tile, px, py, 135 + n * 2, 127 + n * 2, 125 + n * 2); break;
+                    case T_LOG_SIDE: {
+                        const int v = (px % 4 == 0) ? -30 : 0;
+                        put(tile, px, py, 104 + n / 2 + v, 83 + n / 2 + v, 50 + n / 2 + v);
+                        break;
+                    }
+                    case T_LOG_TOP: {
+                        const int d = std::max(std::abs(px - 8), std::abs(py - 8));
+                        if (d >= 7) put(tile, px, py, 104 + n, 83 + n, 50 + n);
+                        else put(tile, px, py, 180 + (d % 2) * 20 + n / 2, 145 + (d % 2) * 15 + n / 2, 90 + n / 2);
+                        break;
+                    }
+                    case T_LEAVES:
+                        if (hash3(px, py, 77, 3) % 5 == 0) put(tile, px, py, 0, 0, 0, 0);
+                        else put(tile, px, py, 60 + n, 130 + n, 40 + n);
+                        break;
+                    case T_GLASS: {
+                        const bool edge = px == 0 || py == 0 || px == 15 || py == 15 || (px == py + 3 && px < 8);
+                        if (edge) put(tile, px, py, 220, 240, 250);
+                        else put(tile, px, py, 0, 0, 0, 0);
+                        break;
+                    }
+                    case T_BRICKS: {
+                        const bool mortar = py % 4 == 3 || ((px + (py / 4 % 2) * 4) % 8 == 7);
+                        if (mortar) put(tile, px, py, 170 + n / 2, 165 + n / 2, 160 + n / 2);
+                        else put(tile, px, py, 150 + n, 70 + n / 2, 55 + n / 2);
+                        break;
+                    }
+                    case T_LAVA: {
+                        const int w = (int)(8 * std::sin((px + py * 0.5f) * 0.8f));
+                        put(tile, px, py, 230 + n / 2, 100 + w * 4 + n, 20 + n / 2);
+                        break;
+                    }
+                    case T_OBSIDIAN: {
+                        if (hash3(px, py, 5, 11) % 9 == 0) put(tile, px, py, 70 + n, 45 + n, 100 + n);
+                        else put(tile, px, py, 22 + n / 4, 16 + n / 4, 34 + n / 4);
+                        break;
+                    }
+                    case T_NETHERRACK: put(tile, px, py, 112 + n * 2, 48 + n, 48 + n); break;
+                    case T_PORTAL: {
+                        const int w = (int)(30 * std::sin(px * 0.9f + std::cos(py * 0.7f) * 2));
+                        put(tile, px, py, 120 + w + n, 30 + n / 2, 210 + w / 2 + n, 190);
+                        break;
+                    }
+                    case T_NETHER_BRICK: {
+                        const bool mortar = py % 4 == 3 || ((px + (py / 4 % 2) * 4) % 8 == 7);
+                        if (mortar) put(tile, px, py, 25, 12, 15);
+                        else put(tile, px, py, 60 + n / 2, 28 + n / 3, 34 + n / 3);
+                        break;
+                    }
+                    case T_COAL_ORE:
+                    case T_IRON_ORE: {
+                        const bool speck = hash3(px / 2, py / 2, tile, 21) % 5 == 0 && hash3(px, py, tile, 3) % 3 != 0;
+                        if (!speck) put(tile, px, py, 125 + n, 125 + n, 125 + n);
+                        else if (tile == T_COAL_ORE) put(tile, px, py, 30 + n / 2, 30 + n / 2, 30 + n / 2);
+                        else put(tile, px, py, 216 + n / 2, 175 + n / 2, 147 + n / 2);
+                        break;
+                    }
+                    case T_FLINT_AND_STEEL: {
+                        const int dx = px - 6, dy = py - 6, d2 = dx * dx + dy * dy;
+                        const bool ring = d2 >= 9 && d2 <= 22 && !(px > 6 && py > 6);
+                        const bool flint = px >= 8 && py >= 8 && px + py <= 26 && px + py >= 17;
+                        if (ring) put(tile, px, py, 190, 190, 200);
+                        else if (flint) put(tile, px, py, 60 + n, 60 + n, 66 + n);
+                        else put(tile, px, py, 0, 0, 0, 0);
+                        break;
+                    }
+                }
+            }
 }
 
 }  // namespace vc

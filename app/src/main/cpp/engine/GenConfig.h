@@ -86,7 +86,11 @@ struct GenConfig {
     // 1.5.9 (3): Crimson Void mineshafts and watchtowers, ruined villages in the Overworld.
     // 1.6.0 (4) Caves and Tunes: deepstone, hardium, bigger caves, mossy caves with vines,
     // lava and tar pools, gravel floors, rotten mineshaft planks.
-    int generation = 4;
+    // 1.8.0 (5) Concrete & Old World: bridges between the Celestial Reach's islands.
+    int generation = 5;
+    // 1.8.0: an "Old World", made with the terrain generator of VoxelCraft 0.1-0.3 (see
+    // World::generateOldWorld). Saved with the world, so it never changes after creation.
+    bool oldWorld = false;
 
     // The built-in defaults (the same content as the default pack files).
     static const GenConfig& defaults();

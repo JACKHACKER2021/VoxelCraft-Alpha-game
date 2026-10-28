@@ -78,7 +78,25 @@ const std::vector<LootEntry>& table(ItemId chest, int& rollsMin, int& rollsMax) 
         {OBSIDIAN, 8, 1, 4},        {FLINT_AND_STEEL, 4, 1, 1},  {POWERSTONE_DUST, 6, 2, 5}, {ANCIENT_COIN, 5, 1, 3},
         {IRON_INGOT, 5, 1, 3},      {NETHER_BRICK, 4, 2, 6},     {COOKED_PORK, 4, 1, 3},     {CRACKED_POWERSTONE_BRICKS, 4, 2, 6},
     };
+    // 1.7.2 build 3: travellers' camps: food, wool, dyes, a little iron.
+    static const std::vector<LootEntry> kCamp = {
+        {BREAD, 8, 1, 4},           {COOKED_MUTTON, 6, 1, 3},    {APPLE, 6, 1, 4},           {TORCH, 6, 2, 8},
+        {STICK, 5, 2, 6},           {IRON_INGOT, 3, 1, 2},       {GRAY_SAPLING, 4, 1, 3},    {DYE + 1, 4, 1, 4},
+        {DYE + 14, 4, 1, 4},        {DYE + 4, 4, 1, 4},          {CARPET + 1, 3, 1, 3},      {EXPLORER_MAP, 1, 1, 1},
+    };
+    // 1.7.2 build 3: the Crimson Void Expansion.
+    static const std::vector<LootEntry> kShrine = {
+        {CRIMSONIUM, 6, 1, 3},      {VOID_SHARD, 8, 2, 6},       {RUBY, 4, 1, 2},            {CRIMSONIUM_PLANKS, 5, 4, 10},
+        {COOKED_PORK, 5, 1, 3},     {EYE_LOG, 2, 1, 2},          {DYE + 14, 4, 2, 5},        {STEEL_INGOT, 3, 1, 3},
+    };
+    static const std::vector<LootEntry> kChamber = {
+        {VOID_SHARD, 10, 3, 8},     {CRIMSONIUM, 4, 1, 2},       {RUBY, 5, 1, 3},            {ANCIENT_COIN, 6, 2, 5},
+        {DARK_SANDSTONE, 5, 4, 10}, {POWERSTONE_RELIC, 2, 1, 1}, {HARDIUM, 2, 1, 2},         {DYE + 10, 4, 2, 5},
+    };
     switch (chest) {
+        case LOOT_CHEST_SHRINE: rollsMin = 4; rollsMax = 7; return kShrine;
+        case LOOT_CHEST_CHAMBER: rollsMin = 5; rollsMax = 9; return kChamber;
+        case LOOT_BARREL_CAMP: rollsMin = 3; rollsMax = 6; return kCamp;
         case LOOT_CHEST_FORGOTTEN: rollsMin = 4; rollsMax = 8; return kForgotten;
         case LOOT_CHEST_DROWNED: rollsMin = 4; rollsMax = 7; return kDrowned;
         case LOOT_CHEST_PORTAL: rollsMin = 4; rollsMax = 7; return kPortalRuin;

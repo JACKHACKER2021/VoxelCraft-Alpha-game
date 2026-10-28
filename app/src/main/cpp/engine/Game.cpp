@@ -23,11 +23,19 @@
 #include "TexturePack.h"
 
 #include <filesystem>
+#include <zlib.h>
+
+#include "Mobs.h"
+
+namespace vc {
+#include "Encyclopedia.inc"
+#include "EncyclopediaPictures.inc"
+}  // namespace vc
 
 namespace vc {
 
 namespace {
-const char* kVersion = "VoxelCraft 1.7.0 The Celestial Reach";
+const char* kVersion = "VoxelCraft 1.8.0 Concrete & Old World";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -180,12 +188,14 @@ bool Game::onBack() {
         case Screen::Trade: setScreen(Screen::Playing); break;
         case Screen::Document: setScreen(Screen::Playing); break;
         case Screen::Credits:
+        case Screen::Encyclopedia:
         case Screen::Trailers: setScreen(Screen::Title); break;
         case Screen::WorldMap:
             session_->refreshMapTexture();
             setScreen(Screen::Playing);
             break;
         case Screen::Chat:
+        case Screen::Cutter:
         case Screen::Book: setScreen(Screen::Playing); break;
         case Screen::Death: break;
     }
@@ -201,6 +211,9 @@ void Game::loadTextures() {
     // Layers: our placeholders, then the picked texture pack, then textures from enabled packs.
     int size = 0;
     auto rgba = buildFallbackAtlas(size);
+    // 1.8.0 Old World: the built-in textures of 0.3; a picked texture pack still goes over them.
+    texturesOld_ = session_ && session_->oldMode();
+    if (texturesOld_) applyLegacyTiles(rgba, size);
     Atlas atlas = loadTexturePack(texturePackDir_, rgba, size);
     for (const std::string& dir : packs_.textureDirs()) atlas = loadTexturePack(dir, atlas.rgba, atlas.size);
     for (const auto& [tile, path] : ModRegistry::get().textures()) blitTextureFile(atlas, tile, path);  // mods
@@ -220,6 +233,28 @@ void Game::loadTextures() {
         frost(T_GRASS_SIDE, 4, 0.9f);
         frost(T_LEAVES, 16, 0.45f);
         frost(T_SPRUCE_LEAVES, 16, 0.45f);
+    }
+    {
+        // 1.7.2 build 2: grass in the colour of its biome, made from whatever grass the atlas has
+        // (texture packs too): orange in the Dappled Forest, dark green under the spruces.
+        const int t = atlas.size / kAtlasCols;
+        auto recolor = [&](int from, int to, bool orange) {
+            for (int py = 0; py < t; ++py)
+                for (int px = 0; px < t; ++px) {
+                    const uint8_t* src = &atlas.rgba[((size_t)((from / kAtlasCols) * t + py) * atlas.size + (from % kAtlasCols) * t + px) * 4];
+                    uint8_t* dst = &atlas.rgba[((size_t)((to / kAtlasCols) * t + py) * atlas.size + (to % kAtlasCols) * t + px) * 4];
+                    std::copy_n(src, 4, dst);
+                    if (src[1] <= src[0] + 8 || src[1] < src[2]) continue;  // only the green part (not the dirt)
+                    const float l = (src[0] * 0.3f + src[1] * 0.59f + src[2] * 0.11f) / 255.0f;
+                    auto c8 = [](float v) { return (uint8_t)std::clamp(v * 255.0f, 0.0f, 255.0f); };
+                    if (orange) dst[0] = c8(l * 1.6f), dst[1] = c8(l * 0.95f), dst[2] = c8(l * 0.3f);
+                    else dst[0] = (uint8_t)(src[0] * 0.5f), dst[1] = (uint8_t)(src[1] * 0.7f), dst[2] = (uint8_t)(src[2] * 0.6f);
+                }
+        };
+        recolor(T_GRASS_TOP, T_GRASS_TOP_ORANGE, true);
+        recolor(T_GRASS_SIDE, T_GRASS_SIDE_ORANGE, true);
+        recolor(T_GRASS_TOP, T_GRASS_TOP_DARK, false);
+        recolor(T_GRASS_SIDE, T_GRASS_SIDE_DARK, false);
     }
     renderer_.setAtlas(atlas.rgba, atlas.size);
     setItemModelAtlas(atlas.rgba, atlas.size);  // 3D items follow the texture pack
@@ -288,12 +323,15 @@ std::string Game::findMusic(const std::string& name) const {
 
 void Game::updateMusic(float dt) {
     if (!onPlayMusic) return;
+    if (!presentsDone_) return;  // 1.7.2 build 2: the menu theme starts after "Tap to continue"
     // The context: menus, the overworld or the Nether.
     std::string context = "menu";
     if (session_ && screen_ != Screen::Title) {
         Dimension d = session_->currentWorld().dimension();
         context = d == Dimension::Nether ? "nether" : d == Dimension::Void ? "void" : d == Dimension::Celestial ? "celestial" : "overworld";
     }
+    // 1.8.0: an Old World is as quiet as the versions it comes from.
+    if (session_ && screen_ != Screen::Title && session_->currentWorld().config().oldWorld) context = "old";
     auto play = [&](const std::string& source, bool loop) {
         musicSource_ = source;
         musicEnded_ = false;
@@ -311,7 +349,7 @@ void Game::updateMusic(float dt) {
         }
         return;
     }
-    if (context == "menu") return;
+    if (context == "menu" || context == "old") return;
     if (!musicSource_.empty() && !musicEnded_) return;  // still playing
     if (!musicSource_.empty()) {
         // A song finished: silence for a while, like the classic game.
@@ -382,6 +420,13 @@ Settings Game::playSettings() const {
     s.addonWinter = addons.count("winter") > 0;
     s.addonHalloween = addons.count("halloween") > 0;
     s.addonAnniversary = addons.count("anniversary") > 0;
+    if (session_ && session_->oldMode()) {
+        // 1.8.0 Old World: the plain renderer of 0.3: no shaders, shadows, waves or clouds.
+        s.graphics = GraphicsMode::Classic;
+        s.shadows = s.waves = s.clouds = false;
+        s.hideGui = false;
+        s.cameraMode = 0;  // first person only
+    }
     return s;
 }
 
@@ -668,6 +713,11 @@ void Game::frame(double time) {
     updateLan(dt);
 
     ui_.begin(width_ / guiScale_, height_ / guiScale_);
+    // 1.8.0: the "Pre-Alpha Style" pack (or any pack with "style": "pre_alpha") restyles the UI.
+    Ui::preAlpha = std::any_of(packList_.begin(), packList_.end(), [](const PackInfo& p) { return p.enabled && p.style == "pre_alpha"; });
+    // 1.8.0: an Old World always looks like 0.3: the old widgets and the old textures.
+    if (session_ && session_->oldMode()) Ui::preAlpha = true;
+    if ((session_ && session_->oldMode()) != texturesOld_) loadTextures();
     const float W = ui_.width(), H = ui_.height();
     renderer_.setBrightness(settings_.brightness);
 
@@ -676,6 +726,7 @@ void Game::frame(double time) {
                                screen_ == Screen::Crafting || screen_ == Screen::Furnace || screen_ == Screen::Chest ||
                                screen_ == Screen::Death || screen_ == Screen::Trade || screen_ == Screen::Invite ||
                                screen_ == Screen::Document || screen_ == Screen::WorldMap || screen_ == Screen::Chat || screen_ == Screen::Book ||
+                               screen_ == Screen::Cutter ||
                                (screen_ == Screen::Settings && settingsReturn_ == Screen::Pause));
     if (inGame) {
         if (screen_ == Screen::Playing) {
@@ -684,6 +735,7 @@ void Game::frame(double time) {
             else if (session_->wantsPause) setScreen(Screen::Pause);
             else if (session_->wantsInventory) setScreen(Screen::Inventory);
             else if (session_->wantsCrafting) setScreen(Screen::Crafting);
+            else if (session_->wantsCutter) cutterPick_ = 0, cutterWood_ = session_->cutterWood, setScreen(Screen::Cutter);
             else if (session_->wantsFurnace) setScreen(Screen::Furnace);
             else if (session_->wantsChest) setScreen(Screen::Chest);
             else if (session_->wantsTrade >= 0 && session_->wantsTrade < (int)session_->mobs().mobs().size()) {
@@ -702,7 +754,7 @@ void Game::frame(double time) {
             session_->wantsBook = 0;
             session_->wantsTrade = -1;
             session_->wantsDocument = -1;
-            session_->wantsPause = session_->wantsInventory = session_->wantsCrafting = session_->wantsFurnace = false;
+            session_->wantsPause = session_->wantsInventory = session_->wantsCrafting = session_->wantsFurnace = session_->wantsCutter = false;
             session_->wantsChest = false;
             if (session_->wantsChat) {
                 session_->wantsChat = false;
@@ -719,7 +771,8 @@ void Game::frame(double time) {
                 // 1.7.0: the name of the place the portal really leads to (the Crimson Void used
                 // to be announced as the Overworld).
                 const Dimension d = session_->currentWorld().dimension();
-                startLoading(d == Dimension::Nether   ? "Vstup do dimenze úhelného kamene"
+                startLoading(d == Dimension::Nether && session_->oldMode() ? "Vstup do Netheru"
+                             : d == Dimension::Nether   ? "Vstup do dimenze úhelného kamene"
                              : d == Dimension::Void   ? "Vstup do Karmínové prázdnoty"
                              : d == Dimension::Celestial ? "Vstup do Nebeské říše"
                                                          : "Návrat do Overworldu",
@@ -731,7 +784,7 @@ void Game::frame(double time) {
         drawWorldOnce(session_->currentWorld());
         bool hud = screen_ != Screen::Death && screen_ != Screen::Settings && !(settings_.hideGui && screen_ == Screen::Playing);
         session_->render(renderer_, ui_, playSettings(), hud);
-        if (now_ < achievementUntil_ && !achievementBanner_.empty()) {
+        if (now_ < achievementUntil_ && !achievementBanner_.empty() && !session_->oldMode()) {
             // "Achievement!" banner below the pause button, like the classic toasts.
             std::string line = trf("Úspěch: {0}", {tr(achievementBanner_)});
             std::string coins = "+" + std::to_string(achievementCoins_);
@@ -743,8 +796,8 @@ void Game::frame(double time) {
             ui_.icon(bx + 16, by + 15, Font::Coin, theme::kGold);
             ui_.text(bx + 26, by + 15, coins, theme::kGold, 1, false);
         }
-        if (screen_ == Screen::Playing || screen_ == Screen::Pause) drawChat();
-        if (screen_ == Screen::Playing || screen_ == Screen::Inventory) tutorial(dt);
+        if ((screen_ == Screen::Playing || screen_ == Screen::Pause) && !session_->oldMode()) drawChat();
+        if ((screen_ == Screen::Playing || screen_ == Screen::Inventory) && !session_->oldMode()) tutorial(dt);
     } else if (screen_ == Screen::Loading && session_) {
         loadingScreen(dt);
     } else {
@@ -754,6 +807,14 @@ void Game::frame(double time) {
     const bool splash = splashTime_ < kSplashLength;
     if (splash && splashTime_ < kSplashLength - 0.6f) {
         splashScreen(dt);  // nothing under it takes taps yet
+        renderer_.drawUi(ui_.list(), W, H);
+        ui_.endFrame();
+        return;
+    }
+    if (!presentsDone_ && screen_ == Screen::Title) {
+        // 1.7.2 build 2: straight after the intro, without the menu flashing up in between.
+        splashTime_ = kSplashLength;
+        presentsScreen(dt);
         renderer_.drawUi(ui_.list(), W, H);
         ui_.endFrame();
         return;
@@ -790,6 +851,8 @@ void Game::frame(double time) {
         case Screen::WorldMap: worldMapScreen(); break;
         case Screen::Chat: chatScreen(); break;
         case Screen::Book: bookScreen(); break;
+        case Screen::Cutter: cutterScreen(); break;
+        case Screen::Encyclopedia: encyclopediaScreen(); break;
         case Screen::Playing: break;
     }
 
@@ -829,6 +892,95 @@ void Game::splashScreen(float dt) {
     const float scale = ui_.textWidth("VOXELSOFTWORKS", 3) < W - 20 ? 3 : 2;
     const float ta = ease((t - 1.15f) / 0.6f) * fade;
     if (ta > 0) ui_.textCentered(W / 2, y + size + gap * 2 + (1 - ta) * 6, "VOXELSOFTWORKS", {1, 1, 1, ta}, scale);
+    const float pa = ease((t - 1.9f) / 0.5f) * fade;
+    if (pa > 0) ui_.textCentered(W / 2, y + size + gap * 2 + 12 * scale, "presents", {0.8f, 0.8f, 0.85f, pa}, 1);
+}
+
+void Game::presentsScreen(float dt) {
+    // 1.8.0: VoxelSoftworks presents this version: what is in it, and what is planned next.
+    const float W = ui_.width(), H = ui_.height();
+    presentsTime_ += std::min(dt, 0.05f);
+    const float t = presentsTime_;
+    auto ease = [](float k) {
+        k = std::clamp(k, 0.0f, 1.0f);
+        return k * k * (3 - 2 * k);
+    };
+    ui_.fill(0, 0, W, H, {0.02f, 0.02f, 0.04f, 1});
+    const Color gold{1.0f, 0.82f, 0.43f, 1}, white{1, 1, 1, 1}, dim{0.72f, 0.74f, 0.8f, 1}, green{0.63f, 0.92f, 0.5f, 1};
+    auto faded = [&](Color c, float start) {
+        c.a = ease((t - start) / 0.5f);
+        return c;
+    };
+    float y = 10;
+    ui_.textCentered(W / 2, y, "VOXELSOFTWORKS PRESENTS", faded(dim, 0.0f), 1);
+    y += 14;
+    const float big = ui_.textWidth("VOXELCRAFT 1.8.0", 3) < W - 20 && H >= 260 ? 3 : 2;
+    ui_.textCentered(W / 2, y, "VOXELCRAFT 1.8.0", faded(gold, 0.2f), big);
+    y += 10 * big + 4;
+    ui_.textCentered(W / 2, y, "Concrete & Old World", faded(white, 0.5f), 1);
+    y += 18;
+    static const char* const kNew[] = {
+        "Starý svět: terén verzí 0.1-0.3 s vlastním starým ovládáním a menu",
+        "Beton: prašný padá jako písek, v peci se vypálí na tvrzený",
+        "Strakatý les: šedé dřevo, červené, oranžové a žluté listí",
+        "Kamenořez a dřevořez: schody, desky, ploty a 6 prken z kmene",
+        "Schody a desky skoro pro všechny bloky, nový barel na věci",
+        "Nebeská říše: první mosty mezi ostrovy",
+    };
+    static const char* const kNext[] = {
+        "1.9.0: nová Nebeská říše s nízkou gravitací",
+        "Celestium: ruda, čtyři nástroje a nebeský hrudní plát",
+        "Noví tvorové: Celestling, Reach Stalker a Sky Drifter",
+        "Příběhové video a hladší písmo",
+    };
+    // Long lines wrap at word boundaries (they used to be cut off). On a small screen the two lists
+    // sit side by side.
+    auto wrap = [&](const std::string& prefix, const char* source, float width) {
+        std::vector<std::string> lines;
+        std::string line = prefix, word;
+        for (char ch : tr(source) + " ") {
+            if (ch != ' ') {
+                word += ch;
+                continue;
+            }
+            if (line.size() > prefix.size() && ui_.textWidth(line + word) > width - 6) lines.push_back(line), line = "  ";
+            line += word + " ";
+            word.clear();
+        }
+        lines.push_back(line);
+        return lines;
+    };
+    auto listHeight = [&](const char* const* items, int n, float width) {
+        float h = 12;
+        for (int i = 0; i < n; ++i) h += wrap("+ ", items[i], width).size() * 10 + 1;
+        return h;
+    };
+    const float room = H - 18 - y;
+    float colW = std::min(W - 20, 520.0f);
+    const bool twoColumns = listHeight(kNew, 6, colW) + 5 + listHeight(kNext, 4, colW) > room;
+    if (twoColumns) colW = std::floor((std::min(W - 12, 760.0f) - 10) / 2);
+    // Still too tall (a small screen): only the name of each point, the part before the colon.
+    const bool shortLines = twoColumns && std::max(listHeight(kNew, 6, colW), listHeight(kNext, 4, colW)) > room;
+    const float x = std::floor(W / 2 - (twoColumns ? colW + 5 : colW / 2));
+    auto drawList = [&](float lx, float ly, const char* title, const char* prefix, const char* const* items, int n, Color c, float start) {
+        ui_.text(lx, ly, title, faded(gold, start), 1, false);
+        ly += 12;
+        for (int i = 0; i < n; ++i) {
+            std::string full = tr(items[i]);
+            if (shortLines && full.find(':') != std::string::npos) full = full.substr(0, full.find(':'));
+            for (const std::string& line : wrap(prefix, full.c_str(), colW)) {
+                ui_.text(lx + 6, ly, line, faded(c, start + 0.2f + i * 0.15f), 1, false);
+                ly += 10;
+            }
+            ly += 1;
+        }
+        return ly;
+    };
+    const float afterNew = drawList(x, y, "CO JE V TÉTO VERZI", "+ ", kNew, 6, white, 0.9f);
+    if (twoColumns) drawList(x + colW + 10, y, "PLÁNY DÁL", "> ", kNext, 4, dim, 2.0f);
+    else drawList(x, afterNew + 5, "PLÁNY DÁL", "> ", kNext, 4, dim, 2.0f);
+    if (t > 3.0f) ui_.textCentered(W / 2, H - 14, "Klepni pro pokračování", faded(green, 3.0f), 1);
+    if (t > 0.8f && ui_.tapped(0, 0, W, H)) presentsDone_ = true;
 }
 
 // ---------------------------------------------------------------- menu screens
@@ -1161,6 +1313,20 @@ std::vector<std::string> Game::wrapText(const std::string& source, float width) 
 void Game::menuWindow(float& x, float& y, float& w, float& h, bool logo) {
     const float W = ui_.width(), H = ui_.height();
     ui_.fill(0, 0, W, H, {0, 0, 0, 0.35f});
+    if (Ui::preAlpha) {
+        // Pre-Alpha Style: no window, the screen sits straight on the dimmed world.
+        ui_.fill(0, 0, W, H, {0.05f, 0.08f, 0.2f, 0.3f});
+        y = 8;
+        if (logo) {
+            ui_.textCentered(W / 2, 8, "VoxelCraft", {1, 1, 1, 1}, 2);
+            y = 30;
+        }
+        const float ww = std::min(W - 16, 560.0f);
+        x = std::floor((W - ww) / 2) + 4;
+        w = ww - 8;
+        h = H - 6 - y;
+        return;
+    }
     // Side strips show the world, the window is centred like in the mock-ups.
     float ww = std::min(W - 16, 560.0f), wx = std::floor((W - ww) / 2);
     ui_.fill(wx + 2, 6, ww, H - 10, {0, 0, 0, 0.5f});  // shadow
@@ -1186,6 +1352,44 @@ void Game::coinsPill(float right, float y) {
 
 void Game::titleScreen() {
     const float W = ui_.width(), H = ui_.height();
+    if (Ui::preAlpha) {
+        // Pre-Alpha Style: the title of 0.3. A big white "VoxelCraft" with a dark drop shadow,
+        // the yellow splash on its corner, grey buttons in one column, the version bottom left.
+        const float scale = ui_.textWidth("VoxelCraft", 6) < W - 20 ? 6 : 4, logoY = std::floor(H * 0.13f);
+        const float lx = std::floor(W / 2 - ui_.textWidth("VoxelCraft", scale) / 2);
+        ui_.text(lx + scale / 2, logoY + scale / 2, "VoxelCraft", {0.3f, 0.3f, 0.3f, 1}, scale, false);
+        ui_.text(lx, logoY, "VoxelCraft", {1, 1, 1, 1}, scale, false);
+        const float pulse = 1 + 0.06f * (float)std::sin(now_ * 6);
+        const std::string splash = kSplashes[splash_ % kSplashCount];
+        const float logoRight = W / 2 + ui_.textWidth("VoxelCraft", scale) / 2;
+        ui_.text(logoRight - ui_.textWidth(splash, pulse) * 0.7f, logoY + 9 * scale, splash, {1, 1, 0.33f, 1}, pulse, true);
+        const float bw = std::min(260.0f, W - 40), bx = std::floor((W - bw) / 2), bh = 20, gap = 4;
+        float y = std::floor(H * 0.4f);
+        if (ui_.button(bx, y, bw, bh, "Hrát")) setScreen(Screen::WorldList);
+        y += bh + gap;
+        if (ui_.button(bx, y, bw, bh, "Nastavení")) {
+            settingsReturn_ = Screen::Title;
+            setScreen(Screen::Settings);
+        }
+        y += bh + gap;
+        const float hw = std::floor((bw - gap) / 2);
+        if (ui_.button(bx, y, hw, bh, "Obchod")) setScreen(Screen::Store);
+        if (ui_.button(bx + hw + gap, y, bw - hw - gap, bh, "Profil a skiny")) setScreen(Screen::Skins);
+        y += bh + gap;
+        if (ui_.button(bx, y, hw, bh, "Módy a balíčky")) setScreen(Screen::Packs);
+        if (ui_.button(bx + hw + gap, y, bw - hw - gap, bh, "Encyklopedie")) encCat_ = encSel_ = 0, encScroll_ = 0, setScreen(Screen::Encyclopedia);
+        y += bh + gap;
+        if (ui_.button(bx, y, bw, bh, "Ukončit hru") && onQuit) onQuit();
+        if (now_ < toastUntil_ && !toast_.empty()) ui_.textCentered(W / 2, y + bh + 8, toast_, {1, 1, 0.33f, 1});
+        ui_.text(3, H - 10, kVersion, {1, 1, 1, 1});
+        const std::string note = "VoxelSoftworks";
+        ui_.text(W - ui_.textWidth(note) - 3, H - 10, note, {1, 1, 1, 1});
+        if (ui_.tapped(W - ui_.textWidth(note) - 8, H - 16, ui_.textWidth(note) + 8, 16)) {
+            creditsStart_ = now_;
+            setScreen(Screen::Credits);
+        }
+        return;
+    }
     ui_.fill(0, 0, W, H, {0, 0, 0, 0.15f});
     // 1.7.0 preview UI: the logo in cream with a dark outline, the subtitle and the splash
     // under it, the menu in a rounded glass panel.
@@ -1219,7 +1423,8 @@ void Game::titleScreen() {
     if (ui_.menuButton(x, y, bw, bh, "Obchod", St::Normal, Font::Bag)) setScreen(Screen::Store);
     if (ui_.menuButton(x + bw + 8, y, bw, bh, "Profil a skiny", St::Normal, Font::Person)) setScreen(Screen::Skins);
     y += bh + gap;
-    if (ui_.menuButton(x, y, pw - 18, bh, "Módy a balíčky", St::Normal, Font::Cube)) setScreen(Screen::Packs);
+    if (ui_.menuButton(x, y, bw, bh, "Módy a balíčky", St::Normal, Font::Cube)) setScreen(Screen::Packs);
+    if (ui_.menuButton(x + bw + 8, y, bw, bh, "Encyklopedie", St::Normal, Font::Star)) encCat_ = encSel_ = 0, encScroll_ = 0, setScreen(Screen::Encyclopedia);
     y += bh + gap;
     if (ui_.menuButton(x, y, pw - 18, bh, "Ukončit hru", St::Danger, Font::ExitDoor) && onQuit) onQuit();
 
@@ -1489,6 +1694,7 @@ void Game::trailersScreen() {
         {"1.5.7: louče, štít a Prasák", "trailers/t07_1.5.7.mp4"},
         {"1.6.0: Caves and Tunes", "trailers/t08_1.6.0.mp4"},
         {"1.7.0: The Celestial Reach", "trailers/t09_1.7.0.mp4"},
+        {"1.8.0: Concrete & Old World", "trailers/t10_1.8.0.mp4"},
     };
     const float rowH = 22, top = y + 28, colW = (w - 8) / 2;
     for (int i = 0; i < (int)(sizeof(trailers) / sizeof(trailers[0])); ++i) {
@@ -1609,15 +1815,25 @@ void Game::worldListScreen() {
             newWorldName_ = "Můj svět";
             newWorldSeed_.clear();
             newWorldMode_ = GameMode::Survival;
-            newWorldFlat_ = newWorldCoords_ = newWorldKeepInventory_ = newWorldCommands_ = newWorldExpLiquids_ = newWorldExpMaps_ = newWorldExpOpen_ = false;
+            newWorldOld_ = newWorldFlat_ = newWorldCoords_ = newWorldKeepInventory_ = newWorldCommands_ = newWorldExpLiquids_ = newWorldExpMaps_ = newWorldExpOpen_ = false;
             setScreen(Screen::CreateWorld);
         }
         // The Multiplayer tab is at the top; this place now imports a world (.vcworld).
         if (ui_.button(x + w / 2 - bw / 2, by, bw, 22, "Importovat svět", (bool)onImportWorld)) onImportWorld();
     } else {
-        if (ui_.button(x + w / 2 - bw * 1.5f - 6, by, bw, 22, "Připojit kódem", true, true) && onTextPrompt)
+        // 1.8.0: labels that do not fit are shortened (they used to run over the next button).
+        auto fit = [&](std::string text) {
+            if (ui_.textWidth(text) <= bw - 10) return text;
+            while (!text.empty() && ui_.textWidth(text + "..") > bw - 10) {
+                text.pop_back();
+                while (!text.empty() && ((unsigned char)text.back() & 0xC0) == 0x80) text.pop_back();  // whole UTF-8 letters
+            }
+            return text + "..";
+        };
+        const std::string join = ui_.textWidth(tr("Připojit kódem")) <= bw - 10 ? tr("Připojit kódem") : tr("Kód");
+        if (ui_.button(x + w / 2 - bw * 1.5f - 6, by, bw, 22, join, true, true) && onTextPrompt)
             onTextPrompt(PromptJoinAddress, tr("Kód místnosti nebo IP adresa"), "");
-        if (ui_.button(x + w / 2 - bw / 2, by, bw, 22, trf("Jméno: {0}", {playerName()})) && onTextPrompt)
+        if (ui_.button(x + w / 2 - bw / 2, by, bw, 22, fit(trf("Jméno: {0}", {playerName()}))) && onTextPrompt)
             onTextPrompt(PromptPlayerName, "Jméno hráče", profile_.name);
     }
     if (ui_.button(x + w / 2 + bw / 2 + 6, by, bw, 22, "Zpět")) setScreen(Screen::Title);
@@ -1640,8 +1856,17 @@ void Game::createWorldScreen() {
     if (ui_.button(x, cy + 44, mw, 20, "Přežití", true, newWorldMode_ == GameMode::Survival)) newWorldMode_ = GameMode::Survival;
     if (ui_.button(x + mw + 4, cy + 44, mw, 20, "Kreativní", true, newWorldMode_ == GameMode::Creative))
         newWorldMode_ = GameMode::Creative;
+    // 1.8.0: three world types, tapped through in turn: modern, flat, and the Old World of 0.1-0.3.
     ui_.text(x, cy + 72, "Typ světa:", kText, 1, false);
-    if (ui_.dropdown(x, cy + 82, col, 18, newWorldFlat_ ? "Plochý" : "Nekonečný (standardní)")) newWorldFlat_ = !newWorldFlat_;
+    if (ui_.dropdown(x, cy + 82, col, 18, newWorldOld_ ? "Starý (historická generace)" : newWorldFlat_ ? "Plochý" : "Nekonečný (moderní generace)")) {
+        if (newWorldOld_) newWorldOld_ = false;
+        else if (newWorldFlat_) newWorldFlat_ = false, newWorldOld_ = true;
+        else newWorldFlat_ = true;
+    }
+    if (newWorldOld_) {
+        newWorldMode_ = GameMode::Creative;  // the old versions had creative only
+        ui_.text(x, cy + 101, "Terén verzí 0.1-0.3, jen kreativní, bez hudby", Color{0.9f, 0.8f, 0.4f, 1}, 1, false, col);
+    }
 
     // Right column: seed and options
     float rx = x + col + 8;
@@ -1670,7 +1895,7 @@ void Game::createWorldScreen() {
     int enabled = 0;
     for (const PackInfo& p : packList_) enabled += p.enabled;
     std::string info = trf("Biomy a Nether z {0} aktivních balíčků", {std::to_string(enabled)});
-    ui_.text(x, cy + 108, info, kTextDim, 1, false, w);
+    if (!newWorldOld_) ui_.text(x, cy + 108, info, kTextDim, 1, false, w);
     // 1.5.1: Experimental Features, for everyone, saved with the world.
     if (ui_.button(x, cy + 120, col, 18, newWorldExpLiquids_ ? trf("Experimentální funkce ({0})", {std::to_string((int)newWorldExpLiquids_)}) : tr("Experimentální funkce")))
         newWorldExpOpen_ = !newWorldExpOpen_;
@@ -1710,6 +1935,7 @@ void Game::createWorldScreen() {
         // The world keeps its own copy of the generator, so later pack edits do not reshape it.
         GenConfig config = packs_.buildConfig();
         config.flat = newWorldFlat_;
+        config.oldWorld = newWorldOld_;
         saveGenerator(wi.folder, config);
         startSession(wi, PlayerState{});
         return;
@@ -1755,7 +1981,8 @@ void Game::settingsScreen() {
 
     float ry = y + 22;
     // The video tab has the most rows; they are a little tighter there.
-    const float rowH = settingsTab_ == 1 ? 23 : settingsTab_ == 5 ? 26 : 22, cx = px + pw - 8;
+    // 1.8.0: the graphics tab's seven rows shrink to fit above the version line and Back.
+    const float rowH = settingsTab_ == 1 ? 23 : settingsTab_ == 5 ? std::clamp(std::floor((h - 54) / 7), 21.0f, 26.0f) : 22, cx = px + pw - 8;
     float subW = pw - 120;  // room for the control on the right
     auto row = [&](const std::string& label, const std::string& sub) {
         ui_.text(px + 8, ry + (sub.empty() ? rowH / 2 - 4 : 3), label, kText, 1, false, pw - 120);
@@ -1920,7 +2147,7 @@ void Game::settingsScreen() {
         endRow();
     }
 
-    ui_.text(px + 8, y + h - 18, std::string(kVersion), kTextDim, 1, false);
+    if (ry <= y + h - 20) ui_.text(px + 8, y + h - 18, std::string(kVersion), kTextDim, 1, false, pw - 100);
     if (ui_.button(px + pw - 68, y + h - 26, 60, 20, "Zpět")) {
         saveSettings(settingsPath_, settings_);
         setScreen(settingsReturn_);
@@ -2163,7 +2390,52 @@ void Game::jsonEditorScreen() {
     }
 }
 
+void Game::oldPauseScreen() {
+    // 1.8.0 Old World: the menu of VoxelCraft 0.3 (as in the creator's screenshot): "Nastavení",
+    // three grey sliders, the texture pack, Done. "Turn off the server" leaves the old world and
+    // goes back to the current version's menu.
+    const float W = ui_.width(), H = ui_.height();
+    ui_.fill(0, 0, W, H, {0.05f, 0.08f, 0.2f, 0.55f});
+    ui_.textCentered(W / 2, 8, "Nastavení", {1, 1, 1, 1});
+    const float bw = std::min(300.0f, W - 40), bx = std::floor((W - bw) / 2);
+    auto oldButton = [&](float y, const std::string& label) {
+        const bool down = ui_.held(bx, y, bw, 22);
+        ui_.fill(bx, y, bw, 22, {0, 0, 0, 1});
+        ui_.fill(bx + 1, y + 1, bw - 2, 20, down ? Color{0.55f, 0.55f, 0.6f, 1} : Color{0.42f, 0.42f, 0.42f, 1});
+        ui_.fill(bx + 1, y + 1, bw - 2, 1, {1, 1, 1, 0.25f});
+        ui_.textCentered(W / 2 + 1, y + 8, label, {0.15f, 0.15f, 0.15f, 1});
+        ui_.textCentered(W / 2, y + 7, label, {0.9f, 0.9f, 0.9f, 1});
+        return ui_.tapped(bx, y, bw, 22);
+    };
+    float y = 26;
+    float v = (settings_.renderDistance - 2) / 10.0f;
+    if (ui_.slider(bx, y, bw, 22, trf("Dohled: {0} chunků", {std::to_string(settings_.renderDistance)}), v))
+        settings_.renderDistance = 2 + (int)std::round(v * 10);
+    y += 27;
+    v = (settings_.sensitivity - 0.25f) / 2.75f;
+    if (ui_.slider(bx, y, bw, 22, trf("Citlivost: {0} %", {std::to_string((int)std::round(settings_.sensitivity * 100))}), v))
+        settings_.sensitivity = 0.25f + v * 2.75f;
+    y += 27;
+    v = (settings_.fov - 50) / 60.0f;
+    if (ui_.slider(bx, y, bw, 22, trf("Zorné pole: {0}°", {std::to_string((int)std::round(settings_.fov))}), v))
+        settings_.fov = std::round(50 + v * 60);
+    y += 27;
+    if (oldButton(y, tr("Balíček textur...")) && onTexturePackButton) onTexturePackButton();
+    y += 27;
+    if (oldButton(y, tr("Vypnout server"))) {
+        saveSettings(settingsPath_, settings_);
+        endSession();
+        setScreen(Screen::Title);
+        return;
+    }
+    if (oldButton(H - 28, tr("Hotovo"))) {
+        saveSettings(settingsPath_, settings_);
+        setScreen(Screen::Playing);
+    }
+}
+
 void Game::pauseScreen() {
+    if (session_ && session_->oldMode()) return oldPauseScreen();
     const float W = ui_.width(), H = ui_.height();
     ui_.fill(0, 0, W, H, {0, 0, 0, 0.45f});
     const bool creative = !session_->survival(), developer = profile_.isDeveloper();
@@ -3627,6 +3899,169 @@ void Game::tradeScreen() {
         }
     }
     if (!hint.empty()) ui_.textCentered(W / 2, py + ph + 4, hint, kTextBright);
+}
+
+void Game::encyclopediaScreen() {
+    // 1.7.2 build 3: the encyclopedia of the whole game. Categories along the top, the entries of
+    // one on the left, the chosen entry on the right: its picture (a screenshot from the game) or
+    // its icon, and what it is.
+    float x, y, w, h;
+    menuWindow(x, y, w, h, false);
+    ui_.text(x + 2, y + 2, "Encyklopedie", kTitle, 1, false);
+    if (ui_.button(x + w - 60, y, 60, 16, "Zpět")) return setScreen(Screen::Title);
+    // The entries of the chosen category: written ones, or the game's blocks, items and mobs.
+    struct Row {
+        std::string title, text;
+        const char* picture = "";
+        ItemId icon = AIR;
+    };
+    std::vector<Row> rows;
+    const int cats = (int)(sizeof(kEncCategories) / sizeof(kEncCategories[0]));
+    const std::string cat = kEncCategories[encCat_];
+    for (const EncEntry& e : kEncyclopedia)
+        if (cat == e.category) rows.push_back({tr(e.title), tr(e.text), e.picture, e.icon});
+    if (cat == "Bloky a předměty") {
+        for (int c = 0; c < CatCount; ++c)
+            for (ItemId id : creativeCategoryItems(c))
+                rows.push_back({tr(itemName(id)), trf("Záložka: {0}", {tr(creativeCategoryName(c))}) + (isItemOnly(id) ? ". " + tr("Předmět") : ""), "", id});
+    } else if (cat == "Moby") {
+        for (int t = 0; t < (int)MobType::Count; ++t) {
+            const MobInfo& m = mobInfo((MobType)t);
+            rows.push_back({tr(m.name), tr(m.boss ? "Boss" : m.hostile ? "Nepřátelský" : "Mírumilovný") + ". " +
+                                            trf("Životy: {0}", {std::to_string((int)m.health)}), "", AIR});
+        }
+    }
+    // Category tabs.
+    const float tabW = std::floor((w - 4 * (cats - 1)) / cats);
+    for (int i = 0; i < cats; ++i)
+        if (ui_.button(x + i * (tabW + 4), y + 18, tabW, 16, i == 4 ? "Bloky" : kEncCategories[i], true, i == encCat_)) encCat_ = i, encSel_ = 0, encScroll_ = 0;
+    // The list.
+    const float ly = y + 40, lh = h - 44, lw = std::floor(w * 0.38f), rowH = 14;
+    ui_.frame(x, ly, lw, lh, kPanelInner, kSeparator);
+    encScroll_ = std::clamp(encScroll_ - ui_.dragY(x, ly, lw, lh), 0.0f, std::max(0.0f, rows.size() * rowH - lh + 4));
+    for (size_t i = 0; i < rows.size(); ++i) {
+        const float ry = ly + 2 + i * rowH - encScroll_;
+        if (ry < ly || ry + rowH > ly + lh) continue;
+        if ((int)i == encSel_) ui_.fill(x + 1, ry, lw - 2, rowH, {0.3f, 0.5f, 0.15f, 0.6f});
+        if (rows[i].icon != AIR) ui_.item(x + 3, ry + 1, 12, rows[i].icon);
+        ui_.text(x + 18, ry + 3, rows[i].title, kText, 1, false, lw - 22);
+        if (ui_.tapped(x, ry, lw, rowH)) encSel_ = (int)i;
+    }
+    if (rows.empty()) return;
+    encSel_ = std::clamp(encSel_, 0, (int)rows.size() - 1);
+    const Row& r = rows[encSel_];
+    // The detail: picture (unpacked into the map texture when it changes) or a big icon.
+    const float dx = x + lw + 8, dw = w - lw - 8;
+    float dy = ly;
+    if (r.picture[0]) {
+        if (encPicture_ != r.picture) {
+            for (const EncPicture& p : kPictures)
+                if (encPicture_ = r.picture, std::string(p.id) == r.picture) {
+                    std::vector<uint8_t> rgb((size_t)kPicW * kPicH * 3), rgba((size_t)kPicW * kPicH * 4);
+                    uLongf len = (uLongf)rgb.size();
+                    uncompress(rgb.data(), &len, p.data, p.size);
+                    for (int i = 0; i < kPicW * kPicH; ++i) {
+                        std::copy_n(&rgb[i * 3], 3, &rgba[i * 4]);
+                        rgba[i * 4 + 3] = 255;
+                    }
+                    renderer_.setMapTexture(rgba, kPicW, kPicH);
+                }
+        }
+        const float pw = std::min(dw, (h - 90) * 16 / 9.0f), ph = std::floor(pw * 9 / 16);
+        ui_.fill(dx - 1, dy - 1, pw + 2, ph + 2, kBorder);
+        ui_.image(TexMap, dx, dy, pw, ph, 0, 0, 1, 1);
+        dy += ph + 6;
+    } else if (r.icon != AIR) {
+        ui_.item(dx, dy, 32, r.icon);
+        dy += 38;
+    }
+    ui_.text(dx, dy, r.title, kTitle, 1, false, dw);
+    dy += 13;
+    // The text, wrapped at word boundaries.
+    std::string line, word;
+    for (char ch : r.text + " ") {
+        if (ch != ' ') {
+            word += ch;
+            continue;
+        }
+        if (!line.empty() && ui_.textWidth(line + " " + word) > dw) {
+            ui_.text(dx, dy, line, kText, 1, false);
+            dy += 10;
+            line.clear();
+        }
+        line += (line.empty() ? "" : " ") + word;
+        word.clear();
+    }
+    ui_.text(dx, dy, line, kText, 1, false);
+}
+
+void Game::cutterScreen() {
+    // 1.7.2 build 2: the cutter. The blocks in the inventory that have stairs and slabs are listed;
+    // pick one, then tap what to cut it into: 2 slabs, or 1 stairs (no waste, unlike crafting).
+    const float W = ui_.width(), H = ui_.height();
+    ui_.fill(0, 0, W, H, {0, 0, 0, 0.45f});
+    // The wood cutter takes wood (planks and logs), the stonecutter everything else.
+    Inventory& inv = session_->inventory();
+    const bool woodMode = cutterWood_;
+    auto cuttable = [&](ItemId id) {
+        if (logPlanks(id)) return woodMode;
+        const int m = shapeMaterialOf(id);
+        return m >= 0 && isWoodMaterial(m) == woodMode;
+    };
+    std::vector<ItemId> blocks;
+    for (const ItemStack& s : inv.slots)
+        if (!s.empty() && cuttable(s.id) && std::find(blocks.begin(), blocks.end(), s.id) == blocks.end()) blocks.push_back(s.id);
+    const float pw = std::min(W - 20, kSlot * 9 + 14), ph = 150, px = std::floor((W - pw) / 2), py = std::floor((H - ph) / 2);
+    ui_.panel(px, py, pw, ph);
+    ui_.text(px + 7, py + 6, woodMode ? "Dřevořez" : "Kamenořez", kLabel, 1, false);
+    ui_.text(px + 7, py + 18, woodMode ? "Rozřež dřevo na prkna, schody, desky a ploty" : "Rozřež blok na schody a desky", kLabel, 1, false, pw - 40);
+    if (ui_.button(px + pw - 18, py + 3, 14, 14, "X")) return setScreen(Screen::Playing);
+    if (blocks.empty()) {
+        ui_.text(px + 7, py + 50, "V inventáři není nic, co jde řezat", kLabel, 1, false, pw - 14);
+        return;
+    }
+    if (std::find(blocks.begin(), blocks.end(), cutterPick_) == blocks.end()) cutterPick_ = blocks[0];
+    const int perRow = std::max(1, (int)((pw - 14) / kSlot));
+    for (size_t i = 0; i < blocks.size() && i < (size_t)perRow * 3; ++i) {
+        const float x = px + 7 + (i % perRow) * kSlot, y = py + 32 + (i / perRow) * kSlot;
+        ui_.slotFrame(x, y, kSlot, blocks[i] == cutterPick_);
+        ui_.item(x + 2, y + 2, kSlot - 4, blocks[i]);
+        if (ui_.tapped(x, y, kSlot, kSlot)) cutterPick_ = blocks[i];
+    }
+    const float ry = py + ph - 30;
+    auto cut = [&](ItemId result, int count) {
+        if (int left = inv.add(result, count)) {
+            // No room: take back what did fit, cut nothing.
+            for (size_t k = 0; k < inv.slots.size() && left < count; ++k)
+                while (inv.slots[k].id == result && left < count) inv.removeOne((int)k), ++left;
+            return;
+        }
+        if (session_->survival()) {
+            for (size_t k = 0; k < inv.slots.size(); ++k)
+                if (inv.slots[k].id == cutterPick_) {
+                    inv.removeOne((int)k);
+                    break;
+                }
+        }
+        playSound(Sound::Place);
+    };
+    // What the chosen block can become: (result, count) pairs.
+    std::vector<std::pair<ItemId, int>> outs;
+    if (const ItemId planks = logPlanks(cutterPick_)) {
+        outs.push_back({planks, 6});  // the wood cutter wastes less than the crafting grid (4)
+    } else {
+        const int m = shapeMaterialOf(cutterPick_);
+        outs.push_back({slabId(m, 0), 2});
+        outs.push_back({stairsId(m, 0, false), 1});
+        if (const ItemId fence = plankFence(cutterPick_)) outs.push_back({fence, 1});
+    }
+    const float bw = std::floor((pw - 14 - 6 * (outs.size() - 1)) / outs.size());
+    for (size_t k = 0; k < outs.size(); ++k) {
+        const float bx = px + 7 + k * (bw + 6);
+        ui_.slotFrame(bx, ry, 24, false);
+        ui_.item(bx + 2, ry + 2, 20, outs[k].first);
+        if (ui_.button(bx + 26, ry + 2, bw - 26, 20, "x" + std::to_string(outs[k].second))) cut(outs[k].first, outs[k].second);
+    }
 }
 
 void Game::craftingScreen() {

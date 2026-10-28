@@ -608,12 +608,12 @@ static int testJsonAndPacks() {
         if (!err.empty()) std::printf("%s: %s\n", path.c_str(), err.c_str());
     }
     const GenConfig& def = GenConfig::defaults();
-    CHECK(def.biomes.size() == 7 && def.overworld.seaLevel == 62 && def.overworld.ores.size() == 5);
+    CHECK(def.biomes.size() == 8 && def.overworld.seaLevel == 62 && def.overworld.ores.size() == 5);
     CHECK(def.nether.fill == NETHERRACK && def.nether.lavaLevel == 31);
     std::vector<std::string> warn;
     GenConfig round = GenConfig::fromJson(def.toJson(), &warn);
-    CHECK(warn.empty() && round.biomes.size() == 7 && round.biomes[2].surface == def.biomes[2].surface);
-    CHECK(RecipeBook::defaults().shaped.size() == 12 + 35 + 6 + 2 + 16 + 6 + 24 + 16 + 3 + 10 + 12 + 5 + 3 + 8 + 7 + 1 && RecipeBook::defaults().shapeless.size() == 2 + 4 + 1 + 1 + 6 + 1 + 1 + 3 + 1 + 3 + 3 + 1);  // 1.5.7: + book and quill; 1.6.0: + 3: torch, shield, lamp; crimson planks  // 1.5.1: no planks from Eye Logs
+    CHECK(warn.empty() && round.biomes.size() == 8 && round.biomes[2].surface == def.biomes[2].surface);
+    CHECK(RecipeBook::defaults().shaped.size() == 12 + 35 + 6 + 2 + 16 + 6 + 24 + 16 + 3 + 10 + 12 + 5 + 3 + 8 + 7 + 1 + 10 + 33 + 16 + 11 && RecipeBook::defaults().shapeless.size() == 2 + 4 + 1 + 1 + 6 + 1 + 1 + 3 + 1 + 3 + 3 + 1 + 2 + 49 + 1);  // 1.8.0: concrete, gray planks, 10 stairs and slabs  // 1.5.7: + book and quill; 1.6.0: + 3: torch, shield, lamp; crimson planks  // 1.5.1: no planks from Eye Logs
 
     // Biomes really show up in the world: deserts are sandy, forests have trees.
     World w(1234, Dimension::Overworld);
@@ -632,13 +632,14 @@ static int testJsonAndPacks() {
     PackManager pm(root.string());
     pm.ensureDefaultPack();
     auto list = pm.list();
-    CHECK(list.size() == 1 && list[0].builtin && list[0].enabled && list[0].name == "VoxelCraft Default");
-    CHECK(pm.files("default").size() == 22 && pm.files("default")[0] == "manifest.json");
+    CHECK(list.size() == 2 && list[0].builtin && list[0].enabled && list[0].name == "VoxelCraft Default" &&
+          list[1].name == "Pre-Alpha Style" && !list[1].enabled && list[1].style == "pre_alpha");
+    CHECK(pm.files("default").size() == 25 && pm.files("default")[0] == "manifest.json");
     warn.clear();
     GenConfig cfg = pm.buildConfig(&warn);
-    CHECK(warn.empty() && cfg.biomes.size() == 7);
+    CHECK(warn.empty() && cfg.biomes.size() == 8);
     // Worlds made in the game (from the packs) get the newest generator: deepstone, hardium, mossy caves.
-    CHECK(cfg.generation == 4);
+    CHECK(cfg.generation == 5);
 
     // A mod pack: glowstone Nether with a higher lava sea, a new biome, one removed biome and a recipe.
     std::string id = pm.createPack("Můj mod");
@@ -695,9 +696,9 @@ static int testJsonAndPacks() {
     pm.move(id, -1);
     CHECK(pm.list()[0].id == id);
     pm.deletePack(id);
-    CHECK(pm.list().size() == 1);
+    CHECK(pm.list().size() == 2);
     pm.deletePack("default");  // the built-in pack cannot be deleted
-    CHECK(pm.list().size() == 1);
+    CHECK(pm.list().size() == 2);
     setRecipes(RecipeBook::defaults());
 
     // The shipped example mod pack loads without warnings.
@@ -707,7 +708,7 @@ static int testJsonAndPacks() {
     cfg = pm.buildConfig(&warn);
     pm.buildRecipes(&warn);
     for (auto& m : warn) std::printf("example warning: %s\n", m.c_str());
-    CHECK(warn.empty() && cfg.nether.fill == NETHER_BRICK && cfg.nether.lavaLevel == 48 && cfg.biomes.size() == 8);
+    CHECK(warn.empty() && cfg.nether.fill == NETHER_BRICK && cfg.nether.lavaLevel == 48 && cfg.biomes.size() == 9);
     pm.deletePack("ohnivy_nether");
 
     // Superflat
@@ -787,7 +788,7 @@ static int testSkinsStoreAudio() {
     pm.buildRecipes(&warn);
     for (auto& m : warn) std::printf("store warning: %s\n", m.c_str());
     CHECK(warn.empty());
-    CHECK(pm.list().size() == 1 + 7);  // default + 4 mod packs + 3 texture packs
+    CHECK(pm.list().size() == 2 + 7);  // default, Pre-Alpha Style + 4 mod packs + 3 texture packs
     CHECK(fs::exists(root / "packs" / "store_night" / "textures" / "blocks" / "stone.png"));
     // The bought texture pack really changes the textures (darker stone).
     int fbSize = 0;
@@ -959,8 +960,8 @@ static int testLeavesMesh() {
             ++trees;
             int sides = 0;
             for (auto [dx, dz] : {std::pair{1, 0}, {-1, 0}, {0, 1}, {0, -1}})
-                sides += (f.getBlock(x + dx, top, z + dz) == LEAVES || f.getBlock(x + dx, top, z + dz) == LOG) &&
-                         (f.getBlock(x + 2 * dx, top - 1, z + 2 * dz) == LEAVES || f.getBlock(x + 2 * dx, top - 1, z + 2 * dz) == LOG);
+                sides += (isLeaves(f.getBlock(x + dx, top, z + dz)) || isLog(f.getBlock(x + dx, top, z + dz))) &&
+                         (isLeaves(f.getBlock(x + 2 * dx, top - 1, z + 2 * dz)) || isLog(f.getBlock(x + 2 * dx, top - 1, z + 2 * dz)));
                 // (a neighbouring tree's trunk may stand where leaves would be)
             halfCrowns += sides < 4;
         }
@@ -1492,7 +1493,7 @@ static int testInventoryAndHand() {
     std::printf("hand: after placing %d planks left, place animation at %.2f\n", inv.slots[0].count, s->hand().placeProgress());
     CHECK(inv.slots[0].count == 1 && s->hand().placeProgress() < 1);
     // 7: using up the stack empties the slot and the hand.
-    s->player().yaw += 0.6f;
+    s->player().yaw += 1.2f;
     tapCentre();
     CHECK(inv.slots[0].empty());
     run(0.3f);
@@ -2200,7 +2201,7 @@ static int testWorldStructures() {
         for (uint32_t seed : {1u, 77u, 12345u}) {
             Structure s = buildWorldStructure((WorldStructure)k, seed);
             int loot = 0;
-            for (ItemId c : s.cells) loot += isChest(c) && c != CHEST;
+            for (ItemId c : s.cells) loot += (isChest(c) && c != CHEST) || c == LOOT_BARREL_CAMP;
             CHECK(s.valid() && (loot >= 1 || k == (int)WorldStructure::BossArena || k == (int)WorldStructure::Village) && s.sx <= 97 && s.sz <= 97);
         }
     return 0;
@@ -2742,6 +2743,14 @@ static int testUpdate12() {
         game.onTouch(0, TouchAction::Down, 1200, 540, t);
         game.onTouch(0, TouchAction::Up, 1200, 540, t);
         for (int i = 0; i < 30; ++i) game.frame(t += 1 / 30.0);
+        // 1.8.0: then "VoxelSoftworks presents" the version; a tap goes on to the menu.
+        log.clear();
+        game.frame(t += 1 / 30.0);
+        CHECK(drawn("VOXELSOFTWORKS PRESENTS") && drawn("VOXELCRAFT 1.8.0") && !drawn("Play"));
+        for (int i = 0; i < 30; ++i) game.frame(t += 1 / 30.0);
+        game.onTouch(0, TouchAction::Down, 1200, 540, t);
+        game.onTouch(0, TouchAction::Up, 1200, 540, t);
+        for (int i = 0; i < 3; ++i) game.frame(t += 1 / 30.0);
         log.clear();
         game.frame(t += 1 / 30.0);
         CHECK(drawn("Play") && !drawn("VOXELSOFTWORKS"));
@@ -3929,7 +3938,7 @@ static int testCaves160() {
     // pools, bigger caves than generation 3; old worlds unchanged; the new recipes and items.
     GenConfig g3 = GenConfig::defaults();
     g3.generation = 3;
-    CHECK(GenConfig::defaults().generation == 4);
+    CHECK(GenConfig::defaults().generation == 5);
     World nw(777, Dimension::Overworld), ow(777, Dimension::Overworld, g3);
     nw.ensureChunksAround(0, 0, 5, 100000);
     ow.ensureChunksAround(0, 0, 5, 100000);
@@ -4000,11 +4009,41 @@ static int testWorld159() {
     ov.ensureChunksAround(0, 0, 12, 100000);
     long newLogs = 0, oldLogs = 0, sprouts = 0;
     for (auto& [k, c] : nv.chunks())
-        for (ItemId b : c->blocks) newLogs += b == VOID_LOG, sprouts += b == NETHER_SPROUTS;
+        for (ItemId b : c->blocks) newLogs += b == VOID_LOG || b == CRIMSONIUM_LOG, sprouts += b == NETHER_SPROUTS;
     for (auto& [k, c] : ov.chunks())
         for (ItemId b : c->blocks) oldLogs += b == VOID_LOG;
     std::printf("world 1.5.9: void logs %ld (old %ld), sprouts in the void %ld\n", newLogs, oldLogs, sprouts);
     CHECK(newLogs > oldLogs && sprouts == 0);
+    {
+        // 1.8.0: the Old World is the 0.3 generator (no deepstone, no ores beyond it), saved with the world.
+        GenConfig oc = GenConfig::defaults();
+        oc.oldWorld = true;
+        GenConfig back = GenConfig::fromJson(oc.toJson());
+        World old(4242, Dimension::Overworld, back);
+        old.ensureChunksAround(0, 0, 3, 100000);
+        long deep = 0, grass = 0, logs = 0;
+        for (auto& [k, c] : old.chunks())
+            for (ItemId b : c->blocks) deep += b == DEEPSTONE || b == COAL_ORE, grass += b == GRASS, logs += b == LOG;
+        std::printf("old world: grass %ld, logs %ld, deepstone+coal %ld\n", grass, logs, deep);
+        CHECK(back.oldWorld && !GenConfig::fromJson(GenConfig::defaults().toJson()).oldWorld && deep == 0 && grass > 1000 && logs > 0);
+        // Celestial bridges: planks over open sky, and the same blocks however the chunks load.
+        World sky(4242, Dimension::Celestial), sky2(4242, Dimension::Celestial);
+        sky.ensureChunksAround(0, 0, 12, 100000);
+        sky2.ensureChunksAround(5, -4, 12, 100000);
+        long bridge = 0, differ = 0;
+        for (int x = -150; x < 150; ++x)
+            for (int z = -60; z < 60; ++z)
+                for (int y = 50; y < 110; ++y) {
+                    const ItemId b = sky.getBlock(x, y, z);
+                    if (b == CELESTIAL_PLANKS && sky.getBlock(x, y - 1, z) == AIR) ++bridge;
+                    if (sky2.getChunk(floorDiv(x, kChunkSize), floorDiv(z, kChunkSize)) && b != sky2.getBlock(x, y, z)) ++differ;
+                }
+        std::printf("celestial bridges: %ld deck blocks over the sky, %ld differ between load orders\n", bridge, differ);
+        CHECK(bridge > 20 && differ == 0);
+        CHECK(isSlab(slabId(17, 0)) && slabMaterial(slabId(21, 1)) == 21 && stairsMaterial(stairsId(19, 2, true)) == 19 &&
+              stairsVariant(stairsId(19, 2, true)) == 6 && shapeMaterialBlock(18) == HARDENED_CONCRETE && isLeaves(ORANGE_LEAVES) &&
+              itemFromKey("gray_slab") == slabId(19, 0) && itemFromKey("dusty_concrete") == DUSTY_CONCRETE);
+    }
     size_t total = 0;
     for (int c = 0; c < CatCount; ++c) total += creativeCategoryItems(c).size();
     CHECK(total == (size_t)kCreativeItemCount && creativeGroup(STAINED_GLASS) && !creativeGroup(STONE));

@@ -443,6 +443,32 @@ Structure desertTemple(Rng& r) {
 }
 
 // A snow dome with a bed, a crafting table and a chest.
+// 1.7.2 build 3: a travellers' camp: an A-frame tent of coloured wool over carpet, a fire pit
+// (a ring of cobblestone round netherrack that burns), logs to sit on and a barrel of supplies.
+Structure camp(Rng& r) {
+    Structure s = box(11, 5, 11);
+    const ItemId tent = woolBlock(r.chance(50) ? 14 : r.chance(50) ? 1 : 0);  // red, orange or white
+    const ItemId stripe = woolBlock(r.chance(50) ? 4 : 0);
+    for (int z = 1; z <= 5; ++z)
+        for (int k = 0; k <= 3; ++k) {
+            // Two sloping sides meet at the ridge (x = 3 at the top).
+            s.at(3 - k, 3 - k, z) = s.at(3 + k, 3 - k, z) = (z == 1 || z == 5) && k == 2 ? stripe : tent;
+            if (k < 3) s.at(3 - k, 0, z) = s.at(3 + k, 0, z) = AIR;
+        }
+    for (int x = 1; x <= 5; ++x)
+        for (int z = 2; z <= 4; ++z) s.at(x, 0, z) = (ItemId)(CARPET + (r.chance(50) ? 12 : 7));  // brown or gray
+    s.at(3, 0, 5) = AIR;  // the way in at the back stays open, the front too
+    s.at(3, 0, 1) = AIR;
+    // The fire pit in front of the tent.
+    for (int dx = -1; dx <= 1; ++dx)
+        for (int dz = -1; dz <= 1; ++dz) s.at(8 + dx, 0, 3 + dz) = dx == 0 && dz == 0 ? (ItemId)NETHERRACK : (ItemId)COBBLESTONE;
+    s.at(8, 1, 3) = TORCH;  // the flame
+    s.at(8, 0, 7) = s.at(9, 0, 7) = GRAY_LOG;  // a log to sit on
+    s.at(5, 0, 8) = LOOT_BARREL_CAMP;
+    if (r.chance(50)) s.at(6, 0, 8) = BARREL;
+    return s;
+}
+
 Structure igloo(Rng& r) {
     Structure s = box(9, 6, 9);
     for (int y = 0; y < 6; ++y)
@@ -874,6 +900,7 @@ Structure buildWorldStructure(WorldStructure kind, uint32_t seed) {
         case WorldStructure::VoidMineshaft: return voidMineshaft(r);
         case WorldStructure::VoidWatchtower: return voidWatchtower(r);
         case WorldStructure::RuinedVillage: return ruinedVillage(r);
+        case WorldStructure::Camp: return camp(r);
         case WorldStructure::CaveDungeon: return caveDungeon(r);
         default: return mineshaft(r);
     }

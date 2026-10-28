@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <filesystem>
 
 #include "Blocks.h"
@@ -75,6 +76,14 @@ bool World::setBlock(int x, int y, int z, ItemId id) {
 
 World::Column World::column(int x, int z) const {
     Column col;
+    if (config_.oldWorld) {
+        // The height formula of VoxelCraft 0.1-0.3, unchanged (see generateOldWorld).
+        const float continent = terrain_.fbm2(x / 256.0f, z / 256.0f, 4);
+        const float hills = detail_.fbm2(x / 64.0f, z / 64.0f, 4);
+        col.height = std::clamp((int)(64 + continent * 28 + hills * 10 * (0.5f + std::max(0.0f, continent))), 4, kChunkHeight - 10);
+        col.biome = config_.biomes.empty() ? nullptr : &config_.biomes.front();
+        return col;
+    }
     if (config_.flat || config_.biomes.empty()) {
         col.height = config_.flat ? 3 : config_.overworld.seaLevel + 2;
         col.biome = config_.biomes.empty() ? nullptr : &config_.biomes.front();
@@ -122,7 +131,8 @@ bool World::setBlockLoading(int x, int y, int z, ItemId id) {
 Chunk* World::generateChunk(int cx, int cz) {
     auto chunk = std::make_unique<Chunk>(cx, cz);
     if (!loadChunk(*chunk)) {
-        if (dim_ == Dimension::Nether) generateNether(*chunk);
+        if (dim_ == Dimension::Nether && config_.oldWorld) generateOldNether(*chunk);
+        else if (dim_ == Dimension::Nether) generateNether(*chunk);
         else if (dim_ == Dimension::Void) generateVoid(*chunk);
         else if (dim_ == Dimension::Celestial) generateCelestial(*chunk);
         else generateOverworld(*chunk);
@@ -135,7 +145,119 @@ Chunk* World::generateChunk(int cx, int cz) {
     return raw;
 }
 
+// 1.8.0 Old World: the Overworld generator of VoxelCraft 0.1-0.3 (commit 5686078, "Menus, world
+// saves ..."), carried over line by line: one height formula from two noises, stone, three blocks
+// of dirt, grass, sand on the shores, sea at 62, worm caves, and round oaks in forest patches.
+// The noises are seeded the same way as back then, so a seed gives the same land as in 0.3.
+// Not part of it (it did not exist yet): biomes, ores, caverns, structures, deepstone.
+void World::generateOldWorld(Chunk& c) {
+    constexpr int kOldSeaLevel = 62;
+    const int cx = c.cx, cz = c.cz;
+    for (int x = 0; x < kChunkSize; ++x) {
+        for (int z = 0; z < kChunkSize; ++z) {
+            const int wx = cx * kChunkSize + x, wz = cz * kChunkSize + z;
+            const int h = column(wx, wz).height;
+            const bool beach = h <= kOldSeaLevel + 1;
+            for (int y = 0; y < kChunkHeight; ++y) {
+                ItemId id = AIR;
+                if (y == 0 || (y < 4 && (hash3(wx, y, wz, seed_) & 1))) id = BEDROCK;
+                else if (y < h - 3) id = STONE;
+                else if (y < h) id = beach ? SAND : DIRT;
+                else if (y == h) id = beach ? SAND : GRASS;
+                else if (y <= kOldSeaLevel) id = WATER;
+                // Worm-like caves carved by 3D noise, kept away from the sea floor.
+                if (id != AIR && id != WATER && id != BEDROCK && y < h - 4 && y > 4) {
+                    const float n = caves_.perlin3(wx / 24.0f, y / 16.0f, wz / 24.0f);
+                    if (std::fabs(n) < 0.06f) id = AIR;
+                }
+                c.set(x, y, z, id);
+            }
+        }
+    }
+    // Trees in a second pass. (0.3 placed them in the same pass, so the next columns cut half of
+    // each crown away; that bug is the one thing left out.)
+    for (int x = 2; x <= 13; ++x) {
+        for (int z = 2; z <= 13; ++z) {
+            const int wx = cx * kChunkSize + x, wz = cz * kChunkSize + z;
+            const int h = column(wx, wz).height;
+            if (h > kOldSeaLevel + 1) {
+                const uint32_t r = hash3(wx, 0, wz, seed_ ^ 0x7EEEu);
+                const float forest = detail_.perlin2(wx / 48.0f + 100, wz / 48.0f);
+                if (r % 100 < (forest > 0.2f ? 4u : 1u) && c.get(x, h, z) == GRASS) {
+                    // The old oak: a 4-6 block trunk and a crown with ragged corners.
+                    const int y = h + 1, trunk = 4 + (int)((r >> 8) % 3);
+                    if (y + trunk + 2 >= kChunkHeight) continue;
+                    c.set(x, y - 1, z, DIRT);
+                    for (int dy = trunk - 2; dy <= trunk + 1; ++dy) {
+                        const int rr = dy >= trunk ? 1 : 2;
+                        for (int dx = -rr; dx <= rr; ++dx)
+                            for (int dz = -rr; dz <= rr; ++dz) {
+                                const bool corner = std::abs(dx) == rr && std::abs(dz) == rr;
+                                if (corner && (dy == trunk + 1 || ((r >> (dx + dz + 8)) & 1))) continue;
+                                if (c.get(x + dx, y + dy, z + dz) == AIR) c.set(x + dx, y + dy, z + dz, LEAVES);
+                            }
+                    }
+                    for (int dy = 0; dy < trunk; ++dy) c.set(x, y + dy, z, LOG);
+                }
+            }
+        }
+    }
+}
+
+// 1.8.0 Old World: the Nether of VoxelCraft 0.2-0.3 (commit feed712), not the Cornerstone
+// Dimension: open netherrack caverns over a lava sea at 31, bedrock floor and roof, soul sand
+// patches, gravel at the shore, glowstone hanging from the ceilings. Blocks that no longer exist
+// are the ones old saves turn into (upgradeLegacyBlock): soul sand -> netherrack, quartz ore ->
+// powerstone ore, glowstone -> powerstone light.
+void World::generateOldNether(Chunk& c) {
+    constexpr int kOldLavaLevel = 31;
+    for (int x = 0; x < kChunkSize; ++x)
+        for (int z = 0; z < kChunkSize; ++z) {
+            const int wx = c.cx * kChunkSize + x, wz = c.cz * kChunkSize + z;
+            const float soul = detail_.perlin2(wx / 20.0f, wz / 20.0f);
+            for (int y = 0; y < kChunkHeight; ++y) {
+                ItemId id;
+                const uint32_t h = hash3(wx, y, wz, seed_ ^ 0xBEEFu);
+                if (y == 0 || y == kChunkHeight - 1 || (y < 5 && (int)(h & 3) < 4 - y) ||
+                    (y > kChunkHeight - 6 && (int)(h & 3) < y - (kChunkHeight - 6)))
+                    id = BEDROCK;
+                else {
+                    const float n = caves_.perlin3(wx / 32.0f, y / 20.0f, wz / 32.0f) + 0.5f * terrain_.perlin3(wx / 12.0f, y / 10.0f, wz / 12.0f);
+                    const float edge = std::max(0.0f, (24 - y) / 24.0f) + std::max(0.0f, (y - 96) / 28.0f);
+                    if (n + edge * 1.2f > 0.05f) id = (h % 120 == 0) ? upgradeLegacyBlock(153) : (ItemId)NETHERRACK;
+                    else id = y <= kOldLavaLevel ? (ItemId)LAVA : (ItemId)AIR;
+                }
+                c.set(x, y, z, id);
+            }
+            for (int y = kOldLavaLevel + 1; y < kChunkHeight - 2; ++y) {
+                if (c.get(x, y, z) != NETHERRACK || c.get(x, y + 1, z) != AIR) continue;
+                if (soul > 0.25f) {
+                    c.set(x, y, z, upgradeLegacyBlock(88));
+                    if (c.get(x, y - 1, z) == NETHERRACK) c.set(x, y - 1, z, upgradeLegacyBlock(88));
+                } else if (y <= kOldLavaLevel + 3 && soul < -0.35f) {
+                    c.set(x, y, z, GRAVEL);
+                }
+            }
+        }
+    const uint32_t r = hash3(c.cx, 0, c.cz, seed_ ^ 0x6105u);
+    for (int i = 0; i < (int)(r % 3); ++i) {
+        const int x = 3 + (int)((r >> (4 + i * 6)) % 10), z = 3 + (int)((r >> (7 + i * 6)) % 10);
+        int y = kChunkHeight - 8;
+        while (y > 40 && !(c.get(x, y, z) == AIR && isSolid(c.get(x, y + 1, z)))) --y;
+        if (y <= 40) continue;
+        for (int k = 0; k < 40; ++k) {
+            const uint32_t q = hash3(c.cx * 97 + i, k, c.cz, seed_);
+            const int dx = (int)(q % 5) - 2, dz = (int)((q >> 3) % 5) - 2, dy = -(int)((q >> 6) % 5);
+            if (c.get(x + dx, y + dy, z + dz) == AIR) c.set(x + dx, y + dy, z + dz, upgradeLegacyBlock(89));
+        }
+    }
+}
+
 void World::generateOverworld(Chunk& c) {
+    if (config_.oldWorld) {
+        generateOldWorld(c);
+        return;
+    }
     const int cx = c.cx, cz = c.cz;
     const int sea = config_.overworld.seaLevel;
     if (config_.biomes.empty() && !config_.flat) return;
@@ -242,7 +364,8 @@ void World::generateOverworld(Chunk& c) {
                 uint32_t r = hash3(wx, 0, wz, seed_ ^ 0x7EEEu);
                 if ((r % 100000) < (uint32_t)(b.treeDensity * 100000) && isSolid(c.get(x, h, z)) && c.get(x, h + 1, z) == AIR) {
                     if (b.treeShape == 1) placePine(c, x, h + 1, z, r, b.trunk, b.leaves);
-                    else placeTree(c, x, h + 1, z, r, b.trunk, b.leaves);
+                    // 1.8.0 Dappled Forest: each tree gets red, orange or yellow leaves.
+                    else placeTree(c, x, h + 1, z, r, b.trunk, b.leaves == RED_LEAVES ? (ItemId)(RED_LEAVES + (r >> 11) % 3) : b.leaves);
                     tree = true;
                 }
             }
@@ -467,12 +590,14 @@ void World::stampStructures(Chunk& c) {
         {WorldStructure::BrokenPortal, 240, 60, kBrokenPortalSize},
         {WorldStructure::RuinedVillage, 400, 45, kVillageSize},  // 1.5.9 (generation 3)
         {WorldStructure::CaveDungeon, 72, 55, 11},               // 1.6.0 (generation 4)
+        {WorldStructure::Camp, 112, 70, 11},                     // 1.7.2 build 3 (generation 5)
     };
     const int sea = config_.overworld.seaLevel;
     const int x0 = c.cx * kChunkSize, z0 = c.cz * kChunkSize, x1 = x0 + kChunkSize - 1, z1 = z0 + kChunkSize - 1;
     for (const Kind& k : kinds) {
         if (k.type == WorldStructure::RuinedVillage && config_.generation < 3) continue;
         if (k.type == WorldStructure::CaveDungeon && config_.generation < 4) continue;
+        if (k.type == WorldStructure::Camp && config_.generation < 5) continue;
         for (int rx = floorDiv(x0 - k.maxSize, k.region); rx <= floorDiv(x1, k.region); ++rx)
             for (int rz = floorDiv(z0 - k.maxSize, k.region); rz <= floorDiv(z1, k.region); ++rz) {
                 uint32_t h = hash3(rx, (int)k.type * 977 + 13, rz, seed_ ^ 0x57A7u);
@@ -500,8 +625,10 @@ void World::stampStructures(Chunk& c) {
                 const bool surface = k.type == WorldStructure::Ruin || k.type == WorldStructure::DesertTemple ||
                                      k.type == WorldStructure::Igloo || k.type == WorldStructure::Watchtower ||
                                      k.type == WorldStructure::Village || k.type == WorldStructure::BrokenPortal ||
-                                     k.type == WorldStructure::RuinedVillage;
+                                     k.type == WorldStructure::RuinedVillage || k.type == WorldStructure::Camp;
                 if (surface) {
+                    // Camps stand mostly in the Dappled Forest; elsewhere only now and then.
+                    if (k.type == WorldStructure::Camp && !(mb && mb->id == "dappled_forest") && (h >> 5) % 6 != 0) continue;
                     if (middle.height <= sea + 1 || !mb || mb->peakBlock) continue;
                     if (k.type == WorldStructure::DesertTemple && !desert) continue;
                     if (k.type == WorldStructure::Igloo && !snowy) continue;
@@ -825,6 +952,13 @@ World::VoidBiome World::voidBiomeAt(int x, int z) const {
     const bool purple = temperature_.perlin2(x / 180.0f + 50, z / 180.0f) > -0.05f;
     // 1.6.0: inside the purple lands, broken pieces of a forgotten overworld drift.
     if (purple && config_.generation >= 4 && detail_.perlin2(x / 150.0f - 620.0f, z / 150.0f + 410.0f) > 0.28f) return VoidBiome::Forgotten;
+    if (config_.generation >= 5) {
+        // 1.7.2 build 3: the expansion's lands, each from its own slow noise.
+        const float e = humidity_.perlin2(x / 170.0f + 77.0f, z / 170.0f - 33.0f);
+        if (purple && e > 0.22f) return VoidBiome::CrimsoniumForest;
+        if (!purple && e > 0.2f) return VoidBiome::ShardDesert;
+        if (e < -0.3f) return VoidBiome::Shattered;
+    }
     return purple ? VoidBiome::Purple : VoidBiome::Crimson;
 }
 
@@ -862,6 +996,9 @@ std::string World::placeName(int x, int z) const {
                 case VoidBiome::Purple: return "Fialový les";
                 case VoidBiome::Crimson: return "Karmínová poušť";
                 case VoidBiome::Forgotten: return "Zapomenutý Overworld";
+                case VoidBiome::CrimsoniumForest: return "Crimsoniový les";
+                case VoidBiome::Shattered: return "Roztříštěná prázdnota";
+                case VoidBiome::ShardDesert: return "Poušť prázdnotných střepů";
                 default: return "Lávová pustina";
             }
         default: {
@@ -1040,6 +1177,91 @@ void World::generateCelestial(Chunk& c) {
                 for (int k = 1; k <= h; ++k) c.set(x, top + k, z, CELESTIAL_STONE_BRICKS);
             }
         }
+    if (config_.generation >= 5) stampCelestialBridges(c);
+}
+
+// 1.8.0: bridges in the Celestial Reach. The sky is cut into a grid of kBridgeCell cells; each cell
+// may have an anchor, a point on an island near its middle. Neighbouring anchors (east and south)
+// are joined by a bridge when the line between them crosses open sky, never runs into higher
+// ground and does not climb too steeply. Everything depends on the seed and the position only,
+// so each chunk draws its own part of a bridge and the parts meet exactly at chunk borders.
+namespace {
+constexpr int kBridgeCell = 56;
+struct BridgeSeg {
+    float ax, az, bx, bz;
+    int ay, by;
+};
+}  // namespace
+
+void World::stampCelestialBridges(Chunk& c) {
+    const int cx = c.cx, cz = c.cz;
+    auto anchor = [&](int gx, int gz, int& ax, int& az, int& ay) {
+        // The island ground closest to a point near the cell's middle (searched on a coarse grid).
+        const uint32_t h = hash3(gx, 41, gz, seed_ ^ 0xB71Du);
+        const int mx = gx * kBridgeCell + kBridgeCell / 2 + (int)(h % 9) - 4, mz = gz * kBridgeCell + kBridgeCell / 2 + (int)((h >> 8) % 9) - 4;
+        int best = 1 << 30;
+        ay = -1;
+        for (int dx = -20; dx <= 20; dx += 4)
+            for (int dz = -20; dz <= 20; dz += 4) {
+                const int d = dx * dx + dz * dz, top = d < best ? celestialTop(mx + dx, mz + dz) : -1;
+                if (top < 0) continue;
+                best = d, ax = mx + dx, az = mz + dz, ay = top;
+            }
+        return ay >= 0;
+    };
+    std::vector<BridgeSeg> segs;
+    const int g0x = floorDiv(cx * kChunkSize, kBridgeCell) - 1, g0z = floorDiv(cz * kChunkSize, kBridgeCell) - 1;
+    const int g1x = floorDiv(cx * kChunkSize + kChunkSize - 1, kBridgeCell), g1z = floorDiv(cz * kChunkSize + kChunkSize - 1, kBridgeCell);
+    for (int gx = g0x; gx <= g1x; ++gx)
+        for (int gz = g0z; gz <= g1z; ++gz) {
+            int ax, az, ay;
+            if (!anchor(gx, gz, ax, az, ay)) continue;
+            for (int dir = 0; dir < 2; ++dir) {
+                const int ngx = gx + (dir == 0), ngz = gz + (dir == 1);
+                // Not every pair is joined: about two in three.
+                if (hash3(gx * 2 + dir, 43, gz, seed_ ^ 0x8B1Du) % 3 == 0) continue;
+                int bx, bz, by;
+                if (!anchor(ngx, ngz, bx, bz, by)) continue;
+                const float len = std::sqrt((float)((bx - ax) * (bx - ax) + (bz - az) * (bz - az)));
+                // The deck runs level, just over the highest ground on the way, and is only built
+                // when both ends are close below it (no long climbs, no towers).
+                bool gap = false;
+                int deck = std::max(ay, by);
+                for (float t = 0; t <= 1.0f; t += 1.0f / len) {
+                    const int top = celestialTop((int)std::lround(ax + (bx - ax) * t), (int)std::lround(az + (bz - az) * t));
+                    if (top < 0) gap = true;
+                    deck = std::max(deck, top);
+                }
+                const bool blocked = deck - ay > 3 || deck - by > 3;
+                if (gap && !blocked) segs.push_back({(float)ax, (float)az, (float)bx, (float)bz, deck + 1, deck + 1});
+            }
+        }
+    if (segs.empty()) return;
+    for (int x = 0; x < kChunkSize; ++x)
+        for (int z = 0; z < kChunkSize; ++z) {
+            const float wx = (float)(cx * kChunkSize + x), wz = (float)(cz * kChunkSize + z);
+            for (const BridgeSeg& s : segs) {
+                const float dx = s.bx - s.ax, dz = s.bz - s.az, len2 = dx * dx + dz * dz;
+                const float t = std::clamp(((wx - s.ax) * dx + (wz - s.az) * dz) / len2, 0.0f, 1.0f);
+                const float px = s.ax + dx * t - wx, pz = s.az + dz * t - wz;
+                const float dist = std::sqrt(px * px + pz * pz);
+                if (dist > 1.8f) continue;
+                const int deck = (int)std::lround(s.ay + (s.by - s.ay) * t);
+                const bool edge = dist > 1.1f;
+                const int along = (int)(t * std::sqrt(len2));
+                if (c.get(x, deck, z) == AIR) c.set(x, deck, z, edge ? CELESTIAL_STONE_BRICKS : CELESTIAL_PLANKS);
+                // Railings of brick slabs along both edges, with a pillar every eight blocks.
+                if (edge && c.get(x, deck + 1, z) == AIR) {
+                    const bool post = along % 8 == 0;
+                    c.set(x, deck + 1, z, post ? (ItemId)CELESTIAL_STONE_BRICKS : slabId(21, 0));
+                    if (post && c.get(x, deck + 2, z) == AIR) c.set(x, deck + 2, z, slabId(21, 0));
+                }
+                // Chains hang below the posts, the way the islands' own chains do.
+                if (edge && along % 8 == 0)
+                    for (int k = 1; k <= 3 && deck - k > 1; ++k)
+                        if (c.get(x, deck - k, z) == AIR) c.set(x, deck - k, z, VOID_FENCE);
+            }
+        }
 }
 
 void World::generateVoid(Chunk& c) {
@@ -1052,7 +1274,12 @@ void World::generateVoid(Chunk& c) {
         for (int z = 0; z < kChunkSize; ++z) {
             const int wx = cx * kChunkSize + x, wz = cz * kChunkSize + z;
             const VoidBiome b = voidBiomeAt(wx, wz);
-            const int h = voidHeight(wx, wz);
+            int h = voidHeight(wx, wz);
+            // 1.7.2 build 3: the Shattered Void is torn: steps and spikes of rock; the shard desert
+            // rolls in long dark dunes.
+            if (b == VoidBiome::Shattered) h += (int)(std::fabs(detail_.perlin2(wx / 14.0f + 51.0f, wz / 14.0f)) * 14);
+            if (b == VoidBiome::ShardDesert) h += (int)((1 - std::fabs(std::sin((wx * 0.5f + wz * 0.8f) / 11.0f))) * 4);
+            h = std::min(h, kChunkHeight - 24);
             biomes[x][z] = b;
             heights[x][z] = h;
             for (int y = 0; y < kChunkHeight; ++y) {
@@ -1066,6 +1293,17 @@ void World::generateVoid(Chunk& c) {
                 if (b == VoidBiome::Crimson && y < h && y >= h - 4) id = RED_SAND;
                 if (b == VoidBiome::Lava && y == h && r % 9 == 0) id = OBSIDIAN;
                 if (b == VoidBiome::Forgotten) id = forgottenBlock(wx, y, wz, h);
+                if (b == VoidBiome::CrimsoniumForest) {
+                    if (y == h) id = VOID_GRASS;
+                    else if (id == VOID_STONE && y > h - 12 && r % 170 == 0) id = CRIMSONIUM_ORE;  // the rare mineral, close under the floor
+                } else if (b == VoidBiome::Shattered && (id == VOID_STONE || y == h)) {
+                    id = SHATTERED_STONE;
+                    // Clefts that split the rock from the top down.
+                    if (y > h - 9 && y <= h && std::fabs(caves_.perlin2(wx / 9.0f + 300.0f, wz / 9.0f)) < 0.07f) id = AIR;
+                    else if (y <= h && r % 97 == 0) id = VOID_SHARD_BLOCK;
+                } else if (b == VoidBiome::ShardDesert && y <= h && y > h - 6) {
+                    id = y > h - 4 ? (ItemId)DARK_SAND : (ItemId)DARK_SANDSTONE;
+                }
                 if (id == VOID_STONE) {
                     // Caves, and the richest ores of the game deep down.
                     if (y > 4 && y < h - 5 && std::fabs(caves_.perlin3(wx / 26.0f, y / 14.0f, wz / 26.0f)) < 0.05f) id = AIR;
@@ -1091,6 +1329,24 @@ void World::generateVoid(Chunk& c) {
                 continue;
             }
             if (c.get(x, h + 1, z) != AIR) continue;
+            if (biomes[x][z] == VoidBiome::CrimsoniumForest && c.get(x, h, z) == VOID_GRASS) {
+                // Dense red trees of crimsonium wood; crimson roots between them.
+                if (r % 1000 < 45) placeTree(c, x, h + 1, z, r, CRIMSONIUM_LOG, CRIMSONIUM_LEAVES);
+                else if (r % 1000 < 110) c.set(x, h + 1, z, CRIMSON_ROOTS);
+                continue;
+            }
+            if (biomes[x][z] == VoidBiome::ShardDesert && c.get(x, h, z) == DARK_SAND) {
+                if (r % 1000 < 18) c.set(x, h + 1, z, SHARD_CLUSTER);
+                continue;
+            }
+            if (biomes[x][z] == VoidBiome::Shattered && c.get(x, h, z) == SHATTERED_STONE) {
+                // Spikes of broken rock, some tipped with crystal.
+                if (r % 1000 < 12) {
+                    const int tall = 3 + (int)((r >> 12) % 6);
+                    for (int k = 1; k <= tall && h + k < kChunkHeight - 2; ++k) c.set(x, h + k, z, k == tall && (r >> 9) % 3 == 0 ? (ItemId)VOID_SHARD_BLOCK : (ItemId)SHATTERED_STONE);
+                }
+                continue;
+            }
             if (biomes[x][z] == VoidBiome::Purple && c.get(x, h, z) == VOID_GRASS) {
                 if (r % 1000 < 22) {
                     // Like an oak, but the trunk has an eye in the middle.
@@ -1146,6 +1402,83 @@ void World::generateVoid(Chunk& c) {
                 c.set(x, h + tall + 1, z, EYE_LOG);
             }
         }
+    // 1.7.2 build 3: the expansion's own structures. Each fits inside one chunk (so it is never cut
+    // at a border) and is chosen from the chunk's position and the seed alone.
+    if (config_.generation >= 5) {
+        const uint32_t r = hash3(cx, 91, cz, seed_ ^ 0x5E7Au);
+        const VoidBiome b = biomes[8][8];
+        const int h0 = heights[8][8];
+        auto put = [&](int x, int y, int z, ItemId id) {
+            if (x >= 0 && x < kChunkSize && z >= 0 && z < kChunkSize && y > 2 && y < kChunkHeight - 1) c.set(x, y, z, id);
+        };
+        const int roll = (int)(r % 100);
+        if (b == VoidBiome::CrimsoniumForest && roll < 9 && h0 + 10 < kChunkHeight) {
+            // A forest shrine: a floor of shattered bricks, four crimsonium pillars, a slab roof
+            // with a crystal on top, the shrine's chest in the middle.
+            for (int x = 5; x <= 11; ++x)
+                for (int z = 5; z <= 11; ++z) {
+                    for (int y = h0 + 1; y <= h0 + 6; ++y) put(x, y, z, AIR);
+                    put(x, h0, z, SHATTERED_BRICKS);
+                    put(x, h0 + 5, z, slabId(37, 0));
+                }
+            for (int x : {5, 11})
+                for (int z : {5, 11})
+                    for (int y = h0 + 1; y <= h0 + 4; ++y) put(x, y, z, CRIMSONIUM_LOG);
+            put(8, h0 + 6, 8, VOID_SHARD_BLOCK);
+            put(8, h0 + 1, 8, LOOT_CHEST_SHRINE);
+            put(7, h0 + 1, 8, VOID_SHARD_BLOCK);
+            put(9, h0 + 1, 8, VOID_SHARD_BLOCK);
+        } else if (b == VoidBiome::Shattered && roll < 10) {
+            // A rock arch from one side of the chunk to the other.
+            for (int x = 2; x <= 13; ++x) {
+                const int top = h0 + 3 + (int)(std::sin((x - 2) / 11.0f * 3.14159f) * 7);
+                for (int z = 7; z <= 9; ++z) {
+                    put(x, top, z, SHATTERED_STONE);
+                    put(x, top - 1, z, (x * 7 + z) % 9 == 0 ? (ItemId)VOID_SHARD_BLOCK : (ItemId)SHATTERED_STONE);
+                    if (x <= 3 || x >= 12)
+                        for (int y = heights[x][z]; y < top; ++y) put(x, y, z, SHATTERED_STONE);  // the legs
+                }
+            }
+        } else if (b == VoidBiome::Shattered && roll < 17 && h0 + 16 < kChunkHeight) {
+            // A crumbling tower of shattered bricks, open to the sky, its chest on the floor.
+            const int tall = 7 + (int)((r >> 9) % 7);
+            for (int x = 6; x <= 10; ++x)
+                for (int z = 6; z <= 10; ++z) {
+                    put(x, h0, z, SHATTERED_BRICKS);
+                    const bool wall = x == 6 || x == 10 || z == 6 || z == 10;
+                    for (int y = h0 + 1; y <= h0 + tall; ++y) {
+                        const bool broken = y > h0 + tall - 3 && hash3(x * 7 + z, y, cz, seed_) % 3 == 0;
+                        put(x, y, z, wall && !broken ? (ItemId)SHATTERED_BRICKS : (ItemId)AIR);
+                    }
+                }
+            put(8, h0 + 1, 6, AIR);
+            put(8, h0 + 2, 6, AIR);  // the doorway
+            put(8, h0 + 1, 9, LOOT_CHEST_VOID);
+        } else if (b == VoidBiome::ShardDesert && roll < 8) {
+            // A buried ruin: the tops of walls sticking out of the dunes.
+            for (int x = 4; x <= 12; ++x)
+                for (int z = 4; z <= 12; ++z) {
+                    if (x != 4 && x != 12 && z != 4 && z != 12) continue;
+                    const int up = (int)(hash3(x, z, cx * 31 + cz, seed_) % 4);
+                    for (int y = h0 - 3; y <= h0 - 1 + up; ++y) put(x, y, z, (x + z) % 3 ? (ItemId)DARK_SANDSTONE : (ItemId)VOID_STONE_BRICKS);
+                }
+            put(8, h0 - 2, 8, LOOT_CHEST_CHAMBER);
+        } else if (b == VoidBiome::ShardDesert && roll < 13 && h0 > 24) {
+            // A hidden chamber under the sand; only a crystal on a small pillar gives it away.
+            const int floor = h0 - 13;
+            for (int x = 5; x <= 11; ++x)
+                for (int z = 5; z <= 11; ++z)
+                    for (int y = floor; y <= floor + 5; ++y) {
+                        const bool shell = x == 5 || x == 11 || z == 5 || z == 11 || y == floor || y == floor + 5;
+                        put(x, y, z, shell ? (ItemId)DARK_SANDSTONE : (ItemId)AIR);
+                    }
+            put(8, floor + 1, 8, LOOT_CHEST_CHAMBER);
+            put(6, floor + 1, 6, VOID_SHARD_BLOCK);
+            put(10, floor + 1, 10, VOID_SHARD_BLOCK);
+            put(8, h0 + 1, 8, SHATTERED_BRICKS);
+            put(8, h0 + 2, 8, VOID_SHARD_BLOCK);
+        }
+    }
     // 1.6.0: the frames of the portal to the Celestial Reach lie in the Forgotten Overworld, flat
     // in the ground like the End's: twelve frame blocks round a dark hole (opens in 1.7.0).
     if (config_.generation >= 4) {

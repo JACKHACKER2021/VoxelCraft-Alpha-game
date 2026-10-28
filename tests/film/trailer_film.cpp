@@ -5101,6 +5101,350 @@ SHOT(x06_celestial_tree) {
     d.seconds(0.3f);
 }
 
+
+// 1.8.0 preview: the Old World (0.3 terrain, textures, HUD) and its Nether.
+SHOT(z01_old_world) {
+    Director d(out, "z01");
+    d.openWorld("Old World", 4242, GameMode::Creative, [](GenConfig& g) { g.oldWorld = true; });
+    Player& p = d.s().player();
+    p.yaw = 0.4f, p.pitch = -0.1f;
+    d.idle(40);
+    d.shot("z01_old_world");
+    d.seconds(2, [&](float k) { p.yaw = 0.4f + k * 0.6f; });
+}
+
+
+// ---------------------------------------------------------------- 1.7.2 build 3: encyclopedia pictures
+// Flies to the nearest place where `want` holds and looks over it from a little above.
+static bool flyToBiome(Director& d, const std::function<bool(World&, int, int)>& want, float yawDeg = 30) {
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x0 = (int)p.pos.x, z0 = (int)p.pos.z;
+    for (int r = 0; r < 3200; r += 24)
+        for (int a = 0; a < 16; ++a) {
+            const int x = x0 + (int)(std::cos(a * 0.3927f) * r), z = z0 + (int)(std::sin(a * 0.3927f) * r);
+            if (!want(w, x, z)) continue;
+            w.ensureChunksAround(floorDiv(x, kChunkSize), floorDiv(z, kChunkSize), 5, 400);
+            p.flying = true;
+            p.pos = Vec3(x + 0.5f, (float)feetY(w, x, z) + 9, z + 0.5f);
+            p.yaw = yawDeg * 3.14159f / 180, p.pitch = -0.25f;
+            return true;
+        }
+    return false;
+}
+static void picture(Director& d, const char* name) {
+    d.settings().hideGui = true;
+    d.s().setTimeOfDay(6000);
+    d.idle(70);
+    d.shot(name);
+    d.seconds(0.3f, [&](float) { d.s().player().flying = true; });
+}
+#define ENC_OVER(NAME, ID)                                                                                   \
+    SHOT(NAME) {                                                                                             \
+        Director d(out, #NAME);                                                                              \
+        d.openWorld("Enc", 4242, GameMode::Creative);                                                        \
+        d.settings().graphics = GraphicsMode::Enhanced;                                                      \
+        flyToBiome(d, [](World& w, int x, int z) { const BiomeDef* b = w.biomeAt(x, z); return b && b->id == ID; }); \
+        picture(d, #NAME);                                                                                   \
+    }
+ENC_OVER(e01_plains, "plains")
+ENC_OVER(e02_forest, "forest")
+ENC_OVER(e03_dappled, "dappled_forest")
+ENC_OVER(e04_desert, "desert")
+ENC_OVER(e05_taiga, "snowy_taiga")
+ENC_OVER(e06_mountains, "mountains")
+#define ENC_VOID(NAME, BIOME)                                                                                \
+    SHOT(NAME) {                                                                                             \
+        Director d(out, #NAME);                                                                              \
+        d.openWorld("Enc", 4242, GameMode::Creative);                                                        \
+        d.settings().graphics = GraphicsMode::Enhanced;                                                      \
+        goNether(d);                                                                                         \
+        goVoid(d);                                                                                           \
+        flyToBiome(d, [](World& w, int x, int z) { return w.voidBiomeAt(x, z) == World::VoidBiome::BIOME; }); \
+        picture(d, #NAME);                                                                                   \
+    }
+ENC_VOID(e07_void_purple, Purple)
+ENC_VOID(e08_void_crimson, Crimson)
+ENC_VOID(e09_crimsonium, CrimsoniumForest)
+ENC_VOID(e10_shattered, Shattered)
+ENC_VOID(e11_shard_desert, ShardDesert)
+SHOT(e12_nether) {
+    Director d(out, "e12");
+    d.openWorld("Enc", 4242, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    goNether(d);
+    picture(d, "e12_nether");
+}
+SHOT(e13_celestial) {
+    Director d(out, "e13");
+    d.openWorld("Enc", 4242, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    enterReach(d);
+    Player& p = d.s().player();
+    p.flying = true;
+    p.pos = p.pos + Vec3(0, 14, 0);
+    p.pitch = -0.35f;
+    picture(d, "e13_celestial");
+}
+SHOT(e14_old_world) {
+    Director d(out, "e14");
+    d.openWorld("Enc", 4242, GameMode::Creative, [](GenConfig& g) { g.oldWorld = true; });
+    d.s().player().pitch = -0.1f;
+    picture(d, "e14_old_world");
+}
+
+
+// ---------------------------------------------------------------- 1.8.0 trailer
+SHOT(v00_intro) {
+    // The intro as it plays on the phone: falling blocks, VoxelSoftworks presents, the new screen.
+    Director d(out, "v00", true);
+    d.shot("v00_intro");
+    d.seconds(9.0f);
+    d.tap(300, 135);
+    d.seconds(2.0f);
+}
+
+static void preAlpha(Director& d) {
+    std::ofstream(d.data / "packs.json") << "{\"enabled\": [\"default\", \"pre_alpha_style\"]}\n";
+    d.tap(220, 176);  // Mods and packs: the list is read again
+    d.game->onBack();
+    d.frames(4);
+}
+SHOT(v01_prealpha) {
+    Director d(out, "v01");
+    d.idle(4);
+    preAlpha(d);
+    d.shot("v01_prealpha");
+    d.seconds(3.0f);
+    d.tap(300, 132);  // Settings in the old style
+    d.seconds(2.0f);
+}
+
+SHOT(v02_old_world) {
+    Director d(out, "v02");
+    d.openWorld("Old World", 4242, GameMode::Creative, [](GenConfig& g) { g.oldWorld = true; });
+    Player& p = d.s().player();
+    p.yaw = 0.6f, p.pitch = -0.05f;
+    d.idle(30);
+    d.shot("v02_old_world");
+    d.down(3, 90, 200);  // the floating joystick of 0.3
+    d.seconds(4.0f, [&](float k) { d.move(3, 90, 200 - 24 * std::min(1.0f, k * 4)); p.yaw = 0.6f + k * 0.5f; });
+    d.up(3, 90, 176);
+    d.seconds(0.6f);
+    d.tap(581, 19);  // the grass block: the old settings
+    d.seconds(2.0f);
+}
+
+SHOT(v03_old_nether) {
+    Director d(out, "v03");
+    d.openWorld("Old World", 4242, GameMode::Creative, [](GenConfig& g) { g.oldWorld = true; });
+    goNether(d);
+    Player& p = d.s().player();
+    p.flying = true;  // out of the portal and up, over the lava sea
+    p.pos = p.pos + Vec3(0, 6, 0) - p.forward() * 4;
+    p.pitch = -0.2f;
+    d.idle(30);
+    d.shot("v03_old_nether");
+    d.seconds(3.5f, [&](float k) { p.flying = true; p.yaw += 0.006f; });
+}
+
+SHOT(v04_concrete) {
+    // A wall of all sixteen colours; powder falls into water and sets.
+    Director d(out, "v04");
+    d.openWorld("Concrete", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z) - 7, y = feetY(w, x, z);
+    for (int c = 0; c < 16; ++c)
+        for (int k = 0; k < 3; ++k) {
+            w.setBlock(x - 8 + c, y + k, z, k == 1 ? (ItemId)(CONCRETE_POWDER + c) : (ItemId)(CONCRETE + c));
+        }
+    for (int dx = -3; dx <= 3; ++dx) w.setBlock(x + dx, y - 1, z + 3, WATER);
+    p.yaw = 0, p.pitch = -0.15f;
+    s.setTimeOfDay(6000);
+    d.settings().hideGui = true;
+    d.idle(20);
+    d.shot("v04_concrete");
+    d.seconds(2.0f);
+    for (int c = 0; c < 6; ++c) {
+        w.setBlock(x - 3 + c, y + 4, z + 3, (ItemId)(CONCRETE_POWDER + (c * 3) % 16));
+        d.seconds(0.35f);
+    }
+    d.seconds(2.5f);
+}
+
+SHOT(v05_dappled) {
+    Director d(out, "v05");
+    d.openWorld("Dappled", 4242, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    flyToBiome(d, [](World& w, int x, int z) {
+        for (int dx = -32; dx <= 32; dx += 16)
+            for (int dz = -32; dz <= 32; dz += 16) {
+                const BiomeDef* b = w.biomeAt(x + dx, z + dz);
+                if (!b || b->id != "dappled_forest") return false;
+            }
+        return true;
+    });
+    d.s().setWeather(true);
+    d.settings().hideGui = true;
+    d.s().setTimeOfDay(6000);
+    d.idle(90);
+    d.shot("v05_dappled");
+    Player& p = d.s().player();
+    d.seconds(6.0f, [&](float k) { p.flying = true; p.yaw += 0.004f; p.pos.y -= 0.02f; });
+}
+
+SHOT(v06_camp) {
+    Director d(out, "v06");
+    d.openWorld("Camp", 4242, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    // Find a camp barrel in the chunks around a Dappled Forest.
+    flyToBiome(d, [](World& w2, int x, int z) { const BiomeDef* b = w2.biomeAt(x, z); return b && b->id == "dappled_forest"; });
+    bool found = false;
+    int bx = 0, by = 0, bz = 0;
+    for (int r = 0; r < 12 && !found; ++r) {
+        w.ensureChunksAround((int)p.pos.x >> 4, (int)p.pos.z >> 4, 4 + r, 600);
+        for (auto& [k, c] : w.chunks()) {
+            for (int i = 0; i < kChunkSize * kChunkSize * kChunkHeight && !found; ++i)
+                if (c->blocks[i] == LOOT_BARREL_CAMP) {
+                    found = true;
+                    // blocks are x, z, y ordered as Chunk::get expects; recover the position by search.
+                }
+            if (found) {
+                for (int x = 0; x < kChunkSize; ++x)
+                    for (int z = 0; z < kChunkSize; ++z)
+                        for (int y = 1; y < kChunkHeight; ++y)
+                            if (c->get(x, y, z) == LOOT_BARREL_CAMP) bx = c->cx * kChunkSize + x, by = y, bz = c->cz * kChunkSize + z;
+                break;
+            }
+        }
+    }
+    p.flying = true;
+    p.pos = Vec3(bx + 6.5f, by + 3.5f, bz + 7.5f);
+    d.lookNow(Vec3(bx - 2.0f, (float)by, bz - 4.0f));
+    d.settings().hideGui = true;
+    s.setTimeOfDay(6000);
+    d.idle(40);
+    d.shot("v06_camp");
+    const Vec3 c(bx - 2.0f, (float)by, bz - 4.0f);
+    d.seconds(5.0f, [&](float k) { p.flying = true; p.pos = Vec3(c.x + std::sin(0.8f + k) * 10, c.y + 4, c.z + std::cos(0.8f + k) * 10); d.lookNow(c); });
+}
+
+SHOT(v07_cutters) {
+    Director d(out, "v07");
+    d.openWorld("Cutters", 4242, GameMode::Survival, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    s.inventory().clear();
+    d.give(0, STONE_BRICKS, 32);
+    d.give(1, DUSTY_CONCRETE, 16);
+    d.give(2, GRAY_LOG, 16);
+    d.give(3, CELESTIAL_STONE_BRICKS, 16);
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z) - 2, y = feetY(w, x, z);
+    w.setBlock(x, y, z, CUTTER);
+    w.setBlock(x + 2, y, z, WOOD_CUTTER);
+    p.pitch = -0.6f;
+    d.idle(20);
+    d.shot("v07_cutters");
+    d.use(Vec3(x + 0.5f, y + 1.0f, z + 0.5f));
+    d.seconds(1.0f);
+    d.tap(206, 166);  // the second block
+    d.seconds(1.2f);
+    d.game->onBack();
+    d.frames(6);
+    d.use(Vec3(x + 2.5f, y + 1.0f, z + 0.5f));
+    d.seconds(2.0f);
+}
+
+SHOT(v08_stairs) {
+    Director d(out, "v08");
+    d.openWorld("Stairs", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z) - 8, y = feetY(w, x, z);
+    for (int m = 17; m < kShapeMaterials; ++m) {
+        const int col = (m - 17) % 12, row = (m - 17) / 12;
+        w.setBlock(x - 12 + col * 2, y, z - row * 3, stairsId(m, 2, false));
+        w.setBlock(x - 11 + col * 2, y, z - row * 3, slabId(m, 0));
+        w.setBlock(x - 12 + col * 2, y, z - row * 3 - 1, shapeMaterialBlock(m));
+    }
+    p.flying = true;
+    p.pos = Vec3(x + 0.5f, y + 5.0f, z + 6.0f);
+    p.yaw = 0, p.pitch = -0.5f;
+    d.settings().hideGui = true;
+    s.setTimeOfDay(6000);
+    d.idle(20);
+    d.shot("v08_stairs");
+    d.seconds(5.0f, [&](float k) { p.flying = true; p.pos.x = x + 0.5f - 6 + k * 12; });
+}
+
+SHOT(v09_bridges) {
+    Director d(out, "v09");
+    d.openWorld("Bridges", 4242, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    enterReach(d);
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    // Fly to the first bridge deck over the open sky.
+    w.ensureChunksAround(0, 0, 8, 2000);
+    Vec3 at = p.pos;
+    for (auto& [k, c] : w.chunks())
+        for (int x = 0; x < kChunkSize; ++x)
+            for (int z = 0; z < kChunkSize; ++z)
+                for (int y = 60; y < 110; ++y)
+                    if (c->get(x, y, z) == CELESTIAL_PLANKS && c->get(x, y - 1, z) == AIR && at.y == p.pos.y)
+                        at = Vec3(c->cx * kChunkSize + x + 0.5f, (float)y, c->cz * kChunkSize + z + 0.5f);
+    d.settings().hideGui = true;
+    d.idle(30);
+    d.shot("v09_bridges");
+    d.seconds(6.0f, [&](float k) { p.flying = true; p.pos = Vec3(at.x + std::sin(k * 1.4f) * 18, at.y + 6, at.z + std::cos(k * 1.4f) * 18); d.lookNow(at); });
+}
+
+#define VOID_FLY(NAME, BIOME)                                                                                 \
+    SHOT(NAME) {                                                                                              \
+        Director d(out, #NAME);                                                                               \
+        d.openWorld("Void", 4242, GameMode::Creative);                                                        \
+        d.settings().graphics = GraphicsMode::Enhanced;                                                       \
+        goNether(d);                                                                                          \
+        goVoid(d);                                                                                            \
+        flyToBiome(d, [](World& w, int x, int z) {                                                            \
+            for (int dx = -24; dx <= 24; dx += 12)                                                            \
+                for (int dz = -24; dz <= 24; dz += 12)                                                        \
+                    if (w.voidBiomeAt(x + dx, z + dz) != World::VoidBiome::BIOME) return false;               \
+            return true;                                                                                      \
+        });                                                                                                   \
+        d.settings().hideGui = true;                                                                          \
+        d.idle(70);                                                                                           \
+        d.shot(#NAME);                                                                                        \
+        Player& p = d.s().player();                                                                           \
+        d.seconds(5.0f, [&](float k) { p.flying = true; p.yaw += 0.005f; p.pos = p.pos + p.forward() * 0.08f; }); \
+    }
+VOID_FLY(v10_crimsonium, CrimsoniumForest)
+VOID_FLY(v11_shattered, Shattered)
+VOID_FLY(v12_shards, ShardDesert)
+
+SHOT(v13_encyclopedia) {
+    Director d(out, "v13");
+    d.idle(4);
+    d.shot("v13_encyclopedia");
+    d.seconds(1.0f);
+    d.tap(380, 176);
+    d.seconds(2.0f);
+    d.tap(150, 36);
+    d.tap(100, 74);
+    d.seconds(2.0f);
+    d.tap(100, 158);
+    d.seconds(2.0f);
+}
+
 // ---------------------------------------------------------------- 1.5.7 checks
 SHOT(k01_fortress) {
     Director d(out, "k01");

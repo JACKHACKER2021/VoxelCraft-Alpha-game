@@ -66,6 +66,16 @@ std::vector<fs::path> jsonFiles(const fs::path& dir) {
 PackManager::PackManager(const std::string& dataDir) : root_(dataDir + "/packs"), statePath_(dataDir + "/packs.json") {}
 
 void PackManager::ensureDefaultPack() {
+    // 1.8.0: the built-in "Pre-Alpha Style" pack, off until the player turns it on.
+    const fs::path style = fs::path(root_) / "pre_alpha_style" / "manifest.json";
+    if (!fs::exists(style))
+        writeText(style, R"({
+  "name": "Pre-Alpha Style",
+  "description": "Menus, buttons, inventory and HUD look like VoxelCraft 0.1-0.3",
+  "version": "1.0",
+  "style": "pre_alpha"
+}
+)");
     const fs::path dir = fs::path(root_) / "default";
     if (!fs::exists(dir / "manifest.json")) {
         resetDefaultPack();
@@ -144,6 +154,7 @@ std::vector<PackInfo> PackManager::list() const {
         p.name = m["name"].str(m["header"]["name"].str(p.id));
         p.description = m["description"].str(m["header"]["description"].str(""));
         p.version = m["version"].str("");
+        p.style = m["style"].str("");
         packs.push_back(p);
     }
     std::vector<std::string> order = enabledOrder();

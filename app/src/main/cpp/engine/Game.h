@@ -53,7 +53,7 @@ public:
 
     Session* session() { return session_.get(); }  // the open world, if any
     // The VoxelSoftworks intro before the menu; tests and tools skip it.
-    void skipSplash() { splashTime_ = kSplashLength; }
+    void skipSplash() { splashTime_ = kSplashLength; presentsDone_ = true; }
     // For tools (the trailer): open a world straight away and reach the profile and settings.
     void openWorld(const WorldInfo& info, const PlayerState& player) { startSession(info, player); }
     Profile& toolProfile() { return profile_; }
@@ -101,7 +101,9 @@ private:
         Document,              // 1.5.0: reading a page of the old documents
         Credits, Trailers,     // 1.5.7: the credits (tap VoxelSoftworks on the title) and the trailer gallery
         WorldMap, Chat,        // 1.5.7: the big map of explored land, the chat window
-        Book                   // 1.5.7: book and quill
+        Book,                  // 1.5.7: book and quill
+        Cutter,                // 1.7.2 build 2: the stonecutter
+        Encyclopedia           // 1.7.2 build 3
     };
 
     // A slot in any open container, so items can be moved between them.
@@ -130,6 +132,19 @@ private:
     void splashScreen(float dt);
     static constexpr float kSplashLength = 3.4f;
     float splashTime_ = 0;  // seconds of the intro shown so far
+    // 1.8.0: after the intro, "VoxelSoftworks presents" the version: what is in it and what comes next.
+    bool presentsDone_ = false;
+    float presentsTime_ = 0;
+    void presentsScreen(float dt);
+    void oldPauseScreen();
+    void cutterScreen();
+    void encyclopediaScreen();
+    int encCat_ = 0, encSel_ = 0;
+    float encScroll_ = 0;
+    std::string encPicture_;  // the picture now in the map texture
+    ItemId cutterPick_ = 0;  // the block chosen in the cutter
+    bool cutterWood_ = false;  // the wood cutter (wood) or the stonecutter (the rest)
+    bool texturesOld_ = false;  // the atlas holds the 0.3 textures (an Old World is open)  // 1.8.0 Old World: the settings screen of 0.3
     int splashLanded_ = 0;  // blocks that have dropped into place
     void rewardsPage(float x, float y, float w, float h);
     CraftResult craftResult(int size) const;  // the grid's recipe, if its addon is on
@@ -300,6 +315,7 @@ private:
     int deleteIndex_ = -1;
     std::string newWorldName_, newWorldSeed_;
     GameMode newWorldMode_ = GameMode::Creative;
+    bool newWorldOld_ = false;  // 1.8.0: World type "Old (historic generation)"
     bool newWorldFlat_ = false, newWorldCoords_ = false, newWorldKeepInventory_ = false, newWorldCommands_ = false;
     bool newWorldExpLiquids_ = false, newWorldExpMaps_ = false, newWorldExpOpen_ = false;  // 1.5.1 Experimental Features
     int settingsTab_ = 0;

@@ -85,7 +85,9 @@ public:
     int surfaceHeight(int x, int z) const;  // overworld generator height (top block), for spawning
 
     // 1.1.0: the Nether's grassy meadows and the three lands of the Crimson Void.
-    enum class VoidBiome { Purple, Crimson, Lava, Forgotten };  // 1.6.0: the Forgotten Overworld (generation 4)
+    // 1.6.0: the Forgotten Overworld (generation 4). 1.7.2 build 3 (generation 5): the Crimson Void
+    // Expansion: the Crimsonium Forest, the Shattered Void and the Void Shards Desert.
+    enum class VoidBiome { Purple, Crimson, Lava, Forgotten, CrimsoniumForest, Shattered, ShardDesert };
     VoidBiome voidBiomeAt(int x, int z) const;
     int voidHeight(int x, int z) const;
     bool netherGrassAt(int x, int z) const;
@@ -126,6 +128,10 @@ private:
 public:
     // 1.7.0: the height of the top of the floating island at x, z, or -1 over the open sky.
     int celestialTop(int x, int z) const;
+    // 1.8.0: bridges between the sky islands, and the generator of worlds made as "Old World".
+    void stampCelestialBridges(Chunk& c);
+    void generateOldWorld(Chunk& c);
+    void generateOldNether(Chunk& c);
 
 private:
     struct Column {

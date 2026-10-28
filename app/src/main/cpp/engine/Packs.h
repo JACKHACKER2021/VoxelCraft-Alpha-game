@@ -13,6 +13,7 @@ struct PackInfo {
     std::string name, description, version;
     bool enabled = false;
     bool builtin = false;  // the "default" pack
+    std::string style;     // 1.8.0: "pre_alpha" restyles the menus and the HUD like VoxelCraft 0.1-0.3
 };
 
 // Packs (mod packs / add-ons) live in <dataDir>/packs/<id>/ and may contain:

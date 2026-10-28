@@ -28,6 +28,8 @@ TreeKind treeForSapling(ItemId sapling) {
         case PINE_SAPLING: return TreeKind::Pine;
         case VOID_SAPLING: return TreeKind::Void;
         case NETHERPERK_SAPLING: return TreeKind::Netherperk;
+        case GRAY_SAPLING: return TreeKind::Gray;
+        case CELESTIAL_SAPLING: return TreeKind::Celestial;
         default: return TreeKind::Oak;
     }
 }
@@ -36,6 +38,7 @@ bool saplingCanGrowOn(ItemId sapling, ItemId ground) {
     switch (sapling) {
         case VOID_SAPLING: return ground == VOID_GRASS || ground == GRASS || ground == DIRT;
         case NETHERPERK_SAPLING: return ground == NETHER_GRASS || ground == NETHERRACK;
+        case CELESTIAL_SAPLING: return ground == CELESTIAL_GRASS || ground == CELESTIAL_DIRT || ground == GRASS || ground == DIRT;
         default: return ground == GRASS || ground == DIRT || ground == SNOW_BLOCK;
     }
 }
@@ -46,9 +49,11 @@ bool growTree(World& w, int x, int y, int z, TreeKind kind, uint32_t seed) {
     for (int k = 1; k <= trunk + 1; ++k)
         if (!freeForTree(w.getBlock(x, y + k, z))) return false;
     const ItemId log = kind == TreeKind::Pine ? SPRUCE_LOG : kind == TreeKind::Void ? VOID_LOG
-                       : kind == TreeKind::Netherperk ? NETHERPERK_LOG : LOG;
+                       : kind == TreeKind::Netherperk ? NETHERPERK_LOG : kind == TreeKind::Gray ? GRAY_LOG
+                       : kind == TreeKind::Celestial ? CELESTIAL_LOG : LOG;
     const ItemId leaves = kind == TreeKind::Pine ? SPRUCE_LEAVES : kind == TreeKind::Void ? VOID_LEAVES
-                          : kind == TreeKind::Netherperk ? NETHERPERK_CAP : LEAVES;
+                          : kind == TreeKind::Netherperk ? NETHERPERK_CAP : kind == TreeKind::Gray ? (ItemId)(RED_LEAVES + (seed >> 11) % 3)
+                          : kind == TreeKind::Celestial ? CELESTIAL_LEAVES : LEAVES;
     w.setBlockLoading(x, y, z, AIR);
     if (w.getBlock(x, y - 1, z) == GRASS) w.setBlock(x, y - 1, z, DIRT);
     if (kind == TreeKind::Pine) {

@@ -16,6 +16,8 @@ std::string tileFilePath(int tile);
 
 // Our own procedural placeholder textures (256x256, 16px tiles).
 std::vector<uint8_t> buildFallbackAtlas(int& sizeOut);
+// 1.8.0 Old World: the 0.3 textures of the blocks that existed then, drawn over an atlas.
+void applyLegacyTiles(std::vector<uint8_t>& rgba, int size);
 
 // 1.5.1: the animated eyes (16x16 RGBA): the Eye Log (kind 0) looks around and blinks; the Void
 // Brick Eye (kind 1) pulses and narrows its slit. `time` in seconds; the game redraws them a few

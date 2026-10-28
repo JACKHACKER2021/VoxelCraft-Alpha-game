@@ -85,6 +85,9 @@ public:
     float textWidth(const std::string& s, float scale = 1) const { return font_.measure(tr(s)) * scale; }
     // Tests: when set, every drawn text (after translation) is appended here.
     static std::vector<std::string>* textLog;
+    // 1.8.0: set while the "Pre-Alpha Style" pack is on: buttons, windows, slots and HUD buttons
+    // are drawn the way VoxelCraft 0.1-0.3 drew them (square, grey, bevelled).
+    static bool preAlpha;
     void bevel(float x, float y, float w, float h, Color face, Color light, Color dark);
     void panel(float x, float y, float w, float h);  // light grey inventory window
     void slotFrame(float x, float y, float size, bool highlight);

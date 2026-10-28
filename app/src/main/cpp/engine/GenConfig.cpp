@@ -456,6 +456,155 @@ const char* kUpdate170 = R"({
   ]
 })";
 
+const char* kUpdate172 = R"({
+  // VoxelCraft 1.7.2 build 3: dyes (from flowers, leaves, minerals, or mixed), coloured wool,
+  // concrete powder in 16 colours (it sets into concrete in water) and carpets.
+  "recipes": [
+    {"type": "shapeless", "ingredients": ["crimsonium_log"], "result": "crimsonium_planks", "count": 4},
+    {"type": "shaped", "pattern": ["SS", "SS"], "key": {"S": "shattered_stone"}, "result": "shattered_bricks", "count": 4},
+    {"type": "shaped", "pattern": ["SS", "SS"], "key": {"S": "dark_sand"}, "result": "dark_sandstone"},
+    {"type": "shaped", "pattern": ["SS", "SS"], "key": {"S": "void_shard"}, "result": "void_shard_block"},
+    {"type": "shaped", "pattern": ["M..", "MM.", "MMM"], "key": {"M": "crimsonium_planks"}, "result": "crimsonium_stairs", "count": 4},
+    {"type": "shaped", "pattern": ["MMM"], "key": {"M": "crimsonium_planks"}, "result": "crimsonium_slab", "count": 6},
+    {"type": "shaped", "pattern": ["M..", "MM.", "MMM"], "key": {"M": "shattered_stone"}, "result": "shattered_stone_stairs", "count": 4},
+    {"type": "shaped", "pattern": ["MMM"], "key": {"M": "shattered_stone"}, "result": "shattered_stone_slab", "count": 6},
+    {"type": "shaped", "pattern": ["M..", "MM.", "MMM"], "key": {"M": "shattered_bricks"}, "result": "shattered_brick_stairs", "count": 4},
+    {"type": "shaped", "pattern": ["MMM"], "key": {"M": "shattered_bricks"}, "result": "shattered_brick_slab", "count": 6},
+    {"type": "shaped", "pattern": ["M..", "MM.", "MMM"], "key": {"M": "dark_sandstone"}, "result": "dark_sandstone_stairs", "count": 4},
+    {"type": "shaped", "pattern": ["MMM"], "key": {"M": "dark_sandstone"}, "result": "dark_sandstone_slab", "count": 6},
+    {"type": "shapeless", "ingredients": ["clay"], "result": "white_dye", "count": 2},
+    {"type": "shapeless", "ingredients": ["orange_leaves"], "result": "orange_dye", "count": 2},
+    {"type": "shapeless", "ingredients": ["dandelion"], "result": "yellow_dye", "count": 2},
+    {"type": "shapeless", "ingredients": ["poppy"], "result": "red_dye", "count": 2},
+    {"type": "shapeless", "ingredients": ["powerstone_dust"], "result": "blue_dye", "count": 2},
+    {"type": "shapeless", "ingredients": ["dirt"], "result": "brown_dye", "count": 2},
+    {"type": "shapeless", "ingredients": ["cactus"], "result": "green_dye", "count": 2},
+    {"type": "shapeless", "ingredients": ["coal"], "result": "black_dye", "count": 2},
+    {"type": "shapeless", "ingredients": ["red_leaves"], "result": "red_dye", "count": 2},
+    {"type": "shapeless", "ingredients": ["yellow_leaves"], "result": "yellow_dye", "count": 2},
+    {"type": "shapeless", "ingredients": ["purple_dye", "pink_dye"], "result": "magenta_dye", "count": 2},
+    {"type": "shapeless", "ingredients": ["blue_dye", "white_dye"], "result": "light_blue_dye", "count": 2},
+    {"type": "shapeless", "ingredients": ["green_dye", "white_dye"], "result": "lime_dye", "count": 2},
+    {"type": "shapeless", "ingredients": ["red_dye", "white_dye"], "result": "pink_dye", "count": 2},
+    {"type": "shapeless", "ingredients": ["black_dye", "white_dye"], "result": "gray_dye", "count": 2},
+    {"type": "shapeless", "ingredients": ["gray_dye", "white_dye"], "result": "light_gray_dye", "count": 2},
+    {"type": "shapeless", "ingredients": ["blue_dye", "green_dye"], "result": "cyan_dye", "count": 2},
+    {"type": "shapeless", "ingredients": ["red_dye", "blue_dye"], "result": "purple_dye", "count": 2},
+    {"type": "shapeless", "ingredients": ["sand", "sand", "sand", "sand", "gravel", "gravel", "gravel", "gravel", "white_dye"], "result": "white_concrete_powder", "count": 8},
+    {"type": "shaped", "pattern": ["WW"], "key": {"W": "white_wool"}, "result": "white_carpet", "count": 3},
+    {"type": "shapeless", "ingredients": ["white_wool", "orange_dye"], "result": "orange_wool"},
+    {"type": "shapeless", "ingredients": ["sand", "sand", "sand", "sand", "gravel", "gravel", "gravel", "gravel", "orange_dye"], "result": "orange_concrete_powder", "count": 8},
+    {"type": "shaped", "pattern": ["WW"], "key": {"W": "orange_wool"}, "result": "orange_carpet", "count": 3},
+    {"type": "shapeless", "ingredients": ["white_wool", "magenta_dye"], "result": "magenta_wool"},
+    {"type": "shapeless", "ingredients": ["sand", "sand", "sand", "sand", "gravel", "gravel", "gravel", "gravel", "magenta_dye"], "result": "magenta_concrete_powder", "count": 8},
+    {"type": "shaped", "pattern": ["WW"], "key": {"W": "magenta_wool"}, "result": "magenta_carpet", "count": 3},
+    {"type": "shapeless", "ingredients": ["white_wool", "light_blue_dye"], "result": "light_blue_wool"},
+    {"type": "shapeless", "ingredients": ["sand", "sand", "sand", "sand", "gravel", "gravel", "gravel", "gravel", "light_blue_dye"], "result": "light_blue_concrete_powder", "count": 8},
+    {"type": "shaped", "pattern": ["WW"], "key": {"W": "light_blue_wool"}, "result": "light_blue_carpet", "count": 3},
+    {"type": "shapeless", "ingredients": ["white_wool", "yellow_dye"], "result": "yellow_wool"},
+    {"type": "shapeless", "ingredients": ["sand", "sand", "sand", "sand", "gravel", "gravel", "gravel", "gravel", "yellow_dye"], "result": "yellow_concrete_powder", "count": 8},
+    {"type": "shaped", "pattern": ["WW"], "key": {"W": "yellow_wool"}, "result": "yellow_carpet", "count": 3},
+    {"type": "shapeless", "ingredients": ["white_wool", "lime_dye"], "result": "lime_wool"},
+    {"type": "shapeless", "ingredients": ["sand", "sand", "sand", "sand", "gravel", "gravel", "gravel", "gravel", "lime_dye"], "result": "lime_concrete_powder", "count": 8},
+    {"type": "shaped", "pattern": ["WW"], "key": {"W": "lime_wool"}, "result": "lime_carpet", "count": 3},
+    {"type": "shapeless", "ingredients": ["white_wool", "pink_dye"], "result": "pink_wool"},
+    {"type": "shapeless", "ingredients": ["sand", "sand", "sand", "sand", "gravel", "gravel", "gravel", "gravel", "pink_dye"], "result": "pink_concrete_powder", "count": 8},
+    {"type": "shaped", "pattern": ["WW"], "key": {"W": "pink_wool"}, "result": "pink_carpet", "count": 3},
+    {"type": "shapeless", "ingredients": ["white_wool", "gray_dye"], "result": "gray_wool"},
+    {"type": "shapeless", "ingredients": ["sand", "sand", "sand", "sand", "gravel", "gravel", "gravel", "gravel", "gray_dye"], "result": "gray_concrete_powder", "count": 8},
+    {"type": "shaped", "pattern": ["WW"], "key": {"W": "gray_wool"}, "result": "gray_carpet", "count": 3},
+    {"type": "shapeless", "ingredients": ["white_wool", "light_gray_dye"], "result": "light_gray_wool"},
+    {"type": "shapeless", "ingredients": ["sand", "sand", "sand", "sand", "gravel", "gravel", "gravel", "gravel", "light_gray_dye"], "result": "light_gray_concrete_powder", "count": 8},
+    {"type": "shaped", "pattern": ["WW"], "key": {"W": "light_gray_wool"}, "result": "light_gray_carpet", "count": 3},
+    {"type": "shapeless", "ingredients": ["white_wool", "cyan_dye"], "result": "cyan_wool"},
+    {"type": "shapeless", "ingredients": ["sand", "sand", "sand", "sand", "gravel", "gravel", "gravel", "gravel", "cyan_dye"], "result": "cyan_concrete_powder", "count": 8},
+    {"type": "shaped", "pattern": ["WW"], "key": {"W": "cyan_wool"}, "result": "cyan_carpet", "count": 3},
+    {"type": "shapeless", "ingredients": ["white_wool", "purple_dye"], "result": "purple_wool"},
+    {"type": "shapeless", "ingredients": ["sand", "sand", "sand", "sand", "gravel", "gravel", "gravel", "gravel", "purple_dye"], "result": "purple_concrete_powder", "count": 8},
+    {"type": "shaped", "pattern": ["WW"], "key": {"W": "purple_wool"}, "result": "purple_carpet", "count": 3},
+    {"type": "shapeless", "ingredients": ["white_wool", "blue_dye"], "result": "blue_wool"},
+    {"type": "shapeless", "ingredients": ["sand", "sand", "sand", "sand", "gravel", "gravel", "gravel", "gravel", "blue_dye"], "result": "blue_concrete_powder", "count": 8},
+    {"type": "shaped", "pattern": ["WW"], "key": {"W": "blue_wool"}, "result": "blue_carpet", "count": 3},
+    {"type": "shapeless", "ingredients": ["white_wool", "brown_dye"], "result": "brown_wool"},
+    {"type": "shapeless", "ingredients": ["sand", "sand", "sand", "sand", "gravel", "gravel", "gravel", "gravel", "brown_dye"], "result": "brown_concrete_powder", "count": 8},
+    {"type": "shaped", "pattern": ["WW"], "key": {"W": "brown_wool"}, "result": "brown_carpet", "count": 3},
+    {"type": "shapeless", "ingredients": ["white_wool", "green_dye"], "result": "green_wool"},
+    {"type": "shapeless", "ingredients": ["sand", "sand", "sand", "sand", "gravel", "gravel", "gravel", "gravel", "green_dye"], "result": "green_concrete_powder", "count": 8},
+    {"type": "shaped", "pattern": ["WW"], "key": {"W": "green_wool"}, "result": "green_carpet", "count": 3},
+    {"type": "shapeless", "ingredients": ["white_wool", "red_dye"], "result": "red_wool"},
+    {"type": "shapeless", "ingredients": ["sand", "sand", "sand", "sand", "gravel", "gravel", "gravel", "gravel", "red_dye"], "result": "red_concrete_powder", "count": 8},
+    {"type": "shaped", "pattern": ["WW"], "key": {"W": "red_wool"}, "result": "red_carpet", "count": 3},
+    {"type": "shapeless", "ingredients": ["white_wool", "black_dye"], "result": "black_wool"},
+    {"type": "shapeless", "ingredients": ["sand", "sand", "sand", "sand", "gravel", "gravel", "gravel", "gravel", "black_dye"], "result": "black_concrete_powder", "count": 8},
+    {"type": "shaped", "pattern": ["WW"], "key": {"W": "black_wool"}, "result": "black_carpet", "count": 3}
+  ]
+})";
+
+const char* kUpdate180 = R"({
+  // VoxelCraft 1.8.0 Concrete & Old World: concrete (dusty from sand and gravel, hardened in the
+  // furnace), the gray wood of the Dappled Forest, and stairs and slabs of the new materials.
+  "recipes": [
+    {"type": "shapeless", "ingredients": ["sand", "sand", "gravel", "gravel"], "result": "dusty_concrete", "count": 4},
+    {"type": "shapeless", "ingredients": ["gray_log"], "result": "gray_planks", "count": 4},
+    {"type": "shaped", "pattern": ["M..", "MM.", "MMM"], "key": {"M": "dusty_concrete"}, "result": "dusty_concrete_stairs", "count": 4},
+    {"type": "shaped", "pattern": ["MMM"], "key": {"M": "dusty_concrete"}, "result": "dusty_concrete_slab", "count": 6},
+    {"type": "shaped", "pattern": ["M..", "MM.", "MMM"], "key": {"M": "hardened_concrete"}, "result": "hardened_concrete_stairs", "count": 4},
+    {"type": "shaped", "pattern": ["MMM"], "key": {"M": "hardened_concrete"}, "result": "hardened_concrete_slab", "count": 6},
+    {"type": "shaped", "pattern": ["M..", "MM.", "MMM"], "key": {"M": "gray_planks"}, "result": "gray_stairs", "count": 4},
+    {"type": "shaped", "pattern": ["MMM"], "key": {"M": "gray_planks"}, "result": "gray_slab", "count": 6},
+    {"type": "shaped", "pattern": ["M..", "MM.", "MMM"], "key": {"M": "celestial_planks"}, "result": "celestial_stairs", "count": 4},
+    {"type": "shaped", "pattern": ["MMM"], "key": {"M": "celestial_planks"}, "result": "celestial_slab", "count": 6},
+    {"type": "shaped", "pattern": ["M..", "MM.", "MMM"], "key": {"M": "celestial_stone_bricks"}, "result": "celestial_brick_stairs", "count": 4},
+    {"type": "shaped", "pattern": ["MMM"], "key": {"M": "celestial_stone_bricks"}, "result": "celestial_brick_slab", "count": 6},
+    {"type": "shaped", "pattern": [".I.", "SSS"], "key": {"I": "iron_ingot", "S": "stone"}, "result": "stonecutter"},
+    {"type": "shaped", "pattern": ["PSP", "P.P", "PSP"], "key": {"P": "planks", "S": "oak_slab"}, "result": "barrel"},
+    {"type": "shaped", "pattern": [".I.", "PPP"], "key": {"I": "iron_ingot", "P": "planks"}, "result": "wood_cutter"},
+    {"type": "shaped", "pattern": ["M..", "MM.", "MMM"], "key": {"M": "hardened_stone"}, "result": "hardened_stone_stairs", "count": 4},
+    {"type": "shaped", "pattern": ["MMM"], "key": {"M": "hardened_stone"}, "result": "hardened_stone_slab", "count": 6},
+    {"type": "shaped", "pattern": ["M..", "MM.", "MMM"], "key": {"M": "void_stone"}, "result": "void_stone_stairs", "count": 4},
+    {"type": "shaped", "pattern": ["MMM"], "key": {"M": "void_stone"}, "result": "void_stone_slab", "count": 6},
+    {"type": "shaped", "pattern": ["M..", "MM.", "MMM"], "key": {"M": "netherrack"}, "result": "netherrack_stairs", "count": 4},
+    {"type": "shaped", "pattern": ["MMM"], "key": {"M": "netherrack"}, "result": "netherrack_slab", "count": 6},
+    {"type": "shaped", "pattern": ["M..", "MM.", "MMM"], "key": {"M": "obsidian"}, "result": "obsidian_stairs", "count": 4},
+    {"type": "shaped", "pattern": ["MMM"], "key": {"M": "obsidian"}, "result": "obsidian_slab", "count": 6},
+    {"type": "shaped", "pattern": ["M..", "MM.", "MMM"], "key": {"M": "crimson_stone"}, "result": "crimson_stone_stairs", "count": 4},
+    {"type": "shaped", "pattern": ["MMM"], "key": {"M": "crimson_stone"}, "result": "crimson_stone_slab", "count": 6},
+    {"type": "shaped", "pattern": ["M..", "MM.", "MMM"], "key": {"M": "souled_stone"}, "result": "souled_stone_stairs", "count": 4},
+    {"type": "shaped", "pattern": ["MMM"], "key": {"M": "souled_stone"}, "result": "souled_stone_slab", "count": 6},
+    {"type": "shaped", "pattern": ["M..", "MM.", "MMM"], "key": {"M": "celestial_stone"}, "result": "celestial_stone_stairs", "count": 4},
+    {"type": "shaped", "pattern": ["MMM"], "key": {"M": "celestial_stone"}, "result": "celestial_stone_slab", "count": 6},
+    {"type": "shaped", "pattern": ["M..", "MM.", "MMM"], "key": {"M": "dripstone_block"}, "result": "dripstone_stairs", "count": 4},
+    {"type": "shaped", "pattern": ["MMM"], "key": {"M": "dripstone_block"}, "result": "dripstone_slab", "count": 6},
+    {"type": "shaped", "pattern": ["M..", "MM.", "MMM"], "key": {"M": "tar_block"}, "result": "tar_stairs", "count": 4},
+    {"type": "shaped", "pattern": ["MMM"], "key": {"M": "tar_block"}, "result": "tar_slab", "count": 6},
+    {"type": "shaped", "pattern": ["M..", "MM.", "MMM"], "key": {"M": "cracked_powerstone_bricks"}, "result": "cracked_powerstone_brick_stairs", "count": 4},
+    {"type": "shaped", "pattern": ["MMM"], "key": {"M": "cracked_powerstone_bricks"}, "result": "cracked_powerstone_brick_slab", "count": 6},
+    {"type": "shaped", "pattern": ["M..", "MM.", "MMM"], "key": {"M": "cracked_nether_bricks"}, "result": "cracked_nether_brick_stairs", "count": 4},
+    {"type": "shaped", "pattern": ["MMM"], "key": {"M": "cracked_nether_bricks"}, "result": "cracked_nether_brick_slab", "count": 6},
+    {"type": "shaped", "pattern": ["M..", "MM.", "MMM"], "key": {"M": "cracked_deepstone_bricks"}, "result": "cracked_deepstone_brick_stairs", "count": 4},
+    {"type": "shaped", "pattern": ["MMM"], "key": {"M": "cracked_deepstone_bricks"}, "result": "cracked_deepstone_brick_slab", "count": 6},
+    {"type": "shaped", "pattern": ["M..", "MM.", "MMM"], "key": {"M": "rotten_planks"}, "result": "rotten_stairs", "count": 4},
+    {"type": "shaped", "pattern": ["MMM"], "key": {"M": "rotten_planks"}, "result": "rotten_slab", "count": 6},
+    {"type": "shaped", "pattern": ["M..", "MM.", "MMM"], "key": {"M": "mossy_deepstone"}, "result": "mossy_deepstone_stairs", "count": 4},
+    {"type": "shaped", "pattern": ["MMM"], "key": {"M": "mossy_deepstone"}, "result": "mossy_deepstone_slab", "count": 6},
+    {"type": "shaped", "pattern": ["M..", "MM.", "MMM"], "key": {"M": "chiseled_powerstone_bricks"}, "result": "chiseled_powerstone_brick_stairs", "count": 4},
+    {"type": "shaped", "pattern": ["MMM"], "key": {"M": "chiseled_powerstone_bricks"}, "result": "chiseled_powerstone_brick_slab", "count": 6}
+  ],
+  "smelting": [
+    {"input": "dusty_concrete", "output": "hardened_concrete"}
+  ]
+})";
+
+const char* kDappledForest = R"({
+  "id": "dappled_forest",
+  "name": "Strakatý les",
+  "climate": {"temperature": 0.32, "humidity": 0.56},
+  "terrain": {"height": 67, "variation": 7},
+  "blocks": {"surface": "grass", "filler": "dirt", "filler_depth": 3, "beach": "sand", "underwater": "dirt"},
+  "trees": {"density": 0.045, "trunk": "gray_log", "leaves": "red_leaves"},
+  "plants": {"grass": 0.2, "flowers": 0.02}
+})";
+
 const char* kUpdate160 = R"({
   // VoxelCraft 1.6.0 Caves and Tunes: deepstone masonry, moss and the hardium pickaxe.
   "recipes": [
@@ -602,6 +751,7 @@ const std::vector<std::pair<std::string, std::string>>& defaultPackFiles() {
         {"biomes/ocean.json", kOcean},
         {"biomes/snowy_taiga.json", kSnowyTaiga},
         {"biomes/ice_plains.json", kIcePlains},
+        {"biomes/dappled_forest.json", kDappledForest},
         {"recipes/crafting.json", kCrafting},
         {"recipes/smelting.json", kSmelting},
         {"recipes/metals.json", kMetals},
@@ -614,6 +764,8 @@ const std::vector<std::pair<std::string, std::string>>& defaultPackFiles() {
         {"recipes/update_1_5_7.json", kUpdate157},
         {"recipes/update_1_6_0.json", kUpdate160},
         {"recipes/update_1_7_0.json", kUpdate170},
+        {"recipes/update_1_8_0.json", kUpdate180},
+        {"recipes/update_1_7_2.json", kUpdate172},
     };
     return files;
 }
@@ -666,7 +818,7 @@ const GenConfig& GenConfig::defaults() {
             else if (path.rfind("biomes/", 0) == 0) biomes.push(j);
         }
         doc.set("biomes", biomes);
-        doc.set("generation", Json::number(4));  // new worlds get the newest generator
+        doc.set("generation", Json::number(5));  // new worlds get the newest generator
         return fromJson(doc);
     }();
     return cfg;
@@ -717,7 +869,8 @@ GenConfig GenConfig::fromJson(const Json& doc, std::vector<std::string>* w) {
     }
     c.flat = doc["flat"].boolean(false);
     c.crimsonDesert = std::clamp((int)doc["crimson_desert"].num(2), 1, 2);
-    c.generation = std::clamp((int)doc["generation"].num(2), 1, 4);
+    c.generation = std::clamp((int)doc["generation"].num(2), 1, 5);
+    c.oldWorld = doc["old_world"].boolean(false);
     return c;
 }
 
@@ -803,6 +956,7 @@ Json GenConfig::toJson() const {
     doc.set("flat", Json::fromBool(flat));
     doc.set("crimson_desert", Json::number(crimsonDesert));
     doc.set("generation", Json::number(generation));
+    doc.set("old_world", Json::fromBool(oldWorld));
     doc.set("overworld", o);
     doc.set("nether", n);
     doc.set("biomes", bs);

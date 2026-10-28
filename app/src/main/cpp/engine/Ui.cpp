@@ -88,7 +88,7 @@ void Ui::tile(float x, float y, float size, int t, Color c) {
 
 void Ui::item(float x, float y, float size, ItemId id) {
     if (id == AIR) return;
-    if (isItemOnly(id) || isLiquid(id) || isPlant(id) || isLeaves(id) || id == GLASS || id == POWERSTONE_GLASS || isDoor(id)) {
+    if (isItemOnly(id) || isLiquid(id) || isPlant(id) || isLeaves(id) || id == GLASS || id == POWERSTONE_GLASS || isDoor(id) || isTorch(id)) {  // a torch is a flat icon
         // Flat icon, like items and see-through blocks in the original inventory.
         float pad = size * 0.1f;
         tile(x + pad, y + pad, size - 2 * pad, tileFor(id, F_SOUTH));
@@ -135,6 +135,7 @@ void Ui::icon(float x, float y, int glyph, Color c, float scale) {
 }
 
 std::vector<std::string>* Ui::textLog = nullptr;
+bool Ui::preAlpha = false;
 
 float Ui::text(float x, float y, const std::string& source, Color c, float scale, bool shadow, float maxWidth) {
     // Every text on screen goes through the translation table.
@@ -172,11 +173,24 @@ void Ui::bevel(float x, float y, float w, float h, Color face, Color light, Colo
 }
 
 void Ui::panel(float x, float y, float w, float h) {
+    if (preAlpha) {
+        // The light grey window of 0.3.
+        fill(x, y, w, h, {0, 0, 0, 1});
+        bevel(x + 1, y + 1, w - 2, h - 2, {0.776f, 0.776f, 0.776f, 1}, {1, 1, 1, 1}, {0.333f, 0.333f, 0.333f, 1});
+        return;
+    }
     // 1.7.0 UI: the old light-grey window is now the dark rounded glass of every menu.
     roundPanel(x, y, w, h);
 }
 
 void Ui::slotFrame(float x, float y, float size, bool highlight) {
+    if (preAlpha) {
+        // Sunken slot of 0.3: dark top-left edge, light bottom-right edge.
+        fill(x, y, size, size, {1, 1, 1, 1});
+        fill(x, y, size - 1, size - 1, {0.216f, 0.216f, 0.216f, 1});
+        fill(x + 1, y + 1, size - 2, size - 2, highlight ? Color{0.6f, 0.75f, 0.95f, 1} : Color{0.545f, 0.545f, 0.545f, 1});
+        return;
+    }
     // 1.7.0 UI: a dark rounded hollow with a soft rim; the chosen slot glows green.
     const Color rim = highlight ? theme::kGreenBorder : Color{0.36f, 0.34f, 0.3f, 1};
     frame(x, y, size, size, highlight ? Color{0.2f, 0.3f, 0.12f, 1} : Color{0.12f, 0.11f, 0.1f, 1}, rim);
@@ -213,6 +227,13 @@ float Ui::dragY(float x, float y, float w, float h) const {
 }
 
 void Ui::frame(float x, float y, float w, float h, Color face, Color border) {
+    if (preAlpha) {
+        // Square corners, a black edge, and the dark menus see-through over the world.
+        fill(x, y, w, h, {0, 0, 0, std::max(0.6f, face.a)});
+        const float lum = face.r * 0.3f + face.g * 0.59f + face.b * 0.11f;
+        fill(x + 1, y + 1, w - 2, h - 2, {lum, lum, lum, face.a * (lum < 0.25f ? 0.55f : 1.0f)});
+        return;
+    }
     // 1.7.0 UI: rounded (more for bigger frames).
     const int r = std::min(w, h) >= 18 ? 3 : std::min(w, h) >= 10 ? 2 : 1;
     roundRect(x, y, w, h, r, border);
@@ -237,6 +258,10 @@ void Ui::roundRect(float x, float y, float w, float h, int r, Color c) {
 }
 
 void Ui::roundPanel(float x, float y, float w, float h) {
+    if (preAlpha) {
+        fill(x, y, w, h, {0, 0, 0, 0.45f});  // 0.3 had no panels: the world shows through
+        return;
+    }
     // A soft shadow, a rounded rim, and dark glass inside.
     roundRect(x + 2, y + 3, w, h, 4, {0, 0, 0, 0.35f});
     roundRect(x, y, w, h, 4, {0.47f, 0.44f, 0.38f, 0.95f});
@@ -246,6 +271,19 @@ void Ui::roundPanel(float x, float y, float w, float h) {
 
 bool Ui::menuButton(float x, float y, float w, float h, const std::string& label, Style style, int iconGlyph, bool enabled) {
     using namespace theme;
+    if (preAlpha) {
+        // The button of 0.3: grey, bevelled, black edge; blue while held; no icons or colours.
+        const bool down = enabled && held(x, y, w, h);
+        const Color face = !enabled ? Color{0.27f, 0.27f, 0.27f, 1} : down ? Color{0.49f, 0.53f, 0.75f, 1} : Color{0.44f, 0.44f, 0.44f, 1};
+        fill(x, y, w, h, {0, 0, 0, 1});
+        bevel(x + 1, y + 1, w - 2, h - 2, face, {face.r + 0.22f, face.g + 0.22f, face.b + 0.22f, 1}, {face.r * 0.5f, face.g * 0.5f, face.b * 0.5f, 1});
+        const Color tc = !enabled ? Color{0.63f, 0.63f, 0.63f, 1} : down ? Color{1, 1, 0.63f, 1} : Color{0.88f, 0.88f, 0.88f, 1};
+        const float tw = std::min(textWidth(label), w - 4);
+        text(std::floor(x + (w - tw) / 2), std::floor(y + (h - 8) / 2), label, tc, 1, true, w - 4);
+        const bool hit = enabled && tapped(x, y, w, h);
+        if (hit && onClick) onClick();
+        return hit;
+    }
     const bool down = enabled && held(x, y, w, h);
     Color face, rim;
     switch (style) {
@@ -282,6 +320,10 @@ bool Ui::menuButton(float x, float y, float w, float h, const std::string& label
 
 void Ui::hudButton(float x, float y, float w, float h, bool pressed) {
     using namespace theme;
+    if (preAlpha) {
+        fill(x, y, w, h, {1, 1, 1, pressed ? 0.35f : 0.18f});  // the pale see-through squares of 0.3
+        return;
+    }
     // 1.7.0 UI: rounded smoky glass with a pale rim (green while pressed).
     const Color face = pressed ? Color{0.22f, 0.4f, 0.1f, 0.75f} : Color{0.12f, 0.12f, 0.11f, 0.45f};
     const Color rim = pressed ? kGreenBorder : Color{0.85f, 0.85f, 0.8f, 0.45f};
@@ -302,7 +344,12 @@ bool Ui::checkbox(float x, float y, bool& value) {
     bool hit = tapped(x - 6, y - 6, 24, 24);
     if (hit) value = !value;
     if (hit && onClick) onClick();
-    frame(x, y, 12, 12, value ? Color{0.3f, 0.58f, 0.12f, 1} : Color{0.1f, 0.09f, 0.08f, 1}, value ? kGreenBorder : kBorder);
+    if (preAlpha) {
+        fill(x, y, 12, 12, {0, 0, 0, 1});
+        bevel(x + 1, y + 1, 10, 10, {0.44f, 0.44f, 0.44f, 1}, {0.66f, 0.66f, 0.66f, 1}, {0.22f, 0.22f, 0.22f, 1});
+    } else {
+        frame(x, y, 12, 12, value ? Color{0.3f, 0.58f, 0.12f, 1} : Color{0.1f, 0.09f, 0.08f, 1}, value ? kGreenBorder : kBorder);
+    }
     if (value) {
         // Check mark, white on green
         const Color m = {1, 1, 1, 1};
@@ -323,6 +370,14 @@ bool Ui::themedSlider(float x, float y, float w, float& value) {
             float v = std::clamp((p.x - x) / w, 0.0f, 1.0f);
             if (v != value) { value = v; changed = true; }
         }
+    if (preAlpha) {
+        // The 0.3 slider: a dark track and a grey bevelled knob.
+        fill(x, y, w, 10, {0, 0, 0, 1});
+        fill(x + 1, y + 1, w - 2, 8, {0.3f, 0.3f, 0.3f, 1});
+        const float kx = std::floor(x + 1 + value * (w - 8));
+        bevel(kx, y, 6, 10, {0.44f, 0.44f, 0.44f, 1}, {0.66f, 0.66f, 0.66f, 1}, {0.22f, 0.22f, 0.22f, 1});
+        return changed;
+    }
     frame(x, y + 3, w, 4, kField, kSeparator);
     fill(x + 1, y + 4, (w - 2) * value, 2, Color{0.38f, 0.66f, 0.16f, 1});
     // A round knob.
@@ -337,6 +392,7 @@ bool Ui::themedSlider(float x, float y, float w, float& value) {
 bool Ui::dropdown(float x, float y, float w, float h, const std::string& value) {
     using namespace theme;
     bool down = held(x, y, w, h);
+    if (preAlpha) return button(x, y, w, h, value);  // 0.3 cycled values on a plain button
     frame(x, y, w, h, down ? kButtonDown : kPanelInner, kBorder);
     text(x + 5, y + (h - 8) / 2, value, kText, 1, false, w - 16);
     // Chevron
@@ -352,6 +408,14 @@ bool Ui::dropdown(float x, float y, float w, float h, const std::string& value) 
 bool Ui::textBox(float x, float y, float w, float h, const std::string& value, const std::string& placeholder) {
     using namespace theme;
     bool down = held(x, y, w, h);
+    if (preAlpha) {
+        // Black field with a grey edge, white text.
+        fill(x, y, w, h, down ? Color{1, 1, 1, 1} : Color{0.63f, 0.63f, 0.63f, 1});
+        fill(x + 1, y + 1, w - 2, h - 2, {0, 0, 0, 1});
+        if (value.empty()) text(x + 5, y + (h - 8) / 2, placeholder, {0.5f, 0.5f, 0.5f, 1}, 1, false, w - 10);
+        else text(x + 5, y + (h - 8) / 2, value, {1, 1, 1, 1}, 1, false, w - 10);
+        return tapped(x, y, w, h);
+    }
     frame(x, y, w, h, kField, down ? kTextBright : kBorder);
     if (value.empty()) text(x + 5, y + (h - 8) / 2, placeholder, kTextDim, 1, false, w - 10);
     else text(x + 5, y + (h - 8) / 2, value, kTextBright, 1, false, w - 10);

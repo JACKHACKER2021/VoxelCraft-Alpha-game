@@ -176,6 +176,21 @@ void buildChunkMesh(const World& world, const Chunk& chunk, ChunkMesh& out) {
     const Neighbourhood n(world, chunk);
     const SkyLight sky(n);
     const BlockLight glow(n, world, chunk);
+    // 1.7.2 build 2: grass takes the colour of its biome (0 green, 1 orange, 2 dark), worked out
+    // once per column and only where there is grass.
+    int8_t grassKind[kChunkSize][kChunkSize];
+    std::fill(&grassKind[0][0], &grassKind[0][0] + kChunkSize * kChunkSize, (int8_t)-1);
+    auto grassTile = [&](int x, int z, int tile) {
+        if (tile != T_GRASS_TOP && tile != T_GRASS_SIDE) return tile;
+        int8_t& k = grassKind[x][z];
+        if (k < 0) {
+            const BiomeDef* b = world.config().oldWorld ? nullptr : world.biomeAt(baseX + x, baseZ + z);
+            k = !b ? 0 : b->id == "dappled_forest" ? 1 : (b->id == "snowy_taiga" || b->treeShape == 1) ? 2 : 0;
+        }
+        if (k == 1) return tile == T_GRASS_TOP ? (int)T_GRASS_TOP_ORANGE : (int)T_GRASS_SIDE_ORANGE;
+        if (k == 2) return tile == T_GRASS_TOP ? (int)T_GRASS_TOP_DARK : (int)T_GRASS_SIDE_DARK;
+        return tile;
+    };
 
     for (int x = 0; x < kChunkSize; ++x)
         for (int z = 0; z < kChunkSize; ++z)
@@ -216,7 +231,12 @@ void buildChunkMesh(const World& world, const Chunk& chunk, ChunkMesh& out) {
                                 for (int k = 0; k < 3; ++k) p[k] = c[k] > 0.5f ? hi[k] : lo[k];
                                 // Texture coordinates from the position on the face, so a small box shows
                                 // the matching part of the tile.
-                                float u = axis == 0 ? p[2] : p[0], v = axis == 1 ? p[2] : 1 - std::min(p[1], 1.0f);
+                                // 1.7.2 build 2: a wall torch's stick sits at the wall, but its texture is the
+                                // standing torch's: map the box back to the middle of the tile (it showed the
+                                // empty edge of the tile, so the torch looked like a flat plate).
+                                float tp[3] = {p[0], p[1], p[2]};
+                                if (isTorch(id) && id != TORCH) tp[0] += 7 / 16.0f - bx.x0, tp[2] += 7 / 16.0f - bx.z0, tp[1] -= 3 / 16.0f;
+                                float u = axis == 0 ? tp[2] : tp[0], v = axis == 1 ? tp[2] : 1 - std::min(tp[1], 1.0f);
                                 if (f == 2 || f == 5) u = 1 - u;  // north and west faces are seen mirrored
                                 if (f == F_TOP && isBed(id)) {
                                     // The bed's top turns with it: the pillow lies across the head end.
@@ -277,7 +297,7 @@ void buildChunkMesh(const World& world, const Chunk& chunk, ChunkMesh& out) {
 
                     // 1.5.5: leaves sway; the open surface of water and lava ripples.
                     const int wave = isLeaves(id) ? 1 : isLiquid(id) && f == F_TOP && n.get(x, y + 1, z) != id ? 2 : 0;
-                    int tile = tileFor(id, (Face)f);
+                    int tile = id == GRASS ? grassTile(x, z, tileFor(id, (Face)f)) : tileFor(id, (Face)f);
                     float u0 = (tile % kAtlasCols) * kTile, v0 = (tile / kAtlasCols) * kTile;
                     const float uv[4][2] = {{u0, v0 + kTile}, {u0 + kTile, v0 + kTile}, {u0 + kTile, v0}, {u0, v0}};
 

@@ -9,7 +9,7 @@ namespace vc {
 class World;
 
 // Growing saplings into trees, and leaves that fall when no trunk holds them.
-enum class TreeKind { Oak, Pine, Void, Netherperk };
+enum class TreeKind { Oak, Pine, Void, Netherperk, Gray, Celestial };
 TreeKind treeForSapling(ItemId sapling);
 // The block a sapling needs under it (grass or dirt, void grass, cornerstone grass).
 bool saplingCanGrowOn(ItemId sapling, ItemId ground);

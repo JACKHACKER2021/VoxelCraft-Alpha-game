@@ -69,8 +69,8 @@ int itemBoxes(ItemId id, Box out[kItemBoxes]) {
         out[0] = {3 / 16.0f, 4 / 16.0f, 3 / 16.0f, 13 / 16.0f, 1, 13 / 16.0f};
         return 1;
     }
-    if (id == SNOW_LAYER) {
-        out[0] = {0, 0, 0, 1, 2 / 16.0f, 1};
+    if (id == SNOW_LAYER || isCarpet(id)) {
+        out[0] = {0, 0, 0, 1, (isCarpet(id) ? 1 : 2) / 16.0f, 1};
         return 1;
     }
     if (id == PARTY_LANTERN) {
@@ -206,6 +206,10 @@ int blockBoxes(const World& world, int x, int y, int z, ItemId id, bool collisio
     }
     if (id == SNOW_LAYER) {
         out[0] = {0, 0, 0, 1, collision ? 0.01f : 2 / 16.0f, 1};
+        return 1;
+    }
+    if (isCarpet(id)) {
+        out[0] = {0, 0, 0, 1, 1 / 16.0f, 1};
         return 1;
     }
     if (id == PARTY_LANTERN) {
