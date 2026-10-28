@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VoxelCraft – VoxelSoftworks</title>
+<meta name="description" content="VoxelCraft je kostičková hra pro Android s vlastním enginem v C++: čtyři dimenze, stovky bloků, módy, multiplayer a Starý svět z verzí 0.1–0.3.">
+<meta property="og:title" content="VoxelCraft 1.8.0 – Concrete &amp; Old World">
+<meta property="og:image" content="img/poster.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #07080c; --panel: #11131b; --panel2: #171a25; --line: #262a3a;
+    --text: #e8eaf2; --dim: #9aa0b4; --cyan: #4fd8ff; --violet: #8a5cff; --gold: #ffd36e; --green: #8ee36b;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 Inter, system-ui, sans-serif; }
+  a { color: var(--cyan); }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+  .pixel { font-family: "Press Start 2P", monospace; letter-spacing: .02em; }
+
+  nav { position: sticky; top: 0; z-index: 10; background: rgba(7, 8, 12, .85); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+  nav .wrap { display: flex; align-items: center; gap: 22px; height: 58px; }
+  nav .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); font-size: 12px; }
+  nav .brand img { height: 30px; }
+  nav .links { margin-left: auto; display: flex; gap: 18px; flex-wrap: wrap; }
+  nav .links a { color: var(--dim); text-decoration: none; font-weight: 600; font-size: 14px; }
+  nav .links a:hover { color: var(--text); }
+
+  header.hero { position: relative; overflow: hidden; padding: 70px 0 60px; text-align: center; }
+  header.hero::before { content: ""; position: absolute; inset: 0; background: url(img/crimsonium.jpg) center/cover; opacity: .18; filter: blur(2px); }
+  header.hero::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 0, var(--bg) 75%); }
+  .hero > .wrap { position: relative; z-index: 1; }
+  .hero .logo { width: min(560px, 90%); animation: rise .9s ease-out both; }  /* the logo's black melts away */
+  .hero h1 { font-size: clamp(22px, 4.4vw, 44px); margin: 26px 0 10px; color: var(--gold); text-shadow: 0 4px 0 #3a2a00; }
+  .hero .sub { font-size: clamp(11px, 1.6vw, 15px); color: var(--text); }
+  .hero p.lead { max-width: 680px; margin: 22px auto 30px; color: var(--dim); font-size: 18px; }
+  .buttons { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .btn { display: inline-block; padding: 14px 22px; border-radius: 10px; font-weight: 800; text-decoration: none; border: 2px solid transparent; }
+  .btn.primary { background: linear-gradient(180deg, #5ad06a, #2f8f3c); color: #fff; border-color: #8ee36b; box-shadow: 0 4px 0 #1d5a26; }
+  .btn.ghost { color: var(--text); border-color: var(--line); background: var(--panel); }
+  .btn:hover { transform: translateY(-2px); }
+  .note { color: var(--dim); font-size: 13px; margin-top: 14px; }
+  @keyframes rise { from { opacity: 0; transform: translateY(14px) scale(.98); } to { opacity: 1; transform: none; } }
+
+  section { padding: 64px 0; border-top: 1px solid var(--line); }
+  h2 { font-size: clamp(16px, 2.4vw, 22px); margin: 0 0 8px; color: var(--cyan); }
+  .intro { color: var(--dim); margin: 0 0 28px; max-width: 760px; }
+  video { width: 100%; border-radius: 14px; border: 1px solid var(--line); background: #000; display: block; }
+
+  .grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .card img { width: 100%; aspect-ratio: 20 / 9; object-fit: cover; display: block; }
+  .card .body { padding: 16px 18px 18px; }
+  .card h3 { margin: 0 0 6px; font-size: 18px; }
+  .card p { margin: 0; color: var(--dim); font-size: 15px; }
+  .tag { display: inline-block; font-size: 11px; font-weight: 800; color: #06121a; background: var(--cyan); padding: 2px 8px; border-radius: 99px; margin-bottom: 8px; }
+  .tag.v { background: var(--violet); color: #fff; }
+  .tag.g { background: var(--gold); }
+
+  .dims { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  .dim { position: relative; border-radius: 14px; overflow: hidden; min-height: 200px; display: flex; align-items: flex-end; border: 1px solid var(--line); }
+  .dim img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .dim div { position: relative; padding: 16px; background: linear-gradient(transparent, rgba(0, 0, 0, .85)); width: 100%; }
+  .dim h3 { margin: 0; font-size: 18px; }
+  .dim p { margin: 4px 0 0; font-size: 14px; color: #cfd3e2; }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-top: 30px; }
+  .stat { background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 18px; text-align: center; }
+  .stat b { display: block; font-family: "Press Start 2P", monospace; font-size: 20px; color: var(--gold); margin-bottom: 8px; }
+  .stat span { color: var(--dim); font-size: 14px; }
+
+  .roadmap { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  .road { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--cyan); border-radius: 12px; padding: 16px 18px; }
+  .road h3 { margin: 0 0 6px; font-size: 16px; }
+  .road p { margin: 0; color: var(--dim); font-size: 14px; }
+
+  .timeline { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+  .timeline li { display: grid; grid-template-columns: 90px 1fr; gap: 14px; align-items: baseline; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; }
+  .timeline b { font-family: "Press Start 2P", monospace; font-size: 11px; color: var(--gold); }
+  .timeline span { color: var(--dim); }
+
+  footer { border-top: 1px solid var(--line); padding: 36px 0 50px; color: var(--dim); font-size: 14px; text-align: center; }
+  footer img { height: 40px; opacity: .9; }
+
+  @media (max-width: 640px) {
+    nav .links { display: none; }
+    .timeline li { grid-template-columns: 1fr; gap: 2px; }
+    section { padding: 48px 0; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand pixel" href="#"><img src="img/logo.png" alt="">VoxelCraft</a>
+    <div class="links">
+      <a href="#trailer">Trailer</a>
+      <a href="#novinky">Novinky 1.8.0</a>
+      <a href="#dimenze">Dimenze</a>
+      <a href="#plany">Plány</a>
+      <a href="#historie">Historie</a>
+      <a href="https://github.com/JACKHACKER2021/VoxelCraft-Alpha-game">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <img class="logo" src="img/logo.png" alt="VoxelSoftworks">
+    <h1 class="pixel">VOXELCRAFT 1.8.0</h1>
+    <div class="sub pixel">CONCRETE &amp; OLD WORLD</div>
+    <p class="lead">Kostičková hra pro Android s vlastním enginem v C++ a OpenGL ES 3. Čtyři dimenze, stovky bloků,
+      módy, multiplayer přes Wi-Fi i bez internetu, a teď i Starý svět z prvních verzí 0.1–0.3.</p>
+    <div class="buttons">
+      <a class="btn primary" href="download/VoxelCraft-1.8.0.apk" download>Stáhnout APK 1.8.0</a>
+      <a class="btn ghost" href="#trailer">Pustit trailer</a>
+    </div>
+    <div class="note">Android · zdarma · neoficiální fanouškovský projekt, bez obsahu od Mojangu</div>
+  </div>
+</header>
+
+<section id="trailer">
+  <div class="wrap">
+    <h2 class="pixel">Trailer 1.8.0</h2>
+    <p class="intro">Všechny novinky aktualizace Concrete &amp; Old World, natočené přímo ve hře.</p>
+    <video controls preload="metadata" poster="img/poster.jpg" src="media/trailer-1.8.0.mp4"></video>
+  </div>
+</section>
+
+<section id="novinky">
+  <div class="wrap">
+    <h2 class="pixel">Co je nového</h2>
+    <p class="intro">Verze 1.8.0 spojuje atmosféru úplně prvních verzí s novým stavěním, barvami a rozšířenou Karmínovou prázdnotou.</p>
+    <div class="grid">
+      <div class="card"><img src="img/old_world.jpg" alt="Starý svět" loading="lazy"><div class="body"><span class="tag g">Starý svět</span>
+        <h3>Generace verzí 0.1–0.3</h3><p>Původní terén, textury, mlha, plovoucí joystick, 9 pevných bloků a staré menu. Portál vede do starého Netheru, „Vypnout server“ tě vrátí do aktuální verze.</p></div></div>
+      <div class="card"><img src="img/prealpha.jpg" alt="Pre-Alpha Style" loading="lazy"><div class="body"><span class="tag g">Balíček</span>
+        <h3>Pre-Alpha Style</h3><p>Zapni ho v Módech a balíčcích a celé menu, tlačítka, sloty i HUD dostanou šedý vzhled verze 0.3.</p></div></div>
+      <div class="card"><img src="img/concrete.jpg" alt="Beton" loading="lazy"><div class="body"><span class="tag">Stavění</span>
+        <h3>Beton v 16 barvách</h3><p>Betonový prášek padá jako písek a ve vodě nebo v dešti ztvrdne. K tomu 16 barviv, barevná vlna a koberce.</p></div></div>
+      <div class="card"><img src="img/dappled.jpg" alt="Strakatý les" loading="lazy"><div class="body"><span class="tag">Biom</span>
+        <h3>Strakatý les</h3><p>Šedé dřevo, červené, oranžové a žluté listí, oranžová tráva a většinou sníh. Ukrývá tábory se zásobami.</p></div></div>
+      <div class="card"><img src="img/cutters.jpg" alt="Kamenořez a dřevořez" loading="lazy"><div class="body"><span class="tag">Bloky</span>
+        <h3>Kamenořez a dřevořez</h3><p>Schody a desky bez ztrát, 6 prken z jednoho kmene a ploty. Schody a desky má teď skoro každý blok.</p></div></div>
+      <div class="card"><img src="img/bridges.jpg" alt="Mosty" loading="lazy"><div class="body"><span class="tag">Nebeská říše</span>
+        <h3>Mosty mezi ostrovy</h3><p>První stavby Nebeské říše: rovné mosty se zábradlím, sloupky a řetězy nad bílou propastí.</p></div></div>
+      <div class="card"><img src="img/shattered.jpg" alt="Roztříštěná prázdnota" loading="lazy"><div class="body"><span class="tag v">Karmínová prázdnota</span>
+        <h3>Tři nové biomy</h3><p>Crimsoniový les se svatyněmi, Roztříštěná prázdnota s oblouky a věžemi a Poušť prázdnotných střepů se skrytými komorami.</p></div></div>
+      <div class="card"><img src="img/encyclopedia.jpg" alt="Encyklopedie" loading="lazy"><div class="body"><span class="tag">Rozhraní</span>
+        <h3>Encyklopedie</h3><p>Dimenze, biomy, stavby, mechaniky, všechny bloky, předměty i moby na jednom místě, se snímky ze hry.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="dimenze">
+  <div class="wrap">
+    <h2 class="pixel">Čtyři dimenze</h2>
+    <p class="intro">Každá dimenze má vlastní bloky, stavby, moby a hudbu.</p>
+    <div class="dims">
+      <div class="dim"><img src="img/plains.jpg" alt="" loading="lazy"><div><h3>Overworld</h3><p>Pláně, lesy, hory, pouště, jeskyně, vesnice, doly a tábory.</p></div></div>
+      <div class="dim"><img src="img/old_nether.jpg" alt="" loading="lazy"><div><h3>Dimenze úhelného kamene</h3><p>Lávová moře, powerstonová pustina a velká pevnost.</p></div></div>
+      <div class="dim"><img src="img/crimsonium.jpg" alt="" loading="lazy"><div><h3>Karmínová prázdnota</h3><p>Oční stromy, karmínová poušť, aréna bosse a tři nové biomy.</p></div></div>
+      <div class="dim"><img src="img/celestial.jpg" alt="" loading="lazy"><div><h3>Nebeská říše</h3><p>Plovoucí ostrovy nad bílou oblohou. Otevře ji 12 hlav Karmínového muže.</p></div></div>
+    </div>
+    <div class="stats">
+      <div class="stat"><b>4</b><span>dimenze</span></div>
+      <div class="stat"><b>400+</b><span>bloků a předmětů</span></div>
+      <div class="stat"><b>14</b><span>druhů mobů</span></div>
+      <div class="stat"><b>5</b><span>jazyků</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="plany">
+  <div class="wrap">
+    <h2 class="pixel">Další verze: 1.9.0</h2>
+    <p class="intro">Celestial Reach Update: Nebeská říše dostane vlastní terén, fyziku a obyvatele.</p>
+    <div class="roadmap">
+      <div class="road"><h3>Nízká gravitace</h3><p>Asi 45 % běžné gravitace: vyšší skoky, delší pády a ovládání ve vzduchu.</p></div>
+      <div class="road"><h3>Nový terén</h3><p>Ostrovy z bílého kamene a modrých hornin, krystalové žíly a zbytky mostů.</p></div>
+      <div class="road"><h3>Celestium</h3><p>Nová ruda, čtyři nástroje a jediný nový kus brnění: nebeský hrudní plát.</p></div>
+      <div class="road"><h3>Noví tvorové</h3><p>Celestling, Reach Stalker a Sky Drifter.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="historie">
+  <div class="wrap">
+    <h2 class="pixel">Historie verzí</h2>
+    <p class="intro">Od prvního enginu po čtyři dimenze.</p>
+    <ul class="timeline">
+      <li><b>0.1–0.3</b><span>Vlastní C++ engine, nekonečný svět, Nether, balíčky textur, menu a ukládání.</span></li>
+      <li><b>1.0.0</b><span>Pět jazyků, nové rudy a nástroje, 3D předměty, hudba biomů.</span></li>
+      <li><b>1.1–1.2</b><span>Karmínová prázdnota, boss Karmínový muž, powerstone, TNT a obchod.</span></li>
+      <li><b>1.3–1.4</b><span>Farmaření, vesnice, módy, jeskyně 2.0 a multiplayer bez internetu.</span></li>
+      <li><b>1.5</b><span>Zapomenuté království, archeologie, shadery a mapy světa.</span></li>
+      <li><b>1.6.0</b><span>Caves and Tunes: hlubinný kámen, hardium a velké jeskyně.</span></li>
+      <li><b>1.7.0</b><span>The Celestial Reach: nová dimenze plovoucích ostrovů a nové menu.</span></li>
+      <li><b>1.8.0</b><span>Concrete &amp; Old World: Starý svět, beton, Strakatý les a rozšíření prázdnoty.</span></li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <img src="img/logo.png" alt="VoxelSoftworks">
+    <p>VoxelCraft vytváří Hoppy_Hopsy21 a VoxelSoftworks. Neoficiální fanouškovský projekt, bez obsahu od Mojangu.</p>
+    <p><a href="https://github.com/JACKHACKER2021/VoxelCraft-Alpha-game">Zdrojový kód na GitHubu</a></p>
+  </div>
+</footer>
+
+</body>
+</html>
