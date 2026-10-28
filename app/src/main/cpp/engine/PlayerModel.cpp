@@ -156,11 +156,11 @@ std::vector<Vertex> buildPlayerExtras(const PlayerPose& pose) {
     const Vec3 neck{0, 24, 0}, rS{6, 22, 0}, lS{-6, 22, 0}, rH{2, 12, 0}, lH{-2, 12, 0};
     const float rl = pose.riding ? 1.4f : s, ll = pose.riding ? 1.4f : -s;
     // Armour: the material's block texture, a little outside the skin.
-    static const int kMaterialTile[5] = {T_PLANKS, T_COBBLE, T_BRONZE_BLOCK, T_STEEL_BLOCK, T_RUBY_BLOCK};
+    static const int kMaterialTile[6] = {T_PLANKS, T_COBBLE, T_BRONZE_BLOCK, T_STEEL_BLOCK, T_RUBY_BLOCK, T_HARDIUM_PLATE};
     for (int piece = 0; piece < 4; ++piece) {
         ItemId id = pose.armor[piece];
         if (!isArmor(id)) continue;
-        const int tile = kMaterialTile[(id - FIRST_ARMOR) / 4];
+        const int tile = kMaterialTile[armorMaterial(id)];
         const float g = 1.0f;
         if (piece == 0) {
             // A helmet with an open face: crown, back, cheeks and a brow over the eyes.

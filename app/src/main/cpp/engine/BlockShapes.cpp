@@ -213,7 +213,7 @@ int blockBoxes(const World& world, int x, int y, int z, ItemId id, bool collisio
         return 1;
     }
     if (isSlab(id)) {
-        out[0] = (id - SLAB) % 3 == 1 ? Box{0, 0.5f, 0, 1, 1, 1} : Box{0, 0, 0, 1, 0.5f, 1};
+        out[0] = slabHalf(id) == 1 ? Box{0, 0.5f, 0, 1, 1, 1} : Box{0, 0, 0, 1, 0.5f, 1};
         return 1;
     }
     if (isStairs(id)) {

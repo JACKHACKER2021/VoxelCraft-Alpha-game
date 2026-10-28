@@ -27,7 +27,7 @@
 namespace vc {
 
 namespace {
-const char* kVersion = "VoxelCraft 1.6.0 Caves and Tunes";
+const char* kVersion = "VoxelCraft 1.7.0 The Celestial Reach";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -292,7 +292,7 @@ void Game::updateMusic(float dt) {
     std::string context = "menu";
     if (session_ && screen_ != Screen::Title) {
         Dimension d = session_->currentWorld().dimension();
-        context = d == Dimension::Nether ? "nether" : d == Dimension::Void ? "void" : "overworld";
+        context = d == Dimension::Nether ? "nether" : d == Dimension::Void ? "void" : d == Dimension::Celestial ? "celestial" : "overworld";
     }
     auto play = [&](const std::string& source, bool loop) {
         musicSource_ = source;
@@ -301,7 +301,6 @@ void Game::updateMusic(float dt) {
     };
     if (context != musicContext_) {
         musicContext_ = context;
-        musicBiomeNext_ = false;
         if (context == "menu") {
             // The VoxelCraft theme (VoxelSoftworks), looping.
             std::string own = findMusic("menu");
@@ -327,13 +326,19 @@ void Game::updateMusic(float dt) {
         play(own.empty() ? "asset:music/void_theme.mp3" : own, false);
         return;
     }
+    if (context == "celestial") {
+        // 1.7.0: the creator's Celestial Exploration over the floating islands.
+        std::string own = findMusic("celestial");
+        play(own.empty() ? "asset:music/celestial_theme.mp3" : own, false);
+        return;
+    }
     if (context == "nether") {
         // 1.6.0: the Cornerstone Dimension's own song, unless the player adds a "nether" track.
         std::string own = findMusic(context);
         play(own.empty() ? "asset:music/cornerstone_theme.mp3" : own, false);
         return;
     }
-    // 1.6.0 Caves and Tunes: deep under the ground the cave tune plays.
+    // Deep under the ground: the creator's cave song, Echoes of Caves.
     {
         const Vec3 p = session_->player().pos;
         const int px = (int)std::floor(p.x), pz = (int)std::floor(p.z);
@@ -342,26 +347,15 @@ void Game::updateMusic(float dt) {
         for (int y = (int)p.y + 2; y < kChunkHeight && roof < 8; ++y) roof += isOpaque(w.getBlock(px, y, pz));
         if (roof >= 8 && p.y < w.config().overworld.seaLevel - 6) {
             std::string own = findMusic("caves");
-            play(own.empty() ? soundsDir_ + "/biome_caves.wav" : own, false);
+            play(own.empty() ? "asset:music/caves_theme.mp3" : own, false);
             return;
         }
     }
-    // Overworld: the Overworld song and the music of the biome take turns.
-    if (!musicBiomeNext_) {
-        std::string own = findMusic("overworld");
-        play(own.empty() ? "asset:music/overworld.mp3" : own, false);
-    } else {
-        Vec3 p = session_->player().pos;
-        const BiomeDef* b = session_->currentWorld().biomeAt((int)std::floor(p.x), (int)std::floor(p.z));
-        std::string id = b ? b->id : "plains";
-        std::string own = findMusic(id);
-        static const char* kStyles[] = {"plains", "forest", "desert", "mountains", "ocean"};
-        std::string style = "plains";
-        for (const char* st : kStyles)
-            if (id == st) style = st;
-        play(own.empty() ? soundsDir_ + "/biome_" + style + ".wav" : own, false);
-    }
-    musicBiomeNext_ = !musicBiomeNext_;
+    // The Overworld: only the creator's own songs now, the old generated biome tunes are gone.
+    // A player's own "overworld" track still wins. (celestial_theme.mp3, Celestial Exploration,
+    // waits in the assets for the Celestial Reach.)
+    std::string own = findMusic("overworld");
+    play(own.empty() ? "asset:music/overworld.mp3" : own, false);
 }
 
 bool Game::saverActive() const {
@@ -722,8 +716,14 @@ void Game::frame(double time) {
             }
             if (session_->travelled) {
                 session_->travelled = false;
-                bool nether = session_->currentWorld().dimension() == Dimension::Nether;
-                startLoading(nether ? "Vstup do dimenze úhelného kamene" : "Návrat do Overworldu", true);
+                // 1.7.0: the name of the place the portal really leads to (the Crimson Void used
+                // to be announced as the Overworld).
+                const Dimension d = session_->currentWorld().dimension();
+                startLoading(d == Dimension::Nether   ? "Vstup do dimenze úhelného kamene"
+                             : d == Dimension::Void   ? "Vstup do Karmínové prázdnoty"
+                             : d == Dimension::Celestial ? "Vstup do Nebeské říše"
+                                                         : "Návrat do Overworldu",
+                             true);
             }
         } else if (screen_ == Screen::Inventory || screen_ == Screen::Crafting || screen_ == Screen::Furnace || screen_ == Screen::Chest) {
             session_->updateFurnaces(dt);
@@ -1186,41 +1186,48 @@ void Game::coinsPill(float right, float y) {
 
 void Game::titleScreen() {
     const float W = ui_.width(), H = ui_.height();
-    ui_.fill(0, 0, W, H, {0, 0, 0, 0.2f});
-    float logoY = std::floor(H * 0.1f);
-    ui_.textCentered(W / 2 + 2, logoY + 2, "VOXELCRAFT", {0, 0, 0, 0.5f}, 4);
-    ui_.textCentered(W / 2, logoY, "VOXELCRAFT", kTitle, 4);
-    ui_.textCentered(W / 2, logoY + 38, "VOXEL SURVIVAL", kTextBright, 1);
-    // Splash text, gently pulsing.
-    float pulse = 1 + 0.06f * (float)std::sin(now_ * 6);
-    std::string splash = kSplashes[splash_ % kSplashCount];
-    float logoRight = W / 2 + ui_.textWidth("VOXELCRAFT", 4) / 2;
-    ui_.text(logoRight - ui_.textWidth(splash, pulse) * 0.6f, logoY + 30, splash, {1, 1, 0.33f, 1}, pulse);
+    ui_.fill(0, 0, W, H, {0, 0, 0, 0.15f});
+    // 1.7.0 preview UI: the logo in cream with a dark outline, the subtitle and the splash
+    // under it, the menu in a rounded glass panel.
+    const float logoY = std::floor(H * 0.08f);
+    const Color outline{0.13f, 0.1f, 0.08f, 1}, cream{0.93f, 0.86f, 0.72f, 1};
+    for (int o = 0; o < 4; ++o) {
+        const float ox = o == 0 ? -2.0f : o == 1 ? 2.0f : 0.0f, oy = o == 2 ? -2.0f : o == 3 ? 2.0f : 0.0f;
+        ui_.textCentered(W / 2 + ox, logoY + oy, "VOXELCRAFT", outline, 4);
+    }
+    ui_.textCentered(W / 2 + 3, logoY + 4, "VOXELCRAFT", {0, 0, 0, 0.45f}, 4);
+    ui_.textCentered(W / 2, logoY, "VOXELCRAFT", cream, 4);
+    ui_.text(W / 2 - ui_.textWidth("VOXEL SURVIVAL") / 2 - 30, logoY + 40, "VOXEL SURVIVAL", kTextBright, 1, true);
+    const float pulse = 1 + 0.06f * (float)std::sin(now_ * 6);
+    const std::string splash = kSplashes[splash_ % kSplashCount];
+    const float logoRight = W / 2 + ui_.textWidth("VOXELCRAFT", 4) / 2;  // the splash sits on the logo's corner, as before
+    ui_.text(logoRight - ui_.textWidth(splash, pulse) * 0.6f, logoY + 30, splash, {1, 1, 0.33f, 1}, pulse, true);
     coinsPill(W - 4, 4);
 
-    // Button panel
-    float pw = std::min(320.0f, W - 20), px = std::floor((W - pw) / 2), py = std::floor(H * 0.38f);
-    float bw = (pw - 24) / 2, bh = 22, gap = 6;
-    ui_.fill(px + 2, py + 2, pw, 4 * (bh + gap) + 10, {0, 0, 0, 0.45f});
-    ui_.frame(px, py, pw, 4 * (bh + gap) + 10, kPanel, kBorder);
-    float x = px + 8, y = py + 8;
-    if (ui_.button(x, y, bw, bh, "Hrát", true, true)) setScreen(Screen::WorldList);
-    if (ui_.button(x + bw + 8, y, bw, bh, "Nastavení")) {
+    // The menu
+    const float pw = std::min(320.0f, W - 20), px = std::floor((W - pw) / 2), py = std::floor(H * 0.34f);
+    const float bw = std::floor((pw - 26) / 2), bh = 25, gap = 7;
+    ui_.roundPanel(px, py, pw, 4 * (bh + gap) + 12);
+    float x = px + 9, y = py + 9;
+    using St = Ui::Style;
+    if (ui_.menuButton(x, y, bw, bh, "Hrát", St::Primary, Font::Sword)) setScreen(Screen::WorldList);
+    if (ui_.menuButton(x + bw + 8, y, bw, bh, "Nastavení", St::Normal, Font::Gear)) {
         settingsReturn_ = Screen::Title;
         setScreen(Screen::Settings);
     }
     y += bh + gap;
-    if (ui_.button(x, y, bw, bh, "Obchod")) setScreen(Screen::Store);
-    if (ui_.button(x + bw + 8, y, bw, bh, "Profil a skiny")) setScreen(Screen::Skins);
+    if (ui_.menuButton(x, y, bw, bh, "Obchod", St::Normal, Font::Bag)) setScreen(Screen::Store);
+    if (ui_.menuButton(x + bw + 8, y, bw, bh, "Profil a skiny", St::Normal, Font::Person)) setScreen(Screen::Skins);
     y += bh + gap;
-    if (ui_.button(x, y, pw - 16, bh, "Módy a balíčky")) setScreen(Screen::Packs);
+    if (ui_.menuButton(x, y, pw - 18, bh, "Módy a balíčky", St::Normal, Font::Cube)) setScreen(Screen::Packs);
     y += bh + gap;
-    if (ui_.button(x, y, pw - 16, bh, "Ukončit hru") && onQuit) onQuit();
+    if (ui_.menuButton(x, y, pw - 18, bh, "Ukončit hru", St::Danger, Font::ExitDoor) && onQuit) onQuit();
 
     if (now_ < toastUntil_ && !toast_.empty()) {
         float tw = ui_.textWidth(toast_) + 16;
-        ui_.frame((W - tw) / 2, py - 22, tw, 16, kGreen, kGreenBorder);
-        ui_.textCentered(W / 2, py - 18, toast_, kTextBright);
+        const float ty = py + 4 * (bh + gap) + 18;  // under the menu, clear of the logo
+        ui_.frame((W - tw) / 2, ty, tw, 16, kGreen, kGreenBorder);
+        ui_.textCentered(W / 2, ty + 4, toast_, kTextBright);
     }
     ui_.text(3, H - 10, kVersion, kText);
     std::string note = "VoxelSoftworks";
@@ -1481,6 +1488,7 @@ void Game::trailersScreen() {
         {"1.5.5: The Shaders Update", "trailers/t06_1.5.5.mp4"},
         {"1.5.7: louče, štít a Prasák", "trailers/t07_1.5.7.mp4"},
         {"1.6.0: Caves and Tunes", "trailers/t08_1.6.0.mp4"},
+        {"1.7.0: The Celestial Reach", "trailers/t09_1.7.0.mp4"},
     };
     const float rowH = 22, top = y + 28, colW = (w - 8) / 2;
     for (int i = 0; i < (int)(sizeof(trailers) / sizeof(trailers[0])); ++i) {
@@ -3195,7 +3203,7 @@ void Game::editWorldScreen() {
 
 namespace {
 constexpr float kSlot = 20;
-const Color kLabel{0.25f, 0.25f, 0.25f, 1};
+const Color kLabel{0.93f, 0.88f, 0.76f, 1};  // 1.7.0 UI: light text on the dark panels
 }  // namespace
 
 void Game::inventoryScreen() {
@@ -3543,7 +3551,7 @@ void Game::survivalInventoryScreen() {
         if (session_->armor()[i].empty()) {
             // A faint outline of the piece that belongs here.
             static const int kHint[4] = {T_FIRST_ARMOR, T_FIRST_ARMOR + 1, T_FIRST_ARMOR + 2, T_FIRST_ARMOR + 3};
-            ui_.tile(gx + 2, sy + 2, kSlot - 4, kHint[i], {0, 0, 0, 0.25f});
+            ui_.tile(gx + 2, sy + 2, kSlot - 4, kHint[i], {1, 1, 1, 0.35f});
         }
     }
     ui_.frame(gx + kSlot + 2, gy, 50, top, {0.12f, 0.12f, 0.14f, 1}, {0, 0, 0, 1});
@@ -3552,7 +3560,7 @@ void Game::survivalInventoryScreen() {
         // 1.5.7: the off hand, in the corner of the player's frame.
         const float ox = gx + kSlot + 2 + 50 - kSlot, oy = gy + top - kSlot;
         slot(ox, oy, {SlotArea::Offhand, 0});
-        if (session_->offhand().empty()) ui_.tile(ox + 2, oy + 2, kSlot - 4, T_SHIELD, {0, 0, 0, 0.25f});
+        if (session_->offhand().empty()) ui_.tile(ox + 2, oy + 2, kSlot - 4, T_SHIELD, {1, 1, 1, 0.35f});
     }
     if (int points = session_->armorPoints(); points > 0) {
         ui_.icon(gx + kSlot + 5, gy + top - 11, Font::ArmorFull, {0.85f, 0.85f, 0.9f, 1});
@@ -3664,7 +3672,12 @@ void Game::creativeInventoryScreen() {
     int& selected = session_->selectedSlot();
     const float W = ui_.width(), H = ui_.height();
     ui_.fill(0, 0, W, H, {0, 0, 0, 0.45f});
-    const float pw = std::min(W - 16, 560.0f), ph = H - 12;
+    // 1.7.0 UI: a compact window sized to its content (tabs, a 9-wide grid, the player with
+    // armour and off hand), centred, instead of the whole screen.
+    const int cols = 9, visRows = std::clamp((int)((H - 12 - 22 - kSlot - 22) / kSlot), 3, 5);
+    const float tab = 21, tabW = 3 * tab + 4, sideW = kSlot + 4 + 52;
+    const float pw = std::min(W - 8, 6 + tabW + 8 + cols * kSlot + 8 + sideW + 6);
+    const float ph = std::min(H - 8, 20 + visRows * kSlot + 4 + 11 + kSlot + 8);
     const float px = std::floor((W - pw) / 2), py = std::floor((H - ph) / 2);
     ui_.panel(px, py, pw, ph);
     if (ui_.button(px + pw - 18, py + 3, 14, 14, "X")) {
@@ -3692,9 +3705,9 @@ void Game::creativeInventoryScreen() {
     if (!addonItems.empty()) tabs.push_back({"Doplňky", addonItems[0], &addonItems});
     if (!modItems.empty()) tabs.push_back({"Módy", modItems[0], &modItems});
     if (creativeTab_ >= (int)tabs.size()) creativeTab_ = 0;
-    const float tab = 24, tabX = px + 6, tabY = py + 20;
+    const float tabX = px + 6, tabY = py + 20;
     for (int t = 0; t < (int)tabs.size(); ++t) {
-        const float x = tabX + (t % 2) * (tab + 2), y = tabY + (t / 2) * (tab + 2);
+        const float x = tabX + (t % 3) * (tab + 2), y = tabY + (t / 3) * (tab + 2);
         ui_.slotFrame(x, y, tab, t == creativeTab_);
         drawStack(x + (tab - kSlot) / 2, y + (tab - kSlot) / 2, {tabs[t].icon, 1});
         if (ui_.held(x, y, tab, tab)) creativeHint_ = tabs[t].name;
@@ -3704,11 +3717,29 @@ void Game::creativeInventoryScreen() {
             creativeGroup_.clear();
         }
     }
-    const float tabW = 2 * tab + 2;
-    // The player, as the skin screen draws it.
-    const float figW = 40, figX = px + pw - figW - 6, figY = py + 22;
-    ui_.frame(figX, figY, figW, 84, kField, kSeparator);
-    if (!skins_.empty()) drawSkinFigure(figX + 4, figY + 10, 2, std::max(0, skinIndex(profile_.skin)), false);
+    // The player with the four armour slots beside them and the off hand in the corner (a tap
+    // swaps the piece with the selected hotbar slot).
+    const float sideX = px + pw - sideW - 6, figW = 52, figX = sideX + kSlot + 4, figY = py + 20, figH = 4 * kSlot;
+    for (int i = 0; i < 4; ++i) {
+        const float sy = figY + i * kSlot;
+        ItemStack& a = session_->armor()[i];
+        ui_.slotFrame(sideX, sy, kSlot, false);
+        if (a.empty()) ui_.tile(sideX + 2, sy + 2, kSlot - 4, T_FIRST_ARMOR + i, {1, 1, 1, 0.35f});
+        drawStack(sideX, sy, a);
+        ItemStack& h = inv.slots[selected];
+        if (ui_.tapped(sideX, sy, kSlot, kSlot) && (h.empty() || armorPiece(h.id) == i)) std::swap(a, h);
+    }
+    ui_.frame(figX, figY, figW, figH, kField, kSeparator);
+    if (!skins_.empty()) drawSkinFigure(figX + (figW - 24) / 2, figY + (figH - 48) / 2 - 4, 1.5f, std::max(0, skinIndex(profile_.skin)), false);
+    {
+        const float ox = sideX, oy = figY + figH + 3;
+        ItemStack& o = session_->offhand();
+        ui_.slotFrame(ox, oy, kSlot, false);
+        if (o.empty()) ui_.tile(ox + 2, oy + 2, kSlot - 4, T_SHIELD, {1, 1, 1, 0.35f});
+        drawStack(ox, oy, o);
+        if (ui_.tapped(ox, oy, kSlot, kSlot)) std::swap(o, inv.slots[selected]);
+        ui_.text(figX + 2, oy + 6, "Ruka", kTextDim, 1, false, figW - 2);
+    }
     // The catalogue: the category (variants folded into their group), or one open group.
     const std::vector<ItemId>& all = *tabs[(size_t)creativeTab_].items;
     std::vector<ItemId> items;
@@ -3733,13 +3764,12 @@ void Game::creativeInventoryScreen() {
     const float gx = px + tabW + 14;
     float gy = py + 20;
     ui_.text(gx, py + 6, creativeGroup_.empty() ? tabs[(size_t)creativeTab_].name : creativeGroup_.c_str(), kTextBright, 1, false,
-             figX - gx - 60);
-    if (!creativeGroup_.empty() && ui_.button(figX - 56, py + 3, 50, 14, "Zpět")) {
+             sideX - gx - 60);
+    if (!creativeGroup_.empty() && ui_.button(sideX - 58, py + 3, 50, 14, "Zpět")) {
         creativeGroup_.clear();
         creativeScroll_ = 0;
     }
-    const int cols = std::max(4, (int)((figX - gx - 10) / kSlot));
-    const float gridH = ph - 20 - kSlot - 22;
+    const float gridH = visRows * kSlot;
     const int rows = ((int)items.size() + cols - 1) / cols;
     creativeScroll_ -= ui_.dragY(gx, gy, cols * kSlot, gridH);
     creativeScroll_ = std::clamp(creativeScroll_, 0.0f, std::max(0.0f, rows * kSlot - gridH));
@@ -3776,9 +3806,9 @@ void Game::creativeInventoryScreen() {
         drawStack(x, hy, inv.slots[i]);
         if (ui_.tapped(x, hy, kSlot, kSlot)) selected = i;
     }
-    if (ui_.button(gx + kHotbarSize * kSlot + 6, hy, 76, kSlot, "Vyprázdnit", !inv.slots[selected].empty()))
+    if (ui_.button(sideX, hy, sideW, kSlot, "Vyprázdnit", !inv.slots[selected].empty()))
         inv.slots[selected] = {};
-    if (!creativeHint_.empty()) ui_.text(gx, hy - 11, creativeHint_, kLabel, 1, false, figX - gx);
+    if (!creativeHint_.empty()) ui_.text(gx, hy - 11, creativeHint_, kLabel, 1, false, sideX - gx);
 }
 
 }  // namespace vc

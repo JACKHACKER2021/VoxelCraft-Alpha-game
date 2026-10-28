@@ -142,8 +142,8 @@ public:
     void setChest(const FurnaceKey& key, const ChestContents& c) { chests_[key] = c; }
     void setFurnace(const FurnaceKey& key, const Furnace& f) { furnaces_[key] = f; }
     Vec3 spawnPoint() const { return state_.spawn; }
-    int dimIndex() const { return world_ == &nether_ ? 1 : world_ == &void_ ? 2 : 0; }
-    World& worldAt(int dim) { return dim == 1 ? nether_ : dim == 2 ? void_ : overworld_; }
+    int dimIndex() const { return world_ == &nether_ ? 1 : world_ == &void_ ? 2 : world_ == &celestial_ ? 3 : 0; }
+    World& worldAt(int dim) { return dim == 1 ? nether_ : dim == 2 ? void_ : dim == 3 ? celestial_ : overworld_; }
     // Opens the chest at the key; a structure chest is filled with its loot the first time.
     void openChestAt(const FurnaceKey& key);
     // Doors and trapdoors: opens or closes the one at (x, y, z) (both halves of a door).
@@ -263,9 +263,9 @@ private:
 
     WorldInfo info_;
     PlayerState state_;
-    std::vector<BlockEdit> edits_[3];
+    std::vector<BlockEdit> edits_[4];
     GenConfig config_;  // must come before the worlds that copy it
-    World overworld_, nether_, void_;
+    World overworld_, nether_, void_, celestial_;  // 1.7.0: the Celestial Reach is dimension 3
     World* world_;
     Player player_;
     Touch touches_[10];
@@ -306,10 +306,10 @@ private:
     std::vector<Timed> saplings_, fallingLeaves_;
     // 1.5.7: sand and gravel fall; with the Flowing Liquids experiment water and lava spread.
     // Flowing (non-source) liquid cells remember how far they are from their source.
-    std::vector<std::array<int, 3>> changes_[3];
+    std::vector<std::array<int, 3>> changes_[4];
     std::vector<Timed> blockTicks_;
-    std::unordered_set<uint64_t> ticking_[3];
-    std::unordered_map<uint64_t, uint8_t> flow_[3];
+    std::unordered_set<uint64_t> ticking_[4];
+    std::unordered_map<uint64_t, uint8_t> flow_[4];
     void updateBlockPhysics(float dt);
     void tickLiquid(int dim, int x, int y, int z);
     void saveFlow() const;
@@ -397,6 +397,10 @@ private:
     float portalTime_ = 0;
     bool portalCooldown_ = false;
     bool portalVoid_ = false;
+    bool portalCelestial_ = false;  // 1.7.0: standing in a Celestial portal
+    Vec3 celestialReturn_{};        // where in the Crimson Void the player stepped into the Celestial Reach
+    bool hasCelestialReturn_ = false;
+    void travelCelestial();
     float voidFog_[3] = {0.16f, 0.05f, 0.24f};  // standing in a void portal (Nether <-> Crimson Void)
     bool dead_ = false;
     float hurtCooldown_ = 0, hurtFlash_ = 0;

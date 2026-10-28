@@ -37,13 +37,16 @@ Session::Session(const WorldInfo& info, const PlayerState& player)
       overworld_(info.seed, Dimension::Overworld, config_),
       nether_(info.seed, Dimension::Nether, config_),
       void_(info.seed, Dimension::Void, config_),
+      celestial_(info.seed, Dimension::Celestial, config_),
       world_(&overworld_) {
     overworld_.setStorageDir(info.folder + "/overworld");
     nether_.setStorageDir(info.folder + "/nether");
     void_.setStorageDir(info.folder + "/void");
+    celestial_.setStorageDir(info.folder + "/celestial");
     overworld_.changeLog = &changes_[0];
     nether_.changeLog = &changes_[1];
     void_.changeLog = &changes_[2];
+    celestial_.changeLog = &changes_[3];
     loadFlow();
     {
         std::ifstream in(info.folder + "/waypoints.txt");
@@ -119,6 +122,7 @@ void Session::save() {
     overworld_.saveModifiedChunks();
     nether_.saveModifiedChunks();
     void_.saveModifiedChunks();
+    celestial_.saveModifiedChunks();
     saveLevel(info_, state_);
     saveFurnaces(info_.folder, furnaces_);
     drops_.save(info_.folder);
@@ -335,7 +339,7 @@ void Session::placeShape(const RayHit& hit, ItemStack& held, int x, int y, int z
     const bool upper = hit.ny == -1 || (hit.ny == 0 && hit.fy > 0.5f);
     ItemId place = AIR;
     if (isSlab(held.id)) {
-        const int m = (held.id - SLAB) / 3;
+        const int m = slabMaterial(held.id);
         const ItemId bottom = slabId(m, 0), top = slabId(m, 1);
         const ItemId target = w.getBlock(hit.x, hit.y, hit.z);
         // A second slab of the same kind on a half one makes a full double slab.
@@ -683,7 +687,7 @@ void Session::updateBlockPhysics(float dt) {
     }
     const bool liquids = info_.expFlowingLiquids;
     // New changes wake the blocks around them.
-    for (int d = 0; d < 3; ++d) {
+    for (int d = 0; d < 4; ++d) {
         if (changes_[d].empty()) continue;
         World& w = worldAt(d);
         std::vector<std::array<int, 3>> list;
@@ -791,7 +795,7 @@ void Session::tickLiquid(int d, int x, int y, int z) {
 void Session::saveFlow() const {
     std::ofstream out(info_.folder + "/flow.dat");
     out << "VCFLOW1\n";
-    for (int d = 0; d < 3; ++d)
+    for (int d = 0; d < 4; ++d)
         for (const auto& [k, level] : flow_[d]) out << d << " " << k << " " << (int)level << "\n";
 }
 
@@ -801,7 +805,7 @@ void Session::loadFlow() {
     if (!(in >> magic) || magic != "VCFLOW1") return;
     int d, level;
     uint64_t k;
-    while (in >> d >> k >> level && d >= 0 && d < 3 && flow_[d].size() < 200000) flow_[d][k] = (uint8_t)level;
+    while (in >> d >> k >> level && d >= 0 && d < 4 && flow_[d].size() < 200000) flow_[d][k] = (uint8_t)level;
 }
 
 void Session::saveTimers() const {
@@ -1831,7 +1835,34 @@ void Session::useItem(const RayHit& hit) {
             openChestAt({dimIndex(), hit.x, hit.y, hit.z});
             return;
         }
-        if (block == CELESTIAL_FRAME) {
+        if (block == CELESTIAL_FRAME && held.id == CRIMSON_HEAD) {
+            // 1.7.0 preview: a head on a frame block, like an eye on the End's frame. The ring of
+            // twelve frames lies round a 3 x 3 hole; with every head in place the hole lights up.
+            w.setBlock(hit.x, hit.y, hit.z, CELESTIAL_FRAME_FULL);
+            if (survival() && --held.count == 0) held = {};
+            hand_.use();
+            sound(Sound::Place);
+            int full = 0, x0 = hit.x, z0 = hit.z, x1 = hit.x, z1 = hit.z;
+            for (int dx = -4; dx <= 4; ++dx)
+                for (int dz = -4; dz <= 4; ++dz) {
+                    const ItemId b = w.getBlock(hit.x + dx, hit.y, hit.z + dz);
+                    if (b != CELESTIAL_FRAME && b != CELESTIAL_FRAME_FULL) continue;
+                    x0 = std::min(x0, hit.x + dx), z0 = std::min(z0, hit.z + dz);
+                    x1 = std::max(x1, hit.x + dx), z1 = std::max(z1, hit.z + dz);
+                    full += b == CELESTIAL_FRAME_FULL;
+                }
+            if (full >= 12) {
+                for (int x = x0 + 1; x < x1; ++x)
+                    for (int z = z0 + 1; z < z1; ++z) w.setBlock(x, hit.y, z, CELESTIAL_PORTAL);
+                sound(Sound::Explode);
+                achieve("celestial_portal");
+                if (onMessage) onMessage(tr("Nebeský portál se otevřel!"));
+            } else if (onMessage) {
+                onMessage(tr("Hlavy v rámu: ") + std::to_string(full) + " / 12");
+            }
+            return;
+        }
+        if (block == CELESTIAL_FRAME || block == CELESTIAL_FRAME_FULL) {
             // 1.6.0: the frame waits for the Celestial Reach.
             if (onMessage) onMessage(tr("Nebeská říše je zatím zavřená. Otevře se ve VoxelCraftu 1.7.0."));
             hand_.use();
@@ -1973,6 +2004,11 @@ void Session::useItem(const RayHit& hit) {
         return;
     }
     if (held.id == FLINT_AND_STEEL || held.id == VOID_FLINT_AND_STEEL) {
+        // 1.7.0: the way to the Crimson Void opens only from the Cornerstone Dimension.
+        if (held.id == VOID_FLINT_AND_STEEL && world_ != &nether_) {
+            if (onMessage) onMessage(tr("Portál do Karmínové prázdnoty jde zapálit jen v dimenzi úhelného kamene."));
+            return;
+        }
         if (tryLightPortal(w, x, y, z, held.id == VOID_FLINT_AND_STEEL)) {
             hand_.use();
             if (survival()) damageHeldTool();
@@ -2336,6 +2372,14 @@ void Session::updateSurvival(float dt, bool jumped) {
 // ---------------------------------------------------------------- portals
 
 void Session::updatePortal(float dt) {
+    // 1.7.0: the Celestial portal, between the Crimson Void and the Celestial Reach.
+    portalCelestial_ = player_.touchesBlock(*world_, CELESTIAL_PORTAL);
+    if (portalCelestial_) {
+        if (portalCooldown_) return;
+        portalTime_ += dt;
+        if (portalTime_ >= kPortalDelay) travelCelestial();
+        return;
+    }
     portalVoid_ = player_.touchesBlock(*world_, VOID_PORTAL);
     if (!portalVoid_ && !player_.touchesBlock(*world_, PORTAL)) {
         portalTime_ = 0;
@@ -2365,6 +2409,47 @@ void Session::checkAchievements() {
         if (b && (b->id == "snowy_taiga" || b->id == "ice_plains")) achieve("snow");
 
     }
+}
+
+void Session::travelCelestial() {
+    exitBoat();
+    if (world_ != &celestial_) {
+        // Up to the Celestial Reach: the big island round (0, 0), with the way back in its middle.
+        celestialReturn_ = player_.pos;
+        hasCelestialReturn_ = world_ == &void_;
+        celestial_.ensureChunksAround(0, 0, 3, 64);
+        const int top = std::max(10, celestial_.celestialTop(0, 4));
+        for (int dx = -2; dx <= 2; ++dx)
+            for (int dz = -2; dz <= 2; ++dz) {
+                const bool corner = std::abs(dx) == 2 && std::abs(dz) == 2, inside = std::abs(dx) <= 1 && std::abs(dz) <= 1;
+                celestial_.setBlock(dx, top, 4 + dz, corner ? CELESTIAL_STONE_BRICKS : inside ? CELESTIAL_PORTAL : CELESTIAL_FRAME_FULL);
+                for (int dy = 1; dy <= 3; ++dy) celestial_.setBlock(dx, top + dy, 4 + dz, AIR);
+            }
+        const int sy = std::max(top, celestial_.celestialTop(0, 0));
+        player_.pos = Vec3(0.5f, (float)sy + 1.01f, 0.5f);
+        world_ = &celestial_;
+        achieve("celestial_reach");
+    } else {
+        // Back down to the Crimson Void, beside the frame the player came through.
+        Vec3 to = celestialReturn_;
+        if (!hasCelestialReturn_) {
+            int fx = 0, fz = 0;
+            void_.nearestCelestialFrame(0, 0, fx, fz);
+            to = Vec3(fx + 0.5f, 0, fz + 0.5f);
+        }
+        to.z += 3;
+        const int tx = (int)std::floor(to.x), tz = (int)std::floor(to.z);
+        void_.ensureChunksAround(floorDiv(tx, kChunkSize), floorDiv(tz, kChunkSize), 2, 64);
+        player_.pos = Vec3(to.x, (float)void_.skyHeight(tx, tz) + 0.01f, to.z);
+        world_ = &void_;
+    }
+    player_.vel = {};
+    player_.fallDistance = 0;
+    target_ = {};
+    breakProgress_ = 0;
+    portalTime_ = 0;
+    portalCooldown_ = true;
+    travelled = true;
 }
 
 void Session::travelThroughPortal() {
@@ -2586,6 +2671,14 @@ void Session::render(Renderer& renderer, Ui& ui, const Settings& settings, bool 
         const Vec3 light = moon ? sun * -1.0f : sun;
         const float up = std::clamp((light.y - 0.04f) / 0.22f, 0.0f, 1.0f);
         renderer.setSun(light, up * up * (3 - 2 * up) * (moon ? 0.35f : 1.0f) * (1 - 0.85f * skyRain_));
+    } else if (world_ == &celestial_) {
+        // 1.7.0 the Celestial Reach: a white, endless sky all round, above and below the islands.
+        static const float kWhite[3] = {0.93f, 0.95f, 1.0f};
+        renderer.setSun(Vec3(0.3f, 1, 0.2f), 0.6f);
+        renderer.setFogColors(kWhite, config_.nether.fog);
+        renderer.setBrightness(settings.brightness * 1.05f);
+        renderer.setSky({}, {}, 0, {});
+        dayLight_ = 1;
     } else {
         renderer.setSun(Vec3(0, 1, 0), 0);
         renderer.setFogColors(config_.overworld.sky, config_.nether.fog);
@@ -2593,8 +2686,9 @@ void Session::render(Renderer& renderer, Ui& ui, const Settings& settings, bool 
         dayLight_ = 1;
     }
     if (world_ == &void_) {
-        // Purple darkness in the eye-tree forest, red haze over the desert, glowing ash over the lava.
-        static const float kFog[3][3] = {{0.16f, 0.05f, 0.24f}, {0.45f, 0.10f, 0.07f}, {0.42f, 0.13f, 0.04f}};
+        // Purple darkness in the eye-tree forest, red haze over the desert, glowing ash over the lava,
+        // pale grey over the Forgotten Overworld (1.7.0: it had no entry, and the screen went green).
+        static const float kFog[4][3] = {{0.16f, 0.05f, 0.24f}, {0.45f, 0.10f, 0.07f}, {0.42f, 0.13f, 0.04f}, {0.34f, 0.38f, 0.40f}};
         const float* want = kFog[(int)void_.voidBiomeAt((int)std::floor(player_.pos.x), (int)std::floor(player_.pos.z))];
         for (int i = 0; i < 3; ++i) voidFog_[i] += (want[i] - voidFog_[i]) * 0.03f;
         renderer.setVoidFog(voidFog_);
@@ -2817,9 +2911,10 @@ void Session::recordEdits(bool on) {
     overworld_.editLog = on ? &edits_[0] : nullptr;
     nether_.editLog = on ? &edits_[1] : nullptr;
     void_.editLog = on ? &edits_[2] : nullptr;
+    celestial_.editLog = on ? &edits_[3] : nullptr;
 }
 
-std::vector<BlockEdit> Session::takeEdits(int dim) { return std::move(edits_[std::clamp(dim, 0, 2)]); }
+std::vector<BlockEdit> Session::takeEdits(int dim) { return std::move(edits_[std::clamp(dim, 0, 3)]); }
 
 void Session::applyRemoteBlock(int dim, int x, int y, int z, ItemId id) {
     World& w = worldAt(dim);
@@ -2872,6 +2967,26 @@ void Session::drawHud(Ui& ui) const {
                                      {cx - std::sin(a) * 3, cy + std::cos(a) * 3}, {cx - std::cos(a) * 3, cy - std::sin(a) * 3}};
             const float uvs[4][2] = {};
             ui.quad(TexNone, pts, uvs, {0.6f, 0.6f, 0.6f, 1});
+        }
+    }
+    if (state_.inventory.slots[state_.selectedSlot].id == CELESTIAL_COMPASS) {
+        // 1.7.0 preview: in the Crimson Void it points to the nearest Celestial portal frame.
+        const float cx = W / 2, cy = 52, r = 13;
+        ui.fill(cx - r - 2, cy - r - 2, 2 * r + 4, 2 * r + 4, {0, 0, 0, 0.45f});
+        int fx, fz;
+        if (world_ == &void_ && void_.nearestCelestialFrame((int)player_.pos.x, (int)player_.pos.z, fx, fz)) {
+            const float a = std::atan2(fx + 0.5f - player_.pos.x, -(fz + 0.5f - player_.pos.z)) - player_.yaw;
+            const float sx = std::sin(a), sy = -std::cos(a), px = -sy, py = sx;
+            const float pts[4][2] = {{cx + sx * r, cy + sy * r}, {cx + px * 4, cy + py * 4}, {cx - sx * 4, cy - sy * 4}, {cx - px * 4, cy - py * 4}};
+            const float uvs[4][2] = {};
+            ui.quad(TexNone, pts, uvs, {0.75f, 0.85f, 1.0f, 1});
+            ui.textCentered(cx, cy + r + 4, std::to_string((int)std::hypot(fx - player_.pos.x, fz - player_.pos.z)) + " m", {0.85f, 0.9f, 1, 1});
+        } else {
+            const float a = clock_ * 6;
+            const float pts[4][2] = {{cx + std::sin(a) * r, cy - std::cos(a) * r}, {cx + std::cos(a) * 3, cy + std::sin(a) * 3},
+                                     {cx - std::sin(a) * 3, cy + std::cos(a) * 3}, {cx - std::cos(a) * 3, cy - std::sin(a) * 3}};
+            const float uvs[4][2] = {};
+            ui.quad(TexNone, pts, uvs, {0.6f, 0.6f, 0.7f, 1});
         }
     }
     if (state_.inventory.slots[state_.selectedSlot].id == FORTRESS_COMPASS) {
@@ -2959,7 +3074,7 @@ void Session::drawHud(Ui& ui) const {
     if (hurtFlash_ > 0 && !settings_.calmMode) ui.fill(0, 0, W, H, {0.8f, 0, 0, hurtFlash_});
 
     // Hotbar: nine slots and the "..." inventory button.
-    ui.fill(l.hotbarX - 1, l.hotbarY - 1, l.slot * 9 + 2, l.slot + 2, {0, 0, 0, 0.6f});
+    ui.frame(l.hotbarX - 3, l.hotbarY - 3, l.slot * 9 + 6, l.slot + 6, {0.08f, 0.07f, 0.06f, 0.55f}, {0.85f, 0.85f, 0.8f, 0.4f});
     for (int i = 0; i < kHotbarSize; ++i) {
         float x = l.hotbarX + i * l.slot;
         // Sunken slot: dark top-left edge, light bottom-right edge.
@@ -3008,32 +3123,27 @@ void Session::drawHud(Ui& ui) const {
         ui.textCentered(W / 2, l.hotbarY - (survival() ? 34 : 14), itemName(held.id), {1, 1, 1, std::min(1.0f, itemNameTimer_)});
 
     if (survival()) {
-        // Hearts on the left, hunger on the right, bubbles above hunger.
-        float rowY = l.hotbarY - 11;
-        bool blink = hurtFlash_ > 0;
-        for (int i = 0; i < 10; ++i) {
-            float x = l.hotbarX + i * 8;
-            ui.icon(x, rowY, Font::HeartEmpty, blink ? Color{1, 1, 1, 1} : Color{0.1f, 0.1f, 0.1f, 1});
-            float hp = state_.health - i * 2;
-            if (hp >= 2) ui.icon(x, rowY, Font::HeartFull, {0.86f, 0.1f, 0.1f, 1});
-            else if (hp >= 1) ui.icon(x, rowY, Font::HeartHalf, {0.86f, 0.1f, 0.1f, 1});
-        }
-        float right = l.hotbarX + l.slot * 9;
-        for (int i = 0; i < 10; ++i) {
-            float x = right - 8 - i * 8;
-            ui.icon(x, rowY, Font::FoodEmpty, {0.1f, 0.1f, 0.1f, 1});
-            float f = state_.food - i * 2;
-            if (f >= 2) ui.icon(x, rowY, Font::FoodFull, {0.72f, 0.45f, 0.2f, 1});
-            else if (f >= 1) ui.icon(x, rowY, Font::FoodHalf, {0.72f, 0.45f, 0.2f, 1});
-        }
-        if (int points = armorPoints(); points > 0) {
-            // Armour above the hearts: 10 icons, two points each.
-            for (int i = 0; i < 10; ++i) {
-                int p = points - i * 2;
-                int glyph = p >= 2 ? Font::ArmorFull : p >= 1 ? Font::ArmorHalf : Font::ArmorEmpty;
-                ui.icon(l.hotbarX + i * 8, rowY - 10, glyph, p >= 1 ? Color{0.85f, 0.85f, 0.9f, 1} : Color{0.15f, 0.15f, 0.15f, 1});
+        // 1.7.0 UI: a health bar with a heart on the left, a food bar with a leaf on the right,
+        // and the armour shield between them (brighter with more armour points).
+        const float rowY = l.hotbarY - 13, total = l.slot * 9, gapW = 14, barW = std::floor((total - gapW) / 2);
+        const bool blink = hurtFlash_ > 0;
+        auto bar = [&](float x, float frac, Color fillC) {
+            ui.frame(x, rowY, barW, 9, {0.08f, 0.07f, 0.06f, 0.75f}, {0.85f, 0.85f, 0.8f, 0.45f});
+            const float fw = std::floor((barW - 4) * std::clamp(frac, 0.0f, 1.0f));
+            if (fw > 0) {
+                ui.fill(x + 2, rowY + 2, fw, 5, fillC);
+                ui.fill(x + 2, rowY + 2, fw, 2, {1, 1, 1, 0.2f});
             }
-        }
+        };
+        bar(l.hotbarX, state_.health / 20.0f, blink ? Color{1, 1, 1, 1} : Color{0.86f, 0.14f, 0.12f, 1});
+        ui.icon(l.hotbarX + 2, rowY + 1, Font::HeartFull, {1, 0.3f, 0.3f, 1});
+        const float fx = l.hotbarX + total - barW;
+        bar(fx, state_.food / 20.0f, Color{0.93f, 0.55f, 0.12f, 1});
+        ui.icon(fx + barW - 10, rowY + 1, Font::FoodFull, {1, 0.75f, 0.3f, 1});
+        const int points = armorPoints();
+        ui.icon(l.hotbarX + barW + (gapW - 7) / 2, rowY + 1, points > 0 ? Font::ArmorFull : Font::ArmorEmpty,
+                points > 0 ? Color{0.85f, 0.88f, 0.95f, 1} : Color{0.6f, 0.6f, 0.6f, 0.7f});
+        float right = l.hotbarX + l.slot * 9;
         if (state_.air < kMaxAir) {
             int bubbles = (int)std::ceil(state_.air / kMaxAir * 10);
             for (int i = 0; i < bubbles; ++i) ui.icon(right - 8 - i * 8, rowY - 10, Font::Bubble, {0.6f, 0.8f, 1, 1});
@@ -3074,7 +3184,6 @@ void Session::drawHud(Ui& ui) const {
         ui.hudButton(bx + 1, by + 1, b - 2, b - 2, on);
         ui.hudGlyph(bx + 1, by + 1, b - 2, b - 2, a[2], b >= 26 ? 2 : 1);
     }
-    ui.fill(l.padX + b + 4, l.padY + b + 4, b - 8, b - 8, {0, 0, 0, 0.25f});  // centre
 
     // The map item in hand: the paper sheet, big, with the player on it.
     if (paperShown_) {
@@ -3096,8 +3205,7 @@ void Session::drawHud(Ui& ui) const {
     // Minimap, top right: terrain, places and the player as an arrow (north is up).
     if (l.mapSize > 0 && !paperShown_) {
         const float mx = l.mapX, my = l.mapY, ms = l.mapSize, k = ms / Minimap::kSize;
-        ui.fill(mx - 2, my - 2, ms + 4, ms + 4, {0, 0, 0, 0.55f});
-        ui.bevel(mx - 1, my - 1, ms + 2, ms + 2, {0, 0, 0, 0}, {1, 1, 1, 0.25f}, {0, 0, 0, 0.5f});
+        ui.frame(mx - 3, my - 3, ms + 6, ms + 6, {0, 0, 0, 0.55f}, {0.85f, 0.85f, 0.8f, 0.55f});
         ui.image(TexMap, mx, my, ms, ms, 0, 0, 1, 1);
         for (const MapMarker& mk : mapMarkers()) {
             // Places outside the map sit on its edge, in their direction.
@@ -3139,7 +3247,7 @@ void Session::drawHud(Ui& ui) const {
         char buf[96];
         std::snprintf(buf, sizeof buf, "X: %d  Y: %d  Z: %d", (int)std::floor(player_.pos.x), (int)std::floor(player_.pos.y),
                       (int)std::floor(player_.pos.z));
-        ui.fill(2, 2, ui.textWidth(buf) + 6, 12, {0, 0, 0, 0.45f});
+        ui.frame(2, 2, ui.textWidth(buf) + 6, 12, {0.08f, 0.07f, 0.06f, 0.5f}, {0.85f, 0.85f, 0.8f, 0.35f});
         ui.text(5, 4, buf);
         const int px = (int)std::floor(player_.pos.x), pz = (int)std::floor(player_.pos.z);
         std::string where = tr(world_->placeName(px, pz));

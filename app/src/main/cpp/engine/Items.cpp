@@ -20,10 +20,12 @@ const ItemId kCreativeItems[] = {
     1000, 1008, 1016, 1024, 1032, 1040, 1048, 1056, 1064, 1072, 1080, 1088,
     1100, 1103, 1106, 1109, 1112, 1115, 1118, 1121, 1124, 1127, 1130, 1133,
     1210, 1211, 1212, 1213, 1214, 1215, 1216, 1217, 1218, 1219, 1220, 1221, 1222, 1223, 1224, 1225, TAR_BLOCK,
-    POWERSTONE_BRICKS, CRACKED_POWERSTONE_BRICKS, CHISELED_POWERSTONE_BRICKS, POWERSTONE_GLASS, STAIRS_EXTRA, 1136,
+    POWERSTONE_BRICKS, CRACKED_POWERSTONE_BRICKS, CHISELED_POWERSTONE_BRICKS, POWERSTONE_GLASS, STAIRS_EXTRA, 1136, STAIRS_EXTRA2, STAIRS_EXTRA2 + 8, STAIRS_EXTRA2 + 16, STAIRS_EXTRA2 + 24,
+    SLAB_EXTRA, SLAB_EXTRA + 3, SLAB_EXTRA + 6, SLAB_EXTRA + 9,
     CRACKED_NETHER_BRICKS, CHISELED_NETHER_BRICKS, SPRUCE_FENCE, VOID_FENCE, NETHERPERK_FENCE, NETHER_BRICK_FENCE,
     POWERSTONE_FENCE, SKELETON_HEAD, VOID_BRICK_EYE, TORCH, CRIMSON_PLANKS, POWERSTONE_FURNACE,
     DEEPSTONE_BRICKS, CRACKED_DEEPSTONE_BRICKS, MOSSY_DEEPSTONE_BRICKS, ROTTEN_PLANKS, MOB_SPAWNER, CELESTIAL_FRAME,
+    CELESTIAL_PLANKS, CELESTIAL_STONE_BRICKS,
     // Nature
     GRASS, DIRT, SAND, GRAVEL, CLAY, SNOW_BLOCK, ICE, CACTUS, LEAVES, SPRUCE_LEAVES, TALL_GRASS, DANDELION, POPPY, WATER, LAVA,
     COAL_ORE, IRON_ORE, BRONZE_ORE, STEEL_ORE, RUBY_ORE, NETHERRACK, NETHER_BRICK,
@@ -32,27 +34,29 @@ const ItemId kCreativeItems[] = {
     FARMLAND, WHEAT_SEEDS, TAR, DRIPSTONE_BLOCK, DRIPSTONE_UP, SNOW_LAYER,
     WASTELAND_GRASS, DRY_GRASS, GRASSER_FLOWER, FERN, DEBRIS_GRAVEL, CRIMSON_STONE, CRIMSON_LOG,
     DEEPSTONE, HARDIUM_ORE, MOSSY_DEEPSTONE, MOSS_BLOCK, FUNGAL_DEEPSTONE, VINES, SOULED_GRASS, SOULED_DIRT, SOULED_STONE,
+    CELESTIAL_GRASS, CELESTIAL_DIRT, CELESTIAL_STONE, CELESTIAL_LOG, CELESTIAL_LEAVES,
     // Tools
     WOOD_PICKAXE, WOOD_AXE, WOOD_SHOVEL, STONE_PICKAXE, STONE_AXE, STONE_SHOVEL, IRON_PICKAXE, IRON_AXE, IRON_SHOVEL,
     BRONZE_PICKAXE, BRONZE_AXE, BRONZE_SHOVEL, STEEL_PICKAXE, STEEL_AXE, STEEL_SHOVEL, RUBY_PICKAXE, RUBY_AXE, RUBY_SHOVEL,
     FLINT_AND_STEEL, VOID_FLINT_AND_STEEL,
     WOOD_SWORD, STONE_SWORD, IRON_SWORD, BRONZE_SWORD, STEEL_SWORD, RUBY_SWORD, BUCKET, WATER_BUCKET, LAVA_BUCKET, BOSS_COMPASS,
-    HOE, BOW, ARROW, MAP, BRUSHER, FORTRESS_COMPASS, SHIELD, EXPLORER_MAP, WRITABLE_BOOK, HARDIUM_PICKAXE,
+    HOE, BOW, ARROW, MAP, BRUSHER, FORTRESS_COMPASS, SHIELD, EXPLORER_MAP, WRITABLE_BOOK, HARDIUM_PICKAXE, CELESTIAL_COMPASS, HARDIUM_SWORD, HARDIUM_AXE, HARDIUM_SHOVEL,
     // Armour
     228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247,
+    HARDIUM_ARMOR, HARDIUM_ARMOR + 1, HARDIUM_ARMOR + 2, HARDIUM_ARMOR + 3,
     // Materials
     STICK, COAL, IRON_INGOT, BRONZE_INGOT, STEEL_INGOT, RUBY, FLINT, APPLE, BOAT,
     RAW_PORK, COOKED_PORK, RAW_MUTTON, COOKED_MUTTON,
     POWERSTONE_DUST, POWERSTONE_CHIP, EGG_PIG, EGG_SHEEP, EGG_SLIME, EGG_FORGOTTEN,
     FEATHER, WHEAT, BREAD, RAW_CHICKEN, COOKED_CHICKEN, RAW_BEEF, STEAK, MILK_BUCKET, EGG_CHICKEN, EGG_COW, EGG_VILLAGER,
-    STRING, TAR_BALL, EGG_SPIDER, EGG_BAT, EGG_TNT_ZOMBIE, EGG_TAR_MONSTER,
+    STRING, TAR_BALL, EGG_SPIDER, EGG_BAT, EGG_TNT_ZOMBIE, EGG_TAR_MONSTER, CRIMSON_HEAD,
     OLD_DOCUMENT, OLD_DOCUMENT + 1, OLD_DOCUMENT + 2, OLD_DOCUMENT + 3, OLD_DOCUMENT + 4, OLD_DOCUMENT + 5, OLD_DOCUMENT + 6,
     OLD_DOCUMENT + 7, ANCIENT_COIN, POWERSTONE_RELIC, POTTERY_SHARD, EGG_HUSKING, EGG_HOGMAN, HARDIUM,
 };
 const int kCreativeItemCount = sizeof(kCreativeItems) / sizeof(kCreativeItems[0]);
-static_assert(sizeof(kCreativeItems) / sizeof(kCreativeItems[0]) == 117 + 62 + 40 + 20 + 50, "the creative tabs cover the whole catalog");
+static_assert(sizeof(kCreativeItems) / sizeof(kCreativeItems[0]) == 127 + 67 + 44 + 24 + 51, "the creative tabs cover the whole catalog");
 const CreativeTab kCreativeTabs[] = {
-    {"Stavební", 0, 117}, {"Příroda", 117, 62}, {"Nástroje", 179, 40}, {"Brnění", 219, 20}, {"Suroviny", 239, 50},
+    {"Stavební", 0, 127}, {"Příroda", 127, 67}, {"Nástroje", 194, 44}, {"Brnění", 238, 24}, {"Suroviny", 262, 51},
 };
 const int kCreativeTabCount = sizeof(kCreativeTabs) / sizeof(kCreativeTabs[0]);
 
@@ -209,17 +213,17 @@ const KeyEntry kKeys[] = {
     {NETHER_BRICK_FENCE, "nether_brick_fence"}, {POWERSTONE_FENCE, "powerstone_fence"},
     {BRUSHER, "brusher"}, {FORTRESS_COMPASS, "fortress_compass"}, {ANCIENT_COIN, "ancient_coin"},
     {POWERSTONE_RELIC, "powerstone_relic"}, {POTTERY_SHARD, "pottery_shard"}, {EGG_HUSKING, "husking_spawn_egg"}, {VOID_BRICK_EYE, "void_brick_eye"}, {CRIMSON_STONE, "crimson_stone"},
-    {TORCH, "torch"}, {CRIMSON_PLANKS, "crimson_planks"}, {CRIMSON_LOG, "crimson_log"}, {SHIELD, "shield"}, {EXPLORER_MAP, "explorer_map"}, {WRITABLE_BOOK, "writable_book"}, {DEEPSTONE, "deepstone"}, {HARDIUM_ORE, "hardium_ore"}, {MOSSY_DEEPSTONE, "mossy_deepstone"}, {MOSS_BLOCK, "moss_block"}, {FUNGAL_DEEPSTONE, "fungal_deepstone"}, {DEEPSTONE_BRICKS, "deepstone_bricks"}, {CRACKED_DEEPSTONE_BRICKS, "cracked_deepstone_bricks"}, {MOSSY_DEEPSTONE_BRICKS, "mossy_deepstone_bricks"}, {ROTTEN_PLANKS, "rotten_planks"}, {VINES, "vines"}, {HARDIUM, "hardium"}, {HARDIUM_PICKAXE, "hardium_pickaxe"}, {MOB_SPAWNER, "spawner"}, {SOULED_GRASS, "souled_grass"}, {SOULED_DIRT, "souled_dirt"}, {SOULED_STONE, "souled_stone"}, {CELESTIAL_FRAME, "celestial_portal_frame"}, {WRITTEN_BOOK, "written_book"},
+    {TORCH, "torch"}, {CRIMSON_PLANKS, "crimson_planks"}, {CRIMSON_LOG, "crimson_log"}, {SHIELD, "shield"}, {EXPLORER_MAP, "explorer_map"}, {WRITABLE_BOOK, "writable_book"}, {DEEPSTONE, "deepstone"}, {HARDIUM_ORE, "hardium_ore"}, {MOSSY_DEEPSTONE, "mossy_deepstone"}, {MOSS_BLOCK, "moss_block"}, {FUNGAL_DEEPSTONE, "fungal_deepstone"}, {DEEPSTONE_BRICKS, "deepstone_bricks"}, {CRACKED_DEEPSTONE_BRICKS, "cracked_deepstone_bricks"}, {MOSSY_DEEPSTONE_BRICKS, "mossy_deepstone_bricks"}, {ROTTEN_PLANKS, "rotten_planks"}, {VINES, "vines"}, {HARDIUM, "hardium"}, {HARDIUM_PICKAXE, "hardium_pickaxe"}, {HARDIUM_SWORD, "hardium_sword"}, {HARDIUM_AXE, "hardium_axe"}, {HARDIUM_SHOVEL, "hardium_shovel"}, {HARDIUM_ARMOR, "hardium_helmet"}, {HARDIUM_ARMOR + 1, "hardium_chestplate"}, {HARDIUM_ARMOR + 2, "hardium_leggings"}, {HARDIUM_ARMOR + 3, "hardium_boots"}, {MOB_SPAWNER, "spawner"}, {SOULED_GRASS, "souled_grass"}, {SOULED_DIRT, "souled_dirt"}, {SOULED_STONE, "souled_stone"}, {CELESTIAL_FRAME, "celestial_portal_frame"}, {CELESTIAL_FRAME_FULL, "celestial_portal_frame_filled"}, {CELESTIAL_PORTAL, "celestial_portal"}, {CRIMSON_HEAD, "crimson_head"}, {CELESTIAL_COMPASS, "celestial_compass"}, {CELESTIAL_LOG, "celestial_log"}, {CELESTIAL_PLANKS, "celestial_planks"}, {CELESTIAL_STONE_BRICKS, "celestial_stone_bricks"}, {CELESTIAL_LEAVES, "celestial_leaves"}, {CELESTIAL_GRASS, "celestial_grass"}, {CELESTIAL_DIRT, "celestial_dirt"}, {CELESTIAL_STONE, "celestial_stone"}, {WRITTEN_BOOK, "written_book"},
     {EGG_HOGMAN, "hogman_spawn_egg"}, {POWERSTONE_FURNACE, "powerstone_furnace"}, {POWERSTONE_FURNACE_ON, "lit_powerstone_furnace"},
     {CEILING_CABLE, "ceiling_power_cable"}, {CEILING_CABLE_ON, "lit_ceiling_power_cable"},
 };
 }  // namespace
 
 // Stairs and slabs, by material (see shapeMaterialBlock).
-const char* const kStairsKeys[kShapeMaterials] = {"oak_stairs", "spruce_stairs", "void_stairs", "netherperk_stairs", "cobblestone_stairs", "stone_stairs", "stone_brick_stairs", "mossy_cobblestone_stairs", "brick_stairs", "sandstone_stairs", "nether_brick_stairs", "void_brick_stairs", "powerstone_stairs"};
-const char* const kSlabKeys[kShapeMaterials] = {"oak_slab", "spruce_slab", "void_slab", "netherperk_slab", "cobblestone_slab", "stone_slab", "stone_brick_slab", "mossy_cobblestone_slab", "brick_slab", "sandstone_slab", "nether_brick_slab", "void_brick_slab", "powerstone_slab"};
-const char* const kStairsNames[kShapeMaterials] = {"Dubové schody", "Smrkové schody", "Prázdnotné schody", "Netherperkové schody", "Schody z dlažebního kamene", "Kamenné schody", "Schody z kamenných cihel", "Schody z mechového kamene", "Cihlové schody", "Pískovcové schody", "Schody z netherových cihel", "Schody z prázdnotných cihel", "Powerstonové schody"};
-const char* const kSlabNames[kShapeMaterials] = {"Dubová deska", "Smrková deska", "Prázdnotná deska", "Netherperková deska", "Deska z dlažebního kamene", "Kamenná deska", "Deska z kamenných cihel", "Deska z mechového kamene", "Cihlová deska", "Pískovcová deska", "Deska z netherových cihel", "Deska z prázdnotných cihel", "Powerstonová deska"};
+const char* const kStairsKeys[kShapeMaterials] = {"oak_stairs", "spruce_stairs", "void_stairs", "netherperk_stairs", "cobblestone_stairs", "stone_stairs", "stone_brick_stairs", "mossy_cobblestone_stairs", "brick_stairs", "sandstone_stairs", "nether_brick_stairs", "void_brick_stairs", "powerstone_stairs", "crimson_stairs", "deepstone_stairs", "deepstone_brick_stairs", "mossy_deepstone_brick_stairs"};
+const char* const kSlabKeys[kShapeMaterials] = {"oak_slab", "spruce_slab", "void_slab", "netherperk_slab", "cobblestone_slab", "stone_slab", "stone_brick_slab", "mossy_cobblestone_slab", "brick_slab", "sandstone_slab", "nether_brick_slab", "void_brick_slab", "powerstone_slab", "crimson_slab", "deepstone_slab", "deepstone_brick_slab", "mossy_deepstone_brick_slab"};
+const char* const kStairsNames[kShapeMaterials] = {"Dubové schody", "Smrkové schody", "Prázdnotné schody", "Netherperkové schody", "Schody z dlažebního kamene", "Kamenné schody", "Schody z kamenných cihel", "Schody z mechového kamene", "Cihlové schody", "Pískovcové schody", "Schody z netherových cihel", "Schody z prázdnotných cihel", "Powerstonové schody", "Karmínové schody", "Deepstonové schody", "Schody z deepstonových cihel", "Schody z mechových deepstonových cihel"};
+const char* const kSlabNames[kShapeMaterials] = {"Dubová deska", "Smrková deska", "Prázdnotná deska", "Netherperková deska", "Deska z dlažebního kamene", "Kamenná deska", "Deska z kamenných cihel", "Deska z mechového kamene", "Cihlová deska", "Pískovcová deska", "Deska z netherových cihel", "Deska z prázdnotných cihel", "Powerstonová deska", "Karmínová deska", "Deepstonová deska", "Deska z deepstonových cihel", "Deska z mechových deepstonových cihel"};
 
 const char* const kGlassNames[16] = {"Bílé sklo", "Oranžové sklo", "Purpurové sklo", "Světle modré sklo", "Žluté sklo", "Limetkové sklo", "Růžové sklo", "Šedé sklo", "Světle šedé sklo", "Azurové sklo", "Fialové sklo", "Modré sklo", "Hnědé sklo", "Zelené sklo", "Červené sklo", "Černé sklo"};
 const char* const kGlassKeys[16] = {"white_stained_glass", "orange_stained_glass", "magenta_stained_glass", "light_blue_stained_glass", "yellow_stained_glass", "lime_stained_glass", "pink_stained_glass", "gray_stained_glass", "light_gray_stained_glass", "cyan_stained_glass", "purple_stained_glass", "blue_stained_glass", "brown_stained_glass", "green_stained_glass", "red_stained_glass", "black_stained_glass"};
@@ -237,7 +241,7 @@ const char* itemKey(ItemId id) {
     if (isDocument(id)) return kDocumentKeys[id - OLD_DOCUMENT];
     if (isSkeletonHead(id)) return "skeleton_head";
     if (isTorch(id)) return "torch";
-    if (isSlab(id)) return kSlabKeys[(id - SLAB) / 3];
+    if (isSlab(id)) return kSlabKeys[slabMaterial(id)];
     for (const KeyEntry& e : kKeys)
         if (e.id == id) return e.key;
     return "air";
@@ -310,7 +314,7 @@ const char* itemName(ItemId id) {
     if (isStairs(id)) return kStairsNames[stairsMaterial(id)];
     if (isDocument(id)) return kDocumentNames[id - OLD_DOCUMENT];
     if (isSkeletonHead(id)) return "Lebka kostlivce";
-    if (isSlab(id)) return kSlabNames[(id - SLAB) / 3];
+    if (isSlab(id)) return kSlabNames[slabMaterial(id)];
     if (isStainedGlass(id)) return kGlassNames[id - STAINED_GLASS];
     if (isWallCable(id) || isCeilingCable(id)) return "Napájecí kabel";
     if (isWallSwitch(id)) return "Vypínač";
@@ -384,11 +388,25 @@ const char* itemName(ItemId id) {
         case VINES: return "Liány";
         case HARDIUM: return "Hardium";
         case HARDIUM_PICKAXE: return "Hardiový krumpáč";
+        case HARDIUM_SWORD: return "Hardiový meč";
+        case HARDIUM_AXE: return "Hardiová sekera";
+        case HARDIUM_SHOVEL: return "Hardiová lopata";
         case MOB_SPAWNER: return "Líheň příšer";
         case SOULED_GRASS: return "Duševní tráva";
         case SOULED_DIRT: return "Duševní hlína";
         case SOULED_STONE: return "Duševní kámen";
         case CELESTIAL_FRAME: return "Rám nebeského portálu";
+        case CELESTIAL_FRAME_FULL: return "Rám nebeského portálu";
+        case CELESTIAL_PORTAL: return "Nebeský portál";
+        case CELESTIAL_LOG: return "Nebeský kmen";
+        case CELESTIAL_PLANKS: return "Nebeská prkna";
+        case CELESTIAL_STONE_BRICKS: return "Nebeské kamenné cihly";
+        case CELESTIAL_LEAVES: return "Nebeské listí";
+        case CELESTIAL_GRASS: return "Nebeská duševní tráva";
+        case CELESTIAL_DIRT: return "Nebeská duševní hlína";
+        case CELESTIAL_STONE: return "Nebeský duševní kámen";
+        case CRIMSON_HEAD: return "Hlava Karmínového muže";
+        case CELESTIAL_COMPASS: return "Nebeský kompas";
         case WRITTEN_BOOK: return "Podepsaná kniha";
         case EGG_HOGMAN: return "Vejce: Prasák";
         case POWERSTONE_FURNACE: case POWERSTONE_FURNACE_ON: return "Powerstonová pec";
@@ -557,12 +575,13 @@ const char* itemName(ItemId id) {
         return kWool[c];
     }
     if (isArmor(id)) {
-        static const char* kArmor[5][4] = {
+        static const char* kArmor[6][4] = {
             {"Dřevěná helma", "Dřevěný kyrys", "Dřevěné nohavice", "Dřevěné boty"},
             {"Kamenná helma", "Kamenný kyrys", "Kamenné nohavice", "Kamenné boty"},
             {"Bronzová helma", "Bronzový kyrys", "Bronzové nohavice", "Bronzové boty"},
             {"Ocelová helma", "Ocelový kyrys", "Ocelové nohavice", "Ocelové boty"},
             {"Rubínová helma", "Rubínový kyrys", "Rubínové nohavice", "Rubínové boty"},
+            {"Hardiová helma", "Hardiový kyrys", "Hardiové nohavice", "Hardiové boty"},
         };
         return kArmor[armorMaterial(id)][armorPiece(id)];
     }
@@ -574,8 +593,8 @@ const char* itemName(ItemId id) {
 ToolKind toolKind(ItemId id) {
     switch (id) {
         case WOOD_PICKAXE: case STONE_PICKAXE: case IRON_PICKAXE: case HARDIUM_PICKAXE: return ToolKind::Pickaxe;
-        case WOOD_AXE: case STONE_AXE: case IRON_AXE: return ToolKind::Axe;
-        case WOOD_SHOVEL: case STONE_SHOVEL: case IRON_SHOVEL: return ToolKind::Shovel;
+        case WOOD_AXE: case STONE_AXE: case IRON_AXE: case HARDIUM_AXE: return ToolKind::Axe;
+        case WOOD_SHOVEL: case STONE_SHOVEL: case IRON_SHOVEL: case HARDIUM_SHOVEL: return ToolKind::Shovel;
         default:
             if (id >= BRONZE_PICKAXE && id <= RUBY_SHOVEL)
                 return (id - BRONZE_PICKAXE) % 3 == 0 ? ToolKind::Pickaxe : (id - BRONZE_PICKAXE) % 3 == 1 ? ToolKind::Axe : ToolKind::Shovel;
@@ -592,7 +611,7 @@ int toolTier(ItemId id) {
         case BRONZE_PICKAXE: case BRONZE_AXE: case BRONZE_SHOVEL: return 3;  // like iron, but tougher
         case STEEL_PICKAXE: case STEEL_AXE: case STEEL_SHOVEL: return 4;
         case RUBY_PICKAXE: case RUBY_AXE: case RUBY_SHOVEL: return 5;
-        case HARDIUM_PICKAXE: return 6;
+        case HARDIUM_PICKAXE: case HARDIUM_AXE: case HARDIUM_SHOVEL: case HARDIUM_SWORD: return 6;
         case WOOD_SWORD: return 1;
         case STONE_SWORD: return 2;
         case IRON_SWORD: case BRONZE_SWORD: return 3;
@@ -604,7 +623,7 @@ int toolTier(ItemId id) {
 
 int toolDurability(ItemId id) {
     if (isArmor(id)) {
-        static const int kBase[5] = {5, 8, 12, 18, 33}, kPiece[4] = {11, 16, 15, 13};
+        static const int kBase[6] = {5, 8, 12, 18, 33, 45}, kPiece[4] = {11, 16, 15, 13};
         return kBase[armorMaterial(id)] * kPiece[armorPiece(id)];
     }
     if ((id >= BRONZE_PICKAXE && id <= BRONZE_SHOVEL) || id == BRONZE_SWORD) return 320;
@@ -622,13 +641,13 @@ int toolDurability(ItemId id) {
     }
 }
 
-int armorPiece(ItemId id) { return isArmor(id) ? (id - FIRST_ARMOR) % 4 : -1; }
-int armorMaterial(ItemId id) { return isArmor(id) ? (id - FIRST_ARMOR) / 4 : -1; }
-ItemId armorItem(int material, int piece) { return (ItemId)(FIRST_ARMOR + material * 4 + piece); }
+int armorPiece(ItemId id) { return !isArmor(id) ? -1 : id >= HARDIUM_ARMOR ? id - HARDIUM_ARMOR : (id - FIRST_ARMOR) % 4; }
+int armorMaterial(ItemId id) { return !isArmor(id) ? -1 : id >= HARDIUM_ARMOR ? 5 : (id - FIRST_ARMOR) / 4; }
+ItemId armorItem(int material, int piece) { return (ItemId)(material == 5 ? HARDIUM_ARMOR + piece : FIRST_ARMOR + material * 4 + piece); }
 
 int armorPoints(ItemId id) {
     if (!isArmor(id)) return 0;
-    static const int kPoints[5][4] = {{1, 2, 2, 1}, {1, 3, 2, 1}, {2, 5, 4, 2}, {2, 6, 5, 2}, {3, 8, 6, 3}};
+    static const int kPoints[6][4] = {{1, 2, 2, 1}, {1, 3, 2, 1}, {2, 5, 4, 2}, {2, 6, 5, 2}, {3, 8, 6, 3}, {4, 9, 7, 4}};
     return kPoints[armorMaterial(id)][armorPiece(id)];
 }
 
@@ -642,9 +661,9 @@ float armorReduction(const ItemStack armor[4]) {
 int maxStack(ItemId id) {
     if (const ModItem* m = id >= kModIdBase ? ModRegistry::get().item(id) : nullptr) return m->stack;
     if (id == WATER_BUCKET || id == LAVA_BUCKET || id == BOSS_COMPASS || id == CAKE || id == MILK_BUCKET || id == MAP || id == ANNIV_MEDAL ||
-        id == FORTRESS_COMPASS || id == EXPLORER_MAP || id == WRITABLE_BOOK || id == WRITTEN_BOOK)
+        id == FORTRESS_COMPASS || id == EXPLORER_MAP || id == WRITABLE_BOOK || id == WRITTEN_BOOK || id == CELESTIAL_COMPASS)
         return 1;
-    if (isSkeletonHead(id) || isDocument(id) || id == POWERSTONE_RELIC) return 16;
+    if (isSkeletonHead(id) || isDocument(id) || id == POWERSTONE_RELIC || id == CRIMSON_HEAD) return 16;
     if (id == BUCKET || isSpawnEgg(id)) return 16;
     return toolDurability(id) > 0 ? 1 : kMaxStack;
 }
@@ -706,10 +725,13 @@ float hardness(ItemId id) {
         case CRIMSON_STONE: return 1.5f;
         case DEEPSTONE: case MOSSY_DEEPSTONE: case FUNGAL_DEEPSTONE: return 4.5f;  // twice as hard as stone
         case MOB_SPAWNER: return 5.0f;
-        case SOULED_GRASS: return 0.6f;
+        case SOULED_GRASS: case CELESTIAL_GRASS: return 0.6f;
+        case CELESTIAL_DIRT: return 0.5f;
+        case CELESTIAL_STONE: return 1.5f;
+        case CELESTIAL_STONE_BRICKS: return 2.0f;
         case SOULED_DIRT: return 0.5f;
         case SOULED_STONE: return 1.5f;
-        case CELESTIAL_FRAME: return -1.0f;  // unbreakable, like the End's frames
+        case CELESTIAL_FRAME: case CELESTIAL_FRAME_FULL: case CELESTIAL_PORTAL: return -1.0f;  // unbreakable, like the End's frames
         case MOSS_BLOCK: return 0.6f;
         case DEEPSTONE_BRICKS: case CRACKED_DEEPSTONE_BRICKS: case MOSSY_DEEPSTONE_BRICKS: return 4.0f;
         case HARDIUM_ORE: return 7.0f;
@@ -775,7 +797,7 @@ ToolKind preferredTool(ItemId id, int& requiredTier) {
         case MOB_SPAWNER:
             requiredTier = 1;
             return ToolKind::Pickaxe;
-        case MOSS_BLOCK: case SOULED_GRASS: case SOULED_DIRT: return ToolKind::Shovel;
+        case MOSS_BLOCK: case SOULED_GRASS: case SOULED_DIRT: case CELESTIAL_GRASS: case CELESTIAL_DIRT: return ToolKind::Shovel;
         case SOULED_STONE:
             requiredTier = 1;
             return ToolKind::Pickaxe;
@@ -864,6 +886,7 @@ ItemId dropFor(ItemId block, float roll, ItemId tool) {
         case HARDIUM_ORE: return HARDIUM;
         case MOB_SPAWNER: return AIR;
         case SOULED_GRASS: return SOULED_DIRT;
+        case CELESTIAL_GRASS: return CELESTIAL_DIRT;
         case ROTTEN_PLANKS: return roll < 0.5f ? (ItemId)STICK : (ItemId)ROTTEN_PLANKS;  // they crumble
         case RUBY_ORE: return RUBY;
         case ICE: return AIR;  // melts
@@ -889,7 +912,7 @@ ItemId dropFor(ItemId block, float roll, ItemId tool) {
             if (isBed(block)) return BED_ITEM;
             if (isStairs(block)) return stairsId(stairsMaterial(block), 0, false);
             if (isSkeletonHead(block)) return SKELETON_HEAD;  // a double slab gives two
-            if (isSlab(block)) return slabId((block - SLAB) / 3, 0);
+            if (isSlab(block)) return slabId(slabMaterial(block), 0);
             if (isStainedGlass(block)) return AIR;  // glass breaks
             if (isWallCable(block) || isCeilingCable(block)) return POWER_CABLE;
             if (isWallSwitch(block)) return SWITCH;

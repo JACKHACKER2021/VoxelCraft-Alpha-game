@@ -19,7 +19,7 @@ namespace {
 
 constexpr float kPoseInterval = 0.1f;  // ten poses a second
 constexpr float kAnnounceInterval = 1.5f;
-const char* const kDimDirs[3] = {"overworld", "nether", "void"};
+const char* const kDimDirs[4] = {"overworld", "nether", "void", "celestial"};
 
 std::vector<uint8_t> readFile(const fs::path& p) {
     std::ifstream in(p, std::ios::binary);
@@ -186,7 +186,7 @@ void Multiplayer::handlePose(net::Reader& r, int id) {
         p->yaw = yaw;
     }
     p->posed = true;
-    p->dim = std::clamp(dim, 0, 2);
+    p->dim = std::clamp(dim, 0, 3);
     p->target = pos;
     p->targetYaw = yaw;
     p->pitch = std::clamp(pitch, -1.6f, 1.6f);
@@ -200,10 +200,10 @@ void Multiplayer::handlePose(net::Reader& r, int id) {
 void Multiplayer::applyBlock(Session* session, int dim, int x, int y, int z, ItemId id) {
     if (y < 0 || y >= kChunkHeight) return;
     if (!session) {
-        pendingEdits_.push_back({std::clamp(dim, 0, 2), x, y, z, id});
+        pendingEdits_.push_back({std::clamp(dim, 0, 3), x, y, z, id});
         return;
     }
-    session->applyRemoteBlock(std::clamp(dim, 0, 2), x, y, z, id);
+    session->applyRemoteBlock(std::clamp(dim, 0, 3), x, y, z, id);
 }
 
 void Multiplayer::animate(float dt) {
@@ -272,7 +272,7 @@ void Multiplayer::sendWorld(Session& session, net::Connection& c, int id) {
     // generator.json can be longer than a short string: it goes as bytes.
     std::string gen = session.currentWorld().config().toJson().dump();
     c.send(Chunk, net::Writer().str("generator.json").bytes(std::vector<uint8_t>(gen.begin(), gen.end())));
-    for (int d = 0; d < 3; ++d) {
+    for (int d = 0; d < 4; ++d) {
         std::error_code ec;
         for (const auto& e : fs::directory_iterator(fs::path(session.info().folder) / kDimDirs[d], ec)) {
             std::string n = e.path().filename().string();
@@ -426,7 +426,7 @@ void Multiplayer::hostUpdate(Session& session, float dt, double now) {
     }
     pendingHits_.clear();
     // Our own changes and pose.
-    for (int d = 0; d < 3; ++d)
+    for (int d = 0; d < 4; ++d)
         for (const BlockEdit& e : session.takeEdits(d))
             broadcast(Block, net::Writer().u8((uint8_t)d).i32(e.x).u8((uint8_t)e.y).i32(e.z).u16(e.id), -1);
     if ((poseTimer_ += dt) >= kPoseInterval) {
@@ -463,7 +463,7 @@ void Multiplayer::clientUpdate(Session* session, float dt, double now) {
         session->recordEdits(true);
         for (const Edit& e : pendingEdits_) session->applyRemoteBlock(e.dim, e.x, e.y, e.z, e.id);
         pendingEdits_.clear();
-        for (int d = 0; d < 3; ++d)
+        for (int d = 0; d < 4; ++d)
             for (const BlockEdit& e : session->takeEdits(d))
                 server_.send(Block, net::Writer().u8((uint8_t)d).i32(e.x).u8((uint8_t)e.y).i32(e.z).u16(e.id));
         if ((poseTimer_ += dt) >= kPoseInterval) {
@@ -503,7 +503,7 @@ void Multiplayer::clientUpdate(Session* session, float dt, double now) {
                 } else {
                     size_t slash = path.find('/');
                     std::string dir = path.substr(0, slash), file = slash == std::string::npos ? "" : path.substr(slash + 1);
-                    if ((dir == kDimDirs[0] || dir == kDimDirs[1] || dir == kDimDirs[2]) && safeChunkName(file))
+                    if ((dir == kDimDirs[0] || dir == kDimDirs[1] || dir == kDimDirs[2] || dir == kDimDirs[3]) && safeChunkName(file))
                         chunkFiles_.emplace_back(path, std::move(data));
                 }
                 break;

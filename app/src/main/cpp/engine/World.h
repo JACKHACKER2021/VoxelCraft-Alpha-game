@@ -24,7 +24,7 @@ constexpr int kSeaLevel = 62;
 constexpr int kNetherLavaLevel = 31;
 
 // The Crimson Void (Void) is VoxelCraft's own dimension, reached through a void portal in the Nether.
-enum class Dimension { Overworld, Nether, Void };
+enum class Dimension { Overworld, Nether, Void, Celestial };  // 1.7.0: the Celestial Reach
 
 // One changed block, as sent between LAN players.
 struct BlockEdit {
@@ -98,6 +98,10 @@ public:
     std::string placeName(int x, int z) const;
     // The nearest fortress (Nether) or boss arena (Crimson Void) to (x, z): its centre and floor height.
     bool nearestStructure(int x, int z, int& outX, int& outY, int& outZ) const;
+    // 1.7.0 preview: the nearest Celestial portal frame (Crimson Void, Forgotten Overworld).
+    bool nearestCelestialFrame(int x, int z, int& outX, int& outZ) const;
+    static constexpr int kCelestialRegion = 240;
+    void celestialSpot(int rx, int rz, int& px, int& pz) const;  // where a region's frame would lie
     // 1.5.7: the middle of the nearest mineshaft (Overworld: the wooden one; Cornerstone
     // Dimension: the crimson one), for explorer maps. False when none is within ~1000 blocks.
     bool nearestMineshaft(int x, int z, int& outX, int& outY, int& outZ);
@@ -117,6 +121,13 @@ private:
     void generateOverworld(Chunk& c);
     void generateNether(Chunk& c);
     void generateVoid(Chunk& c);
+    void generateCelestial(Chunk& c);
+
+public:
+    // 1.7.0: the height of the top of the floating island at x, z, or -1 over the open sky.
+    int celestialTop(int x, int z) const;
+
+private:
     struct Column {
         int height = 0;
         const BiomeDef* biome = nullptr;

@@ -1,6 +1,7 @@
 // Films the VoxelCraft trailer: every shot is the real game, played by a script.
 // Usage: trailer_film <out dir> <shot name|all>   (frames go to <out>/<shot>/f_#####.png)
 #include <chrono>
+#include <ctime>
 #include <fstream>
 #include <map>
 
@@ -12,6 +13,7 @@
 #include "engine/Mobs.h"
 #include "engine/Portal.h"
 #include "engine/Rewards.h"
+#include "engine/Store.h"
 #include "engine/Trees.h"
 #include "engine/Items.h"
 #include "engine/Packs.h"
@@ -3685,10 +3687,17 @@ SHOT(n01_mobs) {
                              MobType::Husking, MobType::Hogman, MobType::CrimsonMan};
     const int n = (int)(sizeof(kinds) / sizeof(kinds[0]));
     s.mobs().mobs().clear();
-    for (int i = 0; i < n; ++i) s.mobs().spawn(kinds[i], 0, Vec3(x + 0.5f + i * 3.0f, (float)y, z - 4.5f));
     auto hold = [&] {
-        for (int i = 0; i < (int)s.mobs().mobs().size() && i < n; ++i) {
-            Mob& m = s.mobs().mobs()[i];
+        // Only the line-up: whatever else wandered in goes, and each one stands at its place.
+        auto& all = s.mobs().mobs();
+        bool ok = (int)all.size() == n;
+        for (int i = 0; ok && i < n; ++i) ok = all[i].type == kinds[i];
+        if (!ok) {
+            all.clear();
+            for (int i = 0; i < n; ++i) s.mobs().spawn(kinds[i], 0, Vec3(x + 0.5f + i * 3.0f, (float)y, z - 4.5f));
+        }
+        for (int i = 0; i < n; ++i) {
+            Mob& m = all[i];
             m.pos = Vec3(x + 0.5f + i * 3.0f, (float)y + (m.type == MobType::Bat ? 1.5f : 0.0f), z - 4.5f);
             m.vel = Vec3(0, 0, 0);
             m.yaw = kPi;  // facing the camera
@@ -3710,6 +3719,1386 @@ SHOT(n01_mobs) {
         p.pos = Vec3(x - 1.0f + k * (n - 1) * 3.0f, y + 1.8f, z + 2.5f);
         d.lookNow(Vec3(x + 1.0f + k * (n - 1) * 3.0f, y + 1.2f, z - 4.5f));
     });
+}
+
+// Chapter IV: real commands typed into the chat window, and what they do.
+SHOT(n02_commands) {
+    Director d(out, "n02_commands");
+    d.openWorld("Commands", 4242, GameMode::Survival);
+    Session& s = d.s();
+    Player& p = s.player();
+    p.yaw = 0.8f;
+    s.mobs().mobs().clear();
+    d.idle(10);
+    s.wantsChat = true;
+    d.idle(4);
+    d.shot("n02_commands");
+    d.seconds(0.8f);
+    d.say("Hello! Let's try some commands.");
+    d.seconds(1.0f);
+    d.say("/gamemode creative");
+    d.seconds(1.0f);
+    d.say("/time set night");
+    d.seconds(1.0f);
+    d.say("/weather rain");
+    d.seconds(1.0f);
+    d.say("/summon pig");
+    d.seconds(1.0f);
+    d.say("/give ruby 5");
+    d.seconds(1.4f);
+    d.game->onBack();  // close the chat and look at the result
+    d.seconds(2.5f, [&](float k) { p.yaw = 0.8f + k * 0.8f; });
+    s.wantsChat = true;
+    d.idle(2);
+    d.say("/tp ~ ~30 ~");
+    d.say("/time set day");
+    d.say("/weather clear");
+    d.seconds(1.0f);
+    d.game->onBack();
+    d.seconds(2.5f, [&](float k) { p.flying = true; p.pitch = -0.6f * k; });
+}
+
+// Chapter VI: a world before and after a pack changes the generator (as a pack's JSON does:
+// biomes "surface" and "leaves").
+static void packWorld(const fs::path& out, const char* name, bool modded) {
+    Director d(out, name);
+    d.openWorld("Pack test", 4242, GameMode::Creative, [&](GenConfig& g) {
+        if (!modded) return;
+        for (BiomeDef& b : g.biomes) {
+            if (b.surface == GRASS) b.surface = MOSS_BLOCK;
+            if (b.leaves == LEAVES) b.leaves = VOID_LEAVES;
+            b.flowerDensity *= 4;
+        }
+    });
+    d.settings().graphics = GraphicsMode::Enhanced;
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    int bx = 0, bz = 0;
+    if (!findBiome(w, "forest", bx, bz)) return;
+    Player& p = s.player();
+    p.flying = true;
+    travel(d, Vec3(bx + 0.5f, (float)feetY(w, bx, bz) + 12, bz + 0.5f));
+    s.setTimeOfDay(7000);
+    d.settings().hideGui = true;
+    s.mobs().mobs().clear();
+    d.idle(30);
+    const Vec3 start = p.pos;
+    d.shot(name);
+    d.seconds(6, [&](float k) {
+        p.flying = true;
+        p.pos = start + Vec3(k * 14, 0, -k * 6);
+        p.yaw = 0.9f, p.pitch = -0.35f;
+    });
+}
+SHOT(n03_pack_before) { packWorld(out, "n03_pack_before", false); }
+SHOT(n03_pack_after) { packWorld(out, "n03_pack_after", true); }
+
+// Chapter IV: real multiplayer. Hoppy_Hopsy21 hosts a world, Patrik joins over the LAN; both
+// move on their own and talk in the chat.
+SHOT(n04_multiplayer) {
+    Director d(out, "n04_multiplayer");
+    d.game->toolProfile().name = "Patrik";
+    WorldInfo hostInfo;
+    hostInfo.folder = createWorldFolder((d.data / "host_worlds").string());
+    hostInfo.name = "VoxelCraft Friends";
+    hostInfo.seed = 4242;
+    hostInfo.mode = GameMode::Creative;
+    Session hostWorld(hostInfo, PlayerState{});
+    Multiplayer host;
+    std::string err;
+    host.host(hostWorld, "VoxelCraft Friends", "Hoppy_Hopsy21", builtinSkins()[2].rgba, false, err);
+    Settings hs;
+    hs.renderDistance = 2;
+    auto pump = [&] {
+        hostWorld.update(1 / kFps, d.t, 600, 270, hs);
+        host.update(&hostWorld, 1 / kFps, d.t);
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    };
+    hostWorld.setTimeOfDay(6000);
+    d.idle(4);
+    d.shot("n04_multiplayer");
+    d.tap(222, 121, 0);
+    for (int i = 0; i < 20; ++i) d.frame(pump);
+    d.tap(182, 15, 0);    // Multiplayer: the host's world on the Wi-Fi
+    for (int i = 0; i < 40; ++i) d.frame(pump);
+    d.tap(300, 45, 0);    // join it
+    for (int i = 0; i < 400 && !d.game->session(); ++i) {
+        bool r = d.recording;
+        d.recording = i % 3 == 0 && r;
+        d.frame(pump);
+        d.recording = r;
+    }
+    for (int i = 0; i < 40; ++i) d.frame(pump);
+    Player& me = d.s().player();
+    me.yaw = 0, me.pitch = -0.05f;
+    Player& f = hostWorld.player();
+    f.pos = me.pos + Vec3(3, 0, -10);
+    host.sendChat("Hi Patrik! Welcome to my world!");
+    for (int i = 0; i < 30; ++i) d.frame(pump);
+    d.say("Hi Hoppy! This is so cool!");
+    // Hoppy walks over while Patrik walks a little circle on his own.
+    for (int i = 0; i < 110; ++i) d.frame([&] {
+            pump();
+            Vec3 goal = me.pos + Vec3(0.5f, 0, -3);
+            Vec3 dir = goal - f.pos;
+            float dist = std::sqrt(dir.x * dir.x + dir.z * dir.z);
+            f.yaw = dist > 0.6f ? yawTo(f.pos, goal) : yawTo(f.pos, me.pos);
+            hostWorld.autopilot.moveZ = dist > 0.6f ? 1 : 0;
+            me.yaw = 0.25f * std::sin(i * 0.05f);
+        });
+    host.sendChat("Follow me, I found a village!");
+    for (int i = 0; i < 20; ++i) d.frame(pump);
+    d.say("Coming!");
+    // Both walk off together, side by side.
+    d.walk(true);
+    for (int i = 0; i < 110; ++i) d.frame([&] {
+            pump();
+            f.yaw = me.yaw + 0.1f;
+            hostWorld.autopilot.moveZ = 1;
+            hostWorld.autopilot.jump = i % 40 == 0;
+        });
+    d.walk(false);
+    hostWorld.autopilot.moveZ = 0;
+    // Each one mines on his own: Patrik the ground in front of him, Hoppy a few blocks away.
+    host.sendChat("I'll dig here, you dig there!");
+    {
+        World& w = d.s().currentWorld();
+        const int px = (int)std::floor(me.pos.x), py = (int)std::floor(me.pos.y), pz = (int)std::floor(me.pos.z);
+        for (int k = 0; k < 3; ++k) {
+            d.mine(px, py - 1, pz - 2 - k);
+            World& hw = hostWorld.currentWorld();
+            const int hx = (int)std::floor(f.pos.x) + 2, hz = (int)std::floor(f.pos.z) - k;
+            hw.setBlock(hx, py - 1, hz, AIR);
+            for (int i = 0; i < 10; ++i) d.frame(pump);
+        }
+        (void)w;
+    }
+    d.settings().cameraMode = 2;  // the camera steps away: Patrik from the front, Hoppy beside him
+    host.sendChat("Let's build a house together.");
+    for (int i = 0; i < 60; ++i) d.frame(pump);
+    d.say("/time set day");
+    for (int i = 0; i < 40; ++i) d.frame(pump);
+    d.settings().cameraMode = 0;
+    d.game->onBack();      // pause: who is playing
+    for (int i = 0; i < 50; ++i) d.frame(pump);
+    host.stop();
+}
+
+// ---------------------------------------------------------------- story extras: powerstone, house, mods, VIP, survival
+
+// Taps a recipe into the crafting table grid from single items in the first inventory row (slot 9 + i).
+// cells: the grid cell (0..8) for each item slot, -1 to skip.
+static void craftGrid(Director& d, const std::vector<int>& cells) {
+    const float gx[3] = {182.5f, 202.5f, 222.5f}, gy[3] = {74.5f, 94.5f, 114.5f};
+    for (size_t i = 0; i < cells.size(); ++i) {
+        if (cells[i] < 0) continue;
+        d.tap(invX((int)i), kTableRow0, 5);
+        d.tap(gx[cells[i] % 3], gy[cells[i] / 3], 6);
+    }
+    d.frames(10);
+    d.tap(282.5f, 94.5f, 22);   // take the result
+}
+
+// Powerstone mining in the Cornerstone Dimension: ore in the rock, dust falls out.
+SHOT(o01_ps_mine) {
+    Director d(out, "o01");
+    d.openWorld("Powerstone", 4242, GameMode::Survival);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    goNether(d);
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z) + 6;
+    const int y = feetY(w, x, z - 6);
+    flatten(w, x - 6, z - 12, x + 6, z + 2, y, NETHER_GRASS);
+    // A cornerstone rock with powerstone ore in it.
+    for (int dx = -3; dx <= 3; ++dx)
+        for (int dy = 0; dy < 4; ++dy)
+            for (int dz = -7; dz >= -9; --dz) {
+                const bool ore = (dz == -7) && ((dx == -1 && dy == 1) || (dx == 1 && dy == 0) || (dx == 0 && dy == 2) || (dx == 2 && dy == 2));
+                if (dy == 3 && std::abs(dx) == 3) continue;
+                w.setBlock(x + dx, y + dy, z + dz, ore ? POWERSTONE_ORE : NETHERRACK);
+            }
+    p.pos = Vec3(x + 0.5f, (float)y, z - 4.5f);
+    p.yaw = 0, p.pitch = 0.1f;
+    s.mobs().mobs().clear();
+    s.inventory().clear();
+    d.give(0, IRON_PICKAXE);
+    s.selectedSlot() = 0;
+    d.idle(20);
+    d.shot("o01_ps_mine");
+    d.seconds(1.0f, [&](float) { d.look(centre(x, y + 1, z - 7), 0.08f); });
+    d.mine(x + 1, y, z - 7);
+    d.mine(x - 1, y + 1, z - 7);
+    d.mine(x, y + 2, z - 7);
+    d.mine(x + 2, y + 2, z - 7);
+    d.walk(true);
+    d.seconds(0.9f, [&](float) { heal(d); d.look(centre(x, y, z - 7), 0.2f); });
+    d.walk(false);
+    d.seconds(0.6f);
+    d.tap(Director::kMenuX, Director::kMenuY, 40);   // the dust in the inventory
+    d.game->onBack();
+    d.frames(6);
+}
+
+// Crafting with powerstone dust: the chip, cables, and a lamp.
+SHOT(o02_ps_craft) {
+    Director d(out, "o02");
+    d.openWorld("Powerstone", 4242, GameMode::Survival, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z), y = feetY(w, x, z);
+    p.pos = Vec3(x + 0.5f, (float)y, z + 0.5f);
+    p.yaw = 0, p.pitch = 0.1f;
+    s.inventory().clear();
+    d.give(0, CRAFTING_TABLE);
+    d.give(9, POWERSTONE_DUST, 1);
+    d.give(10, IRON_INGOT, 1);
+    d.give(11, POWERSTONE_DUST, 1);
+    d.give(12, POWERSTONE_DUST, 1);
+    d.give(13, POWERSTONE_DUST, 1);
+    d.give(14, POWERSTONE_DUST, 1);
+    s.mobs().mobs().clear();
+    s.setTimeOfDay(5000);
+    d.idle(30);
+    d.shot("o02_ps_craft");
+    d.use(topOf(x, y - 1, z - 3));
+    d.seconds(0.4f);
+    d.use(centre(x, y, z - 3));
+    d.frames(10);
+    craftGrid(d, {0, 1, 2});                 // dust, iron, dust: two chips
+    craftGrid(d, {-1, -1, -1, 0, 1, 2});     // three dust in a row: eight cables
+    d.seconds(1.2f);
+    d.game->onBack();
+    d.frames(6);
+}
+
+// The lab: cables on floor, walls and ceiling, a switch, lamps, the powerstone light and block,
+// an iron door, TNT, and the powerstone furnace running on power alone.
+SHOT(o03_ps_lab) {
+    Director d(out, "o03");
+    d.openWorld("Powerstone lab", 4242, GameMode::Survival, [](GenConfig& g) { g.flat = true; });
+    d.settings().graphics = GraphicsMode::Enhanced;
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z), y = feetY(w, x, z);
+    // The room: powerstone bricks, glass windows, a ceiling at y+5.
+    for (int dx = -7; dx <= 7; ++dx)
+        for (int dz = -10; dz <= 3; ++dz) {
+            w.setBlock(x + dx, y - 1, z + dz, POWERSTONE_BRICKS);
+            for (int dy = 0; dy < 5; ++dy) {
+                const bool wall = std::abs(dx) == 7 || dz == -10 || dz == 3;
+                const bool win = wall && dy >= 2 && dy <= 3 && (std::abs(dx) == 7 ? (dz % 3 == 0) : (dx % 3 == 0));
+                w.setBlock(x + dx, y + dy, z + dz, wall ? (win ? POWERSTONE_GLASS : (dy == 0 ? CHISELED_POWERSTONE_BRICKS : POWERSTONE_BRICKS)) : AIR);
+            }
+            w.setBlock(x + dx, y + 5, z + dz, (dx + 7) % 3 == 1 && dz > -9 && dz < 2 ? POWERSTONE_GLASS : POWERSTONE_BRICKS);
+        }
+    for (int cx : {-6, 6})
+        for (int cz : {-9, 2}) w.setBlock(x + cx, y + 4, z + cz, POWERSTONE_LIGHT);
+    // Station 1: the powerstone furnace next to a powerstone block (no fuel needed).
+    w.setBlock(x - 5, y, z - 9, POWERSTONE_FURNACE);
+    // Station 2: TNT at the end of a cable run behind glass.
+    for (int dx = 3; dx <= 5; ++dx) w.setBlock(x + dx, y, z - 8, GLASS);
+    w.setBlock(x + 5, y, z - 9, TNT);
+    s.inventory().clear();
+    d.give(0, POWER_CABLE, 64);
+    d.give(1, SWITCH, 8);
+    d.give(2, POWERSTONE_LAMP, 8);
+    d.give(3, POWERSTONE_LIGHT, 8);
+    d.give(4, POWERSTONE_BLOCK, 8);
+    d.give(5, IRON_DOOR_ITEM, 1);
+    d.give(9, IRON_ORE, 8);
+    s.selectedSlot() = 0;
+    p.flying = false;
+    p.pos = Vec3(x + 0.5f, (float)y, z + 1.5f);
+    p.yaw = 0, p.pitch = 0;
+    s.setTimeOfDay(11800);   // late afternoon light through the glass roof
+    s.inventory().slots[6] = {};
+    s.mobs().mobs().clear();
+    d.idle(30);
+    d.shot("o03_ps_lab");
+    // The powerstone light glows on its own.
+    s.selectedSlot() = 3;
+    d.use(topOf(x - 6, y - 1, z));
+    d.use(topOf(x + 6, y - 1, z));
+    d.use(Vec3(x + 0.5f, y + 4.98f - 0.0f + 0.0f, z - 1.5f) + Vec3(0, 0, 0));
+    // A switch, cable on the floor, up the wall, along the ceiling, to a lamp.
+    s.selectedSlot() = 1;
+    d.use(topOf(x - 2, y - 1, z - 4));
+    s.selectedSlot() = 0;
+    d.use(topOf(x - 1, y - 1, z - 4));
+    d.use(topOf(x, y - 1, z - 4));
+    d.use(topOf(x + 1, y - 1, z - 4));
+    d.use(topOf(x + 1, y - 1, z - 5));
+    d.use(topOf(x + 1, y - 1, z - 6));
+    d.use(topOf(x + 1, y - 1, z - 7));
+    d.use(topOf(x + 1, y - 1, z - 8));
+    d.use(topOf(x + 1, y - 1, z - 9));
+    d.use(Vec3(x + 1.5f, y + 1.5f, z - 9.02f));        // up the wall
+    d.use(Vec3(x + 1.5f, y + 2.5f, z - 9.02f));
+    d.use(Vec3(x + 1.5f, y + 3.5f, z - 9.02f));
+    d.use(Vec3(x + 1.5f, y + 4.5f, z - 9.02f));
+    d.use(Vec3(x + 1.5f, y + 4.98f, z - 8.5f));        // along the ceiling
+    d.use(Vec3(x + 1.5f, y + 4.98f, z - 7.5f));
+    s.selectedSlot() = 2;
+    d.use(Vec3(x + 1.5f, y + 4.98f, z - 6.5f));        // a lamp on the ceiling
+    d.use(topOf(x + 2, y - 1, z - 4));                  // and one on the floor line
+    // Flip the switch: everything lights.
+    s.selectedSlot() = 6;
+    d.use(Vec3(x - 1.5f, y + 0.12f, z - 3.5f));
+    d.seconds(1.5f, [&](float) { d.look(Vec3(x + 1.5f, y + 3.0f, z - 8.0f), 0.08f); });
+    d.use(Vec3(x - 1.5f, y + 0.12f, z - 3.5f));         // off
+    d.seconds(0.8f);
+    d.use(Vec3(x - 1.5f, y + 0.12f, z - 3.5f));         // on again
+    d.seconds(0.8f);
+    // A powerstone block powers what it touches, always.
+    s.selectedSlot() = 4;
+    d.use(topOf(x - 4, y - 1, z - 6));
+    s.selectedSlot() = 2;
+    d.use(Vec3(x - 3.98f, y + 0.5f, z - 5.5f));
+    d.seconds(0.8f);
+    // The powerstone furnace: a powerstone block beside it, ore in, no fuel.
+    s.selectedSlot() = 4;
+    d.use(topOf(x - 4, y - 1, z - 9));
+    d.use(centre(x - 5, y, z - 9));
+    d.frames(8);
+    d.tap(invX(0), kTableRow0, 6);
+    d.tap(226, 74, 8);
+    d.seconds(4.0f);
+    d.game->onBack();
+    d.frames(6);
+    d.seconds(1.0f, [&](float) { d.look(centre(x - 5, y, z - 9), 0.1f); });
+    // An iron door in the side wall, opened by a switch.
+    for (int dy = 0; dy < 2; ++dy) w.setBlock(x + 7, y + dy, z - 2, AIR);
+    s.selectedSlot() = 5;
+    d.use(topOf(x + 7, y - 1, z - 2));
+    s.selectedSlot() = 0;
+    d.use(topOf(x + 6, y - 1, z - 2));
+    d.use(topOf(x + 5, y - 1, z - 2));
+    s.selectedSlot() = 1;
+    d.use(topOf(x + 4, y - 1, z - 2));
+    s.selectedSlot() = 6;
+    d.use(Vec3(x + 4.5f, y + 0.12f, z - 1.5f));
+    d.seconds(1.5f, [&](float) { d.look(centre(x + 7, y + 1, z - 2), 0.1f); });
+    // And a cable to the TNT.
+    s.selectedSlot() = 0;
+    d.use(topOf(x + 4, y - 1, z - 9));
+    d.use(topOf(x + 3, y - 1, z - 9));
+    s.selectedSlot() = 1;
+    d.use(topOf(x + 2, y - 1, z - 9));
+    s.selectedSlot() = 6;
+    d.use(Vec3(x + 2.5f, y + 0.12f, z - 8.5f));
+    d.seconds(5.0f, [&](float) { heal(d); d.look(centre(x + 5, y, z - 9), 0.1f); });
+}
+
+// Chips are money too: hog men trade for powerstone.
+SHOT(o04_ps_hogman) {
+    Director d(out, "o04");
+    d.openWorld("Hogman", 4242, GameMode::Survival);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    goNether(d);
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z) + 6;
+    const int y = feetY(w, x, z - 6);
+    flatten(w, x - 6, z - 12, x + 6, z, y, NETHER_GRASS);
+    p.pos = Vec3(x + 0.5f, (float)y, z + 0.5f);
+    s.mobs().mobs().clear();
+    s.inventory().clear();
+    d.give(0, POWERSTONE_CHIP, 16);
+    d.give(1, POWERSTONE_DUST, 16);
+    s.selectedSlot() = 0;
+    s.mobs().spawn(MobType::Hogman, 1, Vec3(x - 1.5f, (float)y, z - 6.5f));
+    s.mobs().spawn(MobType::Hogman, 1, Vec3(x + 2.5f, (float)y, z - 7.5f));
+    p.yaw = 0, p.pitch = 0;
+    d.idle(4);
+    d.shot("o04_ps_hogman");
+    for (int k = 0; k < 2; ++k) {
+        s.selectedSlot() = k;
+        d.seconds(1.2f, [&](float) { heal(d); if ((int)s.mobs().mobs().size() > k) d.look(s.mobs().mobs()[k].pos + Vec3(0, 1.4f, 0)); });
+        if ((int)s.mobs().mobs().size() > k) d.use(s.mobs().mobs()[k].pos + Vec3(0, 1.0f, 0));
+        d.seconds(3.2f, [&](float) { heal(d); if ((int)s.mobs().mobs().size() > k) d.look(s.mobs().mobs()[k].pos + Vec3(0, 1.4f, 0), 0.1f); });
+    }
+    d.walk(true);
+    d.seconds(1.2f, [&](float) { heal(d); });
+    d.walk(false);
+    d.tap(Director::kMenuX, Director::kMenuY, 36);   // what they paid
+    d.game->onBack();
+    d.frames(4);
+}
+
+// A whole house, built step by step, then furnished and walked through.
+SHOT(o05_house) {
+    Director d(out, "o05");
+    d.openWorld("House", 4242, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    int x, y, z;
+    meadow(d, x, y, z);
+    Player& p = s.player();
+    s.mobs().mobs().clear();
+    s.setTimeOfDay(6500);
+    // The plan: 9 x 7 house, cobblestone base, log corners, plank walls, glass windows, a stepped roof.
+    const int x0 = x - 4, x1 = x + 4, z0 = z - 12, z1 = z - 6;
+    std::vector<std::tuple<int, int, int, ItemId>> plan;
+    for (int bx = x0; bx <= x1; ++bx)
+        for (int bz = z0; bz <= z1; ++bz) plan.emplace_back(bx, y - 1, bz, (bx == x0 || bx == x1 || bz == z0 || bz == z1) ? COBBLESTONE : PLANKS);
+    for (int dy = 0; dy < 4; ++dy)
+        for (int bx = x0; bx <= x1; ++bx)
+            for (int bz = z0; bz <= z1; ++bz) {
+                const bool edgeX = bx == x0 || bx == x1, edgeZ = bz == z0 || bz == z1;
+                if (!edgeX && !edgeZ) continue;
+                ItemId b = (edgeX && edgeZ) ? LOG : (dy == 0 ? COBBLESTONE : PLANKS);
+                const bool door = bz == z1 && bx == x && dy < 2;
+                const bool window = dy >= 1 && dy <= 2 && !(edgeX && edgeZ) &&
+                                    ((edgeZ && (bx == x - 2 || bx == x + 2)) || (edgeX && (bz == z0 + 2 || bz == z1 - 2)));
+                if (door) continue;
+                if (window) b = GLASS;
+                plan.emplace_back(bx, y + dy, bz, b);
+            }
+    // The roof: stepped plank layers, each one smaller, with a log ridge.
+    for (int k = 0; k < 4; ++k)
+        for (int bx = x0 - 1 + k; bx <= x1 + 1 - k; ++bx)
+            for (int bz = z0 - 1; bz <= z1 + 1; ++bz) {
+                const bool top = k == 3;
+                plan.emplace_back(bx, y + 4 + k, bz, top ? LOG : SPRUCE_PLANKS);
+            }
+    // The camera circles while the house rises.
+    const Vec3 mid(x + 0.5f, y + 2.5f, (z0 + z1) / 2.0f + 0.5f);
+    d.settings().hideGui = true;
+    p.flying = true;
+    d.idle(20);
+    d.shot("o05_house");
+    const int frames = 300;
+    size_t done = 0;
+    for (int i = 0; i < frames; ++i) {
+        const size_t want = plan.size() * (i + 1) / (frames - 40 > i ? frames - 40 : i + 1);
+        while (done < std::min(want, plan.size())) {
+            auto [bx, by, bz, b] = plan[done++];
+            w.setBlock(bx, by, bz, b);
+        }
+        d.frame([&] {
+            const float a = 0.6f + i * 0.012f;
+            p.flying = true;
+            p.pos = mid + Vec3(std::sin(a) * 14, 3.5f, std::cos(a) * 14);
+            d.lookNow(mid);
+        });
+    }
+    while (done < plan.size()) {
+        auto [bx, by, bz, b] = plan[done++];
+        w.setBlock(bx, by, bz, b);
+    }
+    // Flowers and a fence by the door.
+    for (int k = -3; k <= 3; ++k)
+        if (k != 0) w.setBlock(x + k, y, z1 + 2, k % 2 ? DANDELION : POPPY);
+    // Inside: furnish it by hand.
+    d.settings().hideGui = false;
+    p.flying = false;
+    p.pos = Vec3(x + 0.5f, (float)y, z1 + 3.5f);
+    p.yaw = 0, p.pitch = 0;
+    s.inventory().clear();
+    d.give(0, OAK_DOOR_ITEM, 1);
+    d.give(1, BED_ITEM, 1);
+    d.give(2, CRAFTING_TABLE, 1);
+    d.give(3, FURNACE, 1);
+    d.give(4, CHEST, 2);
+    d.give(5, TORCH, 8);
+    d.give(6, BOOKSHELF, 8);
+    d.give(7, POWERSTONE_LIGHT, 2);
+    d.give(8, WOOL + 0, 16);
+    d.idle(8);
+    d.shot("o05_house_inside");
+    // An open oak door, and in we go.
+    w.setBlock(x, y, z1, doorId(OAK_DOOR, DoorState{0, true, false}));
+    w.setBlock(x, y + 1, z1, doorId(OAK_DOOR, DoorState{0, true, true}));
+    d.seconds(1.0f);
+    p.pos = Vec3(x + 0.5f, (float)y, z1 - 0.6f);
+    d.frames(2);
+    s.selectedSlot() = 8;                           // a carpet of wool in the middle
+    for (int bx = x - 1; bx <= x + 1; ++bx) w.setBlock(bx, y - 1, z0 + 3, WOOL + 14), w.setBlock(bx, y - 1, z0 + 4, WOOL + 14);
+    s.selectedSlot() = 1;
+    d.use(topOf(x - 2, y - 1, z0 + 2));            // the bed
+    s.selectedSlot() = 2;
+    d.use(topOf(x + 3, y - 1, z0 + 1));            // crafting table
+    s.selectedSlot() = 3;
+    d.use(topOf(x + 3, y - 1, z0 + 2));            // furnace
+    s.selectedSlot() = 4;
+    d.use(topOf(x + 3, y - 1, z0 + 3));            // chests
+    d.use(topOf(x + 3, y - 1, z0 + 4));
+    s.selectedSlot() = 6;
+    for (int bx = x - 3; bx <= x - 1; ++bx) d.use(topOf(bx, y - 1, z0 + 1));   // bookshelves
+    for (int bx = x - 3; bx <= x - 1; ++bx) d.use(topOf(bx, y, z0 + 1));
+    s.selectedSlot() = 5;
+    d.use(Vec3(x - 3.98f + 0.0f, y + 2.5f, z0 + 4.5f));   // torches on the walls
+    d.use(Vec3(x + 3.98f, y + 2.5f, z0 + 4.5f));
+    s.selectedSlot() = 7;
+    d.use(Vec3(x + 0.5f, y + 3.98f, z0 + 3.5f));          // a lamp on the ceiling
+    s.setTimeOfDay(11500);
+    d.seconds(3.0f, [&](float k) { p.yaw = -1.2f + 2.4f * k; p.pitch = 0.05f; });
+    s.selectedSlot() = 9;
+    d.use(centre(x + 3, y, z0 + 3));                      // look in the chest
+    d.seconds(1.0f);
+    d.game->onBack();
+    d.frames(4);
+    // Outside, at dusk, the windows glow.
+    d.settings().hideGui = true;
+    d.shot("o05_house_dusk");
+    p.flying = true;
+    s.setTimeOfDay(12400);   // sunset
+    d.seconds(5.0f, [&](float k) {
+        p.flying = true;
+        const float a = 0.6f + k * 1.2f;
+        p.pos = mid + Vec3(std::sin(a) * 14, 3.5f, std::cos(a) * 14);
+        d.lookNow(mid);
+    });
+}
+
+// The Halloween add-on in a plain world: masked monsters by daylight, pumpkins, the spooky night.
+SHOT(o06_halloween) {
+    Director d(out, "o06");
+    d.game->toolProfile().owned.insert("addon:halloween");
+    d.openWorld("Halloween", 4242, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Classic;
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    int x, y, z;
+    meadow(d, x, y, z);
+    Player& p = s.player();
+    for (int k = 0; k < 6; ++k) w.setBlock(x - 6 + k * 2 + (k % 2), y, z - 6 - (k % 3), PUMPKIN);
+    p.pos = Vec3(x + 0.5f, (float)y, z + 3.5f);
+    p.yaw = 0;
+    s.setTimeOfDay(6000);   // broad daylight, and still they come
+    s.inventory().clear();
+    d.give(0, STEEL_SWORD);
+    for (int i = 0; i < 4; ++i) s.armor()[i] = {armorItem(3, i), 1};
+    s.mobs().mobs().clear();
+    for (int i = 0; i < 5; ++i)
+        s.mobs().spawn(MobType::ForgottenMan, 0, Vec3(x - 4.0f + i * 2.0f, (float)y, z - 14.0f - (i % 2) * 2));
+    d.idle(20);
+    d.shot("o06_halloween");
+    d.seconds(2.0f, [&](float) { heal(d); d.look(Vec3(x + 0.5f, y + 1.0f, z - 8.0f), 0.05f); });
+    for (int i = 0; i < 150; ++i) d.frame([&] {
+            heal(d);
+            const Mob* t = nullptr;
+            float best = 1e9f;
+            for (const Mob& m : s.mobs().mobs())
+                if (m.type == MobType::ForgottenMan && m.alive()) {
+                    float dd = std::hypot(m.pos.x - p.pos.x, m.pos.z - p.pos.z);
+                    if (dd < best) best = dd, t = &m;
+                }
+            if (!t) return;
+            d.look(t->pos + Vec3(0, 1.3f, 0), 0.15f);
+            if (best < 3.5f && i % 7 == 0) d.down(1, Director::kCenterX, Director::kCenterY);
+            if (i % 7 == 2) d.up(1, Director::kCenterX, Director::kCenterY);
+        });
+    s.setTimeOfDay(18500);
+    d.seconds(2.5f, [&](float k) { heal(d); p.yaw += 0.01f; p.pitch = -0.1f; });
+}
+
+// The texture packs from the store, one after another, over the same village.
+static void textureShot(const fs::path& out, const char* name, const char* storeId) {
+    Director d(out, name);
+    if (storeId) {
+        for (const StoreItem& it : storeCatalog())
+            if (it.id == storeId) {
+                std::string err;
+                installStoreItem(it, d.game->toolPacks(), err);
+            }
+        d.game->toolRebuildPacks();
+    }
+    d.openWorld("Textures", 4242, GameMode::Creative);
+    Session& s = d.s();
+    int vx, vy, vz;
+    if (!findVillage(d, vx, vy, vz)) return;
+    Player& p = s.player();
+    p.flying = true;
+    travel(d, Vec3(vx + 0.5f, vy + 10.0f, vz + 16.5f));
+    s.setTimeOfDay(6500);
+    d.settings().hideGui = true;
+    d.idle(30);
+    const Vec3 c(vx + 0.5f, (float)vy + 1, vz + 0.5f);
+    d.shot(name);
+    d.seconds(4.5f, [&](float k) {
+        p.flying = true;
+        const float a = 0.3f + k * 0.6f;
+        p.pos = c + Vec3(std::sin(a) * 18, 9, std::cos(a) * 18);
+        d.lookNow(c);
+    });
+}
+SHOT(o07_tex_default) { textureShot(out, "o07_tex_default", nullptr); }
+SHOT(o07_tex_night) { textureShot(out, "o07_tex_night", "textures:night"); }
+SHOT(o07_tex_pastel) { textureShot(out, "o07_tex_pastel", "textures:pastel"); }
+SHOT(o07_tex_sepia) { textureShot(out, "o07_tex_sepia", "textures:sepia"); }
+
+// VIP: buy it, claim doubled rewards and the extra spin, then play as a VIP.
+SHOT(o08_vip_store) {
+    Director d(out, "o08");
+    Profile& pr = d.game->toolProfile();
+    pr.coins = 4200;
+    pr.name = "Hoppy_Hopsy21";
+    d.idle(10);
+    d.shot("o08_vip_store");
+    d.tap(222, 149, 20);     // Store
+    d.tap(390, 44, 24);      // VIP and addons
+    d.tap(256, 134.5f, 20);  // Buy VIP
+    d.tap(219, 162.5f, 34);  // confirm
+    d.tap(490, 44, 24);      // Rewards: doubled
+    d.tap(150, 140, 34);     // claim
+    for (int k = 0; k < 2; ++k) {   // two spins a day as a VIP
+        d.tap(455, 225, 0);
+        d.seconds(4.3f);
+    }
+}
+
+SHOT(o08_vip_world) {
+    Director d(out, "o08w");
+    Profile& pr = d.game->toolProfile();
+    pr.name = "Hoppy_Hopsy21";
+    pr.until["vip"] = (long long)std::time(nullptr) + 30 * 86400;
+    pr.skin = "vip_gold";
+    d.settings().cameraMode = 2;
+    d.openWorld("VIP", 4242, GameMode::Survival);
+    d.game->toolApplySkin();
+    d.settings().graphics = GraphicsMode::Enhanced;
+    Session& s = d.s();
+    int x, y, z;
+    meadow(d, x, y, z);
+    Player& p = s.player();
+    p.yaw = 0.4f, p.pitch = 0.1f;
+    s.mobs().mobs().clear();
+    s.setTimeOfDay(6000);
+    d.idle(20);
+    d.shot("o08_vip_world");
+    d.say("Hello everyone!");
+    d.seconds(1.5f);
+    d.walk(true);
+    d.seconds(2.5f, [&](float k) { p.yaw += 0.01f; });
+    d.walk(false);
+    d.seconds(1.5f, [&](float k) { p.yaw -= 0.012f; });
+}
+
+// Survival from nothing, every experiment on: a tree, tools, a mine, iron, a home, the night,
+// the Cornerstone Dimension, the Crimson Void, and the Crimson Man.
+SHOT(o09_survival) {
+    Director d(out, "o09");
+    d.expOres = true;
+    d.expFlow = true;
+    d.openWorld("Survival test", 2027, GameMode::Survival);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    s.inventory().clear();
+    s.setTimeOfDay(1500);
+    // 1. Empty hands, a tree.
+    int tx, ty, tz;
+    if (!findTree(w, p.pos, 4, tx, ty, tz)) std::printf("no tree\n");
+    p.pos = Vec3(tx + 6.5f, (float)ty, tz + 0.5f);
+    p.yaw = -kPi / 2, p.pitch = 0;
+    d.idle(30);
+    d.shot("o09a_tree");
+    d.walk(true);
+    for (int i = 0; i < 90 && p.pos.x > tx + 2.6f; ++i) d.frame([&] { d.look(centre(tx, ty + 1, tz), 0.1f); });
+    d.walk(false);
+    d.mine(tx, ty, tz, 200);
+    d.mine(tx, ty + 1, tz, 200);
+    d.mine(tx, ty + 2, tz, 200);
+    d.walk(true);
+    d.frames(16, [&](int) { d.look(Vec3(tx + 0.5f, ty + 0.3f, tz + 0.5f), 0.2f); });
+    d.walk(false);
+    d.seconds(0.5f);
+    // 2. Planks, sticks, a table, a wooden pickaxe.
+    d.cut();
+    s.inventory().clear();
+    d.give(0, CRAFTING_TABLE);
+    d.give(9, PLANKS, 1); d.give(10, PLANKS, 1); d.give(11, PLANKS, 1);
+    d.give(12, STICK, 1); d.give(13, STICK, 1);
+    const int bx = (int)std::floor(p.pos.x), bz = (int)std::floor(p.pos.z), by = feetY(w, bx, bz);
+    flatten(w, bx - 4, bz - 6, bx + 4, bz + 3, by);
+    p.pos = Vec3(bx + 0.5f, (float)by, bz + 0.5f);
+    p.yaw = 0, p.pitch = 0.1f;
+    d.idle(10);
+    d.shot("o09b_tools");
+    d.use(topOf(bx, by - 1, bz - 3));
+    d.seconds(0.3f);
+    d.use(centre(bx, by, bz - 3));
+    d.frames(8);
+    craftGrid(d, {0, 1, 2, 4, 7});   // planks on top, sticks down the middle
+    d.seconds(0.6f);
+    d.game->onBack();
+    d.frames(4);
+    // 3. Down into the stone: coal and iron.
+    d.cut();
+    s.inventory().clear();
+    d.give(0, STONE_PICKAXE);
+    d.give(1, TORCH, 16);
+    s.selectedSlot() = 0;
+    const int my = by - 8;
+    for (int dx = -2; dx <= 2; ++dx)
+        for (int dz = -12; dz <= 2; ++dz)
+            for (int dy = -1; dy <= 3; ++dy) {
+                const bool hall = std::abs(dx) <= 1 && dz >= -6 && dy >= 0 && dy <= 2;
+                w.setBlock(bx + dx, my + dy, bz + dz, hall ? AIR : STONE);
+            }
+    w.setBlock(bx, my + 1, bz - 7, IRON_ORE);
+    w.setBlock(bx + 1, my, bz - 7, IRON_ORE);
+    w.setBlock(bx - 1, my + 2, bz - 7, COAL_ORE);
+    w.setBlock(bx - 1, my, bz - 7, COAL_ORE);
+    p.pos = Vec3(bx + 0.5f, (float)my, bz - 1.5f);
+    p.yaw = 0, p.pitch = 0;
+    d.idle(10);
+    d.shot("o09c_mine");
+    s.selectedSlot() = 1;
+    d.use(Vec3(bx - 1.98f + 1.0f, my + 1.5f, bz - 3.5f));
+    s.selectedSlot() = 0;
+    d.walk(true);
+    d.seconds(0.8f, [&](float) { heal(d); });
+    d.walk(false);
+    d.mine(bx - 1, my + 2, bz - 7);
+    d.mine(bx, my + 1, bz - 7);
+    d.mine(bx + 1, my, bz - 7);
+    d.mine(bx - 1, my, bz - 7);
+    d.walk(true);
+    d.seconds(0.6f, [&](float) { heal(d); });
+    d.walk(false);
+    // 4. Home: a little house, a bed, a furnace smelting iron, the night.
+    d.cut();
+    s.inventory().clear();
+    d.give(0, BED_ITEM);
+    d.give(1, FURNACE);
+    d.give(9, IRON_ORE, 4);
+    d.give(10, COAL, 2);
+    const int hx = bx, hz = bz - 10, hy = feetY(w, hx, hz);
+    for (int dx = -3; dx <= 3; ++dx)
+        for (int dz = -3; dz <= 3; ++dz) {
+            w.setBlock(hx + dx, hy - 1, hz + dz, PLANKS);
+            for (int dy = 0; dy < 4; ++dy) {
+                const bool wall = std::abs(dx) == 3 || std::abs(dz) == 3;
+                const bool door = dz == 3 && dx == 0 && dy < 2;
+                w.setBlock(hx + dx, hy + dy, hz + dz, wall && !door ? (dy == 3 ? LOG : (dy == 1 && dx == 0 ? GLASS : COBBLESTONE)) : AIR);
+            }
+            w.setBlock(hx + dx, hy + 4, hz + dz, PLANKS);
+        }
+    w.setBlock(hx - 2, hy + 2, hz - 2, TORCH);
+    w.setBlock(hx + 2, hy + 2, hz - 2, TORCH);
+    p.pos = Vec3(hx + 0.5f, (float)hy, hz + 1.5f);
+    p.yaw = 0, p.pitch = 0.2f;
+    s.setTimeOfDay(12800);
+    d.idle(10);
+    d.shot("o09d_home");
+    s.selectedSlot() = 1;
+    d.use(topOf(hx + 2, hy - 1, hz - 1));
+    d.use(centre(hx + 2, hy, hz - 1));
+    d.frames(8);
+    d.tap(invX(0), kTableRow0, 6);
+    d.tap(226, 74, 8);
+    d.tap(invX(1), kTableRow0, 6);
+    d.tap(226, 115, 8);
+    d.seconds(2.5f);
+    d.game->onBack();
+    d.frames(4);
+    s.selectedSlot() = 0;
+    d.use(topOf(hx - 1, hy - 1, hz - 1));
+    d.use(centre(hx - 1, hy, hz - 1));   // sleep through the night
+    d.seconds(4.0f);
+    d.cut();
+}
+
+// The survival test, part two (the same experiments): a portal, the Cornerstone Dimension,
+// the Crimson Void and the boss.
+SHOT(o09_survival2) {
+    Director d(out, "o09s2");
+    d.expOres = true;
+    d.expFlow = true;
+    d.openWorld("Survival test", 2027, GameMode::Survival);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    // 5. Iron gear, a portal, the Cornerstone Dimension.
+    s.inventory().clear();
+    for (int i = 0; i < 4; ++i) s.armor()[i] = {armorItem(2, i), 1};
+    d.give(0, IRON_SWORD);
+    d.give(1, IRON_PICKAXE);
+    d.give(2, FLINT_AND_STEEL);
+    d.give(3, COOKED_PORK, 8);
+    s.setTimeOfDay(3000);
+    const int px = (int)std::floor(p.pos.x), pz = (int)std::floor(p.pos.z) - 6, py = feetY(w, px, pz);
+    flatten(w, px - 3, pz - 4, px + 3, pz + 6, py);
+    obsidianFrame(w, px - 1, py, pz - 2);
+    p.pos = Vec3(px + 0.5f, (float)py, pz + 4.5f);
+    p.yaw = 0, p.pitch = 0;
+    d.idle(10);
+    d.shot("o09e_portal");
+    s.selectedSlot() = 2;
+    d.use(topOf(px, py - 1, pz - 2) + Vec3(0, 0.02f, 0));
+    if (w.getBlock(px, py, pz - 2) != PORTAL) tryLightPortal(w, px, py, pz - 2);
+    d.seconds(1.2f);
+    d.walk(true);
+    for (int i = 0; i < 120 && w.getBlock((int)std::floor(p.pos.x), (int)std::floor(p.pos.y + 0.2f), (int)std::floor(p.pos.z)) != PORTAL; ++i)
+        d.frame([&] { heal(d); p.yaw = 0; });
+    d.walk(false);
+    for (int i = 0; i < 300 && s.currentWorld().dimension() != Dimension::Nether; ++i) d.frame([&] { heal(d); });
+    d.cut();
+    arrive(d, Dimension::Nether);
+    d.shot("o09f_nether");
+    d.seconds(3.5f, [&](float k) { heal(d); p.yaw += 0.01f; });
+    // 6. Through the fortress portal into the Crimson Void, and the boss.
+    d.cut();
+    goVoid(d);
+    World& v = s.currentWorld();
+    int ax, ay, az;
+    v.nearestStructure((int)p.pos.x, (int)p.pos.z, ax, ay, az);
+    v.ensureChunksAround(floorDiv(ax, 16), floorDiv(az, 16), 3, 1000);
+    travel(d, Vec3(ax + 0.5f, (float)ay, az + 14.5f));
+    for (int i = 0; i < 4; ++i) s.armor()[i] = {armorItem(4, i), 1};
+    d.give(0, RUBY_SWORD);
+    s.selectedSlot() = 0;
+    d.settings().cameraMode = 1;
+    p.yaw = 0, p.pitch = 0.05f;
+    d.idle(10);
+    d.shot("o09g_boss");
+    d.walk(true);
+    for (int i = 0; i < 100 && !s.mobs().boss(2); ++i) d.frame([&] { heal(d); p.yaw = yawTo(p.pos, Vec3(ax + 0.5f, 0, az + 0.5f)); });
+    d.walk(false);
+    for (int i = 0; i < 420; ++i) {
+        d.frame([&] {
+            heal(d);
+            const Mob* b = s.mobs().boss(2);
+            if (!b) return;
+            d.look(b->pos + Vec3(0, 1.6f, 0), 0.3f);
+            float dist = std::hypot(b->pos.x - p.pos.x, b->pos.z - p.pos.z);
+            s.autopilot.moveZ = dist > 3.0f ? 1.0f : 0.0f;
+            if (i % 8 == 0 && dist < 4.5f) d.down(1, Director::kCenterX, Director::kCenterY);
+            else if (i % 8 == 2) d.up(1, Director::kCenterX, Director::kCenterY);
+        });
+    }
+    s.autopilot.moveZ = 0;
+    d.seconds(1.0f);
+}
+
+
+// A check of the 1.6.0 fix: a world made like the game makes it (from the packs) has the deep layer.
+SHOT(x01_gen_check) {
+    Director d(out, "x01");
+    d.openWorld("Gen check", 777, GameMode::Creative, [&](GenConfig& g) { g = d.game->toolPacks().buildConfig(); });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    std::map<ItemId, int> n;
+    const int px = (int)std::floor(p.pos.x), pz = (int)std::floor(p.pos.z);
+    for (int x = px - 40; x < px + 40; ++x)
+        for (int z = pz - 40; z < pz + 40; ++z)
+            for (int y = 0; y < 40; ++y) ++n[w.getBlock(x, y, z)];
+    std::printf("generation check: deepstone %d hardium %d moss %d mossy %d vines %d fungal %d lava %d air(y<4) ?\n", n[DEEPSTONE], n[HARDIUM_ORE],
+                n[MOSS_BLOCK], n[MOSSY_DEEPSTONE], n[VINES], n[FUNGAL_DEEPSTONE], n[LAVA]);
+    int holes = 0;
+    for (int x = px - 40; x < px + 40; ++x)
+        for (int z = pz - 40; z < pz + 40; ++z) holes += w.getBlock(x, 0, z) == AIR;
+    std::printf("open cells at the floor (y 0): %d\n", holes);
+    // A look at the wall of the deep layer.
+    for (int dx = -3; dx <= 3; ++dx)
+        for (int dz = -3; dz <= 3; ++dz)
+            for (int dy = 0; dy < 4; ++dy) w.setBlock(px + dx, 8 + dy, pz + dz, AIR);
+    p.flying = true;
+    p.pos = Vec3(px + 0.5f, 8.2f, pz + 2.5f);
+    p.yaw = 0, p.pitch = -0.2f;
+    s.inventory().clear();
+    d.give(0, TORCH, 8);
+    d.use(Vec3(px + 0.5f, 9.5f, pz - 3.02f));
+    d.idle(20);
+    d.shot("x01_gen_check");
+    d.seconds(2, [&](float k) { p.flying = true; p.yaw = -0.8f + 1.6f * k; });
+}
+
+
+// 1.7.0 preview: the nine Crimson heads go into the frame's sockets and the portal lights up.
+SHOT(p01_celestial_portal) {
+    Director d(out, "p01");
+    d.openWorld("Celestial", 4242, GameMode::Survival, [](GenConfig& g) { g.flat = true; });
+    d.settings().graphics = GraphicsMode::Enhanced;
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z) - 5, y = feetY(w, x, z) - 1;
+    std::vector<std::pair<int, int>> frames;
+    for (int dx = -2; dx <= 2; ++dx)
+        for (int dz = -2; dz <= 2; ++dz) {
+            const bool corner = std::abs(dx) == 2 && std::abs(dz) == 2, inside = std::abs(dx) <= 1 && std::abs(dz) <= 1;
+            w.setBlock(x + dx, y, z + dz, corner ? SOULED_STONE : inside ? AIR : CELESTIAL_FRAME);
+            if (inside) w.setBlock(x + dx, y - 1, z + dz, VOID_STONE);
+            if (!corner && !inside) frames.emplace_back(dx, dz);
+        }
+    // Round the ring: near side first, then the sides, then the far side.
+    std::sort(frames.begin(), frames.end(), [](auto a, auto b) { return a.second != b.second ? a.second > b.second : a.first < b.first; });
+    s.inventory().clear();
+    d.give(0, CRIMSON_HEAD, 12);
+    d.give(1, CELESTIAL_COMPASS, 1);
+    s.selectedSlot() = 0;
+    p.pos = Vec3(x + 0.5f, (float)y + 1, z + 3.2f);
+    p.yaw = 0, p.pitch = -0.7f;
+    s.setTimeOfDay(12600);   // sunset
+    s.mobs().mobs().clear();
+    d.idle(20);
+    d.shot("p01_celestial_portal");
+    d.seconds(0.8f);
+    for (auto [dx, dz] : frames) d.use(topOf(x + dx, y, z + dz));
+    d.seconds(3.0f, [&](float k) { p.pitch = -0.7f + 0.25f * k; });
+    p.pos = Vec3(x + 0.5f, (float)y + 0.2f, z + 0.5f);   // step in
+    d.seconds(2.0f);
+}
+
+// Every mob topples over in one piece when it dies (no more limbs flying apart).
+SHOT(p02_mob_deaths) {
+    Director d(out, "p02");
+    d.openWorld("Deaths", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z), y = feetY(w, x, z);
+    s.mobs().mobs().clear();
+    const MobType types[] = {MobType::Pig, MobType::Sheep, MobType::Cow, MobType::Chicken, MobType::Villager, MobType::ForgottenMan, MobType::Spider, MobType::Hogman};
+    for (int i = 0; i < 8; ++i) s.mobs().spawn(types[i], 0, Vec3(x - 7.0f + i * 2.0f, (float)y, z - 7.5f));
+    for (Mob& m : s.mobs().mobs()) m.yaw = 0;
+    p.pos = Vec3(x + 0.5f, (float)y, z + 2.5f);
+    p.yaw = 0, p.pitch = -0.15f;
+    s.setTimeOfDay(6000);
+    d.idle(6);
+    for (Mob& m : s.mobs().mobs()) m.pos.z = z - 7.5f, m.target = m.pos, m.yaw = 0;
+    d.shot("p02_mob_deaths");
+    d.seconds(0.6f);
+    for (int i = 0; i < 8; ++i) {
+        // The next one still standing.
+        for (size_t k = 0; k < s.mobs().mobs().size(); ++k)
+            if (s.mobs().mobs()[k].alive()) {
+                const Vec3 at = s.mobs().mobs()[k].pos + Vec3(0, 0, 3);
+                for (int n = 0; n < 40 && !s.mobs().hurt((int)k, 50, at); ++n) {}
+                break;
+            }
+        d.seconds(0.35f);
+    }
+    d.seconds(1.2f);
+}
+
+
+// ---------------------------------------------------------------- 1.7.0 preview
+
+// A floating island of the Celestial Reach (concept): souled grass on top, a rocky cone under it.
+static void celestialIsland(World& w, int cx, int cy, int cz, int r, uint32_t seed) {
+    for (int dx = -r - 2; dx <= r + 2; ++dx)
+        for (int dz = -r - 2; dz <= r + 2; ++dz) {
+            const float wob = (float)(hash3(dx, 0, dz, seed) % 100) / 100.0f * 1.6f;
+            const float d = std::sqrt((float)(dx * dx + dz * dz)) + wob * 0.8f;
+            if (d > r) continue;
+            const int depth = 2 + (int)((r - d) * 1.3f) + (int)(wob * 2);
+            for (int k = 0; k <= depth; ++k) {
+                const ItemId b = k == 0 ? SOULED_GRASS : k < 3 ? SOULED_DIRT : SOULED_STONE;
+                w.setBlock(cx + dx, cy - k, cz + dz, b);
+            }
+        }
+}
+
+// The new tree (concept): a pale void-wood trunk with a crown of glassy sky leaves and glowing fruit.
+static void celestialTree(World& w, int x, int y, int z, int h) {
+    for (int k = 1; k <= h; ++k) w.setBlock(x, y + k, z, VOID_LOG);
+    for (int dx = -2; dx <= 2; ++dx)
+        for (int dz = -2; dz <= 2; ++dz)
+            for (int dy = h - 1; dy <= h + 2; ++dy) {
+                const int rr = dy >= h + 1 ? 1 : 2;
+                if (std::abs(dx) > rr || std::abs(dz) > rr || (std::abs(dx) == rr && std::abs(dz) == rr && rr == 2)) continue;
+                if (w.getBlock(x + dx, y + dy, z + dz) != AIR) continue;
+                const bool fruit = hash3(x + dx, y + dy, z + dz, 1701) % 9 == 0;
+                w.setBlock(x + dx, y + dy, z + dz, fruit ? POWERSTONE_LIGHT : (ItemId)(STAINED_GLASS + 3));
+            }
+}
+
+// A chain between two islands: a sagging line of void fences.
+static void celestialChain(World& w, Vec3 a, Vec3 b) {
+    const int n = (int)(b - a).length();
+    for (int i = 0; i <= n; ++i) {
+        const float t = i / (float)n;
+        const Vec3 p = a + (b - a) * t;
+        const float sag = std::sin(t * kPi) * n * 0.12f;
+        w.setBlock((int)std::floor(p.x), (int)std::floor(p.y - sag), (int)std::floor(p.z), VOID_FENCE);
+    }
+}
+
+static Vec3 buildCelestialReach(Director& d) {
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z), y = feetY(w, x, z) + 46;
+    struct Isl { int dx, dy, dz, r; };
+    const Isl isl[] = {{0, 0, 0, 9}, {22, 6, -10, 6}, {-20, 4, -16, 7}, {6, 12, -32, 6}, {-8, -6, 20, 5}, {26, -2, 16, 5}, {-30, 9, 10, 4}};
+    for (size_t i = 0; i < sizeof isl / sizeof isl[0]; ++i)
+        celestialIsland(w, x + isl[i].dx, y + isl[i].dy, z + isl[i].dz, isl[i].r, 1700 + (uint32_t)i);
+    // Trees on every island.
+    for (size_t i = 0; i < sizeof isl / sizeof isl[0]; ++i) {
+        const int n = isl[i].r >= 7 ? 3 : 1;
+        for (int k = 0; k < n; ++k) {
+            const int tx = x + isl[i].dx + (k == 0 ? 2 : k == 1 ? -4 : 3), tz = z + isl[i].dz + (k == 0 ? -2 : k == 1 ? 1 : 4);
+            celestialTree(w, tx, y + isl[i].dy, tz, 4 + (int)((i + k) % 3));
+        }
+    }
+    // Chains between them.
+    for (size_t i = 1; i < sizeof isl / sizeof isl[0]; ++i)
+        celestialChain(w, Vec3(x + 0.5f, (float)y - 1, z + 0.5f), Vec3(x + isl[i].dx + 0.5f, (float)(y + isl[i].dy - 1), z + isl[i].dz + 0.5f));
+    // Ancient ruins on the big island: broken pillars and an arch.
+    for (int k = 0; k < 4; ++k) {
+        const int px = x - 5 + (k % 2) * 10, pz = z - 5 + (k / 2) * 10, ph = 2 + k % 3;
+        for (int dy = 1; dy <= ph; ++dy) w.setBlock(px, y + dy, pz, dy == ph ? CRACKED_DEEPSTONE_BRICKS : VOID_STONE_BRICKS);
+    }
+    for (int dx = -3; dx <= 3; ++dx) w.setBlock(x + dx, y + 5, z - 6, dx == 0 ? CHISELED_POWERSTONE_BRICKS : VOID_STONE_BRICKS);
+    for (int dy = 1; dy <= 4; ++dy) w.setBlock(x - 3, y + dy, z - 6, VOID_STONE_BRICKS), w.setBlock(x + 3, y + dy, z - 6, VOID_STONE_BRICKS);
+    // The open Celestial portal in the middle.
+    for (int dx = -2; dx <= 2; ++dx)
+        for (int dz = -2; dz <= 2; ++dz) {
+            const bool corner = std::abs(dx) == 2 && std::abs(dz) == 2, inside = std::abs(dx) <= 1 && std::abs(dz) <= 1;
+            w.setBlock(x + dx, y, z + 3 + dz, corner ? SOULED_STONE : inside ? CELESTIAL_PORTAL : CELESTIAL_FRAME);
+        }
+    s.mobs().mobs().clear();
+    return Vec3(x + 0.5f, (float)y, z + 0.5f);
+}
+
+SHOT(q01_reach_fly) {
+    Director d(out, "q01");
+    d.openWorld("Celestial Reach", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    d.settings().graphics = GraphicsMode::Enhanced;
+    d.settings().hideGui = true;
+    Session& s = d.s();
+    Player& p = s.player();
+    const Vec3 c = buildCelestialReach(d);
+    s.setTimeOfDay(5200);
+    p.flying = true;
+    p.pos = c + Vec3(-40, 14, 40);
+    d.idle(60);
+    d.shot("q01_reach_fly");
+    // A long glide past the islands, the camera on the big one.
+    d.seconds(12, [&](float k) {
+        p.flying = true;
+        const float a = -0.8f + k * 2.2f;
+        p.pos = c + Vec3(std::sin(a) * 36, 12 - k * 4, std::cos(a) * 36);
+        d.lookNow(c + Vec3(0, 3, 0));
+    });
+}
+
+SHOT(q02_reach_walk) {
+    Director d(out, "q02");
+    d.openWorld("Celestial Reach", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    d.settings().graphics = GraphicsMode::Enhanced;
+    Session& s = d.s();
+    Player& p = s.player();
+    const Vec3 c = buildCelestialReach(d);
+    s.setTimeOfDay(6200);
+    p.flying = false;
+    p.pos = c + Vec3(0, 1, 6);
+    p.yaw = 0, p.pitch = -0.05f;
+    s.inventory().clear();
+    d.give(0, CELESTIAL_COMPASS);
+    d.give(1, CRIMSON_HEAD, 12);
+    d.idle(60);
+    d.shot("q02_reach_walk");
+    // Out of the portal, a look round the ruins and the trees, then to the edge.
+    d.seconds(3, [&](float k) { p.yaw = -0.6f + 1.2f * k; });
+    d.walk(true);
+    d.seconds(3, [&](float k) { p.yaw = 0.6f - 0.3f * k; });
+    d.walk(false);
+    d.seconds(3, [&](float k) { p.yaw += 0.012f; p.pitch = -0.05f + 0.25f * k; });
+}
+
+// The boss falls: frozen, shaking, a roar, the blast, and his twelve heads.
+SHOT(q03_boss_heads) {
+    Director d(out, "q03");
+    d.openWorld("Boss", 4242, GameMode::Survival);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    goNether(d);
+    goVoid(d);
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    int ax, ay, az;
+    if (!w.nearestStructure((int)p.pos.x, (int)p.pos.z, ax, ay, az)) return;
+    for (int i = 0; i < 4; ++i) s.armor()[i] = {armorItem(4, i), 1};
+    s.inventory().clear();
+    d.give(0, RUBY_SWORD);
+    s.selectedSlot() = 0;
+    travel(d, Vec3(ax + 0.5f, (float)ay + 1, az + 10.5f));
+    d.idle(60);
+    d.settings().cameraMode = 1;
+    d.shot("q03_boss_heads");
+    // A short fight, then the last blow.
+    d.seconds(3, [&](float) {
+        heal(d);
+        for (Mob& m : s.mobs().mobs())
+            if (m.type == MobType::CrimsonMan) d.look(m.pos + Vec3(0, 2, 0));
+    });
+    for (size_t i = 0; i < s.mobs().mobs().size(); ++i)
+        if (s.mobs().mobs()[i].type == MobType::CrimsonMan)
+            for (int n = 0; n < 200 && !s.mobs().hurt((int)i, 20, p.pos); ++n) {}
+    d.seconds(5.5f, [&](float) {
+        heal(d);
+        for (Mob& m : s.mobs().mobs())
+            if (m.type == MobType::CrimsonMan) d.look(m.pos + Vec3(0, 2, 0), 0.2f);
+    });
+    d.settings().cameraMode = 0;
+    d.walk(true);
+    d.seconds(1.5f, [&](float) { heal(d); });
+    d.walk(false);
+    d.tap(Director::kMenuX, Director::kMenuY, 50);   // twelve heads and the compass
+}
+
+
+// 1.7.0: the hardium set, worn and held.
+SHOT(x02_hardium) {
+    Director d(out, "x02");
+    d.settings().cameraMode = 2;
+    d.openWorld("Hardium", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    for (int i = 0; i < 4; ++i) s.armor()[i] = {armorItem(5, i), 1};
+    s.inventory().clear();
+    d.give(0, HARDIUM_SWORD);
+    d.give(1, HARDIUM_PICKAXE);
+    d.give(2, HARDIUM_AXE);
+    d.give(3, HARDIUM_SHOVEL);
+    d.give(4, HARDIUM);
+    s.selectedSlot() = 0;
+    s.player().yaw = 0.6f;
+    s.setTimeOfDay(6000);
+    d.idle(20);
+    d.shot("x02_hardium");
+    d.seconds(1.0f);
+    d.tap(Director::kMenuX, Director::kMenuY, 30);
+}
+
+
+// 1.7.0: a frozen pond, to check the ice is solid (no grid of the pond floor through it).
+SHOT(x03_ice) {
+    Director d(out, "x03");
+    d.openWorld("Ice", 4242, GameMode::Creative);
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    int x, y, z;
+    meadow(d, x, y, z);
+    for (int dx = -6; dx <= 6; ++dx)
+        for (int dz = -12; dz <= -2; ++dz) {
+            const int depth = 1 + (std::abs(dx) < 4 && dz < -4 && dz > -10 ? 3 : 1);
+            for (int k = 1; k <= depth; ++k) w.setBlock(x + dx, y - k, z + dz, WATER);
+            w.setBlock(x + dx, y - 1, z + dz, ICE);
+        }
+    Player& p = s.player();
+    p.flying = true;
+    p.pos = Vec3(x + 0.5f, y + 4.0f, z + 2.5f);
+    p.yaw = 0, p.pitch = -0.6f;
+    s.setTimeOfDay(6000);
+    d.idle(20);
+    d.shot("x03_ice");
+    d.seconds(0.5f);
+}
+
+
+// 1.7.0: the whole way: twelve heads on a frame in the Crimson Void, through the portal, and
+// out on the floating islands of the Celestial Reach.
+SHOT(x04_celestial_trip) {
+    Director d(out, "x04");
+    d.openWorld("Celestial trip", 4242, GameMode::Survival);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    goNether(d);
+    goVoid(d);
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z) - 5, y = feetY(w, x, z) - 1;
+    std::vector<std::pair<int, int>> frames;
+    for (int dx = -2; dx <= 2; ++dx)
+        for (int dz = -2; dz <= 2; ++dz) {
+            const bool corner = std::abs(dx) == 2 && std::abs(dz) == 2, inside = std::abs(dx) <= 1 && std::abs(dz) <= 1;
+            w.setBlock(x + dx, y, z + dz, corner ? SOULED_STONE : inside ? AIR : CELESTIAL_FRAME);
+            if (inside) w.setBlock(x + dx, y - 1, z + dz, VOID_STONE);
+            for (int dy = 1; dy <= 3; ++dy) w.setBlock(x + dx, y + dy, z + dz, AIR);
+            if (!corner && !inside) frames.emplace_back(dx, dz);
+        }
+    std::sort(frames.begin(), frames.end(), [](auto a, auto b) { return a.second != b.second ? a.second > b.second : a.first < b.first; });
+    s.inventory().clear();
+    d.give(0, CRIMSON_HEAD, 12);
+    s.selectedSlot() = 0;
+    s.mobs().mobs().clear();
+    p.pos = Vec3(x + 0.5f, (float)y + 1, z + 3.2f);
+    p.yaw = 0, p.pitch = -0.7f;
+    d.idle(20);
+    d.shot("x04_celestial_trip");
+    for (auto [dx, dz] : frames) d.use(topOf(x + dx, y, z + dz));
+    d.seconds(1.0f, [&](float) { heal(d); });
+    p.pos = Vec3(x + 0.5f, (float)y + 0.2f, z + 0.5f);
+    for (int i = 0; i < 300 && s.currentWorld().dimension() != Dimension::Celestial; ++i) d.frame([&] { heal(d); });
+    d.cut();
+    d.idle(90);
+    d.shot("x04b_celestial_arrive");
+    p.pitch = 0;
+    d.seconds(5, [&](float k) { heal(d); p.yaw = k * 3.0f; });
+    d.walk(true);
+    d.seconds(2, [&](float) { heal(d); });
+    d.walk(false);
+    std::printf("dimension %d at %.1f %.1f %.1f\n", (int)s.currentWorld().dimension(), p.pos.x, p.pos.y, p.pos.z);
+}
+
+
+// 1.7.0: a close look at the crimson log's new bark.
+SHOT(x05_crimson_log) {
+    Director d(out, "x05");
+    d.openWorld("Log", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z), y = feetY(w, x, z);
+    for (int dx = -1; dx <= 1; ++dx)
+        for (int dy = 0; dy < 3; ++dy) w.setBlock(x + dx, y + dy, z - 3, CRIMSON_LOG);
+    w.setBlock(x + 3, y, z - 3, CRIMSON_LOG);
+    p.pos = Vec3(x + 1.5f, (float)y, z + 0.5f);
+    p.yaw = 0.2f, p.pitch = -0.2f;
+    s.setTimeOfDay(6000);
+    d.idle(20);
+    d.shot("x05_crimson_log");
+    d.seconds(0.3f);
+}
+
+
+// 1.7.0 trailer: the real Celestial Reach, from the air.
+static void enterReach(Director& d) {
+    goNether(d);
+    goVoid(d);
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z) - 4, y = feetY(w, x, z) - 1;
+    for (int dx = -1; dx <= 1; ++dx)
+        for (int dz = -1; dz <= 1; ++dz) w.setBlock(x + dx, y, z + dz, CELESTIAL_PORTAL);
+    p.pos = Vec3(x + 0.5f, (float)feetY(w, x, z + 4), z + 4.5f);   // out of every portal: clears the cooldown
+    d.idle(10);
+    p.pos = Vec3(x + 0.5f, (float)y + 0.2f, z + 0.5f);
+    for (int i = 0; i < 400 && s.currentWorld().dimension() != Dimension::Celestial; ++i) d.idle(1);
+    d.idle(90);
+}
+
+SHOT(y01_reach_fly) {
+    Director d(out, "y01");
+    d.openWorld("Celestial Reach", 4242, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    enterReach(d);
+    Session& s = d.s();
+    Player& p = s.player();
+    d.settings().hideGui = true;
+    const Vec3 c = p.pos;
+    s.currentWorld().ensureChunksAround(0, 0, 5, 200);
+    d.idle(60);
+    d.shot("y01_reach_fly");
+    d.seconds(10, [&](float k) {
+        p.flying = true;
+        const float a = -0.6f + k * 2.0f;
+        p.pos = c + Vec3(std::sin(a) * 40, 16 - k * 6, std::cos(a) * 40);
+        d.lookNow(c + Vec3(0, -2, 0));
+    });
+}
+
+SHOT(y02_reach_walk) {
+    Director d(out, "y02");
+    d.openWorld("Celestial Reach", 4242, GameMode::Survival);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    enterReach(d);
+    Session& s = d.s();
+    Player& p = s.player();
+    s.inventory().clear();
+    d.give(0, HARDIUM_AXE);
+    d.give(1, CELESTIAL_PLANKS, 32);
+    d.give(2, CELESTIAL_STONE_BRICKS, 32);
+    for (int i = 0; i < 4; ++i) s.armor()[i] = {armorItem(5, i), 1};
+    s.selectedSlot() = 0;
+    p.yaw = 0.3f, p.pitch = 0;
+    d.idle(20);
+    d.shot("y02_reach_walk");
+    d.walk(true);
+    d.seconds(3, [&](float k) { heal(d); p.yaw = 0.3f + k * 0.8f; });
+    d.walk(false);
+    d.seconds(2, [&](float k) { heal(d); p.pitch = k * 0.6f; });  // a look down past the edge
+}
+
+// The new stairs and slabs (crimson, deepstone) and the solid ice.
+SHOT(y03_blocks) {
+    Director d(out, "y03");
+    d.openWorld("Blocks", 4242, GameMode::Creative);
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    int x, y, z;
+    meadow(d, x, y, z);
+    const int mats[4] = {13, 14, 15, 16};
+    for (int m = 0; m < 4; ++m) {
+        for (int k = 0; k < 3; ++k) w.setBlock(x - 6 + m * 3 + k, y, z - 6, k == 1 ? stairsId(mats[m], 2, false) : slabId(mats[m], 0));
+        w.setBlock(x - 6 + m * 3 + 1, y, z - 7, shapeMaterialBlock(mats[m]));
+    }
+    for (int dx = -6; dx <= 6; ++dx)
+        for (int dz = -12; dz <= -9; ++dz) w.setBlock(x + dx, y - 1, z + dz, ICE);
+    for (int k = 0; k < 4; ++k) w.setBlock(x + 4, y + k, z - 4, CRIMSON_LOG);
+    Player& p = s.player();
+    p.flying = true;
+    p.pos = Vec3(x + 0.5f, y + 2.5f, z + 1.5f);
+    p.yaw = 0, p.pitch = -0.35f;
+    s.setTimeOfDay(6000);
+    d.settings().hideGui = true;
+    d.idle(20);
+    d.shot("y03_blocks");
+    d.seconds(5, [&](float k) { p.flying = true; p.pos.x = x + 0.5f - 3 + k * 6; });
+}
+
+// The new menus: title, store, settings, creative inventory.
+SHOT(y04_ui) {
+    Director d(out, "y04");
+    d.idle(10);
+    d.shot("y04_ui");
+    d.seconds(1.5f);
+    d.tap(222, 149, 40);   // store
+    d.game->onBack();
+    d.frames(6);
+    d.tap(378, 121, 40);   // settings
+    d.game->onBack();
+    d.frames(10);
+}
+
+SHOT(y05_creative) {
+    Director d(out, "y05");
+    d.openWorld("Creative", 4242, GameMode::Creative);
+    Session& s = d.s();
+    for (int i = 0; i < 4; ++i) s.armor()[i] = {armorItem(5, i), 1};
+    s.offhand() = {SHIELD, 1, 0};
+    d.idle(10);
+    d.shot("y05_creative");
+    d.seconds(1.0f);
+    d.tap(Director::kMenuX, Director::kMenuY, 30);
+    d.seconds(2.0f);
+}
+
+
+// 1.7.0: a celestial tree up close (bark and leaves).
+SHOT(x06_celestial_tree) {
+    Director d(out, "x06");
+    d.openWorld("Tree", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z) - 4, y = feetY(w, x, z);
+    for (int k = 0; k < 5; ++k) w.setBlock(x, y + k, z, CELESTIAL_LOG);
+    for (int dx = -2; dx <= 2; ++dx)
+        for (int dz = -2; dz <= 2; ++dz)
+            for (int dy = 4; dy <= 6; ++dy)
+                if (w.getBlock(x + dx, y + dy, z + dz) == AIR && !(std::abs(dx) == 2 && std::abs(dz) == 2)) w.setBlock(x + dx, y + dy, z + dz, CELESTIAL_LEAVES);
+    p.pos = Vec3(x + 0.5f, (float)y, z + 4.5f);
+    p.yaw = 0, p.pitch = -0.35f;
+    s.setTimeOfDay(6000);
+    d.idle(20);
+    d.shot("x06_celestial_tree");
+    d.seconds(0.3f);
 }
 
 // ---------------------------------------------------------------- 1.5.7 checks

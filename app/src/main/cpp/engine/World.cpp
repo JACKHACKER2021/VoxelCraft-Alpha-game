@@ -124,6 +124,7 @@ Chunk* World::generateChunk(int cx, int cz) {
     if (!loadChunk(*chunk)) {
         if (dim_ == Dimension::Nether) generateNether(*chunk);
         else if (dim_ == Dimension::Void) generateVoid(*chunk);
+        else if (dim_ == Dimension::Celestial) generateCelestial(*chunk);
         else generateOverworld(*chunk);
     }
     chunk->recalcHeightmap();
@@ -176,9 +177,10 @@ void World::generateOverworld(Chunk& c) {
                 // High mountains: hardened stone above the peak height, snow on the very top.
                 if (b.peakBlock && y > b.peakHeight && y <= h && id != BEDROCK) id = b.peakBlock;
                 if (y == h && h > b.snowHeight) id = SNOW_BLOCK;
-                // 1.6.0 (generation 4): the deep layer of deepstone, with a wavy top.
+                // 1.6.0 (generation 4): the deep layer of deepstone, with a wavy top. 1.7.0: about 40
+                // blocks thick, so the deep caves have room.
                 const bool gen4 = config_.generation >= 4;
-                if (gen4 && id == STONE && y < 12 + (int)(detail_.perlin2(wx / 23.0f + 41.0f, wz / 23.0f) * 3))
+                if (gen4 && id == STONE && y < 40 + (int)(detail_.perlin2(wx / 23.0f + 41.0f, wz / 23.0f) * 4))
                     id = DEEPSTONE;
 
                 // Worm-like caves carved by 3D noise, kept away from the sea floor.
@@ -308,10 +310,10 @@ void World::generateOverworld(Chunk& c) {
         // Hardium: small, rare veins, only in deepstone.
         OreDef hardium;
         hardium.block = HARDIUM_ORE;
-        hardium.veins = 2;
+        hardium.veins = 3;
         hardium.size = 4;
         hardium.minY = 3;
-        hardium.maxY = 10;
+        hardium.maxY = 30;
         placeOres(c, hardium, 0x4A2Du);
     }
     stampStructures(c);
@@ -854,6 +856,7 @@ std::string World::placeName(int x, int z) const {
     switch (dim_) {
         case Dimension::Nether:
             return wastelandAt(x, z) ? "Powerstonová pustina" : netherGrassAt(x, z) ? "Louka úhelného kamene" : "Dimenze úhelného kamene";
+        case Dimension::Celestial: return "Nebeská říše";
         case Dimension::Void:
             switch (voidBiomeAt(x, z)) {
                 case VoidBiome::Purple: return "Fialový les";
@@ -883,6 +886,27 @@ bool World::villageIn(int rx, int rz, int& cx, int& cy, int& cz) const {
     cy = middle.height + 2;
     cz = oz + kVillageSize / 2;
     return true;
+}
+
+void World::celestialSpot(int rx, int rz, int& px, int& pz) const {
+    const int region = kCelestialRegion;
+    const uint32_t hh = hash3(rx, 1552, rz, seed_ ^ 0xCE1Eu);
+    px = rx * region + 16 + (int)(hh % (uint32_t)(region - 32)), pz = rz * region + 16 + (int)((hh >> 12) % (uint32_t)(region - 32));
+}
+
+bool World::nearestCelestialFrame(int x, int z, int& outX, int& outZ) const {
+    if (dim_ != Dimension::Void || config_.generation < 4) return false;
+    const int rx0 = floorDiv(x, kCelestialRegion), rz0 = floorDiv(z, kCelestialRegion);
+    long best = -1;
+    for (int rx = rx0 - 4; rx <= rx0 + 4; ++rx)
+        for (int rz = rz0 - 4; rz <= rz0 + 4; ++rz) {
+            int px, pz;
+            celestialSpot(rx, rz, px, pz);
+            if (voidBiomeAt(px, pz) != VoidBiome::Forgotten) continue;
+            const long d = (long)(px - x) * (px - x) + (long)(pz - z) * (pz - z);
+            if (best < 0 || d < best) best = d, outX = px, outZ = pz;
+        }
+    return best >= 0;
 }
 
 bool World::nearestStructure(int x, int z, int& outX, int& outY, int& outZ) const {
@@ -956,6 +980,66 @@ ItemId World::forgottenBlock(int wx, int y, int wz, int h) const {
 int World::forgottenTop(int wx, int wz, int h) const {
     const uint32_t cell = hash3(floorDiv(wx, 8), 0, floorDiv(wz, 8), seed_ ^ 0xF06Fu);
     return h + (int)((cell >> 8) % 9) - 4;  // each piece at its own height
+}
+
+// ---------------------------------------------------------------- 1.7.0 the Celestial Reach
+
+int World::celestialTop(int x, int z) const {
+    // Islands where a slow and a quick noise together rise over a threshold; a big one always
+    // floats around the arrival point (0, 0).
+    float m = detail_.perlin2(x / 52.0f + 911.0f, z / 52.0f - 377.0f) * 0.65f + detail_.perlin2(x / 17.0f - 51.0f, z / 17.0f + 83.0f) * 0.35f;
+    const float d = std::sqrt((float)(x * x + z * z));
+    if (d < 14) m = std::max(m, 0.16f + (14 - d) / 14 * 0.45f);
+    if (m < 0.16f) return -1;
+    const float base = 74 + detail_.perlin2(x / 95.0f + 300.0f, z / 95.0f - 120.0f) * 16;
+    return (int)(base + (m - 0.16f) * 9);
+}
+
+void World::generateCelestial(Chunk& c) {
+    // Floating islands of celestial soul grass over an empty sky: nothing below, a fall is a
+    // fall. Pale trees, broken pillars of a lost kingdom, and chains hanging under the rock.
+    const int cx = c.cx, cz = c.cz;
+    int tops[kChunkSize][kChunkSize];
+    for (int x = 0; x < kChunkSize; ++x)
+        for (int z = 0; z < kChunkSize; ++z) {
+            const int wx = cx * kChunkSize + x, wz = cz * kChunkSize + z;
+            const int top = celestialTop(wx, wz);
+            tops[x][z] = top;
+            if (top < 0) continue;
+            float m = detail_.perlin2(wx / 52.0f + 911.0f, wz / 52.0f - 377.0f) * 0.65f + detail_.perlin2(wx / 17.0f - 51.0f, wz / 17.0f + 83.0f) * 0.35f;
+            const float d = std::sqrt((float)(wx * wx + wz * wz));
+            if (d < 14) m = std::max(m, 0.16f + (14 - d) / 14 * 0.45f);
+            const int depth = 3 + (int)((m - 0.16f) * 55 + caves_.perlin2(wx / 7.0f, wz / 7.0f) * 3);
+            for (int k = 0; k <= depth && top - k > 1; ++k)
+                c.set(x, top - k, z, k == 0 ? CELESTIAL_GRASS : k < 3 ? CELESTIAL_DIRT : CELESTIAL_STONE);
+            // A chain hanging from the underside now and then.
+            const uint32_t r = hash3(wx, 7, wz, seed_ ^ 0xC3A1u);
+            if (r % 113 == 0)
+                for (int k = 1; k < 4 + (int)((r >> 8) % 6) && top - depth - k > 1; ++k) c.set(x, top - depth - k, z, VOID_FENCE);
+        }
+    for (int x = 0; x < kChunkSize; ++x)
+        for (int z = 0; z < kChunkSize; ++z) {
+            const int top = tops[x][z];
+            if (top < 0) continue;
+            const int wx = cx * kChunkSize + x, wz = cz * kChunkSize + z;
+            const uint32_t r = hash3(wx, 0, wz, seed_ ^ 0xCE1Au);
+            if (x >= 2 && x <= 13 && z >= 2 && z <= 13 && r % 83 == 0 && wx * wx + wz * wz > 9) {
+                // A celestial tree: pale trunk, a round crown of see-through sky leaves.
+                const int h = 4 + (int)((r >> 6) % 3);
+                for (int k = 1; k <= h; ++k) c.set(x, top + k, z, CELESTIAL_LOG);
+                for (int dx = -2; dx <= 2; ++dx)
+                    for (int dz = -2; dz <= 2; ++dz)
+                        for (int dy = h - 1; dy <= h + 2; ++dy) {
+                            const int rr = dy >= h + 1 ? 1 : 2;
+                            if (std::abs(dx) > rr || std::abs(dz) > rr || (rr == 2 && std::abs(dx) == 2 && std::abs(dz) == 2)) continue;
+                            if (c.get(x + dx, top + dy, z + dz) == AIR) c.set(x + dx, top + dy, z + dz, CELESTIAL_LEAVES);
+                        }
+            } else if (r % 509 == 0) {
+                // A broken pillar of the lost kingdom.
+                const int h = 2 + (int)((r >> 5) % 5);
+                for (int k = 1; k <= h; ++k) c.set(x, top + k, z, CELESTIAL_STONE_BRICKS);
+            }
+        }
 }
 
 void World::generateVoid(Chunk& c) {
@@ -1065,11 +1149,11 @@ void World::generateVoid(Chunk& c) {
     // 1.6.0: the frames of the portal to the Celestial Reach lie in the Forgotten Overworld, flat
     // in the ground like the End's: twelve frame blocks round a dark hole (opens in 1.7.0).
     if (config_.generation >= 4) {
-        const int region = 240;
+        const int region = kCelestialRegion;
         for (int rx = floorDiv(cx * kChunkSize, region); rx <= floorDiv(cx * kChunkSize + 15, region); ++rx)
             for (int rz = floorDiv(cz * kChunkSize, region); rz <= floorDiv(cz * kChunkSize + 15, region); ++rz) {
-                const uint32_t hh = hash3(rx, 1552, rz, seed_ ^ 0xCE1Eu);
-                const int px = rx * region + 16 + (int)(hh % (uint32_t)(region - 32)), pz = rz * region + 16 + (int)((hh >> 12) % (uint32_t)(region - 32));
+                int px, pz;
+                celestialSpot(rx, rz, px, pz);
                 const int lx = px - cx * kChunkSize, lz = pz - cz * kChunkSize;
                 if (lx < 3 || lx > 12 || lz < 3 || lz > 12 || voidBiomeAt(px, pz) != VoidBiome::Forgotten) continue;
                 const int top = forgottenTop(px, pz, heights[lx][lz]);

@@ -95,6 +95,13 @@ public:
 
     // Widgets. `primary` draws the green variant (main action, selected tab).
     bool button(float x, float y, float w, float h, const std::string& label, bool enabled = true, bool primary = false);
+    // 1.7.0 preview UI: a rounded, raised menu button with an optional icon glyph.
+    enum class Style { Normal, Primary, Danger };
+    bool menuButton(float x, float y, float w, float h, const std::string& label, Style style, int iconGlyph = -1, bool enabled = true);
+    // A rounded dark glass panel with a light rim (the menus' new frame).
+    void roundPanel(float x, float y, float w, float h);
+    // A filled rectangle with rounded corners of radius r (0..4 GUI pixels).
+    void roundRect(float x, float y, float w, float h, int r, Color c);
     // In-game touch button (D-pad, jump, pause...): dark glass panel with a block-style bevel.
     void hudButton(float x, float y, float w, float h, bool pressed);
     void hudGlyph(float x, float y, float w, float h, int glyph, float scale = 2);

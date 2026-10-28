@@ -394,7 +394,8 @@ def audio_track(path):
     # Music: each chapter's piece from where its group starts to where the next piece starts.
     cues = [(starts[i], g.music) for i, g in enumerate(groups) if g.music]
     files = {"menu": "menu_theme.mp3", "overworld": "overworld.mp3", "nether": "biome_nether.mp3",
-             "overworld2": "biome_plains.mp3", "forest": "biome_forest.mp3", "menu2": "menu_theme.mp3"}
+             "overworld2": "biome_plains.mp3", "forest": "biome_forest.mp3", "menu2": "menu_theme.mp3",
+             "celestial": "celestial_theme.mp3", "caves": "caves_theme.mp3"}
     offsets = {"menu2": 40.0}
     k = 0
     for j, (st, name) in enumerate(cues):

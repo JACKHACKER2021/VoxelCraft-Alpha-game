@@ -613,7 +613,7 @@ static int testJsonAndPacks() {
     std::vector<std::string> warn;
     GenConfig round = GenConfig::fromJson(def.toJson(), &warn);
     CHECK(warn.empty() && round.biomes.size() == 7 && round.biomes[2].surface == def.biomes[2].surface);
-    CHECK(RecipeBook::defaults().shaped.size() == 12 + 35 + 6 + 2 + 16 + 6 + 24 + 16 + 3 + 10 + 12 + 5 + 3 && RecipeBook::defaults().shapeless.size() == 2 + 4 + 1 + 1 + 6 + 1 + 1 + 3 + 1 + 3 + 3);  // 1.5.7: + book and quill; 1.6.0: + 3: torch, shield, lamp; crimson planks  // 1.5.1: no planks from Eye Logs
+    CHECK(RecipeBook::defaults().shaped.size() == 12 + 35 + 6 + 2 + 16 + 6 + 24 + 16 + 3 + 10 + 12 + 5 + 3 + 8 + 7 + 1 && RecipeBook::defaults().shapeless.size() == 2 + 4 + 1 + 1 + 6 + 1 + 1 + 3 + 1 + 3 + 3 + 1);  // 1.5.7: + book and quill; 1.6.0: + 3: torch, shield, lamp; crimson planks  // 1.5.1: no planks from Eye Logs
 
     // Biomes really show up in the world: deserts are sandy, forests have trees.
     World w(1234, Dimension::Overworld);
@@ -633,10 +633,12 @@ static int testJsonAndPacks() {
     pm.ensureDefaultPack();
     auto list = pm.list();
     CHECK(list.size() == 1 && list[0].builtin && list[0].enabled && list[0].name == "VoxelCraft Default");
-    CHECK(pm.files("default").size() == 21 && pm.files("default")[0] == "manifest.json");
+    CHECK(pm.files("default").size() == 22 && pm.files("default")[0] == "manifest.json");
     warn.clear();
     GenConfig cfg = pm.buildConfig(&warn);
     CHECK(warn.empty() && cfg.biomes.size() == 7);
+    // Worlds made in the game (from the packs) get the newest generator: deepstone, hardium, mossy caves.
+    CHECK(cfg.generation == 4);
 
     // A mod pack: glowstone Nether with a higher lava sea, a new biome, one removed biome and a recipe.
     std::string id = pm.createPack("Můj mod");
@@ -803,8 +805,8 @@ static int testSkinsStoreAudio() {
     }
     auto music = synthesizeMusic();
     CHECK(music.size() > 22050 * 2 * 40);
-    CHECK(writeSoundFiles((root / "sounds").string()) && fs::exists(root / "sounds" / "music.wav") &&
-          fs::exists(root / "sounds" / "coin.wav"));
+    CHECK(writeSoundFiles((root / "sounds").string()) && !fs::exists(root / "sounds" / "music.wav") &&
+          fs::exists(root / "sounds" / "coin.wav"));  // 1.6.0: sounds only, no generated music
     fs::remove_all(root);
     return 0;
 }
@@ -1945,7 +1947,7 @@ static int testMusic() {
     CHECK(game.musicSource().empty());
     frames(60 * 50);  // the pause is 20-45 s
     std::printf("music: after the Overworld song comes %s\n", game.musicSource().c_str());
-    CHECK(game.musicSource().find("/sounds/biome_") != std::string::npos);
+    CHECK(game.musicSource() == "asset:music/overworld.mp3");  // only the creator's own songs, no old biome tunes
     // The player's own Overworld song.
     fs::create_directories(root / "music");
     std::ofstream(root / "music" / "overworld.mp3") << "x";
@@ -2693,9 +2695,17 @@ static int testUpdate11() {
         CHECK(dmg >= 9);
         int hits = 0;
         while (!ms.hurt(0, 7, Vec3(8.5f, 4, 8.5f))) ++hits;
-        for (int i = 0; i < 80; ++i) ms.update(ground, 0, Vec3(8.5f, 4, 8.5f), true, 1 / 60.0f, ev);
-        bool died = false;
-        for (const MobEvent& e : ev) died |= e.kind == MobEvent::Died && e.type == MobType::CrimsonMan;
+        // 1.6.0: he stands, shakes and roars first, then blows up.
+        for (int i = 0; i < 120; ++i) ms.update(ground, 0, Vec3(8.5f, 4, 8.5f), true, 1 / 60.0f, ev);
+        CHECK(ms.mobs().size() == 1);
+        for (int i = 0; i < 180; ++i) ms.update(ground, 0, Vec3(8.5f, 4, 8.5f), true, 1 / 60.0f, ev);
+        bool died = false, roared = false, boom = false;
+        for (const MobEvent& e : ev) {
+            died |= e.kind == MobEvent::Died && e.type == MobType::CrimsonMan;
+            roared |= e.kind == MobEvent::BossRoar;
+            boom |= e.kind == MobEvent::Explode && e.type == MobType::CrimsonMan;
+        }
+        CHECK(roared && boom);
         std::printf("boss: took %d hits, dealt %.0f damage\n", hits + 1, dmg);
         CHECK(hits >= 40 && died && ms.mobs().empty() && !mobDrops(MobType::CrimsonMan, 0.5f).empty());
     }

@@ -60,6 +60,9 @@ struct Mob {
 };
 
 // What happened during an update, for the game to react to.
+// 1.6.0: how long the Crimson Man takes to die (frozen, shaking, then exploding).
+constexpr float kBossDeathTime = 3.5f;
+
 struct MobEvent {
     enum Kind { HitPlayer, Died, BossRoar, Explode, TarSpread, Fireball, Barter, BossWave, BossSummon } kind;  // 1.6.0: wave, summon
     MobType type;

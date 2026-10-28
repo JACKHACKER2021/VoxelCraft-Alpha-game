@@ -206,6 +206,9 @@ enum BlockId : uint16_t {
     PARTY_POPPER = 1422,
     // 1.5.0 Forgotten Powerstone: powerstone stairs live here (the first range is full).
     STAIRS_EXTRA = 1140,     // 1140..1147: material 12 (powerstone bricks)
+    // 1.7.0: stairs and slabs of the blocks added since 1.5.0 (materials 13..16).
+    SLAB_EXTRA = 1148,       // 1148..1159: slabs of materials 13..16
+    STAIRS_EXTRA2 = 1160,    // 1160..1191: stairs of materials 13..16
     EGG_HUSKING = 1307,
     // Blocks of the forgotten civilization, the wasteland and the fortress.
     POWERSTONE_BRICKS = 1500,
@@ -258,6 +261,18 @@ enum BlockId : uint16_t {
     SOULED_DIRT = 1550,
     SOULED_STONE = 1551,
     CELESTIAL_FRAME = 1552,
+    // 1.7.0 preview: each of the twelve frame blocks takes one of the Crimson Man's heads (like
+    // the eyes of the End's frame); with all twelve in place the hole lights up as the portal.
+    CELESTIAL_FRAME_FULL = 1553,
+    CELESTIAL_PORTAL = 1555,    // (1554 was a preview socket; free)
+    // 1.7.0 the Celestial Reach: the floating islands' blocks.
+    CELESTIAL_LOG = 1556,
+    CELESTIAL_PLANKS = 1557,
+    CELESTIAL_STONE_BRICKS = 1558,
+    CELESTIAL_LEAVES = 1559,    // see-through, pale sky blue
+    CELESTIAL_GRASS = 1560,     // soul grass of the sky islands
+    CELESTIAL_DIRT = 1561,
+    CELESTIAL_STONE = 1562,
     // 1.5.0 items
     BRUSHER = 1600,
     FORTRESS_COMPASS = 1601,
@@ -273,6 +288,12 @@ enum BlockId : uint16_t {
     // 1.6.0 items
     HARDIUM = 1617,          // a shard from hardium ore
     HARDIUM_PICKAXE = 1618,  // the hardest pickaxe: tier 6
+    // 1.7.0 preview items
+    CRIMSON_HEAD = 1619,       // twelve fall from the Crimson Man; they open the Celestial portal
+    CELESTIAL_COMPASS = 1620,  // points to the nearest Celestial portal frame
+    // 1.7.0: the rest of the hardium set (tier 6) and hardium armour (material 5).
+    HARDIUM_SWORD = 1621, HARDIUM_AXE = 1622, HARDIUM_SHOVEL = 1623,
+    HARDIUM_ARMOR = 1624,      // 1624..1627: helmet, chestplate, leggings, boots
     EGG_HOGMAN = 1308,       // the hog man of the Cornerstone Dimension
 };
 inline bool isTorch(ItemId id) { return id >= TORCH && id < TORCH_WALL + 4; }
@@ -282,30 +303,43 @@ inline bool isSkeletonHead(ItemId id) { return id >= SKELETON_HEAD && id < SKELE
 inline bool isFence(ItemId id) { return id == FENCE || (id >= SPRUCE_FENCE && id <= POWERSTONE_FENCE); }
 
 // The materials stairs and slabs come in, in id order.
-// Stairs of the first 12 materials are STAIRS + material * 8 + variant; later ones start at STAIRS_EXTRA.
-constexpr int kShapeMaterials = 13;
+// Stairs of the first 12 materials are STAIRS + material * 8 + variant; material 12 is at STAIRS_EXTRA
+// and 13..16 at STAIRS_EXTRA2. Slabs of the first 13 are SLAB + material * 3 + half, the rest at SLAB_EXTRA.
+constexpr int kShapeMaterials = 17;
 constexpr int kFirstStairsMaterials = 12;
+constexpr int kFirstSlabMaterials = 13;
 inline ItemId shapeMaterialBlock(int material) {
     const ItemId kBlocks[kShapeMaterials] = {PLANKS,  SPRUCE_PLANKS,     VOID_PLANKS, NETHERPERK_PLANKS,
                                              COBBLESTONE, STONE,         STONE_BRICKS, MOSSY_COBBLESTONE,
                                              BRICKS,  SANDSTONE,         NETHER_BRICK, VOID_STONE_BRICKS,
-                                             POWERSTONE_BRICKS};
+                                             POWERSTONE_BRICKS, CRIMSON_PLANKS, DEEPSTONE, DEEPSTONE_BRICKS,
+                                             MOSSY_DEEPSTONE_BRICKS};
     return kBlocks[material < 0 || material >= kShapeMaterials ? 0 : material];
 }
 inline bool isStairs(ItemId id) {
-    return (id >= STAIRS && id < STAIRS + kFirstStairsMaterials * 8) ||
-           (id >= STAIRS_EXTRA && id < STAIRS_EXTRA + (kShapeMaterials - kFirstStairsMaterials) * 8);
+    return (id >= STAIRS && id < STAIRS + kFirstStairsMaterials * 8) || (id >= STAIRS_EXTRA && id < STAIRS_EXTRA + 8) ||
+           (id >= STAIRS_EXTRA2 && id < STAIRS_EXTRA2 + (kShapeMaterials - kFirstSlabMaterials) * 8);
 }
 // Which material a stair is made of, and its facing (bits 0-1) and upside-down bit (4).
-inline int stairsMaterial(ItemId id) { return id >= STAIRS_EXTRA ? kFirstStairsMaterials + (id - STAIRS_EXTRA) / 8 : (id - STAIRS) / 8; }
-inline int stairsVariant(ItemId id) { return id >= STAIRS_EXTRA ? (id - STAIRS_EXTRA) % 8 : (id - STAIRS) % 8; }
-inline bool isSlab(ItemId id) { return id >= SLAB && id < SLAB + kShapeMaterials * 3; }
-inline bool isDoubleSlab(ItemId id) { return isSlab(id) && (id - SLAB) % 3 == 2; }
+inline int stairsMaterial(ItemId id) {
+    return id >= STAIRS_EXTRA2 ? kFirstSlabMaterials + (id - STAIRS_EXTRA2) / 8 : id >= STAIRS_EXTRA ? kFirstStairsMaterials : (id - STAIRS) / 8;
+}
+inline int stairsVariant(ItemId id) { return id >= STAIRS_EXTRA2 ? (id - STAIRS_EXTRA2) % 8 : id >= STAIRS_EXTRA ? (id - STAIRS_EXTRA) % 8 : (id - STAIRS) % 8; }
+inline bool isSlab(ItemId id) {
+    return (id >= SLAB && id < SLAB + kFirstSlabMaterials * 3) || (id >= SLAB_EXTRA && id < SLAB_EXTRA + (kShapeMaterials - kFirstSlabMaterials) * 3);
+}
+inline int slabMaterial(ItemId id) { return id >= SLAB_EXTRA ? kFirstSlabMaterials + (id - SLAB_EXTRA) / 3 : (id - SLAB) / 3; }
+inline int slabHalf(ItemId id) { return id >= SLAB_EXTRA ? (id - SLAB_EXTRA) % 3 : (id - SLAB) % 3; }  // 0 bottom, 1 top, 2 double
+inline bool isDoubleSlab(ItemId id) { return isSlab(id) && slabHalf(id) == 2; }
 inline ItemId stairsId(int material, int facing, bool upsideDown) {
-    const int base = material < kFirstStairsMaterials ? STAIRS + material * 8 : STAIRS_EXTRA + (material - kFirstStairsMaterials) * 8;
+    const int base = material < kFirstStairsMaterials ? STAIRS + material * 8
+                     : material < kFirstSlabMaterials ? STAIRS_EXTRA
+                                                      : STAIRS_EXTRA2 + (material - kFirstSlabMaterials) * 8;
     return (ItemId)(base + (facing & 3) + (upsideDown ? 4 : 0));
 }
-inline ItemId slabId(int material, int half) { return (ItemId)(SLAB + material * 3 + half); }  // 0 bottom, 1 top, 2 double
+inline ItemId slabId(int material, int half) {  // 0 bottom, 1 top, 2 double
+    return (ItemId)(material < kFirstSlabMaterials ? SLAB + material * 3 + half : SLAB_EXTRA + (material - kFirstSlabMaterials) * 3 + half);
+}
 inline bool isStainedGlass(ItemId id) { return id >= STAINED_GLASS && id < STAINED_GLASS + 16; }
 inline bool isDripstoneSpike(ItemId id) { return id == DRIPSTONE_UP || id == DRIPSTONE_DOWN; }
 // Blocks with ids from 1000 up (everything else up there is an item).
@@ -323,11 +357,11 @@ int modFood(ItemId id);
 inline bool isNewBlock(ItemId id) {
     if (id >= kModIdBase) return modIsBlock(id);
     return isStairs(id) || isSlab(id) || (id >= TAR && id <= SNOW_LAYER) || isStainedGlass(id) || (id >= WALL_CABLE && id < WALL_CABLE + 8) || (id >= WALL_SWITCH && id < WALL_SWITCH + 8) ||
-           (id >= ANNIV_LOGO && id <= PAINTED_PLANKS + 3) || (id >= POWERSTONE_BRICKS && id <= CELESTIAL_FRAME && id != 1518 && id != 1519);
+           (id >= ANNIV_LOGO && id <= PAINTED_PLANKS + 3) || (id >= POWERSTONE_BRICKS && id <= CELESTIAL_STONE && id != 1518 && id != 1519);
 }
 // The full block a stair or slab is cut from (its texture, hardness and tool).
 inline ItemId shapeMaterial(ItemId id) {
-    return isStairs(id) ? shapeMaterialBlock(stairsMaterial(id)) : isSlab(id) ? shapeMaterialBlock((id - SLAB) / 3) : id;
+    return isStairs(id) ? shapeMaterialBlock(stairsMaterial(id)) : isSlab(id) ? shapeMaterialBlock(slabMaterial(id)) : id;
 }
 
 // The terrain atlas is a square of kAtlasCols x kAtlasCols tiles (32 x 32 since 1.4.0).
@@ -399,6 +433,13 @@ enum Tile : uint16_t {
     T_DEEPSTONE, T_HARDIUM_ORE, T_MOSSY_DEEPSTONE, T_MOSS_BLOCK, T_FUNGAL_DEEPSTONE, T_DEEPSTONE_BRICKS,
     T_CRACKED_DEEPSTONE_BRICKS, T_MOSSY_DEEPSTONE_BRICKS, T_ROTTEN_PLANKS, T_VINES, T_HARDIUM, T_HARDIUM_PICKAXE, T_SPAWNER,
     T_SOULED_GRASS_TOP, T_SOULED_GRASS_SIDE, T_SOULED_DIRT, T_SOULED_STONE, T_CELESTIAL_FRAME_TOP, T_CELESTIAL_FRAME_SIDE,
+    // 1.7.0 preview
+    T_CELESTIAL_FRAME_FULL, T_CELESTIAL_PORTAL, T_CRIMSON_HEAD, T_CELESTIAL_COMPASS,
+    T_HARDIUM_SWORD, T_HARDIUM_AXE, T_HARDIUM_SHOVEL, T_HARDIUM_ARMOR,  // + 4 armour pieces
+    T_HARDIUM_ARMOR_END = T_HARDIUM_ARMOR + 3,
+    T_HARDIUM_PLATE,  // the worn hardium armour's metal
+    T_CELESTIAL_LOG_SIDE, T_CELESTIAL_LOG_TOP, T_CELESTIAL_PLANKS, T_CELESTIAL_STONE_BRICKS, T_CELESTIAL_LEAVES,
+    T_CELESTIAL_GRASS_TOP, T_CELESTIAL_GRASS_SIDE, T_CELESTIAL_DIRT, T_CELESTIAL_STONE,
     T_COUNT
 };
 static_assert(T_COUNT <= kAtlasCols * kAtlasCols, "the atlas has room for every tile");
@@ -434,7 +475,7 @@ inline ItemId toggledSwitch(ItemId id) {
 inline int wallSide(ItemId id) { return isWallCable(id) ? (id - WALL_CABLE) % 4 : isWallSwitch(id) ? (id - WALL_SWITCH) % 4 : -1; }
 inline bool isLamp(ItemId id) { return id == POWERSTONE_LAMP || id == POWERSTONE_LAMP_ON; }
 inline bool isTnt(ItemId id) { return id == TNT || id == NUKE_TNT; }
-inline bool isSword(ItemId id) { return id >= WOOD_SWORD && id <= RUBY_SWORD; }
+inline bool isSword(ItemId id) { return (id >= WOOD_SWORD && id <= RUBY_SWORD) || id == HARDIUM_SWORD; }
 inline bool isSpawnEgg(ItemId id) {
     return (id >= EGG_PIG && id <= EGG_FORGOTTEN) || (id >= EGG_CHICKEN && id <= EGG_VILLAGER) || (id >= EGG_SPIDER && id <= EGG_HOGMAN);
 }
@@ -454,11 +495,11 @@ inline bool isShaped(ItemId id) {
            isSwitch(id) || id == CAKE || id == FARMLAND || isStairs(id) || (isSlab(id) && !isDoubleSlab(id)) ||
            isBalloon(id) || id == PARTY_LANTERN || id == SNOW_LAYER || isTorch(id);
 }
-inline bool isLeaves(ItemId id) { return id == LEAVES || id == SPRUCE_LEAVES || id == VOID_LEAVES || id == NETHERPERK_CAP; }
+inline bool isLeaves(ItemId id) { return id == LEAVES || id == SPRUCE_LEAVES || id == VOID_LEAVES || id == NETHERPERK_CAP || id == CELESTIAL_LEAVES; }
 inline bool isLog(ItemId id) {
-    return id == LOG || id == SPRUCE_LOG || id == VOID_LOG || id == EYE_LOG || id == NETHERPERK_LOG || id == CRIMSON_LOG;
+    return id == LOG || id == SPRUCE_LOG || id == VOID_LOG || id == EYE_LOG || id == NETHERPERK_LOG || id == CRIMSON_LOG || id == CELESTIAL_LOG;
 }
-inline bool isPortal(ItemId id) { return id == PORTAL || id == VOID_PORTAL; }
+inline bool isPortal(ItemId id) { return id == PORTAL || id == VOID_PORTAL || id == CELESTIAL_PORTAL; }
 // Small plants: drawn as two crossed planes, no collision, but they can be targeted and broken.
 inline bool isPlant(ItemId id) {
     return id == TALL_GRASS || id == DANDELION || id == POPPY || id == NETHER_SPROUTS || id == CRIMSON_ROOTS || isSapling(id) ||
@@ -469,7 +510,7 @@ inline bool isSolid(ItemId id) { return id != AIR && !isLiquid(id) && !isPortal(
 inline bool isTargetable(ItemId id) { return isSolid(id) || isPlant(id); }
 // Opaque blocks fully hide the faces of their neighbours.
 inline bool isOpaque(ItemId id) {
-    return isSolid(id) && !isLeaves(id) && id != GLASS && id != POWERSTONE_GLASS && id != ICE && !isShaped(id) && !isStainedGlass(id) &&
+    return isSolid(id) && !isLeaves(id) && id != GLASS && id != POWERSTONE_GLASS && !isShaped(id) && !isStainedGlass(id) &&
            !(id >= kModIdBase && modIsTransparent(id));
 }
 // Rendered at full brightness regardless of shading.
@@ -487,7 +528,7 @@ inline int lightLevel(ItemId id) {
         case LAVA: return 14;
         case TORCH: case TORCH_WALL: case TORCH_WALL + 1: case TORCH_WALL + 2: case TORCH_WALL + 3: return 14;
         case LIT_FURNACE: case POWERSTONE_BLOCK: case POWERSTONE_FURNACE_ON: return 12;
-        case NETHERPERK_CAP: case PORTAL: case VOID_PORTAL: return 10;
+        case NETHERPERK_CAP: case PORTAL: case VOID_PORTAL: case CELESTIAL_PORTAL: return 10;
         case EYE_LOG: case ANNIV_LOGO: case VOID_BRICK_EYE: return 8;
         case POWER_CABLE_ON: return 6;
         default:
@@ -498,9 +539,9 @@ inline int lightLevel(ItemId id) {
 // Wool colour 0 (white) to 15 (black), or -1 for other blocks.
 inline int woolColor(ItemId id) { return id == WOOL ? 0 : (id >= WOOL_ORANGE && id <= WOOL_BLACK) ? id - WOOL_ORANGE + 1 : -1; }
 inline ItemId woolBlock(int color) { return color == 0 ? (ItemId)WOOL : (ItemId)(WOOL_ORANGE + color - 1); }
-inline bool isArmor(ItemId id) { return id >= FIRST_ARMOR && id <= LAST_ARMOR; }
+inline bool isArmor(ItemId id) { return (id >= FIRST_ARMOR && id <= LAST_ARMOR) || (id >= HARDIUM_ARMOR && id < HARDIUM_ARMOR + 4); }
 // Drawn in the blended pass after everything else.
-inline bool isTranslucent(ItemId id) { return id == WATER || isPortal(id) || id == ICE || isStainedGlass(id); }
+inline bool isTranslucent(ItemId id) { return id == WATER || isPortal(id) || isStainedGlass(id); }  // 1.7.0: ice is solid (no see-through grid)
 inline bool isFood(ItemId id) {
     return id == APPLE || (id >= RAW_PORK && id <= COOKED_MUTTON) || id == CANDY_CANE || id == BREAD ||
            (id >= RAW_CHICKEN && id <= STEAK) || id == MILK_BUCKET || (id >= kModIdBase && modFood(id) > 0);
@@ -710,8 +751,22 @@ inline int tileFor(ItemId id, Face face) {
                 case SOULED_DIRT: return T_SOULED_DIRT;
                 case SOULED_STONE: return T_SOULED_STONE;
                 case CELESTIAL_FRAME: return face == F_TOP ? T_CELESTIAL_FRAME_TOP : T_CELESTIAL_FRAME_SIDE;
+                case CELESTIAL_FRAME_FULL: return face == F_TOP ? T_CELESTIAL_FRAME_FULL : T_CELESTIAL_FRAME_SIDE;
+                case CELESTIAL_LOG: return face == F_TOP || face == F_BOTTOM ? T_CELESTIAL_LOG_TOP : T_CELESTIAL_LOG_SIDE;
+                case CELESTIAL_PLANKS: return T_CELESTIAL_PLANKS;
+                case CELESTIAL_STONE_BRICKS: return T_CELESTIAL_STONE_BRICKS;
+                case CELESTIAL_LEAVES: return T_CELESTIAL_LEAVES;
+                case CELESTIAL_GRASS: return face == F_TOP ? T_CELESTIAL_GRASS_TOP : face == F_BOTTOM ? T_CELESTIAL_DIRT : T_CELESTIAL_GRASS_SIDE;
+                case CELESTIAL_DIRT: return T_CELESTIAL_DIRT;
+                case CELESTIAL_STONE: return T_CELESTIAL_STONE;
+                case CELESTIAL_PORTAL: return T_CELESTIAL_PORTAL;
+                case CRIMSON_HEAD: return T_CRIMSON_HEAD;
+                case CELESTIAL_COMPASS: return T_CELESTIAL_COMPASS;
                 case HARDIUM: return T_HARDIUM;
                 case HARDIUM_PICKAXE: return T_HARDIUM_PICKAXE;
+                case HARDIUM_SWORD: return T_HARDIUM_SWORD;
+                case HARDIUM_AXE: return T_HARDIUM_AXE;
+                case HARDIUM_SHOVEL: return T_HARDIUM_SHOVEL;
                 case EGG_HOGMAN: return T_EGG_HOGMAN;
                 case VOID_BRICK_EYE: return face == F_TOP || face == F_BOTTOM ? T_VOID_STONE_BRICKS : T_VOID_BRICK_EYE;
                 case POWERSTONE_BRICKS: case POWERSTONE_FENCE: return T_POWERSTONE_BRICKS;
@@ -750,6 +805,7 @@ inline int tileFor(ItemId id, Face face) {
                     break;
             }
             if (id >= BRONZE_PICKAXE && id <= RUBY_SHOVEL) return T_FIRST_NEW_TOOL + (id - BRONZE_PICKAXE);
+            if (id >= HARDIUM_ARMOR && id < HARDIUM_ARMOR + 4) return T_HARDIUM_ARMOR + (id - HARDIUM_ARMOR);
             if (isArmor(id)) return T_FIRST_ARMOR + (id - FIRST_ARMOR);
             if (isSword(id)) return T_FIRST_SWORD + (id - WOOD_SWORD);
             if (isSpawnEgg(id)) return T_EGG_PIG + (id - EGG_PIG);

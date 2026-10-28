@@ -432,6 +432,30 @@ const char* kUpdate157 = R"({
   ]
 })";
 
+const char* kUpdate170 = R"({
+  // VoxelCraft 1.7.0: stairs and slabs of crimson planks and the deepstone family, and the
+  // hardium sword, axe, shovel and armour.
+  "recipes": [
+    {"type": "shapeless", "ingredients": ["celestial_log"], "result": "celestial_planks", "count": 4},
+    {"type": "shaped", "pattern": ["SS", "SS"], "key": {"S": "celestial_stone"}, "result": "celestial_stone_bricks", "count": 4},
+    {"type": "shaped", "pattern": ["H", "H", "S"], "key": {"H": "hardium", "S": "stick"}, "result": "hardium_sword"},
+    {"type": "shaped", "pattern": ["HH", "HS", ".S"], "key": {"H": "hardium", "S": "stick"}, "result": "hardium_axe"},
+    {"type": "shaped", "pattern": ["H", "S", "S"], "key": {"H": "hardium", "S": "stick"}, "result": "hardium_shovel"},
+    {"type": "shaped", "pattern": ["HHH", "H.H"], "key": {"H": "hardium"}, "result": "hardium_helmet"},
+    {"type": "shaped", "pattern": ["H.H", "HHH", "HHH"], "key": {"H": "hardium"}, "result": "hardium_chestplate"},
+    {"type": "shaped", "pattern": ["HHH", "H.H", "H.H"], "key": {"H": "hardium"}, "result": "hardium_leggings"},
+    {"type": "shaped", "pattern": ["H.H", "H.H"], "key": {"H": "hardium"}, "result": "hardium_boots"},
+    {"type": "shaped", "pattern": ["M..", "MM.", "MMM"], "key": {"M": "crimson_planks"}, "result": "crimson_stairs", "count": 4},
+    {"type": "shaped", "pattern": ["MMM"], "key": {"M": "crimson_planks"}, "result": "crimson_slab", "count": 6},
+    {"type": "shaped", "pattern": ["M..", "MM.", "MMM"], "key": {"M": "deepstone"}, "result": "deepstone_stairs", "count": 4},
+    {"type": "shaped", "pattern": ["MMM"], "key": {"M": "deepstone"}, "result": "deepstone_slab", "count": 6},
+    {"type": "shaped", "pattern": ["M..", "MM.", "MMM"], "key": {"M": "deepstone_bricks"}, "result": "deepstone_brick_stairs", "count": 4},
+    {"type": "shaped", "pattern": ["MMM"], "key": {"M": "deepstone_bricks"}, "result": "deepstone_brick_slab", "count": 6},
+    {"type": "shaped", "pattern": ["M..", "MM.", "MMM"], "key": {"M": "mossy_deepstone_bricks"}, "result": "mossy_deepstone_brick_stairs", "count": 4},
+    {"type": "shaped", "pattern": ["MMM"], "key": {"M": "mossy_deepstone_bricks"}, "result": "mossy_deepstone_brick_slab", "count": 6}
+  ]
+})";
+
 const char* kUpdate160 = R"({
   // VoxelCraft 1.6.0 Caves and Tunes: deepstone masonry, moss and the hardium pickaxe.
   "recipes": [
@@ -589,6 +613,7 @@ const std::vector<std::pair<std::string, std::string>>& defaultPackFiles() {
         {"recipes/update_1_5.json", kUpdate15},
         {"recipes/update_1_5_7.json", kUpdate157},
         {"recipes/update_1_6_0.json", kUpdate160},
+        {"recipes/update_1_7_0.json", kUpdate170},
     };
     return files;
 }

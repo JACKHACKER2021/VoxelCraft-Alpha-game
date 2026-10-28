@@ -9,6 +9,7 @@
 namespace vc {
 
 #include "CaveTextures.inc"
+#include "StoneTexture.inc"
 
 namespace {
 
@@ -1496,7 +1497,7 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
                     }
                     case T_ICE: {
                         bool streak = (px + py) % 7 == 0 || (px - py + 16) % 11 == 0;
-                        a.put(tile, px, py, Rgb{150, 192, 242}.scaled(streak ? 1.12f : 1.0f).plus(n / 4), 190);
+                        a.put(tile, px, py, Rgb{150, 192, 242}.scaled(streak ? 1.12f : 1.0f).plus(n / 4));  // 1.7.0: solid ice
                         break;
                     }
                     case T_CACTUS_SIDE: {
@@ -1603,8 +1604,67 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
                     if (p[3] < 128) a.clear(kCaveTiles[i], px, py);
                     else a.put(kCaveTiles[i], px, py, {p[0], p[1], p[2]});
                 }
+        // And the user's new stone.
+        for (int py = 0; py < 16; ++py)
+            for (int px = 0; px < 16; ++px) {
+                const uint8_t* p = kStoneTexture + (py * 16 + px) * 3;
+                a.put(T_STONE, px, py, {p[0], p[1], p[2]});
+            }
         a.sprite(T_HARDIUM, kSprite_gem, {70, 200, 225}, {225, 250, 255});
         a.sprite(T_HARDIUM_PICKAXE, kSprite_pickaxe, {80, 205, 230});
+        // 1.7.0: the rest of the hardium set, in the same icy cyan.
+        a.sprite(T_HARDIUM_SWORD, kSprite_sword, {80, 205, 230}, {255, 255, 255});
+        a.sprite(T_HARDIUM_AXE, kSprite_axe, {80, 205, 230});
+        a.sprite(T_HARDIUM_SHOVEL, kSprite_shovel, {80, 205, 230});
+        {
+            const char* const* shapes[4] = {kSprite_helmet, kSprite_chestplate, kSprite_leggings, kSprite_boots};
+            for (int k = 0; k < 4; ++k) a.sprite(T_HARDIUM_ARMOR + k, shapes[k], {80, 205, 230});
+        }
+        // 1.7.0 the Celestial Reach: pale, sunlit blocks with gold and soul-cyan flecks.
+        for (int py = 0; py < 16; ++py)
+            for (int px = 0; px < 16; ++px) {
+                const int n = (int)(hash3(px, py, 1556, 5) % 14) - 7;
+                const bool soul = hash3(px, py, 1560, 7) % 21 == 0;
+                const Rgb soulC{150, 240, 240}, gold{232, 200, 110};
+                // Log: pale pearly bark (light, like birch) in soft vertical bands, short dark lenticel
+                // marks across it, a thin gold vein winding up, and a lit left edge on each band.
+                {
+                    const int band = px / 4, inBand = px % 4;
+                    const float shade = 0.9f + 0.06f * (float)((band * 7 + 3) % 4) + (inBand == 0 ? 0.08f : 0.0f) - (inBand == 3 ? 0.07f : 0.0f);
+                    Rgb bark = Rgb{226, 228, 238}.scaled(shade).plus(n / 2);
+                    const uint32_t mh = hash3(band, py / 2, 1558, 5);
+                    if (mh % 5 == 0 && inBand >= 1 && inBand <= 2 && py % 2 == 0) bark = Rgb{120, 120, 140};  // lenticels
+                    const int vein = (int)(7 + std::sin(py * 0.55f) * 3.2f);
+                    if (px == vein) bark = gold;
+                    if (std::abs(px - vein) == 1 && hash3(px, py, 1559, 2) % 3 == 0) bark = gold.scaled(0.75f);
+                    a.put(T_CELESTIAL_LOG_SIDE, px, py, bark);
+                }
+                const float rr = std::sqrt((px - 7.5f) * (px - 7.5f) + (py - 7.5f) * (py - 7.5f));
+                a.put(T_CELESTIAL_LOG_TOP, px, py, rr > 7 ? Rgb{205, 205, 218}.plus(n) : ((int)rr % 2 ? Rgb{236, 226, 196} : Rgb{222, 206, 160}).plus(n / 2));
+                // Planks: cream boards with gold nail heads.
+                const bool board = py % 4 == 3;
+                const bool nail = py % 4 == 1 && (px == 2 || px == 13);
+                a.put(T_CELESTIAL_PLANKS, px, py, nail ? gold : board ? Rgb{196, 186, 160}.plus(n / 2) : Rgb{232, 222, 196}.plus(n / 2));
+                // Stone and bricks: white-blue stone; bricks with gold mortar.
+                const Rgb stone = Rgb{206, 214, 232}.plus(n);
+                a.put(T_CELESTIAL_STONE, px, py, soul ? soulC : stone);
+                const bool mortar = py % 8 == 7 || (px + (py / 8) * 4) % 8 == 7;
+                a.put(T_CELESTIAL_STONE_BRICKS, px, py, mortar ? gold.scaled(0.8f) : stone.scaled(1.04f));
+                // Soul grass of the sky: pale mint with cyan souls; dirt is light sandy grey.
+                const Rgb grass = Rgb{150, 222, 190}.plus(n), dirt = Rgb{186, 176, 162}.plus(n);
+                a.put(T_CELESTIAL_GRASS_TOP, px, py, soul ? soulC : grass);
+                const int fringe = 3 + (int)(hash3(px, 0, 1561, 9) % 3);
+                a.put(T_CELESTIAL_GRASS_SIDE, px, py, py < fringe ? grass : soul ? soulC : dirt);
+                a.put(T_CELESTIAL_DIRT, px, py, soul ? soulC : dirt);
+                leafPixel(a, T_CELESTIAL_LEAVES, px, py, {120, 200, 235}, 81, false);
+            }
+        // The metal of worn hardium armour: icy plates with bright seams.
+        for (int py = 0; py < 16; ++py)
+            for (int px = 0; px < 16; ++px) {
+                const int n = (int)(hash3(px, py, 1624, 3) % 16) - 8;
+                const bool seam = px % 8 == 0 || py % 8 == 0;
+                a.put(T_HARDIUM_PLATE, px, py, seam ? Rgb{190, 245, 255} : Rgb{70, 175, 205}.plus(n));
+            }
         // The Forgotten Overworld: grass, dirt and stone of a lost world, pale and with ghostly
         // cyan specks of souls in them.
         for (int py = 0; py < 16; ++py)
@@ -1626,7 +1686,25 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
                 const bool star = (dx <= 2 && dy <= 9) || (dy <= 2 && dx <= 9) || (dx + dy <= 9);
                 a.put(T_CELESTIAL_FRAME_TOP, px, py, rim ? Rgb{214, 180, 90} : star ? Rgb{235, 240, 255} : vs);
                 a.put(T_CELESTIAL_FRAME_SIDE, px, py, py < 3 ? Rgb{214, 180, 90}.scaled(py == 2 ? 0.75f : 1.0f) : vs);
+                // 1.7.0 preview: a frame block holding a head (the gold rim round the Crimson Man's
+                // face), the portal (a starry sky over pale clouds) and the head as an item.
+                const bool face = px >= 3 && px <= 12 && py >= 3 && py <= 12;
+                Rgb fc = Rgb{22, 18, 22}.plus(n / 3);
+                if (py >= 5 && py <= 6 && ((px >= 4 && px <= 6) || (px >= 9 && px <= 11))) fc = {255, 50, 35};
+                else if (py == 10 && px >= 5 && px <= 10) fc = {130, 12, 12};
+                a.put(T_CELESTIAL_FRAME_FULL, px, py, rim ? Rgb{214, 180, 90} : face ? fc : vs);
+                const uint32_t h = hash3(px, py, 1555, 3);
+                const float sky = py / 15.0f;
+                Rgb pc = Rgb{(int)(40 + sky * 90), (int)(60 + sky * 120), (int)(150 + sky * 90)}.plus(n / 2);
+                if (h % 19 == 0) pc = {245, 245, 255};
+                a.put(T_CELESTIAL_PORTAL, px, py, pc);
+                Rgb hc = Rgb{22, 18, 22}.scaled(0.8f + patch(px, py, 78, 4) * 0.5f).plus(n / 3);
+                if (py >= 5 && py <= 7 && ((px >= 2 && px <= 5) || (px >= 10 && px <= 13))) hc = Rgb{255, 40 + n, 30};
+                else if (py >= 11 && py <= 12 && px >= 4 && px <= 11) hc = {120, 10, 10};
+                if (px < 1 || px > 14 || py < 1 || py > 14) a.clear(T_CRIMSON_HEAD, px, py);
+                else a.put(T_CRIMSON_HEAD, px, py, hc);
             }
+        a.sprite(T_CELESTIAL_COMPASS, kSprite_compass, {70, 60, 110}, {235, 240, 255});
         // The spawner: a dark iron cage with a faint glow inside.
         for (int py = 0; py < 16; ++py)
             for (int px = 0; px < 16; ++px) {
@@ -2290,16 +2368,46 @@ void drawUpdate157(Canvas& a, int tile) {
                     break;
                 }
                 case T_CRIMSON_LOG_SIDE: {
-                    const float stripe = std::sin(px * 1.9f + tilePatch(px, py, 175, 4) * 2.5f);
-                    Rgb c = Rgb{96, 24, 34}.scaled(0.85f + stripe * 0.12f + tilePatch(px, py, 176, 4) * 0.12f).plus(n / 2);
-                    if (hash3(px, py, 177, 3) % 29 == 0) c = Rgb{220, 70, 60};  // glowing sap
+                    // 1.7.0: real bark. Vertical plates of uneven width split by dark furrows, a lit
+                    // left edge on each plate, short cross cracks, a knot, and beads of glowing sap
+                    // that run down the furrows.
+                    static const int kEdges[] = {0, 3, 5, 9, 12, 16};
+                    int plate = 0;
+                    while (px >= kEdges[plate + 1]) ++plate;
+                    const int left = kEdges[plate], right = kEdges[plate + 1] - 1;
+                    const int shift = (int)(hash3(plate, 0, 178, 3) % 5);  // plates break at different heights
+                    const bool furrow = px == right && right != 15;
+                    const bool crack = (py + shift) % 7 == 0 && !furrow;
+                    const bool lit = px == left && !furrow;
+                    const float kx = px - 10.5f, ky = py - 5.5f;
+                    const bool knot = kx * kx + ky * ky * 1.6f < 3.2f, knotRing = !knot && kx * kx + ky * ky * 1.6f < 6.0f;
+                    Rgb c = Rgb{112, 30, 40}.scaled(0.9f + tilePatch(px, py, 176, 4) * 0.14f).plus(n / 3);
+                    if (lit) c = c.scaled(1.22f);
+                    if (crack) c = c.scaled(0.6f);
+                    if (furrow) c = Rgb{46, 10, 16};
+                    if (knotRing) c = Rgb{70, 16, 24};
+                    if (knot) c = Rgb{150, 46, 52}.plus(n / 4);
+                    // Sap: a bright bead in a furrow with a fading trail below it.
+                    if (furrow) {
+                        const int bead = (int)(hash3(px, 0, 177, 3) % 16);
+                        const int below = (py - bead + 16) % 16;
+                        if (below == 0) c = Rgb{255, 96, 70};
+                        else if (below <= 2) c = Rgb{190, 50, 44}.scaled(1.0f - below * 0.2f);
+                    }
                     a.put(tile, px, py, c);
                     break;
                 }
                 case T_CRIMSON_LOG_TOP: {
-                    const float d = std::sqrt((px - 7.5f) * (px - 7.5f) + (py - 7.5f) * (py - 7.5f));
-                    Rgb c = d > 6.6f ? Rgb{96, 24, 34} : ((int)(d * 1.3f) % 2 ? Rgb{170, 50, 56} : Rgb{140, 36, 46});
-                    a.put(tile, px, py, c.plus(n / 3));
+                    // Bark round the edge, then growth rings, a few radial cracks and a glowing heart.
+                    const float dx = px - 7.5f, dy = py - 7.5f, d = std::sqrt(dx * dx + dy * dy);
+                    const float ang = std::atan2(dy, dx);
+                    Rgb c;
+                    if (d > 6.6f) c = Rgb{96, 24, 34}.scaled(0.85f + tilePatch(px, py, 179, 3) * 0.2f);
+                    else if (d > 5.9f) c = Rgb{60, 14, 20};
+                    else c = ((int)(d * 1.25f) % 2 ? Rgb{176, 54, 58} : Rgb{146, 38, 48});
+                    if (d < 6 && d > 1.5f && std::fabs(std::sin(ang * 2.5f + 0.7f)) < 0.07f) c = Rgb{80, 18, 26};  // cracks
+                    if (d < 1.3f) c = Rgb{255, 110, 80};  // the glowing heart
+                    a.put(tile, px, py, c.plus(n / 4));
                     break;
                 }
                 case T_PS_FURNACE_FRONT:

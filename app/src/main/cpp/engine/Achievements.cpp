@@ -58,6 +58,9 @@ const Achievement kAchievements[] = {
     {"shield_block", "Kryt", "Zastav útok štítem.", 25},
     {"hogman_trade", "Obchod s Prasákem", "Dej Prasákovi powerstone.", 40},
     {"explorer", "Po stopách horníků", "Najdi důl podle průzkumné mapy.", 60},
+    // 1.7.0 preview
+    {"celestial_reach", "Nad oblaky", "Vstup do Nebeské říše.", 120},
+    {"celestial_portal", "Brána do nebes", "Vlož dvanáct hlav Karmínového muže do rámu nebeského portálu.", 100},
 };
 const int kAchievementCount = sizeof(kAchievements) / sizeof(kAchievements[0]);
 

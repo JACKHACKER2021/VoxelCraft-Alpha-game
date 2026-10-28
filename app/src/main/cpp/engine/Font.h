@@ -14,7 +14,9 @@ public:
 
     // Icon glyphs (not reachable from text).
     enum Icon { HeartFull = 200, HeartHalf, HeartEmpty, FoodFull, FoodHalf, FoodEmpty, Bubble, ArrowUp, ArrowDown, Solid, Coin, Star, ArrowLeft, ArrowRight,
-                ArmorFull, ArmorHalf, ArmorEmpty, MapPin, Home, Skull, House };
+                ArmorFull, ArmorHalf, ArmorEmpty, MapPin, Home, Skull, House,
+                // 1.7.0 preview: the menu button icons
+                Sword, Gear, Bag, Person, Cube, ExitDoor };
 
     Font();
     const std::vector<uint8_t>& rgba() const { return rgba_; }

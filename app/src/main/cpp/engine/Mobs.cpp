@@ -66,9 +66,11 @@ struct Builder {
     float yaw, scale, light;
     // A mod's mob: its skin replaces every tile, its face the original face tile.
     int skin = -1, face = -1, baseFace = -1;
+    float fall = 0;  // dying: the whole body tips over sideways around the feet, in one piece
 
     Vec3 toWorld(Vec3 p) const {
         p = p * scale;
+        if (fall != 0) p = Vec3(p.x * std::cos(fall) - p.y * std::sin(fall), p.x * std::sin(fall) + p.y * std::cos(fall) + std::sin(fall) * 0.3f * scale, p.z);
         float c = std::cos(yaw), s = std::sin(yaw);
         // yaw 0 looks to -z; positive yaw turns towards +x (like the player).
         return feet + Vec3(p.x * c - p.z * s, p.y, p.x * s + p.z * c);
@@ -175,7 +177,14 @@ void MobSystem::update(const World& world, int dim, const Vec3& target, bool hun
         m.attackCooldown = std::max(0.0f, m.attackCooldown - dt);
         m.attackAnim = std::max(0.0f, m.attackAnim - dt * 2.5f);
         if (!m.alive()) {
+            const float before = m.deathTime;
             m.deathTime += dt;
+            // The boss does not just fall over: he freezes, twitches and roars, then blows up.
+            if (info.boss) {
+                if (before < 1.2f && m.deathTime >= 1.2f) events.push_back({MobEvent::BossRoar, m.type, m.pos, 0, {}, -1, 0});
+                if (m.deathTime < kBossDeathTime) continue;
+                events.push_back({MobEvent::Explode, m.type, m.pos + Vec3(0, 1.0f, 0), 0, {}, -1, 0});
+            }
             if (m.deathTime > 0.9f) {
                 events.push_back({MobEvent::Died, m.type, m.pos + Vec3(0, 0.5f, 0), 0, {}, m.killer, m.variant});
                 mobs_.erase(mobs_.begin() + (long)i);
@@ -462,7 +471,22 @@ void MobSystem::buildVertices(int dim, float time, std::vector<Vertex>& out) con
         float light = m.hurtTime > 0 ? 1.7f : 1.0f;
         if (m.fuse > 0 && std::fmod(m.fuse * (4 + m.fuse * 6), 1.0f) > 0.5f) light = 2.4f;  // flashes faster and faster
         float roll = m.alive() ? 0 : std::min(1.0f, m.deathTime / 0.5f) * kPi / 2;
-        Builder b{out, m.pos, m.yaw, 1.0f, light};
+        Vec3 feet = m.pos;
+        float yaw = m.yaw;
+        if (!m.alive() && mobInfo(m.type).boss) {
+            // The boss's death: standing, shaking harder and harder, turning in jerks, flashing.
+            const float k = std::min(1.0f, m.deathTime / kBossDeathTime);
+            roll = 0;
+            feet = feet + Vec3(std::sin(time * 71.0f) * 0.25f * k, std::fabs(std::sin(time * 23.0f)) * 0.15f * k, std::cos(time * 59.0f) * 0.25f * k);
+            yaw += std::sin(time * 9.0f + m.deathTime * 13.0f) * 1.2f * k;
+            light = std::fmod(time * (3 + k * 14), 1.0f) > 0.5f ? 2.6f : 1.0f;
+        }
+        Builder b{out, feet, yaw, 1.0f, light};
+        // Every part turns with the body (before, each limb rolled round its own joint and the
+        // body came apart); the limbs keep their places and the mob just topples over.
+        b.fall = roll;
+        roll = 0;
+        if (!m.alive() && !mobInfo(m.type).boss) b.light = std::max(b.light, 1.4f);  // a red-white flash as it dies
         if (const ModMob* mod = ModRegistry::get().mob(m.variant); mod && mod->skin >= 0) {
             b.skin = mod->skin;
             b.face = mod->face;
@@ -774,7 +798,8 @@ std::vector<std::pair<ItemId, int>> mobDrops(MobType type, float roll) {
             return roll < 0.2f ? std::vector<std::pair<ItemId, int>>{{RAW_PORK, 2}, {CRIMSON_LOG, 2}}
                                : std::vector<std::pair<ItemId, int>>{{RAW_PORK, 1 + (int)(roll * 2)}};
         case MobType::CrimsonMan:
-            return {{RUBY_BLOCK, 3}, {STEEL_BLOCK, 2}, {RUBY, 8}, {VOID_STONE_BRICKS, 16}, {armorItem(4, 1), 1}, {RUBY_PICKAXE, 1}};
+            // 1.7.0 preview: his twelve heads, which open the Celestial portal, and the compass to it.
+            return {{CRIMSON_HEAD, 12}, {CELESTIAL_COMPASS, 1}};
         default: return {};
     }
 }

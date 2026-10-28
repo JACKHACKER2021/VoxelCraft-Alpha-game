@@ -12,7 +12,7 @@ namespace {
 
 constexpr int kRate = 22050;
 constexpr float kTau = 6.2831853f;
-const char* kVersionTag = "synth-v3";  // 1.6.0: the cave tune
+const char* kVersionTag = "synth-v4";  // 1.6.0: sounds only, the generated music is gone
 
 std::vector<uint8_t> toWav(const std::vector<float>& samples) {
     std::vector<uint8_t> out;
@@ -356,9 +356,10 @@ bool writeSoundFiles(const std::string& dir) {
     };
     bool ok = true;
     for (int i = 0; i < (int)Sound::Count; ++i) ok = write(soundName((Sound)i), synthesizeSound((Sound)i)) && ok;
-    ok = write("music", synthesizeMusic()) && ok;
-    for (int i = 0; i < (int)MusicStyle::Count; ++i)
-        ok = write(musicStyleName((MusicStyle)i), synthesizeBiomeMusic((MusicStyle)i)) && ok;
+    // 1.6.0: no generated music any more (the game plays only the creator's songs); old
+    // generated tracks are removed.
+    fs::remove(fs::path(dir) / "music.wav", ec);
+    for (int i = 0; i < (int)MusicStyle::Count; ++i) fs::remove(fs::path(dir) / (std::string(musicStyleName((MusicStyle)i)) + ".wav"), ec);
     if (ok) std::ofstream(tag) << kVersionTag;
     return ok;
 }

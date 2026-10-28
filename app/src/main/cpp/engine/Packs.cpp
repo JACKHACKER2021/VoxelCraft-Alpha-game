@@ -259,6 +259,7 @@ GenConfig PackManager::buildConfig(std::vector<std::string>* w) const {
     doc.set("overworld", overworld);
     doc.set("nether", nether);
     doc.set("biomes", list);
+    doc.set("generation", Json::number(GenConfig::defaults().generation));  // new worlds get the newest generator
     return GenConfig::fromJson(doc, w);
 }
 

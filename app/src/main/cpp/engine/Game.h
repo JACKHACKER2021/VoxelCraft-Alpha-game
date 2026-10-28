@@ -60,6 +60,7 @@ public:
     Settings& toolSettings() { return settings_; }
     PackManager& toolPacks() { return packs_; }
     void toolRebuildPacks() { rebuildFromPacks(); }
+    void toolApplySkin() { applySkin(); }
     void toolOpenCredits() { setScreen(Screen::Credits); }
 
     // Platform hooks, all called on the game thread.
@@ -341,7 +342,6 @@ private:
     // Music: the context decides the playlist (menu theme, overworld + biome, Nether).
     std::string musicContext_, musicSource_;
     float musicGap_ = 0;       // silence before the next game track
-    bool musicBiomeNext_ = false;
     bool musicEnded_ = false;
     // Developer login
     std::string devLoginName_;

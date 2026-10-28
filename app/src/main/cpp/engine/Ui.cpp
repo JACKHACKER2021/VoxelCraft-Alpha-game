@@ -172,16 +172,15 @@ void Ui::bevel(float x, float y, float w, float h, Color face, Color light, Colo
 }
 
 void Ui::panel(float x, float y, float w, float h) {
-    fill(x, y, w, h, {0, 0, 0, 1});
-    bevel(x + 1, y + 1, w - 2, h - 2, {0.776f, 0.776f, 0.776f, 1}, {1, 1, 1, 1}, {0.333f, 0.333f, 0.333f, 1});
+    // 1.7.0 UI: the old light-grey window is now the dark rounded glass of every menu.
+    roundPanel(x, y, w, h);
 }
 
 void Ui::slotFrame(float x, float y, float size, bool highlight) {
-    // Sunken slot: dark top-left edge, light bottom-right edge.
-    fill(x, y, size, size, {1, 1, 1, 1});
-    fill(x, y, size - 1, size - 1, {0.216f, 0.216f, 0.216f, 1});
-    Color face = highlight ? Color{0.6f, 0.75f, 0.95f, 1} : Color{0.545f, 0.545f, 0.545f, 1};
-    fill(x + 1, y + 1, size - 2, size - 2, face);
+    // 1.7.0 UI: a dark rounded hollow with a soft rim; the chosen slot glows green.
+    const Color rim = highlight ? theme::kGreenBorder : Color{0.36f, 0.34f, 0.3f, 1};
+    frame(x, y, size, size, highlight ? Color{0.2f, 0.3f, 0.12f, 1} : Color{0.12f, 0.11f, 0.1f, 1}, rim);
+    fill(x + 2, y + 1, size - 4, 1, {0, 0, 0, 0.35f});
 }
 
 bool Ui::tapped(float x, float y, float w, float h) {
@@ -214,48 +213,83 @@ float Ui::dragY(float x, float y, float w, float h) const {
 }
 
 void Ui::frame(float x, float y, float w, float h, Color face, Color border) {
-    fill(x, y, w, h, border);
-    fill(x + 1, y + 1, w - 2, h - 2, face);
+    // 1.7.0 UI: rounded (more for bigger frames).
+    const int r = std::min(w, h) >= 18 ? 3 : std::min(w, h) >= 10 ? 2 : 1;
+    roundRect(x, y, w, h, r, border);
+    roundRect(x + 1, y + 1, w - 2, h - 2, std::max(1, r - 1), face);
 }
 
 bool Ui::button(float x, float y, float w, float h, const std::string& label, bool enabled, bool primary) {
-    using namespace theme;
-    bool down = enabled && held(x, y, w, h);
-    Color face = primary ? (down ? kGreenDown : kGreen) : (down ? kButtonDown : kButton);
-    Color border = primary ? kGreenBorder : kBorder;
-    if (!enabled) face = {0.18f, 0.165f, 0.145f, 1};
-    // Block-style button: a 1px drop shadow, a frame and an inner bevel (light top-left,
-    // dark bottom-right). Pressed buttons sink by a pixel and lose the shadow.
-    float dy = down ? 1 : 0;
-    if (!down) fill(x + 1, y + h, w - 1, 1, kBorderDark);
-    frame(x, y + dy, w, h, face, border);
-    if (enabled) {
-        Color light{1, 1, 1, down ? 0.04f : 0.1f}, dark{0, 0, 0, down ? 0.08f : 0.22f};
-        fill(x + 1, y + dy + 1, w - 2, 1, light);
-        fill(x + 1, y + dy + 1, 1, h - 2, light);
-        fill(x + 1, y + dy + h - 2, w - 2, 1, dark);
-        fill(x + w - 2, y + dy + 1, 1, h - 2, dark);
+    return menuButton(x, y, w, h, label, primary ? Style::Primary : Style::Normal, -1, enabled);
+}
+
+void Ui::roundRect(float x, float y, float w, float h, int r, Color c) {
+    // Insets of the corner rows for each radius (a quarter circle in pixels).
+    static const int kInset[5][4] = {{0, 0, 0, 0}, {1, 0, 0, 0}, {2, 1, 0, 0}, {3, 1, 1, 0}, {4, 2, 1, 1}};
+    r = std::clamp(r, 0, 4);
+    r = std::min(r, (int)std::min(w, h) / 2);
+    for (int k = 0; k < r; ++k) {
+        const float in = (float)kInset[r][k];
+        fill(x + in, y + k, w - 2 * in, 1, c);
+        fill(x + in, y + h - 1 - k, w - 2 * in, 1, c);
     }
-    Color tc = !enabled ? kTextDim : primary ? kTextBright : kText;
-    float tw = textWidth(label);
-    text(x + (w - tw) / 2, y + dy + (h - 8) / 2, label, tc, 1, false, w - 4);
-    bool hit = enabled && tapped(x, y, w, h);
+    fill(x, y + r, w, h - 2 * r, c);
+}
+
+void Ui::roundPanel(float x, float y, float w, float h) {
+    // A soft shadow, a rounded rim, and dark glass inside.
+    roundRect(x + 2, y + 3, w, h, 4, {0, 0, 0, 0.35f});
+    roundRect(x, y, w, h, 4, {0.47f, 0.44f, 0.38f, 0.95f});
+    roundRect(x + 1, y + 1, w - 2, h - 2, 4, {0.11f, 0.1f, 0.09f, 0.88f});
+    fill(x + 5, y + 2, w - 10, 1, {1, 1, 1, 0.08f});
+}
+
+bool Ui::menuButton(float x, float y, float w, float h, const std::string& label, Style style, int iconGlyph, bool enabled) {
+    using namespace theme;
+    const bool down = enabled && held(x, y, w, h);
+    Color face, rim;
+    switch (style) {
+        case Style::Primary: face = {0.24f, 0.47f, 0.09f, 1}, rim = {0.56f, 0.78f, 0.3f, 1}; break;
+        case Style::Danger: face = {0.43f, 0.16f, 0.13f, 1}, rim = {0.72f, 0.33f, 0.27f, 1}; break;
+        default: face = {0.27f, 0.25f, 0.22f, 1}, rim = {0.52f, 0.49f, 0.43f, 1}; break;
+    }
+    if (down) face = {face.r * 1.2f, face.g * 1.2f, face.b * 1.2f, 1};
+    if (!enabled) face = {0.17f, 0.16f, 0.14f, 1}, rim = {0.3f, 0.28f, 0.25f, 1};
+    // Raised: a 2px shadow under it; pressed it sinks onto the shadow.
+    const float dy = down ? 2 : 0;
+    if (!down) roundRect(x + 1, y + 2, w - 2, h, 4, {0, 0, 0, 0.45f});
+    const float by = y + dy;
+    // The rim with rounded corners, then the face.
+    const int r = h >= 18 ? 4 : 3;
+    roundRect(x, by, w, h, r, rim);
+    roundRect(x + 1, by + 1, w - 2, h - 2, r - 1, face);
+    // A glossy upper half and a darker lip at the bottom, like the picture.
+    roundRect(x + 2, by + 2, w - 4, std::floor((h - 4) / 2), 2, {1, 1, 1, enabled ? 0.07f : 0.02f});
+    fill(x + 4, by + 2, w - 8, 1, {1, 1, 1, enabled ? 0.22f : 0.05f});
+    fill(x + 3, by + h - 4, w - 6, 2, {0, 0, 0, 0.25f});
+    const Color tc = !enabled ? kTextDim : style == Style::Normal ? kTextBright : Color{1, 1, 1, 1};
+    const float tw = textWidth(label);
+    float cx = x + (w - tw) / 2;
+    if (iconGlyph >= 0) {
+        cx += 6;
+        icon(std::floor(cx - 12), std::floor(by + (h - 8) / 2), iconGlyph, tc);
+    }
+    text(std::floor(cx), std::floor(by + (h - 8) / 2), label, tc, 1, true, w - 4);
+    const bool hit = enabled && tapped(x, y, w, h);
     if (hit && onClick) onClick();
     return hit;
 }
 
 void Ui::hudButton(float x, float y, float w, float h, bool pressed) {
     using namespace theme;
-    Color face = pressed ? Color{0.2f, 0.36f, 0.06f, 0.82f} : Color{0.1f, 0.09f, 0.08f, 0.55f};
-    Color border = pressed ? kGreenBorder : Color{kBorder.r, kBorder.g, kBorder.b, 0.85f};
-    fill(x, y, w, h, border);
-    fill(x + 1, y + 1, w - 2, h - 2, face);
-    // Bevel like the edge of a block: light top-left, dark bottom-right (swapped when pressed).
-    Color light{1, 1, 1, pressed ? 0.05f : 0.14f}, dark{0, 0, 0, pressed ? 0.1f : 0.3f};
-    fill(x + 1, y + 1, w - 2, 1, pressed ? dark : light);
-    fill(x + 1, y + 1, 1, h - 2, pressed ? dark : light);
-    fill(x + 1, y + h - 2, w - 2, 1, pressed ? light : dark);
-    fill(x + w - 2, y + 1, 1, h - 2, pressed ? light : dark);
+    // 1.7.0 UI: rounded smoky glass with a pale rim (green while pressed).
+    const Color face = pressed ? Color{0.22f, 0.4f, 0.1f, 0.75f} : Color{0.12f, 0.12f, 0.11f, 0.45f};
+    const Color rim = pressed ? kGreenBorder : Color{0.85f, 0.85f, 0.8f, 0.45f};
+    fill(x + 2, y, w - 4, h, rim);
+    fill(x, y + 2, w, h - 4, rim);
+    fill(x + 1, y + 1, w - 2, h - 2, rim);
+    fill(x + 2, y + 2, w - 4, h - 4, face);
+    fill(x + 3, y + 2, w - 6, 1, {1, 1, 1, pressed ? 0.05f : 0.15f});
 }
 
 void Ui::hudGlyph(float x, float y, float w, float h, int glyph, float scale) {
@@ -268,10 +302,10 @@ bool Ui::checkbox(float x, float y, bool& value) {
     bool hit = tapped(x - 6, y - 6, 24, 24);
     if (hit) value = !value;
     if (hit && onClick) onClick();
-    frame(x, y, 12, 12, value ? kAccent : kPanel, value ? kGreenBorder : kBorder);
+    frame(x, y, 12, 12, value ? Color{0.3f, 0.58f, 0.12f, 1} : Color{0.1f, 0.09f, 0.08f, 1}, value ? kGreenBorder : kBorder);
     if (value) {
-        // Check mark
-        const Color m = {0.12f, 0.16f, 0.06f, 1};
+        // Check mark, white on green
+        const Color m = {1, 1, 1, 1};
         fill(x + 2, y + 6, 2, 2, m);
         fill(x + 4, y + 8, 2, 2, m);
         fill(x + 6, y + 6, 2, 2, m);
@@ -290,9 +324,13 @@ bool Ui::themedSlider(float x, float y, float w, float& value) {
             if (v != value) { value = v; changed = true; }
         }
     frame(x, y + 3, w, 4, kField, kSeparator);
-    fill(x + 1, y + 4, (w - 2) * value, 2, kAccent);
-    float kx = x + value * (w - 8);
-    frame(kx, y, 8, 10, kAccent, kGreenBorder);
+    fill(x + 1, y + 4, (w - 2) * value, 2, Color{0.38f, 0.66f, 0.16f, 1});
+    // A round knob.
+    const float kx = std::floor(x + value * (w - 10));
+    fill(kx + 3, y - 1, 4, 12, kGreenBorder);
+    fill(kx + 1, y, 8, 10, kGreenBorder);
+    fill(kx, y + 2, 10, 6, kGreenBorder);
+    fill(kx + 2, y + 1, 6, 8, Color{0.3f, 0.55f, 0.12f, 1});
     return changed;
 }
 
