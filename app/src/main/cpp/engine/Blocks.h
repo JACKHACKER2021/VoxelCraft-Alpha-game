@@ -220,7 +220,14 @@ enum BlockId : uint16_t {
     WOOD_CUTTER = 1572,      // cuts wood: 6 planks from a log, stairs, slabs and fences
     GRAY_SAPLING = 1573,     // grows a Dappled Forest tree (red, orange or yellow leaves)
     CELESTIAL_SAPLING = 1574,
-    LOOT_BARREL_CAMP = 1575,  // 1.7.2 build 3: a barrel of the Overworld camps, filled the first time it opens
+    LOOT_BARREL_CAMP = 1575,
+    // 1.9.0 build 2: the Celestial Reach terrain, fire and the campfire.
+    PALE_STONE = 1576,        // the white rock of the new sky islands
+    SKY_STONE = 1577,         // blue rock in bands under the white
+    CELESTIUM_ORE = 1578,     // in white and blue rock; an iron pickaxe or better
+    PALE_CRYSTAL = 1579,      // glowing crystal veins
+    FIRE = 1580,              // lit with flint and steel on any block; burns wood, leaves and wool
+    CAMPFIRE = 1581,          // logs round a fire: light, warmth and smoke  // 1.7.2 build 3: a barrel of the Overworld camps, filled the first time it opens
     EGG_HUSKING = 1307,
     // Blocks of the forgotten civilization, the wasteland and the fortress.
     POWERSTONE_BRICKS = 1500,
@@ -295,6 +302,10 @@ enum BlockId : uint16_t {
     BRUSHER = 1600,
     FORTRESS_COMPASS = 1601,
     OLD_DOCUMENT = 1602,     // 1602..1609: the eight pages of the forgotten kingdom's story
+    // 1.9.0 build 2: celestium from the Celestial Reach (1603..1608).
+    CELESTIUM = 1603,
+    CELESTIUM_PICKAXE = 1604, CELESTIUM_SWORD = 1605, CELESTIUM_AXE = 1606, CELESTIUM_SHOVEL = 1607,
+    CELESTIUM_CHESTPLATE = 1608,  // the only celestium armour: steadier, softer falls in low gravity
     ANCIENT_COIN = 1610,
     POWERSTONE_RELIC = 1611,
     POTTERY_SHARD = 1612,
@@ -580,6 +591,9 @@ enum Tile : uint16_t {
     T_CONCRETE_POWDER, T_CONCRETE = T_CONCRETE_POWDER + 16, T_DYE = T_CONCRETE + 16, T_DYE_END = T_DYE + 15,  // 1.7.2 build 3: 16 colours each
     T_CRIMSONIUM_LOG_SIDE, T_CRIMSONIUM_LOG_TOP, T_CRIMSONIUM_PLANKS, T_CRIMSONIUM_LEAVES, T_SHATTERED_STONE, T_SHATTERED_BRICKS,
     T_VOID_SHARD_BLOCK, T_DARK_SAND, T_DARK_SANDSTONE, T_SHARD_CLUSTER, T_CRIMSONIUM_ORE, T_VOID_SHARD, T_CRIMSONIUM,
+    T_PALE_STONE, T_SKY_STONE, T_CELESTIUM_ORE, T_PALE_CRYSTAL, T_FIRE, T_CAMPFIRE_TOP, T_CAMPFIRE_SIDE,  // 1.9.0 build 2
+    T_CELESTIUM, T_CELESTIUM_PICKAXE, T_CELESTIUM_SWORD, T_CELESTIUM_AXE, T_CELESTIUM_SHOVEL, T_CELESTIUM_CHESTPLATE, T_CELESTIUM_PLATE,
+    T_CELESTIAL_PIG_SKIN, T_CELESTIAL_PIG_FACE, T_CELESTIAL_WOOL, T_CELESTIAL_SHEEP_FACE, T_CELESTIAL_SHEEP_SKIN,  // 1.9.0 build 3 (made in Game::loadTextures)
     T_COUNT
 };
 static_assert(T_COUNT <= kAtlasCols * kAtlasCols, "the atlas has room for every tile");
@@ -616,7 +630,7 @@ inline ItemId toggledSwitch(ItemId id) {
 inline int wallSide(ItemId id) { return isWallCable(id) ? (id - WALL_CABLE) % 4 : isWallSwitch(id) ? (id - WALL_SWITCH) % 4 : -1; }
 inline bool isLamp(ItemId id) { return id == POWERSTONE_LAMP || id == POWERSTONE_LAMP_ON; }
 inline bool isTnt(ItemId id) { return id == TNT || id == NUKE_TNT; }
-inline bool isSword(ItemId id) { return (id >= WOOD_SWORD && id <= RUBY_SWORD) || id == HARDIUM_SWORD; }
+inline bool isSword(ItemId id) { return (id >= WOOD_SWORD && id <= RUBY_SWORD) || id == HARDIUM_SWORD || id == CELESTIUM_SWORD; }
 inline bool isSpawnEgg(ItemId id) {
     return (id >= EGG_PIG && id <= EGG_FORGOTTEN) || (id >= EGG_CHICKEN && id <= EGG_VILLAGER) || (id >= EGG_SPIDER && id <= EGG_HOGMAN);
 }
@@ -634,7 +648,7 @@ inline bool isBed(ItemId id) { return id >= BED && id < BED + 8; }
 inline bool isShaped(ItemId id) {
     return isDoor(id) || isTrapdoor(id) || isChest(id) || isFence(id) || isSkeletonHead(id) || id == CACTUS || isBed(id) || isCable(id) ||
            isSwitch(id) || id == CAKE || id == FARMLAND || isStairs(id) || (isSlab(id) && !isDoubleSlab(id)) ||
-           isBalloon(id) || id == PARTY_LANTERN || id == SNOW_LAYER || isTorch(id) || isCarpet(id);
+           isBalloon(id) || id == PARTY_LANTERN || id == SNOW_LAYER || isTorch(id) || isCarpet(id) || id == CAMPFIRE;
 }
 inline bool isLeaves(ItemId id) { return id == LEAVES || id == SPRUCE_LEAVES || id == VOID_LEAVES || id == NETHERPERK_CAP || id == CELESTIAL_LEAVES ||
                                          (id >= RED_LEAVES && id <= YELLOW_LEAVES) || id == CRIMSONIUM_LEAVES; }
@@ -645,7 +659,7 @@ inline bool isPortal(ItemId id) { return id == PORTAL || id == VOID_PORTAL || id
 // Small plants: drawn as two crossed planes, no collision, but they can be targeted and broken.
 inline bool isPlant(ItemId id) {
     return id == TALL_GRASS || id == DANDELION || id == POPPY || id == NETHER_SPROUTS || id == CRIMSON_ROOTS || isSapling(id) ||
-           isCrop(id) || isDripstoneSpike(id) || id == DRY_GRASS || id == GRASSER_FLOWER || id == FERN || id == VINES || id == SHARD_CLUSTER;
+           isCrop(id) || isDripstoneSpike(id) || id == DRY_GRASS || id == GRASSER_FLOWER || id == FERN || id == VINES || id == SHARD_CLUSTER || id == FIRE;
 }
 inline bool isSolid(ItemId id) { return id != AIR && !isLiquid(id) && !isPortal(id) && !isPlant(id); }
 // What a tap or a mining finger can hit.
@@ -659,14 +673,15 @@ inline bool isOpaque(ItemId id) {
 inline bool isEmissive(ItemId id) {
     return id == LAVA || isPortal(id) || id == LIT_FURNACE || id == EYE_LOG || id == POWERSTONE_LIGHT ||
            id == POWERSTONE_LAMP_ON || id == NETHERPERK_CAP || cableOn(id) || id == POWERSTONE_BLOCK ||
-           id == PARTY_LANTERN || id == ANNIV_LOGO || id == VOID_BRICK_EYE || isTorch(id) || id == FUNGAL_DEEPSTONE || id == VOID_SHARD_BLOCK || id == SHARD_CLUSTER || (id >= kModIdBase && modIsEmissive(id));
+           id == PARTY_LANTERN || id == ANNIV_LOGO || id == VOID_BRICK_EYE || isTorch(id) || id == FUNGAL_DEEPSTONE || id == VOID_SHARD_BLOCK || id == SHARD_CLUSTER || id == FIRE || id == CAMPFIRE || id == PALE_CRYSTAL || (id >= kModIdBase && modIsEmissive(id));
 }
 inline bool isFurnace(ItemId id) { return id == FURNACE || id == LIT_FURNACE || id == POWERSTONE_FURNACE || id == POWERSTONE_FURNACE_ON; }
 inline bool isPowerstoneFurnace(ItemId id) { return id == POWERSTONE_FURNACE || id == POWERSTONE_FURNACE_ON; }
 // How far a block lights up its surroundings (0..15), day and night.
 inline int lightLevel(ItemId id) {
     switch (id) {
-        case POWERSTONE_LAMP_ON: case POWERSTONE_LIGHT: case PARTY_LANTERN: return 15;
+        case POWERSTONE_LAMP_ON: case POWERSTONE_LIGHT: case PARTY_LANTERN: case FIRE: case CAMPFIRE: return 15;
+        case PALE_CRYSTAL: return 11;
         case LAVA: return 14;
         case TORCH: case TORCH_WALL: case TORCH_WALL + 1: case TORCH_WALL + 2: case TORCH_WALL + 3: return 14;
         case LIT_FURNACE: case POWERSTONE_BLOCK: case POWERSTONE_FURNACE_ON: return 12;
@@ -682,7 +697,9 @@ inline int lightLevel(ItemId id) {
 // Wool colour 0 (white) to 15 (black), or -1 for other blocks.
 inline int woolColor(ItemId id) { return id == WOOL ? 0 : (id >= WOOL_ORANGE && id <= WOOL_BLACK) ? id - WOOL_ORANGE + 1 : -1; }
 inline ItemId woolBlock(int color) { return color == 0 ? (ItemId)WOOL : (ItemId)(WOOL_ORANGE + color - 1); }
-inline bool isArmor(ItemId id) { return (id >= FIRST_ARMOR && id <= LAST_ARMOR) || (id >= HARDIUM_ARMOR && id < HARDIUM_ARMOR + 4); }
+inline bool isArmor(ItemId id) {
+    return (id >= FIRST_ARMOR && id <= LAST_ARMOR) || (id >= HARDIUM_ARMOR && id < HARDIUM_ARMOR + 4) || id == CELESTIUM_CHESTPLATE;
+}
 // Drawn in the blended pass after everything else.
 inline bool isTranslucent(ItemId id) { return id == WATER || isPortal(id) || isStainedGlass(id); }  // 1.7.0: ice is solid (no see-through grid)
 inline bool isFood(ItemId id) {
@@ -861,6 +878,18 @@ inline int tileFor(ItemId id, Face face) {
                 case CRIMSONIUM_ORE: return T_CRIMSONIUM_ORE;
                 case VOID_SHARD: return T_VOID_SHARD;
                 case CRIMSONIUM: return T_CRIMSONIUM;
+                case PALE_STONE: return T_PALE_STONE;
+                case SKY_STONE: return T_SKY_STONE;
+                case CELESTIUM_ORE: return T_CELESTIUM_ORE;
+                case PALE_CRYSTAL: return T_PALE_CRYSTAL;
+                case FIRE: return T_FIRE;
+                case CAMPFIRE: return face == F_TOP ? T_CAMPFIRE_TOP : face == F_BOTTOM ? T_LOG_TOP : T_CAMPFIRE_SIDE;
+                case CELESTIUM: return T_CELESTIUM;
+                case CELESTIUM_PICKAXE: return T_CELESTIUM_PICKAXE;
+                case CELESTIUM_SWORD: return T_CELESTIUM_SWORD;
+                case CELESTIUM_AXE: return T_CELESTIUM_AXE;
+                case CELESTIUM_SHOVEL: return T_CELESTIUM_SHOVEL;
+                case CELESTIUM_CHESTPLATE: return T_CELESTIUM_CHESTPLATE;
                 default: break;
             }
             if (id >= kModIdBase) return modTileFor(id, face);

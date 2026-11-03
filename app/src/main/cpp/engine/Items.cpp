@@ -28,7 +28,7 @@ const ItemId kCreativeItems[] = {
     CELESTIAL_PLANKS, CELESTIAL_STONE_BRICKS,
     DUSTY_CONCRETE, HARDENED_CONCRETE, GRAY_PLANKS, STAIRS_EXTRA3, STAIRS_EXTRA3 + 8, STAIRS_EXTRA3 + 16, STAIRS_EXTRA3 + 24,
     STAIRS_EXTRA3 + 32, SLAB_EXTRA3, SLAB_EXTRA3 + 3, SLAB_EXTRA3 + 6, SLAB_EXTRA3 + 9, SLAB_EXTRA3 + 12,
-    CUTTER, WOOD_CUTTER, BARREL,
+    CUTTER, WOOD_CUTTER, BARREL, CAMPFIRE,
     CRIMSONIUM_PLANKS, SHATTERED_BRICKS, DARK_SANDSTONE, STAIRS_EXTRA5 + 0, STAIRS_EXTRA5 + 8, STAIRS_EXTRA5 + 16, STAIRS_EXTRA5 + 24, SLAB_EXTRA5 + 0, SLAB_EXTRA5 + 3, SLAB_EXTRA5 + 6, SLAB_EXTRA5 + 9,
     CONCRETE_POWDER + 0, CONCRETE_POWDER + 1, CONCRETE_POWDER + 2, CONCRETE_POWDER + 3, CONCRETE_POWDER + 4, CONCRETE_POWDER + 5, CONCRETE_POWDER + 6, CONCRETE_POWDER + 7, CONCRETE_POWDER + 8, CONCRETE_POWDER + 9, CONCRETE_POWDER + 10, CONCRETE_POWDER + 11, CONCRETE_POWDER + 12, CONCRETE_POWDER + 13, CONCRETE_POWDER + 14, CONCRETE_POWDER + 15,
     CONCRETE + 0, CONCRETE + 1, CONCRETE + 2, CONCRETE + 3, CONCRETE + 4, CONCRETE + 5, CONCRETE + 6, CONCRETE + 7, CONCRETE + 8, CONCRETE + 9, CONCRETE + 10, CONCRETE + 11, CONCRETE + 12, CONCRETE + 13, CONCRETE + 14, CONCRETE + 15,
@@ -46,15 +46,17 @@ const ItemId kCreativeItems[] = {
     CELESTIAL_GRASS, CELESTIAL_DIRT, CELESTIAL_STONE, CELESTIAL_LOG, CELESTIAL_LEAVES,
     GRAY_LOG, RED_LEAVES, ORANGE_LEAVES, YELLOW_LEAVES, GRAY_SAPLING, CELESTIAL_SAPLING,
     CRIMSONIUM_LOG, CRIMSONIUM_LEAVES, SHATTERED_STONE, VOID_SHARD_BLOCK, DARK_SAND, SHARD_CLUSTER, CRIMSONIUM_ORE,
+    PALE_STONE, SKY_STONE, CELESTIUM_ORE, PALE_CRYSTAL,
     // Tools
     WOOD_PICKAXE, WOOD_AXE, WOOD_SHOVEL, STONE_PICKAXE, STONE_AXE, STONE_SHOVEL, IRON_PICKAXE, IRON_AXE, IRON_SHOVEL,
     BRONZE_PICKAXE, BRONZE_AXE, BRONZE_SHOVEL, STEEL_PICKAXE, STEEL_AXE, STEEL_SHOVEL, RUBY_PICKAXE, RUBY_AXE, RUBY_SHOVEL,
     FLINT_AND_STEEL, VOID_FLINT_AND_STEEL,
     WOOD_SWORD, STONE_SWORD, IRON_SWORD, BRONZE_SWORD, STEEL_SWORD, RUBY_SWORD, BUCKET, WATER_BUCKET, LAVA_BUCKET, BOSS_COMPASS,
     HOE, BOW, ARROW, MAP, BRUSHER, FORTRESS_COMPASS, SHIELD, EXPLORER_MAP, WRITABLE_BOOK, HARDIUM_PICKAXE, CELESTIAL_COMPASS, HARDIUM_SWORD, HARDIUM_AXE, HARDIUM_SHOVEL,
+    CELESTIUM_PICKAXE, CELESTIUM_SWORD, CELESTIUM_AXE, CELESTIUM_SHOVEL,
     // Armour
     228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247,
-    HARDIUM_ARMOR, HARDIUM_ARMOR + 1, HARDIUM_ARMOR + 2, HARDIUM_ARMOR + 3,
+    HARDIUM_ARMOR, HARDIUM_ARMOR + 1, HARDIUM_ARMOR + 2, HARDIUM_ARMOR + 3, CELESTIUM_CHESTPLATE,
     // Materials
     VOID_SHARD, CRIMSONIUM, DYE + 0, DYE + 1, DYE + 2, DYE + 3, DYE + 4, DYE + 5, DYE + 6, DYE + 7, DYE + 8, DYE + 9, DYE + 10, DYE + 11, DYE + 12, DYE + 13, DYE + 14, DYE + 15,
     STICK, COAL, IRON_INGOT, BRONZE_INGOT, STEEL_INGOT, RUBY, FLINT, APPLE, BOAT,
@@ -63,12 +65,12 @@ const ItemId kCreativeItems[] = {
     FEATHER, WHEAT, BREAD, RAW_CHICKEN, COOKED_CHICKEN, RAW_BEEF, STEAK, MILK_BUCKET, EGG_CHICKEN, EGG_COW, EGG_VILLAGER,
     STRING, TAR_BALL, EGG_SPIDER, EGG_BAT, EGG_TNT_ZOMBIE, EGG_TAR_MONSTER, CRIMSON_HEAD,
     OLD_DOCUMENT, OLD_DOCUMENT + 1, OLD_DOCUMENT + 2, OLD_DOCUMENT + 3, OLD_DOCUMENT + 4, OLD_DOCUMENT + 5, OLD_DOCUMENT + 6,
-    OLD_DOCUMENT + 7, ANCIENT_COIN, POWERSTONE_RELIC, POTTERY_SHARD, EGG_HUSKING, EGG_HOGMAN, HARDIUM,
+    OLD_DOCUMENT + 7, ANCIENT_COIN, POWERSTONE_RELIC, POTTERY_SHARD, EGG_HUSKING, EGG_HOGMAN, HARDIUM, CELESTIUM,
 };
 const int kCreativeItemCount = sizeof(kCreativeItems) / sizeof(kCreativeItems[0]);
-static_assert(sizeof(kCreativeItems) / sizeof(kCreativeItems[0]) == 232 + 80 + 44 + 24 + 69, "the creative tabs cover the whole catalog");
+static_assert(sizeof(kCreativeItems) / sizeof(kCreativeItems[0]) == 233 + 84 + 48 + 25 + 70, "the creative tabs cover the whole catalog");
 const CreativeTab kCreativeTabs[] = {
-    {"Stavební", 0, 232}, {"Příroda", 232, 80}, {"Nástroje", 312, 44}, {"Brnění", 356, 24}, {"Suroviny", 380, 69},
+    {"Stavební", 0, 233}, {"Příroda", 233, 84}, {"Nástroje", 317, 48}, {"Brnění", 365, 25}, {"Suroviny", 390, 70},
 };
 const int kCreativeTabCount = sizeof(kCreativeTabs) / sizeof(kCreativeTabs[0]);
 
@@ -226,7 +228,7 @@ const KeyEntry kKeys[] = {
     {NETHER_BRICK_FENCE, "nether_brick_fence"}, {POWERSTONE_FENCE, "powerstone_fence"},
     {BRUSHER, "brusher"}, {FORTRESS_COMPASS, "fortress_compass"}, {ANCIENT_COIN, "ancient_coin"},
     {POWERSTONE_RELIC, "powerstone_relic"}, {POTTERY_SHARD, "pottery_shard"}, {EGG_HUSKING, "husking_spawn_egg"}, {VOID_BRICK_EYE, "void_brick_eye"}, {CRIMSON_STONE, "crimson_stone"},
-    {TORCH, "torch"}, {CRIMSON_PLANKS, "crimson_planks"}, {CRIMSON_LOG, "crimson_log"}, {SHIELD, "shield"}, {EXPLORER_MAP, "explorer_map"}, {WRITABLE_BOOK, "writable_book"}, {DEEPSTONE, "deepstone"}, {HARDIUM_ORE, "hardium_ore"}, {MOSSY_DEEPSTONE, "mossy_deepstone"}, {MOSS_BLOCK, "moss_block"}, {FUNGAL_DEEPSTONE, "fungal_deepstone"}, {DEEPSTONE_BRICKS, "deepstone_bricks"}, {CRACKED_DEEPSTONE_BRICKS, "cracked_deepstone_bricks"}, {MOSSY_DEEPSTONE_BRICKS, "mossy_deepstone_bricks"}, {ROTTEN_PLANKS, "rotten_planks"}, {VINES, "vines"}, {HARDIUM, "hardium"}, {HARDIUM_PICKAXE, "hardium_pickaxe"}, {HARDIUM_SWORD, "hardium_sword"}, {HARDIUM_AXE, "hardium_axe"}, {HARDIUM_SHOVEL, "hardium_shovel"}, {HARDIUM_ARMOR, "hardium_helmet"}, {HARDIUM_ARMOR + 1, "hardium_chestplate"}, {HARDIUM_ARMOR + 2, "hardium_leggings"}, {HARDIUM_ARMOR + 3, "hardium_boots"}, {MOB_SPAWNER, "spawner"}, {SOULED_GRASS, "souled_grass"}, {SOULED_DIRT, "souled_dirt"}, {SOULED_STONE, "souled_stone"}, {CELESTIAL_FRAME, "celestial_portal_frame"}, {CELESTIAL_FRAME_FULL, "celestial_portal_frame_filled"}, {CELESTIAL_PORTAL, "celestial_portal"}, {CRIMSON_HEAD, "crimson_head"}, {CELESTIAL_COMPASS, "celestial_compass"}, {CELESTIAL_LOG, "celestial_log"}, {CELESTIAL_PLANKS, "celestial_planks"}, {CELESTIAL_STONE_BRICKS, "celestial_stone_bricks"}, {CELESTIAL_LEAVES, "celestial_leaves"}, {CELESTIAL_GRASS, "celestial_grass"}, {CELESTIAL_DIRT, "celestial_dirt"}, {CELESTIAL_STONE, "celestial_stone"}, {DUSTY_CONCRETE, "dusty_concrete"}, {HARDENED_CONCRETE, "hardened_concrete"}, {GRAY_LOG, "gray_log"}, {GRAY_PLANKS, "gray_planks"}, {RED_LEAVES, "red_leaves"}, {ORANGE_LEAVES, "orange_leaves"}, {YELLOW_LEAVES, "yellow_leaves"}, {CUTTER, "stonecutter"}, {CRIMSONIUM_LOG, "crimsonium_log"}, {CRIMSONIUM_PLANKS, "crimsonium_planks"}, {CRIMSONIUM_LEAVES, "crimsonium_leaves"}, {SHATTERED_STONE, "shattered_stone"}, {SHATTERED_BRICKS, "shattered_bricks"}, {VOID_SHARD_BLOCK, "void_shard_block"}, {DARK_SAND, "dark_sand"}, {DARK_SANDSTONE, "dark_sandstone"}, {SHARD_CLUSTER, "shard_cluster"}, {CRIMSONIUM_ORE, "crimsonium_ore"}, {VOID_SHARD, "void_shard"}, {CRIMSONIUM, "crimsonium"}, {LOOT_CHEST_SHRINE, "shrine_chest"}, {LOOT_CHEST_CHAMBER, "chamber_chest"}, {LOOT_BARREL_CAMP, "camp_barrel"}, {WOOD_CUTTER, "wood_cutter"}, {GRAY_SAPLING, "gray_sapling"}, {CELESTIAL_SAPLING, "celestial_sapling"}, {BARREL, "barrel"}, {WRITTEN_BOOK, "written_book"},
+    {TORCH, "torch"}, {CRIMSON_PLANKS, "crimson_planks"}, {CRIMSON_LOG, "crimson_log"}, {SHIELD, "shield"}, {EXPLORER_MAP, "explorer_map"}, {WRITABLE_BOOK, "writable_book"}, {DEEPSTONE, "deepstone"}, {HARDIUM_ORE, "hardium_ore"}, {MOSSY_DEEPSTONE, "mossy_deepstone"}, {MOSS_BLOCK, "moss_block"}, {FUNGAL_DEEPSTONE, "fungal_deepstone"}, {DEEPSTONE_BRICKS, "deepstone_bricks"}, {CRACKED_DEEPSTONE_BRICKS, "cracked_deepstone_bricks"}, {MOSSY_DEEPSTONE_BRICKS, "mossy_deepstone_bricks"}, {ROTTEN_PLANKS, "rotten_planks"}, {VINES, "vines"}, {HARDIUM, "hardium"}, {HARDIUM_PICKAXE, "hardium_pickaxe"}, {HARDIUM_SWORD, "hardium_sword"}, {HARDIUM_AXE, "hardium_axe"}, {HARDIUM_SHOVEL, "hardium_shovel"}, {HARDIUM_ARMOR, "hardium_helmet"}, {HARDIUM_ARMOR + 1, "hardium_chestplate"}, {HARDIUM_ARMOR + 2, "hardium_leggings"}, {HARDIUM_ARMOR + 3, "hardium_boots"}, {MOB_SPAWNER, "spawner"}, {SOULED_GRASS, "souled_grass"}, {SOULED_DIRT, "souled_dirt"}, {SOULED_STONE, "souled_stone"}, {CELESTIAL_FRAME, "celestial_portal_frame"}, {CELESTIAL_FRAME_FULL, "celestial_portal_frame_filled"}, {CELESTIAL_PORTAL, "celestial_portal"}, {CRIMSON_HEAD, "crimson_head"}, {CELESTIAL_COMPASS, "celestial_compass"}, {CELESTIAL_LOG, "celestial_log"}, {CELESTIAL_PLANKS, "celestial_planks"}, {CELESTIAL_STONE_BRICKS, "celestial_stone_bricks"}, {CELESTIAL_LEAVES, "celestial_leaves"}, {CELESTIAL_GRASS, "celestial_grass"}, {CELESTIAL_DIRT, "celestial_dirt"}, {CELESTIAL_STONE, "celestial_stone"}, {DUSTY_CONCRETE, "dusty_concrete"}, {HARDENED_CONCRETE, "hardened_concrete"}, {GRAY_LOG, "gray_log"}, {GRAY_PLANKS, "gray_planks"}, {RED_LEAVES, "red_leaves"}, {ORANGE_LEAVES, "orange_leaves"}, {YELLOW_LEAVES, "yellow_leaves"}, {CUTTER, "stonecutter"}, {CRIMSONIUM_LOG, "crimsonium_log"}, {CRIMSONIUM_PLANKS, "crimsonium_planks"}, {CRIMSONIUM_LEAVES, "crimsonium_leaves"}, {SHATTERED_STONE, "shattered_stone"}, {SHATTERED_BRICKS, "shattered_bricks"}, {VOID_SHARD_BLOCK, "void_shard_block"}, {DARK_SAND, "dark_sand"}, {DARK_SANDSTONE, "dark_sandstone"}, {SHARD_CLUSTER, "shard_cluster"}, {CRIMSONIUM_ORE, "crimsonium_ore"}, {VOID_SHARD, "void_shard"}, {CRIMSONIUM, "crimsonium"}, {LOOT_CHEST_SHRINE, "shrine_chest"}, {LOOT_CHEST_CHAMBER, "chamber_chest"}, {LOOT_BARREL_CAMP, "camp_barrel"}, {WOOD_CUTTER, "wood_cutter"}, {GRAY_SAPLING, "gray_sapling"}, {CELESTIAL_SAPLING, "celestial_sapling"}, {BARREL, "barrel"}, {WRITTEN_BOOK, "written_book"}, {PALE_STONE, "pale_stone"}, {SKY_STONE, "sky_stone"}, {CELESTIUM_ORE, "celestium_ore"}, {PALE_CRYSTAL, "pale_crystal"}, {FIRE, "fire"}, {CAMPFIRE, "campfire"}, {CELESTIUM, "celestium"}, {CELESTIUM_PICKAXE, "celestium_pickaxe"}, {CELESTIUM_SWORD, "celestium_sword"}, {CELESTIUM_AXE, "celestium_axe"}, {CELESTIUM_SHOVEL, "celestium_shovel"}, {CELESTIUM_CHESTPLATE, "celestium_chestplate"},
     {EGG_HOGMAN, "hogman_spawn_egg"}, {POWERSTONE_FURNACE, "powerstone_furnace"}, {POWERSTONE_FURNACE_ON, "lit_powerstone_furnace"},
     {CEILING_CABLE, "ceiling_power_cable"}, {CEILING_CABLE_ON, "lit_ceiling_power_cable"},
 };
@@ -426,6 +428,17 @@ const char* itemName(ItemId id) {
         case HARDIUM_SWORD: return "Hardiový meč";
         case HARDIUM_AXE: return "Hardiová sekera";
         case HARDIUM_SHOVEL: return "Hardiová lopata";
+        case PALE_STONE: return "Bledý kámen";
+        case SKY_STONE: return "Nebeský kámen";
+        case CELESTIUM_ORE: return "Celestiová ruda";
+        case PALE_CRYSTAL: return "Bledý krystal";
+        case FIRE: return "Oheň";
+        case CAMPFIRE: return "Táborák";
+        case CELESTIUM: return "Celestium";
+        case CELESTIUM_PICKAXE: return "Celestiový krumpáč";
+        case CELESTIUM_SWORD: return "Celestiový meč";
+        case CELESTIUM_AXE: return "Celestiová sekera";
+        case CELESTIUM_SHOVEL: return "Celestiová lopata";
         case MOB_SPAWNER: return "Líheň příšer";
         case SOULED_GRASS: return "Duševní tráva";
         case SOULED_DIRT: return "Duševní hlína";
@@ -637,13 +650,14 @@ const char* itemName(ItemId id) {
         return kWool[c];
     }
     if (isArmor(id)) {
-        static const char* kArmor[6][4] = {
+        static const char* kArmor[7][4] = {
             {"Dřevěná helma", "Dřevěný kyrys", "Dřevěné nohavice", "Dřevěné boty"},
             {"Kamenná helma", "Kamenný kyrys", "Kamenné nohavice", "Kamenné boty"},
             {"Bronzová helma", "Bronzový kyrys", "Bronzové nohavice", "Bronzové boty"},
             {"Ocelová helma", "Ocelový kyrys", "Ocelové nohavice", "Ocelové boty"},
             {"Rubínová helma", "Rubínový kyrys", "Rubínové nohavice", "Rubínové boty"},
             {"Hardiová helma", "Hardiový kyrys", "Hardiové nohavice", "Hardiové boty"},
+            {"", "Celestiový kyrys", "", ""},  // 1.9.0: a chestplate only
         };
         return kArmor[armorMaterial(id)][armorPiece(id)];
     }
@@ -654,9 +668,9 @@ const char* itemName(ItemId id) {
 
 ToolKind toolKind(ItemId id) {
     switch (id) {
-        case WOOD_PICKAXE: case STONE_PICKAXE: case IRON_PICKAXE: case HARDIUM_PICKAXE: return ToolKind::Pickaxe;
-        case WOOD_AXE: case STONE_AXE: case IRON_AXE: case HARDIUM_AXE: return ToolKind::Axe;
-        case WOOD_SHOVEL: case STONE_SHOVEL: case IRON_SHOVEL: case HARDIUM_SHOVEL: return ToolKind::Shovel;
+        case WOOD_PICKAXE: case STONE_PICKAXE: case IRON_PICKAXE: case HARDIUM_PICKAXE: case CELESTIUM_PICKAXE: return ToolKind::Pickaxe;
+        case WOOD_AXE: case STONE_AXE: case IRON_AXE: case HARDIUM_AXE: case CELESTIUM_AXE: return ToolKind::Axe;
+        case WOOD_SHOVEL: case STONE_SHOVEL: case IRON_SHOVEL: case HARDIUM_SHOVEL: case CELESTIUM_SHOVEL: return ToolKind::Shovel;
         default:
             if (id >= BRONZE_PICKAXE && id <= RUBY_SHOVEL)
                 return (id - BRONZE_PICKAXE) % 3 == 0 ? ToolKind::Pickaxe : (id - BRONZE_PICKAXE) % 3 == 1 ? ToolKind::Axe : ToolKind::Shovel;
@@ -674,6 +688,7 @@ int toolTier(ItemId id) {
         case STEEL_PICKAXE: case STEEL_AXE: case STEEL_SHOVEL: return 4;
         case RUBY_PICKAXE: case RUBY_AXE: case RUBY_SHOVEL: return 5;
         case HARDIUM_PICKAXE: case HARDIUM_AXE: case HARDIUM_SHOVEL: case HARDIUM_SWORD: return 6;
+        case CELESTIUM_PICKAXE: case CELESTIUM_AXE: case CELESTIUM_SHOVEL: case CELESTIUM_SWORD: return 5;  // light and fast
         case WOOD_SWORD: return 1;
         case STONE_SWORD: return 2;
         case IRON_SWORD: case BRONZE_SWORD: return 3;
@@ -685,7 +700,7 @@ int toolTier(ItemId id) {
 
 int toolDurability(ItemId id) {
     if (isArmor(id)) {
-        static const int kBase[6] = {5, 8, 12, 18, 33, 45}, kPiece[4] = {11, 16, 15, 13};
+        static const int kBase[7] = {5, 8, 12, 18, 33, 45, 30}, kPiece[4] = {11, 16, 15, 13};
         return kBase[armorMaterial(id)] * kPiece[armorPiece(id)];
     }
     if ((id >= BRONZE_PICKAXE && id <= BRONZE_SHOVEL) || id == BRONZE_SWORD) return 320;
@@ -703,13 +718,15 @@ int toolDurability(ItemId id) {
     }
 }
 
-int armorPiece(ItemId id) { return !isArmor(id) ? -1 : id >= HARDIUM_ARMOR ? id - HARDIUM_ARMOR : (id - FIRST_ARMOR) % 4; }
-int armorMaterial(ItemId id) { return !isArmor(id) ? -1 : id >= HARDIUM_ARMOR ? 5 : (id - FIRST_ARMOR) / 4; }
+int armorPiece(ItemId id) {
+    return !isArmor(id) ? -1 : id == CELESTIUM_CHESTPLATE ? 1 : id >= HARDIUM_ARMOR ? id - HARDIUM_ARMOR : (id - FIRST_ARMOR) % 4;
+}
+int armorMaterial(ItemId id) { return !isArmor(id) ? -1 : id == CELESTIUM_CHESTPLATE ? 6 : id >= HARDIUM_ARMOR ? 5 : (id - FIRST_ARMOR) / 4; }
 ItemId armorItem(int material, int piece) { return (ItemId)(material == 5 ? HARDIUM_ARMOR + piece : FIRST_ARMOR + material * 4 + piece); }
 
 int armorPoints(ItemId id) {
     if (!isArmor(id)) return 0;
-    static const int kPoints[6][4] = {{1, 2, 2, 1}, {1, 3, 2, 1}, {2, 5, 4, 2}, {2, 6, 5, 2}, {3, 8, 6, 3}, {4, 9, 7, 4}};
+    static const int kPoints[7][4] = {{1, 2, 2, 1}, {1, 3, 2, 1}, {2, 5, 4, 2}, {2, 6, 5, 2}, {3, 8, 6, 3}, {4, 9, 7, 4}, {0, 7, 0, 0}};
     return kPoints[armorMaterial(id)][armorPiece(id)];
 }
 
@@ -814,6 +831,11 @@ float hardness(ItemId id) {
             if (id == SHATTERED_STONE || id == SHATTERED_BRICKS || id == DARK_SANDSTONE) return 1.8f;
             if (id == VOID_SHARD_BLOCK) return 1.5f;
             if (id == CRIMSONIUM_ORE) return 4.0f;
+            if (id == PALE_STONE || id == SKY_STONE) return 1.6f;
+            if (id == CELESTIUM_ORE) return 4.5f;
+            if (id == PALE_CRYSTAL) return 1.2f;
+            if (id == FIRE) return 0.0f;
+            if (id == CAMPFIRE) return 2.0f;
             if (id == CRIMSONIUM_PLANKS || id == CRIMSONIUM_LOG) return 2.0f;
             if (isColorConcrete(id)) return 1.8f;
             if (isCarpet(id)) return 0.1f;
@@ -850,7 +872,11 @@ ToolKind preferredTool(ItemId id, int& requiredTier) {
         return m->tool == "axe" ? ToolKind::Axe : m->tool == "shovel" ? ToolKind::Shovel : ToolKind::None;
     }
     if ((isConcretePowder(id) && id != DUSTY_CONCRETE) || id == DARK_SAND) return ToolKind::Shovel;
-    if (id == CRIMSONIUM_LOG || id == CRIMSONIUM_PLANKS) return ToolKind::Axe;
+    if (id == CRIMSONIUM_LOG || id == CRIMSONIUM_PLANKS || id == CAMPFIRE) return ToolKind::Axe;
+    if (id == PALE_STONE || id == SKY_STONE || id == CELESTIUM_ORE || id == PALE_CRYSTAL) {
+        requiredTier = id == CELESTIUM_ORE ? 3 : 1;  // celestium: an iron pickaxe or better
+        return ToolKind::Pickaxe;
+    }
     if (id == SHATTERED_STONE || id == SHATTERED_BRICKS || id == DARK_SANDSTONE || id == VOID_SHARD_BLOCK || id == CRIMSONIUM_ORE) {
         requiredTier = id == CRIMSONIUM_ORE ? 3 : 1;
         return ToolKind::Pickaxe;
@@ -989,6 +1015,9 @@ ItemId dropFor(ItemId block, float roll, ItemId tool) {
         case CRIMSONIUM_LEAVES: return AIR;
         case VOID_SHARD_BLOCK: case SHARD_CLUSTER: return VOID_SHARD;
         case CRIMSONIUM_ORE: return CRIMSONIUM;
+        case CELESTIUM_ORE: return CELESTIUM;
+        case FIRE: return AIR;
+        case CAMPFIRE: return roll < 0.5f ? (ItemId)COAL : (ItemId)CAMPFIRE;
         case POWERSTONE_ORE: return POWERSTONE_DUST;
         case POWER_CABLE_ON: return POWER_CABLE;
         case POWERSTONE_LAMP_ON: return POWERSTONE_LAMP;

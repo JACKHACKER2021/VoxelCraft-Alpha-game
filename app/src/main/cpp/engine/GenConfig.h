@@ -73,11 +73,18 @@ const std::vector<std::pair<std::string, std::string>>& retiredDefaults();
 // Worlds made with 1.5.0 lose the Overworld wasteland biome (it lives in the Cornerstone Dimension now).
 void retireBiomes(GenConfig& config);
 
+constexpr int kFlatPresets = 6;
+const char* flatPresetName(int preset);  // Czech, for tr()
+// The layers of a flat world from the bottom up; returns how many (at most 8).
+int flatLayers(int preset, ItemId out[8]);
+
 struct GenConfig {
     OverworldDef overworld;
     NetherDef nether;
     std::vector<BiomeDef> biomes;
     bool flat = false;  // superflat world type
+    // 1.9.0: how the flat world looks: 0 classic grass, 1 desert, 2 snow, 3 stone, 4 nether, 5 void.
+    int flatPreset = 0;
     // Generator generations, so worlds keep the terrain they were made with: 1 = before 1.5.1,
     // 2 = the 1.5.1 Crimson Desert (dunes, rock formations, minerals, buried ruins).
     int crimsonDesert = 2;
@@ -87,7 +94,7 @@ struct GenConfig {
     // 1.6.0 (4) Caves and Tunes: deepstone, hardium, bigger caves, mossy caves with vines,
     // lava and tar pools, gravel floors, rotten mineshaft planks.
     // 1.8.0 (5) Concrete & Old World: bridges between the Celestial Reach's islands.
-    int generation = 5;
+    int generation = 6;  // 6 = 1.9.0: the new Celestial Reach rock, crystals and celestium
     // 1.8.0: an "Old World", made with the terrain generator of VoxelCraft 0.1-0.3 (see
     // World::generateOldWorld). Saved with the world, so it never changes after creation.
     bool oldWorld = false;

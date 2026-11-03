@@ -540,6 +540,18 @@ const char* kUpdate172 = R"({
   ]
 })";
 
+const char* kUpdate190 = R"({
+  // VoxelCraft 1.9.0 build 2: celestium tools and chestplate, the campfire.
+  "recipes": [
+    {"type": "shaped", "pattern": ["CCC", ".S.", ".S."], "key": {"C": "celestium", "S": "stick"}, "result": "celestium_pickaxe"},
+    {"type": "shaped", "pattern": ["C", "C", "S"], "key": {"C": "celestium", "S": "stick"}, "result": "celestium_sword"},
+    {"type": "shaped", "pattern": ["CC", "CS", ".S"], "key": {"C": "celestium", "S": "stick"}, "result": "celestium_axe"},
+    {"type": "shaped", "pattern": ["C", "S", "S"], "key": {"C": "celestium", "S": "stick"}, "result": "celestium_shovel"},
+    {"type": "shaped", "pattern": ["C.C", "CPC", "CCC"], "key": {"C": "celestium", "P": "pale_crystal"}, "result": "celestium_chestplate"},
+    {"type": "shaped", "pattern": [".S.", "SCS", "LLL"], "key": {"S": "stick", "C": "coal", "L": "log"}, "result": "campfire"}
+  ]
+})";
+
 const char* kUpdate180 = R"({
   // VoxelCraft 1.8.0 Concrete & Old World: concrete (dusty from sand and gravel, hardened in the
   // furnace), the gray wood of the Dappled Forest, and stairs and slabs of the new materials.
@@ -766,6 +778,7 @@ const std::vector<std::pair<std::string, std::string>>& defaultPackFiles() {
         {"recipes/update_1_7_0.json", kUpdate170},
         {"recipes/update_1_8_0.json", kUpdate180},
         {"recipes/update_1_7_2.json", kUpdate172},
+        {"recipes/update_1_9_0.json", kUpdate190},
     };
     return files;
 }
@@ -818,7 +831,7 @@ const GenConfig& GenConfig::defaults() {
             else if (path.rfind("biomes/", 0) == 0) biomes.push(j);
         }
         doc.set("biomes", biomes);
-        doc.set("generation", Json::number(5));  // new worlds get the newest generator
+        doc.set("generation", Json::number(6));  // new worlds get the newest generator
         return fromJson(doc);
     }();
     return cfg;
@@ -868,8 +881,9 @@ GenConfig GenConfig::fromJson(const Json& doc, std::vector<std::string>* w) {
         c.biomes = defaults().biomes;
     }
     c.flat = doc["flat"].boolean(false);
+    c.flatPreset = std::clamp((int)doc["flat_preset"].num(0), 0, kFlatPresets - 1);
     c.crimsonDesert = std::clamp((int)doc["crimson_desert"].num(2), 1, 2);
-    c.generation = std::clamp((int)doc["generation"].num(2), 1, 5);
+    c.generation = std::clamp((int)doc["generation"].num(2), 1, 6);
     c.oldWorld = doc["old_world"].boolean(false);
     return c;
 }
@@ -954,6 +968,7 @@ Json GenConfig::toJson() const {
 
     Json doc = Json::object();
     doc.set("flat", Json::fromBool(flat));
+    doc.set("flat_preset", Json::number(flatPreset));
     doc.set("crimson_desert", Json::number(crimsonDesert));
     doc.set("generation", Json::number(generation));
     doc.set("old_world", Json::fromBool(oldWorld));
@@ -961,6 +976,25 @@ Json GenConfig::toJson() const {
     doc.set("nether", n);
     doc.set("biomes", bs);
     return doc;
+}
+
+const char* flatPresetName(int preset) {
+    static const char* kNames[kFlatPresets] = {"Klasický", "Poušť", "Zasněžený", "Kamenný", "Netherový", "Prázdnota"};
+    return kNames[std::clamp(preset, 0, kFlatPresets - 1)];
+}
+
+int flatLayers(int preset, ItemId out[8]) {
+    static const std::vector<ItemId> kLayers[kFlatPresets] = {
+        {WORLD_END, DIRT, DIRT, GRASS},
+        {WORLD_END, STONE, SANDSTONE, SANDSTONE, SAND, SAND},
+        {WORLD_END, DIRT, DIRT, SNOW_BLOCK},
+        {WORLD_END, STONE, STONE, STONE, STONE, COBBLESTONE},
+        {WORLD_END, NETHERRACK, NETHERRACK, NETHERRACK},
+        {WORLD_END, VOID_STONE, VOID_STONE, VOID_STONE},
+    };
+    const auto& l = kLayers[std::clamp(preset, 0, kFlatPresets - 1)];
+    std::copy(l.begin(), l.end(), out);
+    return (int)l.size();
 }
 
 }  // namespace vc

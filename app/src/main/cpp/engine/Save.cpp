@@ -108,7 +108,8 @@ bool saveLevel(const WorldInfo& info, const PlayerState& p) {
     o << "lastPlayed=" << info.lastPlayed << "\n";
     o << "showCoordinates=" << (info.showCoordinates ? 1 : 0) << "\nkeepInventory=" << (info.keepInventory ? 1 : 0)
       << "\nallowCommands=" << (info.allowCommands ? 1 : 0) << "\nexp.oreRedesign=" << (info.expOreRedesign ? 1 : 0)
-      << "\nexp.flowingLiquids=" << (info.expFlowingLiquids ? 1 : 0) << "\nexp.explorationMaps=" << (info.expExplorationMaps ? 1 : 0) << "\n";
+      << "\nexp.flowingLiquids=" << (info.expFlowingLiquids ? 1 : 0) << "\nexp.explorationMaps=" << (info.expExplorationMaps ? 1 : 0)
+      << "\nexp.storms=" << (info.expStorms ? 1 : 0) << "\nexp.stars=" << (info.expStars ? 1 : 0) << "\nexp.breeding=" << (info.expBreeding ? 1 : 0) << "\n";
     if (p.valid) {
         o << "player.x=" << p.pos.x << "\nplayer.y=" << p.pos.y << "\nplayer.z=" << p.pos.z << "\n";
         o << "spawn.x=" << p.spawn.x << "\nspawn.y=" << p.spawn.y << "\nspawn.z=" << p.spawn.z << "\n";
@@ -149,6 +150,9 @@ bool loadLevel(const std::string& folder, WorldInfo& info, PlayerState& p) {
     info.expOreRedesign = num(kv, "exp.oreRedesign", 0) != 0;
     info.expFlowingLiquids = num(kv, "exp.flowingLiquids", 0) != 0;
     info.expExplorationMaps = num(kv, "exp.explorationMaps", 0) != 0;
+    info.expStorms = num(kv, "exp.storms", 0) != 0;
+    info.expStars = num(kv, "exp.stars", 0) != 0;
+    info.expBreeding = num(kv, "exp.breeding", 0) != 0;
 
     p = PlayerState{};
     if (!kv.count("player.x")) return true;
@@ -332,6 +336,8 @@ Settings loadSettings(const std::string& path) {
     s.expLowGravity = flag("expLowGravity", false);
     s.expBigBoom = flag("expBigBoom", false);
     s.calmMode = flag("calmMode", false);
+    s.seasonalEvents = flag("seasonalEvents", true);
+    s.fallingLeaves = flag("fallingLeaves", true);
     s.tutorialStep = (int)num(kv, "tutorialStep", 0);
     s.mpPvp = flag("mpPvp", false);
     s.mpProtectSpawn = flag("mpProtectSpawn", true);
@@ -349,7 +355,7 @@ void saveSettings(const std::string& path, const Settings& s) {
       << "\ndevGodMode=" << s.devGodMode << "\ndevFly=" << s.devFly << "\ndevInstantMine=" << s.devInstantMine
       << "\ndevDebug=" << s.devDebug << "\ndevNoclip=" << s.devNoclip << "\ndevSpeed=" << s.devSpeed
       << "\nexpDayNight=" << s.expDayNight << "\nexpFastFurnace=" << s.expFastFurnace << "\nexpOreMap=" << s.expOreMap << "\nexpFastGrowth=" << s.expFastGrowth << "\nexpLowGravity=" << s.expLowGravity
-      << "\nexpBigBoom=" << s.expBigBoom << "\ncalmMode=" << s.calmMode << "\ntutorialStep=" << s.tutorialStep << "\nmpPvp=" << s.mpPvp << "\nmpProtectSpawn=" << s.mpProtectSpawn
+      << "\nexpBigBoom=" << s.expBigBoom << "\ncalmMode=" << s.calmMode << "\nseasonalEvents=" << s.seasonalEvents << "\nfallingLeaves=" << s.fallingLeaves << "\ntutorialStep=" << s.tutorialStep << "\nmpPvp=" << s.mpPvp << "\nmpProtectSpawn=" << s.mpProtectSpawn
       << "\n";
     writeFileAtomic(path, o.str());
 }

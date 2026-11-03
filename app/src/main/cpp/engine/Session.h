@@ -306,6 +306,18 @@ private:
         bool nuke;
     };
     std::vector<PrimedTnt> tnt_;
+    // 1.9.0: sand, gravel and powder fall smoothly as a moving block, then land in the grid.
+    struct FallingBlock {
+        int dim;
+        Vec3 pos;  // the bottom centre
+        float vel;
+        ItemId id;
+    };
+    std::vector<FallingBlock> fallingBlocks_;
+    std::vector<Vertex> fallingVerts_;
+    float fireworkTimer_ = 0;  // 1.9.0 New Year's Eve fireworks at night
+    uint32_t fireworkSeed_ = 2027;
+    void landFallingBlocks();  // before saving: every falling block lands where it would
     struct Timed {
         int dim, x, y, z;
         float time;
@@ -319,6 +331,17 @@ private:
     std::unordered_map<uint64_t, uint8_t> flow_[4];
     void updateBlockPhysics(float dt);
     void tickLiquid(int dim, int x, int y, int z);
+    void tickFire(int dim, int x, int y, int z);     // 1.9.0 build 2
+    bool lightFire(World& w, int x, int y, int z);
+    float fireRandom();
+    uint32_t fireSeed_ = 7177;
+    float burning_ = 0;  // seconds the player keeps burning
+    void updateExperiments20(float dt);  // 1.9.0 build 3: the previews of 2.0.0
+    float stormTimer_ = 8, starTimer_ = 4, lightningFlash_ = 0;
+    // 1.9.0 build 2: falling leaves, flames and smoke round the player.
+    void updateAmbientParticles(float dt);
+    float ambientScan_ = 0, ambientLeaf_ = 0;
+    std::vector<std::array<int, 4>> fireSpots_;  // x, y, z, 1 = campfire
     void saveFlow() const;
     void loadFlow();
     std::vector<Vertex> tntVerts_, arrowVerts_;

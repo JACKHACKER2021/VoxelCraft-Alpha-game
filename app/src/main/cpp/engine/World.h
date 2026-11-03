@@ -72,6 +72,17 @@ public:
     std::vector<BlockEdit>* editLog = nullptr;
     // 1.5.7: when set, the position of every changed block is appended here (falling blocks, flowing liquids).
     std::vector<std::array<int, 3>>* changeLog = nullptr;
+    // 1.9.0 build 3: how far each flowing liquid cell is from its source (Session's map), so the
+    // mesher can lower and slope the surface; 0 = a source or a cell not in the map.
+    const std::unordered_map<uint64_t, uint8_t>* flowLevels = nullptr;
+    int liquidLevel(int x, int y, int z) const {
+        if (!flowLevels) return 0;
+        auto it = flowLevels->find(liquidCellKey(x, y, z));
+        return it == flowLevels->end() ? 0 : it->second;
+    }
+    static uint64_t liquidCellKey(int x, int y, int z) {
+        return ((uint64_t)((uint32_t)x & 0xFFFFFFFu) << 36) | ((uint64_t)((uint32_t)z & 0xFFFFFFFu) << 8) | (uint64_t)(y & 0xFF);
+    }
     // Highest y that is still lit by the sky in this column.
     int skyHeight(int x, int z) const;
 

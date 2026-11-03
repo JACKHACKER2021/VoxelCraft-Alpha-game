@@ -35,7 +35,7 @@ namespace vc {
 namespace vc {
 
 namespace {
-const char* kVersion = "VoxelCraft 1.8.0 Concrete & Old World";
+const char* kVersion = "VoxelCraft 1.9.0 Celestial Reach & Seasons";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -187,6 +187,7 @@ bool Game::onBack() {
         case Screen::Chest:
         case Screen::Trade: setScreen(Screen::Playing); break;
         case Screen::Document: setScreen(Screen::Playing); break;
+        case Screen::HowToCraft: setScreen(howBack_); break;
         case Screen::Credits:
         case Screen::Encyclopedia:
         case Screen::Trailers: setScreen(Screen::Title); break;
@@ -217,7 +218,8 @@ void Game::loadTextures() {
     Atlas atlas = loadTexturePack(texturePackDir_, rgba, size);
     for (const std::string& dir : packs_.textureDirs()) atlas = loadTexturePack(dir, atlas.rgba, atlas.size);
     for (const auto& [tile, path] : ModRegistry::get().textures()) blitTextureFile(atlas, tile, path);  // mods
-    texturesWinter_ = playSettings().addonWinter;
+    texturesSeason_ = playSettings().season;
+    texturesWinter_ = playSettings().addonWinter || snowySeason(texturesSeason_);
     if (texturesWinter_) {
         // The Winter addon: snow on the grass and frost on the leaves.
         const int t = atlas.size / kAtlasCols;
@@ -254,7 +256,46 @@ void Game::loadTextures() {
         recolor(T_GRASS_TOP, T_GRASS_TOP_ORANGE, true);
         recolor(T_GRASS_SIDE, T_GRASS_SIDE_ORANGE, true);
         recolor(T_GRASS_TOP, T_GRASS_TOP_DARK, false);
+        // 1.9.0 build 3: the celestial pig and sheep: the animals' own textures (from any texture
+        // pack) bleached to sky white, with a pale blue tint and a few gold flecks.
+        auto celestial = [&](int from, int to) {
+            for (int py = 0; py < t; ++py)
+                for (int px = 0; px < t; ++px) {
+                    const uint8_t* src = &atlas.rgba[((size_t)((from / kAtlasCols) * t + py) * atlas.size + (from % kAtlasCols) * t + px) * 4];
+                    uint8_t* dst = &atlas.rgba[((size_t)((to / kAtlasCols) * t + py) * atlas.size + (to % kAtlasCols) * t + px) * 4];
+                    const float l = (src[0] * 0.3f + src[1] * 0.59f + src[2] * 0.11f) / 255.0f;
+                    const bool gold = ((px * 7 + py * 11) % 23) == 0 && l > 0.4f;
+                    dst[0] = gold ? 245 : (uint8_t)std::min(255.0f, 150 + l * 100);
+                    dst[1] = gold ? 210 : (uint8_t)std::min(255.0f, 175 + l * 80);
+                    dst[2] = gold ? 110 : (uint8_t)std::min(255.0f, 215 + l * 40);
+                    if (l < 0.18f) dst[0] = dst[1] = (uint8_t)(l * 255 + 40), dst[2] = (uint8_t)(l * 255 + 90);  // eyes and nose stay dark
+                    dst[3] = src[3];
+                }
+        };
+        celestial(T_PIG_SKIN, T_CELESTIAL_PIG_SKIN);
+        celestial(T_PIG_FACE, T_CELESTIAL_PIG_FACE);
+        celestial(T_SHEEP_WOOL, T_CELESTIAL_WOOL);
+        celestial(T_SHEEP_FACE, T_CELESTIAL_SHEEP_FACE);
+        celestial(T_SHEEP_SKIN, T_CELESTIAL_SHEEP_SKIN);
         recolor(T_GRASS_SIDE, T_GRASS_SIDE_DARK, false);
+        if (texturesSeason_ == Season::Halloween && !texturesWinter_) {
+            // 1.9.0 autumn Halloween: orange grass everywhere and leaves in autumn reds and yellows.
+            auto copyTile = [&](int from, int to) {
+                for (int py = 0; py < t; ++py)
+                    std::copy_n(&atlas.rgba[((size_t)((from / kAtlasCols) * t + py) * atlas.size + (from % kAtlasCols) * t) * 4], t * 4,
+                                &atlas.rgba[((size_t)((to / kAtlasCols) * t + py) * atlas.size + (to % kAtlasCols) * t) * 4]);
+            };
+            copyTile(T_GRASS_TOP_ORANGE, T_GRASS_TOP);
+            copyTile(T_GRASS_SIDE_ORANGE, T_GRASS_SIDE);
+            for (int py = 0; py < t; ++py)
+                for (int px = 0; px < t; ++px) {
+                    uint8_t* c = &atlas.rgba[((size_t)((T_LEAVES / kAtlasCols) * t + py) * atlas.size + (T_LEAVES % kAtlasCols) * t + px) * 4];
+                    const float l = (c[0] * 0.3f + c[1] * 0.59f + c[2] * 0.11f) / 255.0f;
+                    const bool red = (px / 3 + py / 3) % 3 == 0;
+                    c[0] = (uint8_t)std::min(255.0f, l * (red ? 1.9f : 1.7f) * 255), c[1] = (uint8_t)std::min(255.0f, l * (red ? 0.45f : 1.15f) * 255),
+                    c[2] = (uint8_t)(l * 0.2f * 255);
+                }
+        }
     }
     renderer_.setAtlas(atlas.rgba, atlas.size);
     setItemModelAtlas(atlas.rgba, atlas.size);  // 3D items follow the texture pack
@@ -408,6 +449,7 @@ Settings Game::playSettings() const {
         s.renderDistance = std::min(s.renderDistance, 4);
         s.clouds = false;
         s.shadows = s.waves = false;
+        s.fallingLeaves = false;
         s.graphics = GraphicsMode::Classic;
     }
     if (!profile_.isDeveloper()) {
@@ -420,12 +462,14 @@ Settings Game::playSettings() const {
     s.addonWinter = addons.count("winter") > 0;
     s.addonHalloween = addons.count("halloween") > 0;
     s.addonAnniversary = addons.count("anniversary") > 0;
+    s.season = s.seasonalEvents ? (seasonOverride_ >= 0 ? (Season)seasonOverride_ : seasonOn(todayYmd())) : Season::None;
     if (session_ && session_->oldMode()) {
         // 1.8.0 Old World: the plain renderer of 0.3: no shaders, shadows, waves or clouds.
         s.graphics = GraphicsMode::Classic;
         s.shadows = s.waves = s.clouds = false;
         s.hideGui = false;
         s.cameraMode = 0;  // first person only
+        s.season = Season::None;  // 1.9.0: no seasonal events in the old versions
     }
     return s;
 }
@@ -539,7 +583,9 @@ void Game::frame(double time) {
         }
         saverWasOn_ = saver;
     }
-    if (textureReload_.exchange(false) || texturesWinter_ != playSettings().addonWinter) loadTextures();
+    if (textureReload_.exchange(false) || texturesWinter_ != (playSettings().addonWinter || snowySeason(playSettings().season)) ||
+        texturesSeason_ != playSettings().season)
+        loadTextures();
     if (packsReload_.exchange(false)) rebuildFromPacks();
     if (!languageSent_ && onLanguage) {
         onLanguage(languageCode(language()));
@@ -853,6 +899,7 @@ void Game::frame(double time) {
         case Screen::Book: bookScreen(); break;
         case Screen::Cutter: cutterScreen(); break;
         case Screen::Encyclopedia: encyclopediaScreen(); break;
+        case Screen::HowToCraft: howToCraftScreen(); break;
         case Screen::Playing: break;
     }
 
@@ -906,6 +953,18 @@ void Game::presentsScreen(float dt) {
         return k * k * (3 - 2 * k);
     };
     ui_.fill(0, 0, W, H, {0.02f, 0.02f, 0.04f, 1});
+    // 1.9.0: the season of the date falls behind the text: snow, autumn leaves or confetti.
+    const Season season = playSettings().season;
+    if (season != Season::None) {
+        for (int i = 0; i < 70; ++i) {
+            const float sx = std::fmod(i * 97.13f + std::sin(t * 0.7f + i) * 14, W), speed = 14 + (i * 37 % 23);
+            const float sy = std::fmod(i * 53.7f + t * speed, H + 8) - 4, s = 1 + (i % 3);
+            Color c = season == Season::Halloween ? (i % 3 == 0 ? Color{0.85f, 0.3f, 0.1f, 0.7f} : Color{0.95f, 0.62f, 0.2f, 0.7f})
+                      : season == Season::Christmas ? Color{0.95f, 0.97f, 1.0f, 0.6f}
+                                                    : Color{(float)(i % 2), (float)(i % 3 == 0), (float)(i % 5 < 2), 0.75f};
+            ui_.fill(sx, sy, s, s, c);
+        }
+    }
     const Color gold{1.0f, 0.82f, 0.43f, 1}, white{1, 1, 1, 1}, dim{0.72f, 0.74f, 0.8f, 1}, green{0.63f, 0.92f, 0.5f, 1};
     auto faded = [&](Color c, float start) {
         c.a = ease((t - start) / 0.5f);
@@ -915,22 +974,38 @@ void Game::presentsScreen(float dt) {
     ui_.textCentered(W / 2, y, "VOXELSOFTWORKS PRESENTS", faded(dim, 0.0f), 1);
     y += 14;
     const float big = ui_.textWidth("VOXELCRAFT 1.8.0", 3) < W - 20 && H >= 260 ? 3 : 2;
-    ui_.textCentered(W / 2, y, "VOXELCRAFT 1.8.0", faded(gold, 0.2f), big);
+    ui_.textCentered(W / 2, y, "VOXELCRAFT 1.9.0", faded(gold, 0.2f), big);
     y += 10 * big + 4;
-    ui_.textCentered(W / 2, y, "Concrete & Old World", faded(white, 0.5f), 1);
-    y += 18;
+    ui_.textCentered(W / 2, y, "Celestial Reach & Seasons", faded(white, 0.5f), 1);
+    y += 14;
+    if (season != Season::None) {
+        // The event that is on right now, in a coloured band.
+        const char* name = season == Season::Halloween ? "Právě probíhá: Podzim a Halloween (1. 10. - 30. 11.)"
+                           : season == Season::Christmas ? "Právě probíhá: Vánoce (20. 12. - 29. 12.)"
+                                                         : "Právě probíhá: Silvestr (30. 12. - 2. 1.)";
+        const Color band = season == Season::Halloween ? Color{0.55f, 0.25f, 0.05f, 0.85f}
+                           : season == Season::Christmas ? Color{0.12f, 0.38f, 0.2f, 0.85f}
+                                                         : Color{0.25f, 0.15f, 0.45f, 0.85f};
+        const float bw = std::min(W - 20, ui_.textWidth(tr(name)) + 16);
+        Color bc = band;
+        bc.a *= ease((t - 0.6f) / 0.5f);
+        ui_.fill(W / 2 - bw / 2, y - 3, bw, 13, bc);
+        ui_.textCentered(W / 2, y, name, faded(white, 0.6f), 1);
+        y += 14;
+    }
+    y += 4;
     static const char* const kNew[] = {
-        "Starý svět: terén verzí 0.1-0.3 s vlastním starým ovládáním a menu",
-        "Beton: prašný padá jako písek, v peci se vypálí na tvrzený",
-        "Strakatý les: šedé dřevo, červené, oranžové a žluté listí",
-        "Kamenořez a dřevořez: schody, desky, ploty a 6 prken z kmene",
-        "Schody a desky skoro pro všechny bloky, nový barel na věci",
-        "Nebeská říše: první mosty mezi ostrovy",
+        "Nebeská říše: nízká gravitace, bílý a modrý kámen, krystaly, nebeská prasata a ovce",
+        "Celestium: ruda, čtyři nástroje a kyrys, který tlumí pády",
+        "Oheň ze zapalovače, táborák a padající listí",
+        "Tekoucí voda a láva ve všech světech, se svažující se hladinou",
+        "Jak vyrobit? Všechny recepty, pec i řezačky; každé dřevo jako dubové",
+        "Sezóny podle data, plynulý pád bloků, vzhledy plochého světa",
     };
     static const char* const kNext[] = {
-        "1.9.0: nová Nebeská říše s nízkou gravitací",
-        "Celestium: ruda, čtyři nástroje a nebeský hrudní plát",
-        "Noví tvorové: Celestling, Reach Stalker a Sky Drifter",
+        "VoxelCraft 2.0.0",
+        "Vyzkoušej ji v experimentech: bouřky, padající hvězdy, chov zvířat",
+        "Noví tvorové Nebeské říše",
         "Příběhové video a hladší písmo",
     };
     // Long lines wrap at word boundaries (they used to be cut off). On a small screen the two lists
@@ -1695,6 +1770,7 @@ void Game::trailersScreen() {
         {"1.6.0: Caves and Tunes", "trailers/t08_1.6.0.mp4"},
         {"1.7.0: The Celestial Reach", "trailers/t09_1.7.0.mp4"},
         {"1.8.0: Concrete & Old World", "trailers/t10_1.8.0.mp4"},
+        {"1.9.0: Celestial Reach & Seasons", "trailers/t11_1.9.0.mp4"},
     };
     const float rowH = 22, top = y + 28, colW = (w - 8) / 2;
     for (int i = 0; i < (int)(sizeof(trailers) / sizeof(trailers[0])); ++i) {
@@ -1815,7 +1891,9 @@ void Game::worldListScreen() {
             newWorldName_ = "Můj svět";
             newWorldSeed_.clear();
             newWorldMode_ = GameMode::Survival;
+            newWorldFlatPreset_ = 0;
             newWorldOld_ = newWorldFlat_ = newWorldCoords_ = newWorldKeepInventory_ = newWorldCommands_ = newWorldExpLiquids_ = newWorldExpMaps_ = newWorldExpOpen_ = false;
+            newWorldExpStorms_ = newWorldExpStars_ = newWorldExpBreeding_ = false;
             setScreen(Screen::CreateWorld);
         }
         // The Multiplayer tab is at the top; this place now imports a world (.vcworld).
@@ -1866,6 +1944,10 @@ void Game::createWorldScreen() {
     if (newWorldOld_) {
         newWorldMode_ = GameMode::Creative;  // the old versions had creative only
         ui_.text(x, cy + 101, "Terén verzí 0.1-0.3, jen kreativní, bez hudby", Color{0.9f, 0.8f, 0.4f, 1}, 1, false, col);
+    } else if (newWorldFlat_) {
+        // 1.9.0: the flat world's look, tapped through in turn.
+        if (ui_.dropdown(x, cy + 104, col, 18, trf("Vzhled: {0}", {tr(flatPresetName(newWorldFlatPreset_))})))
+            newWorldFlatPreset_ = (newWorldFlatPreset_ + 1) % kFlatPresets;
     }
 
     // Right column: seed and options
@@ -1897,11 +1979,12 @@ void Game::createWorldScreen() {
     std::string info = trf("Biomy a Nether z {0} aktivních balíčků", {std::to_string(enabled)});
     if (!newWorldOld_) ui_.text(x, cy + 108, info, kTextDim, 1, false, w);
     // 1.5.1: Experimental Features, for everyone, saved with the world.
-    if (ui_.button(x, cy + 120, col, 18, newWorldExpLiquids_ ? trf("Experimentální funkce ({0})", {std::to_string((int)newWorldExpLiquids_)}) : tr("Experimentální funkce")))
+    const int expCount = newWorldExpStorms_ + newWorldExpStars_ + newWorldExpBreeding_;
+    if (ui_.button(x, cy + 120, col, 18, expCount ? trf("Experimentální funkce ({0})", {std::to_string(expCount)}) : tr("Experimentální funkce")))
         newWorldExpOpen_ = !newWorldExpOpen_;
     if (newWorldExpOpen_) {
         const float ex = x + 8, ey = y + 24, ew = w - 16;
-        ui_.frame(ex, ey, ew, 112, kPanel, kSeparator);
+        ui_.frame(ex, ey, ew, 136, kPanel, kSeparator);
         ui_.text(ex + 6, ey + 6, "Experimentální funkce", kTitle, 1, false);
         ui_.text(ex + 6, ey + 18, "Rozpracovaný obsah dalších verzí. Platí jen pro tento svět a po vytvoření je nelze změnit.",
                  kTextDim, 1, false, ew - 12);
@@ -1912,10 +1995,12 @@ void Game::createWorldScreen() {
             ui_.text(ex + 12, ry + 12, about, kTextDim, 1, false, ew - 50);
             ui_.checkbox(ex + ew - 30, ry + 3, on);
         };
-        experiment(ey + 36, "Tekoucí voda a láva", "Kapaliny tečou dolů a do stran; láva s vodou ztvrdne.", newWorldExpLiquids_);
-        // 1.5.9: explorer maps are a standard feature now (no longer listed here).
-        ui_.text(ex + 6, ey + 86, "Upozornění: experimenty se mohou změnit nebo zmizet.", Color{0.9f, 0.7f, 0.35f, 1}, 1, false, ew - 70);
-        if (ui_.button(ex + ew - 66, ey + 92, 60, 16, "Hotovo")) newWorldExpOpen_ = false;
+        // 1.9.0 build 3: flowing water and lava are standard now; three previews of 2.0.0 instead.
+        experiment(ey + 36, "2.0: Bouřky", "V dešti udeří blesk a může zapálit oheň.", newWorldExpStorms_);
+        experiment(ey + 60, "2.0: Padající hvězdy", "Za jasné noci přeletí po obloze hvězdy.", newWorldExpStars_);
+        experiment(ey + 84, "2.0: Chov zvířat", "Nakrm dvě zvířata (pšenice, semínka) a narodí se mládě.", newWorldExpBreeding_);
+        ui_.text(ex + 6, ey + 112, "Upozornění: experimenty se mohou změnit nebo zmizet.", Color{0.9f, 0.7f, 0.35f, 1}, 1, false, ew - 70);
+        if (ui_.button(ex + ew - 66, ey + 116, 60, 16, "Hotovo")) newWorldExpOpen_ = false;
         return;  // the panel covers the screen's other buttons
     }
 
@@ -1932,9 +2017,13 @@ void Game::createWorldScreen() {
         wi.allowCommands = newWorldCommands_;
         wi.expFlowingLiquids = newWorldExpLiquids_;
         wi.expExplorationMaps = newWorldExpMaps_;
+        wi.expStorms = newWorldExpStorms_;
+        wi.expStars = newWorldExpStars_;
+        wi.expBreeding = newWorldExpBreeding_;
         // The world keeps its own copy of the generator, so later pack edits do not reshape it.
         GenConfig config = packs_.buildConfig();
         config.flat = newWorldFlat_;
+        config.flatPreset = newWorldFlatPreset_;
         config.oldWorld = newWorldOld_;
         saveGenerator(wi.folder, config);
         startSession(wi, PlayerState{});
@@ -2070,6 +2159,7 @@ void Game::settingsScreen() {
             ry += 8;
         }
         check("Mraky", "", settings_.clouds);
+        check("Padající listí", "Ze stromů se snáší listí", settings_.fallingLeaves);
         check("Skrýt GUI", "Jen svět, třeba na snímky", settings_.hideGui);
     } else if (settingsTab_ == 2) {
         float v = settings_.musicVolume;
@@ -2081,6 +2171,7 @@ void Game::settingsScreen() {
         if (slider("Zvuky", std::to_string((int)std::round(v * 100)) + " %", v)) settings_.soundVolume = v;
         check("Zvuky rozhraní", "Cvaknutí tlačítek", settings_.uiSounds);
         check("Klidný režim", "Bez příšer, tišší zvuky, bez rudého záblesku", settings_.calmMode);
+        check("Sezónní události", "Podzim a Halloween, Vánoce a Silvestr podle data", settings_.seasonalEvents);
         for (const std::string& line : wrapText("Hudba: témata VoxelSoftworks a skladby biomů. Vlastní písně dej do složky music.", pw - 16)) {
             ui_.text(px + 8, ry + 6, line, kTextDim, 1, false, pw - 16);
             ry += 10;
@@ -2719,6 +2810,16 @@ void Game::developerScreen() {
         changed = true;
     }
     ly += 20;
+    {
+        // 1.9.0 build 3: the developer picks the season (or the date decides), to check each event.
+        static const char* const kSeasons[5] = {"Podle data", "Žádná", "Halloween", "Vánoce", "Silvestr"};
+        ui_.text(lx, ly + 3, "Sezóna", kText, 1, false);
+        if (ui_.dropdown(lx + 70, ly, 90, 15, kSeasons[seasonOverride_ + 1])) seasonOverride_ = seasonOverride_ >= 3 ? -1 : seasonOverride_ + 1;
+        const Season now = seasonOn(todayYmd());
+        static const char* const kNames[4] = {"žádná", "Halloween (1. 10. - 30. 11.)", "Vánoce (20. 12. - 29. 12.)", "Silvestr (30. 12. - 2. 1.)"};
+        ui_.text(lx, ly + 18, trf("Dnes podle data: {0}", {tr(kNames[(int)now])}), kTextDim, 1, false, 200);
+        ly += 32;
+    }
     // Experiments
     ui_.text(rx, ryy, "Experimenty", kTextBright, 1, false);
     ryy += 13;
@@ -3637,6 +3738,15 @@ bool Game::containerWindow(const std::string& title, float contentH, float& gx, 
     // The recipe book (crafting screens): a button in the title bar swaps the side panel.
     const bool crafting = screen_ == Screen::Inventory || screen_ == Screen::Crafting;
     if (crafting && ui_.button(px + pw - 80, py + 3, 60, 14, "Recepty", true, recipeBook_)) recipeBook_ = !recipeBook_;
+    {
+        // 1.9.0 build 3: the full guide, with the furnace and the cutters too.
+        const float hw = ui_.textWidth(tr("Jak vyrobit?")) + 12;
+        if (crafting && ui_.button(px + pw - 84 - hw, py + 3, hw, 14, "Jak vyrobit?")) {
+            howBack_ = screen_;
+            setScreen(Screen::HowToCraft);
+            return false;
+        }
+    }
     if (crafting && recipeBook_) recipeBookPanel(sx, py, sw, ph);
     else selectionPanel(sx, py, sw, ph);
     // Tapping outside both closes the window.
@@ -3899,6 +4009,115 @@ void Game::tradeScreen() {
         }
     }
     if (!hint.empty()) ui_.textCentered(W / 2, py + ph + 4, hint, kTextBright);
+}
+
+void Game::howToCraftScreen() {
+    // 1.9.0 build 3: every way to make things: the 2x2 grid in the inventory, the crafting table,
+    // the furnace and the two cutters. Categories on top, the results on the left; the chosen one
+    // shows its ingredients in place and where it is made.
+    struct How {
+        CraftResult result;
+        int where;  // 0 inventory, 1 crafting table, 2 furnace, 3 stonecutter, 4 wood cutter
+        std::vector<ItemId> cells;
+        int width;  // -1 shapeless
+    };
+    static std::vector<How> all;
+    static const RecipeBook* builtFor = nullptr;
+    if (builtFor != &recipes() || all.empty()) {
+        builtFor = &recipes();
+        all.clear();
+        const RecipeBook& book = recipes();
+        for (const ShapedRecipe& r : book.shaped) all.push_back({r.result, r.w <= 2 && r.h <= 2 ? 0 : 1, r.cells, r.w});
+        for (const ShapelessRecipe& r : book.shapeless) all.push_back({r.result, r.ingredients.size() <= 4 ? 0 : 1, r.ingredients, -1});
+        for (const auto& [in, out] : book.smelting) all.push_back({{out, 1}, 2, {in}, 1});
+        for (int m = 0; m < kShapeMaterials; ++m) {
+            const ItemId b = shapeMaterialBlock(m);
+            const int where = isWoodMaterial(m) ? 4 : 3;
+            all.push_back({{slabId(m, 0), 2}, where, {b}, 1});
+            all.push_back({{stairsId(m, 0, false), 1}, where, {b}, 1});
+            if (const ItemId fence = plankFence(b)) all.push_back({{fence, 1}, 4, {b}, 1});
+        }
+        for (ItemId log : {LOG, SPRUCE_LOG, VOID_LOG, NETHERPERK_LOG, CRIMSON_LOG, CELESTIAL_LOG, GRAY_LOG, CRIMSONIUM_LOG})
+            if (const ItemId planks = logPlanks(log)) all.push_back({{planks, 6}, 4, {log}, 1});
+    }
+    static const char* const kCats[] = {"Vše", "Powerstone", "Nástroje a brnění", "Stavební", "Pec", "Řezačky"};
+    auto inCat = [&](const How& e, int c) {
+        const std::string key = itemKey(e.result.id);
+        const bool power = key.find("powerstone") != std::string::npos || key.find("cable") != std::string::npos ||
+                           key.find("switch") != std::string::npos || key.find("lamp") != std::string::npos || isTnt(e.result.id);
+        const bool tool = toolKind(e.result.id) != ToolKind::None || isArmor(e.result.id) || toolDurability(e.result.id) > 0;
+        switch (c) {
+            case 1: return power;
+            case 2: return tool;
+            case 3: return !power && !tool && isPlaceable(e.result.id) && e.where < 2;
+            case 4: return e.where == 2;
+            case 5: return e.where >= 3;
+            default: return true;
+        }
+    };
+    float x, y, w, h;
+    menuWindow(x, y, w, h, false);
+    ui_.text(x + 2, y + 2, "Jak vyrobit?", kTitle, 1, false);
+    if (ui_.button(x + w - 60, y, 60, 16, "Zpět")) return setScreen(howBack_);
+    // Category tabs.
+    const int cats = (int)(sizeof(kCats) / sizeof(kCats[0]));
+    float tx = x;
+    for (int c = 0; c < cats; ++c) {
+        const float tw = ui_.textWidth(tr(kCats[c])) + 10;
+        if (ui_.button(tx, y + 18, tw, 16, kCats[c], true, howCat_ == c)) howCat_ = c, howPick_ = -1, howScroll_ = 0;
+        tx += tw + 3;
+    }
+    std::vector<int> list;
+    for (int i = 0; i < (int)all.size(); ++i)
+        if (inCat(all[i], howCat_)) list.push_back(i);
+    if (howPick_ < 0 && !list.empty()) howPick_ = list[0];
+    // The results on the left.
+    const float ly = y + 40, lh = h - 42, lw = std::floor(w * 0.5f);
+    ui_.frame(x, ly, lw, lh, kPanelInner, kSeparator);
+    const int cols = std::max(1, (int)((lw - 6) / kSlot));
+    howScroll_ -= ui_.dragY(x, ly, lw, lh);
+    const int rows = ((int)list.size() + cols - 1) / cols;
+    howScroll_ = std::clamp(howScroll_, 0.0f, std::max(0.0f, rows * kSlot - lh + 6));
+    for (size_t i = 0; i < list.size(); ++i) {
+        const float sx = x + 3 + (float)(i % (size_t)cols) * kSlot, sy = ly + 3 + (float)(i / (size_t)cols) * kSlot - howScroll_;
+        if (sy < ly - 1 || sy + kSlot > ly + lh + 1) continue;
+        ui_.slotFrame(sx, sy, kSlot, list[i] == howPick_);
+        ui_.item(sx + 2, sy + 2, kSlot - 4, all[(size_t)list[i]].result.id);
+        if (ui_.tapped(sx, sy, kSlot, kSlot)) howPick_ = list[i];
+    }
+    // The chosen recipe on the right.
+    const float rx = x + lw + 6, rw = w - lw - 6;
+    ui_.frame(rx, ly, rw, lh, kPanelInner, kSeparator);
+    if (howPick_ < 0 || howPick_ >= (int)all.size()) return;
+    const How& e = all[(size_t)howPick_];
+    static const char* const kWhere[] = {"Inventář (mřížka 2x2) nebo pracovní stůl", "Pracovní stůl (mřížka 3x3)", "Pec: vlož dovnitř a přidej palivo",
+                                         "Kamenořez", "Dřevořez"};
+    ui_.text(rx + 6, ly + 6, itemName(e.result.id), kTextBright, 1, false, rw - 12);
+    ui_.text(rx + 6, ly + 18, kWhere[e.where], kGold, 1, false, rw - 12);
+    const float gx = rx + 8, gy = ly + 34;
+    const int gw = e.where >= 2 ? 1 : e.where == 0 && e.width != -1 ? 2 : 3;
+    for (int k = 0; k < gw * gw; ++k) {
+        const float sx = gx + (k % gw) * kSlot, sy = gy + (k / gw) * kSlot;
+        ui_.slotFrame(sx, sy, kSlot, false);
+        ItemId id = AIR;
+        if (e.width > 0) {
+            const int cx = k % gw, cy = k / gw;
+            if (cx < e.width && (size_t)(cy * e.width + cx) < e.cells.size() && cy < (int)e.cells.size() / e.width) id = e.cells[(size_t)(cy * e.width + cx)];
+        } else if ((size_t)k < e.cells.size()) {
+            id = e.cells[(size_t)k];
+        }
+        if (id != AIR) ui_.item(sx + 2, sy + 2, kSlot - 4, id);
+    }
+    const float ax = gx + gw * kSlot + 6, ay = gy + (gw * kSlot - kSlot) / 2;
+    ui_.text(ax, ay + 6, ">", kTextBright, 1, false);
+    ui_.slotFrame(ax + 12, ay, kSlot, true);
+    ui_.item(ax + 14, ay + 2, kSlot - 4, e.result.id);
+    if (e.result.count > 1) ui_.text(ax + 14 + kSlot - 10, ay + kSlot - 10, std::to_string(e.result.count), kTextBright, 1, false);
+    if (e.width == -1) ui_.text(rx + 6, gy + gw * kSlot + 6, "Na pořadí nezáleží", kTextDim, 1, false, rw - 12);
+    if (e.where < 2) {
+        float hy = ly + lh - 26;
+        for (const std::string& line : wrapText("Prkna a kmeny z jakéhokoliv dřeva fungují jako dubová.", rw - 12)) ui_.text(rx + 6, hy, line, kTextDim, 1, false), hy += 10;
+    }
 }
 
 void Game::encyclopediaScreen() {

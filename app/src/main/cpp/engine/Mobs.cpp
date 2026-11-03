@@ -511,9 +511,13 @@ void MobSystem::buildVertices(int dim, float time, std::vector<Vertex>& out) con
             case MobType::Pig:
             case MobType::Sheep: {
                 bool sheep = m.type == MobType::Sheep;
-                int skin = sheep ? T_SHEEP_WOOL : T_PIG_SKIN, face = sheep ? T_SHEEP_FACE : T_PIG_FACE;
+                // 1.9.0 build 3: in the Celestial Reach they are celestial: sky white with gold flecks.
+                const bool sky = m.dim == 3 && !ModRegistry::get().mob(m.variant);
+                const int woolT = sky ? T_CELESTIAL_WOOL : T_SHEEP_WOOL, sheepSkin = sky ? T_CELESTIAL_SHEEP_SKIN : T_SHEEP_SKIN,
+                          pigSkin = sky ? T_CELESTIAL_PIG_SKIN : T_PIG_SKIN;
+                int skin = sheep ? woolT : pigSkin, face = sheep ? (sky ? T_CELESTIAL_SHEEP_FACE : T_SHEEP_FACE) : (sky ? T_CELESTIAL_PIG_FACE : T_PIG_FACE);
                 int legT[6];
-                tilesAll(sheep ? T_SHEEP_SKIN : T_PIG_SKIN, legT);
+                tilesAll(sheep ? sheepSkin : pigSkin, legT);
                 float legH = sheep ? 0.45f : 0.35f;
                 for (int k = 0; k < 4; ++k) {
                     float lx = (k % 2 ? 0.17f : -0.17f), lz = (k < 2 ? -0.3f : 0.3f);
@@ -524,8 +528,8 @@ void MobSystem::buildVertices(int dim, float time, std::vector<Vertex>& out) con
                 float w = sheep ? 0.32f : 0.28f, top = legH + (sheep ? 0.6f : 0.45f);
                 b.box({-w, legH - 0.05f, -0.45f}, {w, top, 0.45f}, t, 0, {}, roll);
                 // The head: the face in front, wool on top (sheep), skin elsewhere.
-                faceTiles(sheep ? T_SHEEP_SKIN : T_PIG_SKIN, face);
-                if (sheep) t[0] = T_SHEEP_WOOL;
+                faceTiles(sheep ? sheepSkin : pigSkin, face);
+                if (sheep) t[0] = woolT;
                 float hy = top - 0.12f;
                 b.box({-0.22f, hy - 0.42f, -0.78f}, {0.22f, hy, -0.4f}, t, 0, {}, roll);
                 break;

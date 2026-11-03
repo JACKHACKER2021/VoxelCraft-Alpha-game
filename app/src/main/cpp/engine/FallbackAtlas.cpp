@@ -1764,6 +1764,44 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
             }
         a.sprite(T_VOID_SHARD, kSprite_gem, {150, 80, 220}, {235, 210, 255});
         a.sprite(T_CRIMSONIUM, kSprite_gem, {200, 30, 50}, {255, 170, 170});
+        // 1.9.0 build 2: the new Celestial Reach rock, celestium, fire and the campfire.
+        for (int py = 0; py < 16; ++py)
+            for (int px = 0; px < 16; ++px) {
+                const int n = (int)(hash3(px, py, 1576, 3) % 14) - 7;
+                const Rgb pale = Rgb{226, 230, 238}.plus(n), sky = Rgb{122, 170, 228}.plus(n);
+                const bool vein = (px * 5 + py * 3) % 19 == 0;
+                a.put(T_PALE_STONE, px, py, vein ? Rgb{190, 210, 240} : (px + py * 3) % 11 == 0 ? pale.scaled(0.9f) : pale);
+                a.put(T_SKY_STONE, px, py, py % 5 == 2 ? sky.scaled(1.15f) : vein ? Rgb{220, 235, 255} : sky);
+                const bool gem = hash3(px / 2, py / 2, 1578, 4) % 5 == 0;
+                a.put(T_CELESTIUM_ORE, px, py, gem ? ((px + py) % 3 ? Rgb{245, 215, 120} : Rgb{255, 250, 215}) : pale.scaled(0.95f));
+                const int facet = (px + py) % 5, facet2 = (px - py + 16) % 6;
+                a.put(T_PALE_CRYSTAL, px, py, facet == 0 || facet2 == 0 ? Rgb{250, 252, 255} : Rgb{170, 215, 250}.plus(n));
+                // Fire: tongues of flame, white-yellow at the core, red at the tips, see-through around.
+                const float wave = std::sin(px * 1.3f) * 2.5f + std::sin(px * 0.6f + 1) * 2;
+                const int edge = std::abs(px - 8);
+                const float top = 2 + edge * 0.9f + wave * 0.5f + (hash3(px, 0, 1580, 2) % 3);
+                if (py >= top && edge < 8) {
+                    const float k = (py - top) / std::max(1.0f, 16 - top);
+                    const Rgb c = k > 0.6f && edge < 4 ? Rgb{255, 245, 170} : k > 0.3f ? Rgb{255, 170, 40} : Rgb{225, 70, 20};
+                    a.put(T_FIRE, px, py, c);
+                } else {
+                    a.clear(T_FIRE, px, py);
+                }
+                // Campfire: charred logs on the sides, glowing embers between log ends on top.
+                const Rgb bark = Rgb{88, 62, 40}.plus(n);
+                a.put(T_CAMPFIRE_SIDE, px, py, py < 4 || py > 11 ? Rgb{30, 26, 24} : px % 4 == 0 ? bark.scaled(0.7f) : bark);
+                const bool ember = hash3(px, py, 1581, 5) % 4 == 0;
+                const bool ring = (px > 2 && px < 13 && py > 2 && py < 13) && !(px > 4 && px < 11 && py > 4 && py < 11);
+                a.put(T_CAMPFIRE_TOP, px, py, ring ? Rgb{150, 110, 70}.plus(n) : ember ? Rgb{255, 140, 40} : Rgb{50, 40, 36}.plus(n));
+                // Worn celestium: pale gold plates with white seams.
+                a.put(T_CELESTIUM_PLATE, px, py, px % 8 == 0 || py % 8 == 0 ? Rgb{255, 252, 230} : Rgb{232, 205, 120}.plus(n));
+            }
+        a.sprite(T_CELESTIUM, kSprite_gem, {240, 205, 110}, {255, 250, 225});
+        a.sprite(T_CELESTIUM_PICKAXE, kSprite_pickaxe, {240, 210, 120});
+        a.sprite(T_CELESTIUM_SWORD, kSprite_sword, {240, 210, 120}, {255, 255, 255});
+        a.sprite(T_CELESTIUM_AXE, kSprite_axe, {240, 210, 120});
+        a.sprite(T_CELESTIUM_SHOVEL, kSprite_shovel, {240, 210, 120});
+        a.sprite(T_CELESTIUM_CHESTPLATE, kSprite_chestplate, {240, 210, 120});
         // 1.7.2 build 2: saplings of the new trees.
         a.sprite(T_GRAY_SAPLING, kSprite_sapling, {214, 110, 40});
         a.sprite(T_CELESTIAL_SAPLING, kSprite_sapling, {120, 200, 235});

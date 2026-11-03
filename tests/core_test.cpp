@@ -613,7 +613,7 @@ static int testJsonAndPacks() {
     std::vector<std::string> warn;
     GenConfig round = GenConfig::fromJson(def.toJson(), &warn);
     CHECK(warn.empty() && round.biomes.size() == 8 && round.biomes[2].surface == def.biomes[2].surface);
-    CHECK(RecipeBook::defaults().shaped.size() == 12 + 35 + 6 + 2 + 16 + 6 + 24 + 16 + 3 + 10 + 12 + 5 + 3 + 8 + 7 + 1 + 10 + 33 + 16 + 11 && RecipeBook::defaults().shapeless.size() == 2 + 4 + 1 + 1 + 6 + 1 + 1 + 3 + 1 + 3 + 3 + 1 + 2 + 49 + 1);  // 1.8.0: concrete, gray planks, 10 stairs and slabs  // 1.5.7: + book and quill; 1.6.0: + 3: torch, shield, lamp; crimson planks  // 1.5.1: no planks from Eye Logs
+    CHECK(RecipeBook::defaults().shaped.size() == 12 + 35 + 6 + 2 + 16 + 6 + 24 + 16 + 3 + 10 + 12 + 5 + 3 + 8 + 7 + 1 + 10 + 33 + 16 + 11 + 6 && RecipeBook::defaults().shapeless.size() == 2 + 4 + 1 + 1 + 6 + 1 + 1 + 3 + 1 + 3 + 3 + 1 + 2 + 49 + 1);  // 1.8.0: concrete, gray planks, 10 stairs and slabs  // 1.5.7: + book and quill; 1.6.0: + 3: torch, shield, lamp; crimson planks  // 1.5.1: no planks from Eye Logs
 
     // Biomes really show up in the world: deserts are sandy, forests have trees.
     World w(1234, Dimension::Overworld);
@@ -634,12 +634,12 @@ static int testJsonAndPacks() {
     auto list = pm.list();
     CHECK(list.size() == 2 && list[0].builtin && list[0].enabled && list[0].name == "VoxelCraft Default" &&
           list[1].name == "Pre-Alpha Style" && !list[1].enabled && list[1].style == "pre_alpha");
-    CHECK(pm.files("default").size() == 25 && pm.files("default")[0] == "manifest.json");
+    CHECK(pm.files("default").size() == 26 && pm.files("default")[0] == "manifest.json");
     warn.clear();
     GenConfig cfg = pm.buildConfig(&warn);
     CHECK(warn.empty() && cfg.biomes.size() == 8);
     // Worlds made in the game (from the packs) get the newest generator: deepstone, hardium, mossy caves.
-    CHECK(cfg.generation == 5);
+    CHECK(cfg.generation == 6);
 
     // A mod pack: glowstone Nether with a higher lava sea, a new biome, one removed biome and a recipe.
     std::string id = pm.createPack("Můj mod");
@@ -2746,7 +2746,7 @@ static int testUpdate12() {
         // 1.8.0: then "VoxelSoftworks presents" the version; a tap goes on to the menu.
         log.clear();
         game.frame(t += 1 / 30.0);
-        CHECK(drawn("VOXELSOFTWORKS PRESENTS") && drawn("VOXELCRAFT 1.8.0") && !drawn("Play"));
+        CHECK(drawn("VOXELSOFTWORKS PRESENTS") && drawn("VOXELCRAFT 1.9.0") && !drawn("Play"));
         for (int i = 0; i < 30; ++i) game.frame(t += 1 / 30.0);
         game.onTouch(0, TouchAction::Down, 1200, 540, t);
         game.onTouch(0, TouchAction::Up, 1200, 540, t);
@@ -3876,6 +3876,40 @@ static int testShaders155() {
     return 0;
 }
 
+// 1.9.0 Seasons: event dates and the looks of a flat world.
+static int testSeasons190() {
+    CHECK(seasonOn(20261001) == Season::Halloween && seasonOn(20261130) == Season::Halloween && seasonOn(20260930) == Season::None);
+    CHECK(seasonOn(20261219) == Season::None && seasonOn(20261220) == Season::Christmas && seasonOn(20261229) == Season::Christmas);
+    CHECK(seasonOn(20261230) == Season::NewYear && seasonOn(20270101) == Season::NewYear && seasonOn(20270102) == Season::NewYear &&
+          seasonOn(20270103) == Season::None);
+    CHECK(snowySeason(Season::Christmas) && snowySeason(Season::NewYear) && !snowySeason(Season::Halloween));
+    const ItemId tops[kFlatPresets] = {GRASS, SAND, SNOW_BLOCK, COBBLESTONE, NETHERRACK, VOID_STONE};
+    for (int p = 0; p < kFlatPresets; ++p) {
+        GenConfig flat;
+        flat.flat = true;
+        flat.flatPreset = p;
+        flat = GenConfig::fromJson(flat.toJson());  // the look is saved with the world
+        World w(4, Dimension::Overworld, flat);
+        w.ensureChunksAround(0, 0, 1, 9);
+        ItemId layers[8];
+        const int n = flatLayers(p, layers);
+        CHECK(w.getBlock(5, n - 1, 5) == tops[p] && w.getBlock(5, n, 5) == AIR && w.getBlock(5, 0, 5) == WORLD_END);
+    }
+    std::printf("seasons: event dates ok, %d flat world looks\n", kFlatPresets);
+    // 1.9.0 build 3: every wood crafts the basic wooden things, and every log gives its own planks.
+    for (ItemId log : {LOG, SPRUCE_LOG, VOID_LOG, NETHERPERK_LOG, CRIMSON_LOG, CELESTIAL_LOG, GRAY_LOG, CRIMSONIUM_LOG}) {
+        ItemStack g1[4] = {{log, 1, 0}, {}, {}, {}};
+        const CraftResult planks = matchRecipe(g1, 2);
+        CHECK(!planks.empty() && planks.id == logPlanks(log));
+        ItemStack table[4] = {{planks.id, 1, 0}, {planks.id, 1, 0}, {planks.id, 1, 0}, {planks.id, 1, 0}};
+        ItemStack sticks[4] = {{planks.id, 1, 0}, {}, {planks.id, 1, 0}, {}};
+        ItemStack chest[9] = {{planks.id, 1, 0}, {planks.id, 1, 0}, {planks.id, 1, 0}, {planks.id, 1, 0}, {}, {planks.id, 1, 0},
+                              {planks.id, 1, 0}, {planks.id, 1, 0}, {planks.id, 1, 0}};
+        CHECK(matchRecipe(table, 2).id == CRAFTING_TABLE && matchRecipe(sticks, 2).id == STICK && matchRecipe(chest, 3).id == CHEST);
+    }
+    return 0;
+}
+
 static int testPhysics157() {
     namespace fs = std::filesystem;
     fs::path root = fs::temp_directory_path() / "vc_physics_test";
@@ -3929,6 +3963,21 @@ static int testPhysics157() {
     run(3);
     CHECK(w.getBlock(x - 2, g, z) == OBSIDIAN);
     // Torches pop off when their block goes.
+    // 1.9.0 build 2: fire next to planks spreads into them and burns them away; on stone it goes out.
+    for (int dx = 1; dx <= 3; ++dx)
+        for (int dy = 0; dy < 2; ++dy) w.setBlock(x + dx, g + 3 + dy, z + 2, PLANKS);
+    for (int dx = 0; dx <= 3; ++dx) w.setBlock(x + dx, g + 2, z + 2, STONE);
+    w.setBlock(x, g + 3, z + 2, FIRE);
+    int burnt = 0, seenFire = 0;
+    for (int k = 0; k < 40; ++k) {
+        run(0.5f);
+        for (int dx = 0; dx <= 3; ++dx)
+            for (int dy = 0; dy < 2; ++dy) seenFire += w.getBlock(x + dx, g + 3 + dy, z + 2) == FIRE;
+    }
+    for (int dx = 1; dx <= 3; ++dx)
+        for (int dy = 0; dy < 2; ++dy) burnt += w.getBlock(x + dx, g + 3 + dy, z + 2) != PLANKS;
+    std::printf("fire: %d of 6 planks burnt, fire seen %d times\n", burnt, seenFire);
+    CHECK(burnt >= 3 && w.getBlock(x, g + 3, z + 2) != FIRE);
     fs::remove_all(root);
     return 0;
 }
@@ -3938,7 +3987,7 @@ static int testCaves160() {
     // pools, bigger caves than generation 3; old worlds unchanged; the new recipes and items.
     GenConfig g3 = GenConfig::defaults();
     g3.generation = 3;
-    CHECK(GenConfig::defaults().generation == 5);
+    CHECK(GenConfig::defaults().generation == 6);
     World nw(777, Dimension::Overworld), ow(777, Dimension::Overworld, g3);
     nw.ensureChunksAround(0, 0, 5, 100000);
     ow.ensureChunksAround(0, 0, 5, 100000);
@@ -4158,7 +4207,7 @@ static int testStorage157() {
 int main() {
     if (testOverworld() || testNether() || testPortal() || testTexturePacks() || testFontAndItems() || testSaves() ||
         testSurvivalSession() || testMenuFlow() || testCrafting() || testWorkbenchInSession() ||
-        testJsonAndPacks() || testSkinsStoreAudio() || testThirdPersonCamera() || testWaterEscape() || testLeavesMesh() || testPlants() || testDigParticles() || testDPad() || testStructures() || testInventoryAndHand() || testMetalsAndArmor() || testDeveloperAccess() || testEnglishEverywhere() || testMusic() || testDoorsChests() || testNewBiomes() || testWorldStructures() || testBoat() || testAchievements() || testLanGame() || testCommands() || testUpdate11() || testUpdate12() || testUpdate13() || testUpdate14() || testUpdate15() || testExperiments151() || testShaders155() || testPhysics157() || testWorld157() || testWorld159() || testCaves160() || testStorage157())
+        testJsonAndPacks() || testSkinsStoreAudio() || testThirdPersonCamera() || testWaterEscape() || testLeavesMesh() || testPlants() || testDigParticles() || testDPad() || testStructures() || testInventoryAndHand() || testMetalsAndArmor() || testDeveloperAccess() || testEnglishEverywhere() || testMusic() || testDoorsChests() || testNewBiomes() || testWorldStructures() || testBoat() || testAchievements() || testLanGame() || testCommands() || testUpdate11() || testUpdate12() || testUpdate13() || testUpdate14() || testUpdate15() || testExperiments151() || testShaders155() || testPhysics157() || testWorld157() || testWorld159() || testCaves160() || testStorage157() || testSeasons190())
         return 1;
     std::printf("all tests passed\n");
     return 0;

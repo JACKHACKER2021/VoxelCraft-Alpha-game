@@ -62,6 +62,13 @@ public:
     void toolRebuildPacks() { rebuildFromPacks(); }
     void toolApplySkin() { applySkin(); }
     void toolOpenCredits() { setScreen(Screen::Credits); }
+    void toolEndSession() { endSession(); }
+    void toolHowToCraft(int cat, int pick) { howBack_ = Screen::Playing, howCat_ = cat, howPick_ = pick, setScreen(Screen::HowToCraft); }
+    void toolCreateWorld(bool experiments) { setScreen(Screen::CreateWorld), newWorldExpOpen_ = experiments; }
+    void toolConfirmDelete() {  // tests and films: the delete question for the first world
+        setScreen(Screen::WorldList);
+        if (!worlds_.empty()) deleteIndex_ = 0, setScreen(Screen::ConfirmDelete);
+    }
 
     // Platform hooks, all called on the game thread.
     std::function<void()> onTexturePackButton;
@@ -103,7 +110,8 @@ private:
         WorldMap, Chat,        // 1.5.7: the big map of explored land, the chat window
         Book,                  // 1.5.7: book and quill
         Cutter,                // 1.7.2 build 2: the stonecutter
-        Encyclopedia           // 1.7.2 build 3
+        Encyclopedia,          // 1.7.2 build 3
+        HowToCraft             // 1.9.0 build 3: every recipe, how and where to make it
     };
 
     // A slot in any open container, so items can be moved between them.
@@ -218,6 +226,11 @@ private:
     void recipeBookPanel(float x, float y, float w, float h);
     bool recipeBook_ = false;
     float bookScroll_ = 0;
+    // 1.9.0 build 3: the "How to craft?" guide.
+    void howToCraftScreen();
+    int howCat_ = 0, howPick_ = -1;
+    float howScroll_ = 0;
+    Screen howBack_ = Screen::Inventory;
     void tapSlot(SlotRef ref);
     ItemStack* stackAt(SlotRef ref);
     void drawStack(float x, float y, const ItemStack& s);
@@ -316,6 +329,8 @@ private:
     std::string newWorldName_, newWorldSeed_;
     GameMode newWorldMode_ = GameMode::Creative;
     bool newWorldOld_ = false;  // 1.8.0: World type "Old (historic generation)"
+    int newWorldFlatPreset_ = 0;  // 1.9.0 the look of a flat world
+    bool newWorldExpStorms_ = false, newWorldExpStars_ = false, newWorldExpBreeding_ = false;  // 1.9.0 build 3
     bool newWorldFlat_ = false, newWorldCoords_ = false, newWorldKeepInventory_ = false, newWorldCommands_ = false;
     bool newWorldExpLiquids_ = false, newWorldExpMaps_ = false, newWorldExpOpen_ = false;  // 1.5.1 Experimental Features
     int settingsTab_ = 0;
@@ -337,6 +352,10 @@ private:
     int gridSize_ = 2;
     int creativeTab_ = 0;
     bool texturesWinter_ = false;  // the atlas has the Winter addon's snow
+    Season texturesSeason_ = Season::None;  // 1.9.0: the season the atlas was made for
+public:
+    int seasonOverride_ = -1;  // 1.9.0: tests and films pick a season (-1: by the date)
+private:
     // The ore tiles of the loaded atlas (16x16 each), put back when a world without the
     // Ore Redesign experiment is played.
     std::vector<uint8_t> oreBase_;

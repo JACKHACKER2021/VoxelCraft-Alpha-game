@@ -5576,3 +5576,335 @@ SHOT(k01_fortress) {
         d.lookNow(Vec3(fx + 0.5f, fy + 2.0f, fz + 0.5f));
     });
 }
+
+// ---------------------------------------------------------------- 1.9.0 Seasons
+#define SEASON_SHOT(NAME, SEASON, BIOME, TIME)                                                     \
+    SHOT(NAME) {                                                                                   \
+        Director d(out, #NAME);                                                                    \
+        d.game->seasonOverride_ = (int)SEASON;                                                     \
+        d.openWorld("Season", 4242, GameMode::Creative);                                           \
+        d.settings().graphics = GraphicsMode::Enhanced;                                            \
+        flyToBiome(d, [](World& w, int x, int z) { return overAll(w, x, z, BIOME); });             \
+        d.s().player().pos.y += 6;                                                                 \
+        d.s().player().pitch = -0.3f;                                                              \
+        d.s().setTimeOfDay(TIME);                                                                  \
+        d.settings().hideGui = true;                                                               \
+        d.seconds(3.0f);                                                                           \
+        d.shot(#NAME);                                                                             \
+        d.seconds(2.0f);                                                                           \
+    }
+SEASON_SHOT(s01_christmas, Season::Christmas, "forest", 6000)
+SEASON_SHOT(s02_autumn, Season::Halloween, "forest", 10500)
+SHOT(s03_newyear) {
+    Director d(out, "s03");
+    d.game->seasonOverride_ = (int)Season::NewYear;
+    d.openWorld("Season", 4242, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    flyToBiome(d, [](World& w, int x, int z) { return overAll(w, x, z, "plains"); });
+    d.s().player().flying = true;
+    d.s().player().pos.y += 20;
+    d.s().player().pitch = 0.2f;
+    d.s().setTimeOfDay(18000);
+    d.settings().hideGui = true;
+    d.seconds(4.0f);
+    d.shot("s03_newyear");
+    d.seconds(3.0f);
+}
+SHOT(s04_falling) {
+    // A sand tower whose bottom block is broken: the column slides down smoothly.
+    Director d(out, "s04");
+    d.game->seasonOverride_ = 0;
+    d.openWorld("Fall", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z) - 6, y = feetY(w, x, z);
+    for (int k = 0; k < 6; ++k) w.setBlock(x, y + 6 + k, z, k % 2 ? GRAVEL : SAND);
+    w.setBlock(x, y + 5, z, GLASS);
+    p.yaw = 0, p.pitch = 0.25f;
+    s.setTimeOfDay(6000);
+    d.settings().hideGui = true;
+    d.idle(10);
+    d.shot("s04_falling");
+    w.setBlock(x, y + 5, z, AIR);
+    d.seconds(2.5f);
+}
+SHOT(s05_flat) {
+    Director d(out, "s05");
+    d.game->seasonOverride_ = 0;
+    d.openWorld("Flat", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; g.flatPreset = 1; });
+    d.s().player().pitch = -0.2f;
+    d.s().setTimeOfDay(6000);
+    d.settings().hideGui = true;
+    d.seconds(1.5f);
+    d.shot("s05_flat");
+    d.seconds(1.0f);
+}
+
+// ---------------------------------------------------------------- 1.9.0 trailer
+SHOT(t00_intro) {
+    Director d(out, "t00", true);
+    d.game->seasonOverride_ = (int)Season::Halloween;
+    d.shot("t00_intro");
+    d.seconds(10.0f);
+    d.tap(300, 135);
+    d.seconds(2.0f);
+}
+static void seasonFlight(Director& d, Season season, const char* biome, float time, bool night, const char* name) {
+    d.game->seasonOverride_ = (int)season;
+    d.openWorld("Season", 4242, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    flyToBiome(d, [biome](World& w, int x, int z) { return overAll(w, x, z, biome); });
+    Player& p = d.s().player();
+    p.flying = true;
+    p.pos.y += night ? 18 : 7;
+    p.pitch = night ? 0.15f : -0.25f;
+    d.s().setTimeOfDay(time);
+    d.settings().hideGui = true;
+    d.seconds(3.0f);
+    d.shot(name);
+    d.seconds(7.0f, [&](float) { p.yaw += night ? 0.0015f : 0.003f; if (!night) p.pos = p.pos + Vec3(std::sin(p.yaw), 0, -std::cos(p.yaw)) * 0.06f; });
+}
+SHOT(t01_autumn) { Director d(out, "t01"); seasonFlight(d, Season::Halloween, "forest", 10500, false, "t01_autumn"); }
+SHOT(t02_autumn_plains) { Director d(out, "t02"); seasonFlight(d, Season::Halloween, "plains", 11500, false, "t02_autumn_plains"); }
+SHOT(t03_christmas) { Director d(out, "t03"); seasonFlight(d, Season::Christmas, "forest", 6000, false, "t03_christmas"); }
+SHOT(t04_christmas_plains) { Director d(out, "t04"); seasonFlight(d, Season::Christmas, "plains", 7000, false, "t04_christmas_plains"); }
+SHOT(t05_newyear) { Director d(out, "t05"); seasonFlight(d, Season::NewYear, "plains", 18000, true, "t05_newyear"); }
+SHOT(t06_falling) {
+    // A row of sand, gravel and concrete powder towers; their glass floors go one after another.
+    Director d(out, "t06");
+    d.game->seasonOverride_ = 0;
+    d.openWorld("Fall", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z) - 9, y = feetY(w, x, z);
+    const ItemId kinds[7] = {SAND, GRAVEL, (ItemId)(CONCRETE_POWDER + 1), RED_SAND, (ItemId)(CONCRETE_POWDER + 4), DARK_SAND, (ItemId)(CONCRETE_POWDER + 11)};
+    for (int c = 0; c < 7; ++c) {
+        w.setBlock(x - 6 + c * 2, y + 4, z, GLASS);
+        for (int k = 0; k < 5; ++k) w.setBlock(x - 6 + c * 2, y + 5 + k, z, kinds[c]);
+    }
+    p.yaw = 0, p.pitch = 0.18f;
+    s.setTimeOfDay(6000);
+    d.settings().hideGui = true;
+    d.idle(10);
+    d.shot("t06_falling");
+    d.seconds(0.6f);
+    for (int c = 0; c < 7; ++c) {
+        w.setBlock(x - 6 + c * 2, y + 4, z, AIR);
+        d.seconds(0.35f);
+    }
+    d.seconds(3.0f);
+}
+#define FLAT_SHOT(NAME, PRESET)                                                                                \
+    SHOT(NAME) {                                                                                               \
+        Director d(out, #NAME);                                                                                \
+        d.game->seasonOverride_ = 0;                                                                           \
+        d.openWorld("Flat", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; g.flatPreset = PRESET; }); \
+        Player& p = d.s().player();                                                                            \
+        p.flying = true;                                                                                       \
+        p.pos.y += 3;                                                                                          \
+        p.pitch = -0.2f;                                                                                       \
+        d.s().setTimeOfDay(6000);                                                                              \
+        d.settings().hideGui = true;                                                                           \
+        d.seconds(1.0f);                                                                                       \
+        d.shot(#NAME);                                                                                         \
+        d.seconds(3.0f, [&](float) { p.yaw += 0.004f; });                                                      \
+    }
+FLAT_SHOT(t07_flat_desert, 1)
+FLAT_SHOT(t08_flat_snow, 2)
+FLAT_SHOT(t09_flat_nether, 4)
+FLAT_SHOT(t10_flat_void, 5)
+
+// ---------------------------------------------------------------- 1.9.0 build 2 pictures
+SHOT(b01_reach) {
+    // The new Celestial Reach rock: white and blue stone, crystal veins and spikes.
+    Director d(out, "b01");
+    d.game->seasonOverride_ = 0;
+    d.openWorld("Reach", 4242, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    enterReach(d);
+    Player& p = d.s().player();
+    p.flying = true;
+    p.pos = p.pos + Vec3(0, 10, 0) - p.forward() * 30;
+    p.pitch = -0.3f;
+    d.settings().hideGui = true;
+    d.idle(30);
+    d.shot("b01_reach");
+    d.seconds(5.0f, [&](float) { d.s().player().yaw += 0.003f; });
+}
+SHOT(b02_reach_under) {
+    // Under an island: crystal spikes hanging into the sky.
+    Director d(out, "b02");
+    d.game->seasonOverride_ = 0;
+    d.openWorld("Reach", 4242, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    enterReach(d);
+    Player& p = d.s().player();
+    p.flying = true;
+    p.pos = p.pos + Vec3(0, -24, 0) - p.forward() * 10;
+    p.pitch = 0.6f;
+    d.settings().hideGui = true;
+    d.idle(30);
+    d.shot("b02_reach_under");
+    d.seconds(5.0f, [&](float) { d.s().player().yaw += 0.003f; });
+}
+SHOT(b03_campfire) {
+    // A campfire at dusk, and a fire spreading through a little wooden hut and its tree.
+    Director d(out, "b03");
+    d.game->seasonOverride_ = 0;
+    d.openWorld("Fire", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z) - 6, y = feetY(w, x, z);
+    w.setBlock(x - 2, y, z, CAMPFIRE);
+    for (int dx = 2; dx <= 5; ++dx)
+        for (int dy = 0; dy < 3; ++dy)
+            for (int dz = -1; dz <= 1; ++dz) w.setBlock(x + dx, y + dy, z + dz - 1, dy == 2 ? LEAVES : PLANKS);
+    w.setBlock(x + 1, y, z, FIRE);
+    p.yaw = 0, p.pitch = -0.1f;
+    s.setTimeOfDay(12000);
+    d.settings().hideGui = true;
+    d.seconds(9.0f);
+    d.shot("b03_campfire");
+    d.seconds(5.0f, [&](float) { d.s().player().yaw += 0.003f; });
+}
+SHOT(b04_leaves) {
+    Director d(out, "b04");
+    d.game->seasonOverride_ = (int)Season::Halloween;
+    d.openWorld("Leaves", 4242, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    flyToBiome(d, [](World& w, int x, int z) { return overAll(w, x, z, "forest"); });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    // Stand on the ground under the crowns.
+    p.flying = false;
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z);
+    p.pos.y = (float)feetY(w, x, z);
+    p.pitch = 0.15f;
+    s.setTimeOfDay(6000);
+    d.settings().hideGui = true;
+    d.seconds(6.0f);
+    d.shot("b04_leaves");
+    d.seconds(5.0f, [&](float) { d.s().player().yaw += 0.003f; });
+}
+SHOT(b05_celestium) {
+    // The celestium set in the Reach, held in the hand.
+    Director d(out, "b05");
+    d.game->seasonOverride_ = 0;
+    d.openWorld("Reach", 4242, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    enterReach(d);
+    Session& s = d.s();
+    s.inventory().slots[0] = {CELESTIUM_PICKAXE, 1, 0};
+    s.inventory().slots[1] = {CELESTIUM_SWORD, 1, 0};
+    s.inventory().slots[2] = {CELESTIUM_AXE, 1, 0};
+    s.inventory().slots[3] = {CELESTIUM_SHOVEL, 1, 0};
+    s.inventory().slots[4] = {CELESTIUM_CHESTPLATE, 1, 0};
+    s.inventory().slots[5] = {CELESTIUM, 12, 0};
+    s.inventory().slots[6] = {CELESTIUM_ORE, 5, 0};
+    s.inventory().slots[7] = {PALE_CRYSTAL, 8, 0};
+    s.inventory().slots[8] = {CAMPFIRE, 2, 0};
+    s.selectedSlot() = 0;
+    s.armor()[1] = {CELESTIUM_CHESTPLATE, 1, 0};
+    d.idle(20);
+    d.shot("b05_celestium");
+    d.seconds(5.0f, [&](float) { d.s().player().yaw += 0.003f; });
+}
+SHOT(z90_delete) {
+    Director d(out, "z90");
+    d.openWorld("My World", 4242, GameMode::Creative);
+    d.game->toolEndSession();
+    d.idle(5);
+    d.game->toolConfirmDelete();
+    d.idle(5);
+    d.shot("z90_delete");
+    d.seconds(0.3f);
+}
+
+// ---------------------------------------------------------------- 1.9.0 build 3 pictures
+SHOT(c01_sky_animals) {
+    Director d(out, "c01");
+    d.game->seasonOverride_ = 0;
+    d.openWorld("Reach", 4242, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    enterReach(d);
+    Session& s = d.s();
+    Player& p = s.player();
+    const Vec3 f = p.forward();
+    for (int k = 0; k < 3; ++k) {
+        s.mobs().spawn(MobType::Pig, 3, p.pos + Vec3(f.x * (4 + k), 0, f.z * (4 + k)) + Vec3((float)k - 1.5f, 0, 0));
+        s.mobs().spawn(MobType::Sheep, 3, p.pos + Vec3(f.x * (6 + k), 0, f.z * (6 + k)) + Vec3((float)k + 0.5f, 0, 1));
+    }
+    p.pitch = -0.25f;
+    d.settings().hideGui = true;
+    d.idle(40);
+    d.shot("c01_sky_animals");
+    d.seconds(5.0f, [&](float) { d.s().player().yaw += 0.003f; });
+}
+SHOT(c02_water) {
+    // A spring on a hill: the water runs down and out, lower and lower away from the source.
+    Director d(out, "c02");
+    d.game->seasonOverride_ = 0;
+    d.openWorld("Water", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z) - 8, y = feetY(w, x, z);
+    for (int dx = -1; dx <= 1; ++dx)
+        for (int dz = -1; dz <= 1; ++dz)
+            for (int k = 0; k < 3; ++k) w.setBlock(x + dx, y + k, z + dz, STONE);
+    w.setBlock(x, y + 3, z, WATER);
+    w.setBlock(x + 6, y, z, LAVA);
+    p.pos.y += 3;
+    p.flying = true;
+    p.yaw = 0, p.pitch = -0.35f;
+    s.setTimeOfDay(6000);
+    d.settings().hideGui = true;
+    d.seconds(8.0f);
+    d.shot("c02_water");
+    d.seconds(5.0f, [&](float) { d.s().player().yaw += 0.003f; });
+}
+SHOT(c03_howto) {
+    Director d(out, "c03");
+    d.game->seasonOverride_ = 0;
+    d.openWorld("How", 4242, GameMode::Survival);
+    d.game->toolHowToCraft(1, -1);
+    d.idle(10);
+    d.shot("c03_howto");
+    d.seconds(4.0f);
+}
+SHOT(c04_experiments) {
+    Director d(out, "c04");
+    d.game->toolCreateWorld(true);
+    d.idle(10);
+    d.shot("c04_experiments");
+    d.seconds(0.3f);
+}
+SHOT(c05_portal) {
+    // The portal frame of the Celestial Reach in the Forgotten Overworld, where the compass points.
+    Director d(out, "c05");
+    d.game->seasonOverride_ = 0;
+    d.openWorld("Portal", 4242, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    goNether(d);
+    goVoid(d);
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    int fx = 0, fz = 0;
+    if (!w.nearestCelestialFrame((int)p.pos.x, (int)p.pos.z, fx, fz)) std::printf("no frame\n");
+    p.flying = true;
+    p.pos = Vec3(fx + 0.5f, 0, fz + 9.5f);
+    w.ensureChunksAround(floorDiv(fx, kChunkSize), floorDiv(fz, kChunkSize), 3, 64);
+    d.idle(30);
+    p.pos.y = (float)w.skyHeight(fx, fz) + 6;
+    p.yaw = 0, p.pitch = -0.5f;
+    d.settings().hideGui = true;
+    d.idle(40);
+    std::printf("frame at %d %d, block there %d\n", fx, fz, (int)w.getBlock(fx + 2, w.skyHeight(fx + 2, fz) - 1, fz));
+    d.shot("c05_portal");
+    d.seconds(0.5f);
+}

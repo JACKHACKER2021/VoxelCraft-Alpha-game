@@ -5,6 +5,19 @@
 namespace vc {
 
 namespace {
+// 1.9.0 the campfire: an ash bed, two logs along x below and two along z on top of them.
+int campfireBoxes(Box out[]) {
+    const float t = 1 / 16.0f;
+    out[0] = {0, 0, 0, 1, 1 * t, 1};                     // ash and embers
+    out[1] = {1 * t, 0, 1 * t, 15 * t, 4 * t, 5 * t};    // logs along x
+    out[2] = {1 * t, 0, 11 * t, 15 * t, 4 * t, 15 * t};
+    out[3] = {1 * t, 3 * t, 1 * t, 5 * t, 7 * t, 15 * t};  // logs along z, resting on them
+    out[4] = {11 * t, 3 * t, 1 * t, 15 * t, 7 * t, 15 * t};
+    return 5;
+}
+}  // namespace
+
+namespace {
 
 constexpr float kThin = 3 / 16.0f;
 
@@ -76,6 +89,12 @@ int itemBoxes(ItemId id, Box out[kItemBoxes]) {
     if (id == PARTY_LANTERN) {
         out[0] = {3 / 16.0f, 0, 3 / 16.0f, 13 / 16.0f, 13 / 16.0f, 13 / 16.0f};
         return 1;
+    }
+    if (id == CAMPFIRE) {
+        Box all[5];
+        campfireBoxes(all);
+        for (int i = 0; i < kItemBoxes; ++i) out[i] = all[i + 1];  // the icon: just the logs
+        return kItemBoxes;
     }
     if (isSlab(id) && !isDoubleSlab(id)) {
         out[0] = {0, 0, 0, 1, 0.5f, 1};
@@ -215,6 +234,13 @@ int blockBoxes(const World& world, int x, int y, int z, ItemId id, bool collisio
     if (id == PARTY_LANTERN) {
         out[0] = {4 / 16.0f, 0, 4 / 16.0f, 12 / 16.0f, 10 / 16.0f, 12 / 16.0f};
         return 1;
+    }
+    if (id == CAMPFIRE) {
+        if (collision) {
+            out[0] = {0, 0, 0, 1, 7 / 16.0f, 1};
+            return 1;
+        }
+        return campfireBoxes(out);
     }
     if (isSlab(id)) {
         out[0] = slabHalf(id) == 1 ? Box{0, 0.5f, 0, 1, 1, 1} : Box{0, 0, 0, 1, 0.5f, 1};

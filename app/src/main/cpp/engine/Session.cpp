@@ -28,6 +28,20 @@ constexpr float kMaxHealth = 20, kMaxFood = 20, kMaxAir = 15;
 constexpr float kAutosave = 60;
 
 const ItemId kCreativeHotbar[kHotbarSize] = {GRASS, COBBLESTONE, PLANKS, LOG, GLASS, BRICKS, NETHERRACK, OBSIDIAN, FLINT_AND_STEEL};
+uint64_t cellKey(int x, int y, int z) { return World::liquidCellKey(x, y, z); }
+bool fallsDown(ItemId b) { return b == SAND || b == GRAVEL || b == RED_SAND || b == DEBRIS_GRAVEL || b == DARK_SAND || isConcretePowder(b); }  // 1.7.2 build 2: dusty concrete is a powder
+// What a falling block or a flowing liquid simply replaces.
+bool washedAway(ItemId b) { return b == AIR || isPlant(b) || isTorch(b) || b == SNOW_LAYER; }
+// 1.9.0 build 2: what fire catches on and burns away.
+bool isFlammable(ItemId b) {
+    if (b == FIRE || b == SHARD_CLUSTER) return false;
+    if (isLog(b) || isLeaves(b) || isPlant(b) || woolColor(b) >= 0 || isCarpet(b) || isTnt(b)) return true;
+    if (b == BOOKSHELF || b == BARREL || b == LOOT_BARREL_CAMP || b == CHEST || b == WOOD_CUTTER || b == CRAFTING_TABLE || b == HAY_BALE)
+        return true;
+    if (isFence(b)) return b != NETHER_BRICK_FENCE && b != POWERSTONE_FENCE;
+    const int m = shapeMaterialOf(isStairs(b) || isSlab(b) ? shapeMaterial(b) : b);
+    return m >= 0 && isWoodMaterial(m);
+}
 }  // namespace
 
 Session::Session(const WorldInfo& info, const PlayerState& player)
@@ -47,6 +61,10 @@ Session::Session(const WorldInfo& info, const PlayerState& player)
     nether_.changeLog = &changes_[1];
     void_.changeLog = &changes_[2];
     celestial_.changeLog = &changes_[3];
+    overworld_.flowLevels = &flow_[0];
+    nether_.flowLevels = &flow_[1];
+    void_.flowLevels = &flow_[2];
+    celestial_.flowLevels = &flow_[3];
     loadFlow();
     {
         std::ifstream in(info.folder + "/waypoints.txt");
@@ -112,7 +130,23 @@ void Session::findSpawn() {
     state_.spawn = Vec3(x + 0.5f, (float)overworld_.skyHeight(x, z) + 0.01f, z + 0.5f);
 }
 
+void Session::landFallingBlocks() {
+    for (const FallingBlock& f : fallingBlocks_) {
+        World& w = worldAt(f.dim);
+        const int x = (int)std::floor(f.pos.x), z = (int)std::floor(f.pos.z);
+        int y = (int)std::floor(f.pos.y);
+        while (y > 0) {
+            const ItemId below = w.getBlock(x, y - 1, z);
+            if (!washedAway(below) && !isLiquid(below)) break;
+            --y;
+        }
+        if (y >= 0 && y < kChunkHeight) w.setBlock(x, y, z, f.id);
+    }
+    fallingBlocks_.clear();
+}
+
 void Session::save() {
+    landFallingBlocks();
     state_.pos = player_.pos;
     state_.yaw = player_.yaw;
     state_.pitch = player_.pitch;
@@ -627,6 +661,25 @@ void Session::updateBlocksOverTime(float dt) {
             --i;
         }
     }
+    // 1.9.0: falling blocks speed up, then land on the first block that holds them.
+    for (size_t i = 0; i < fallingBlocks_.size(); ++i) {
+        FallingBlock& f = fallingBlocks_[i];
+        World& w = worldAt(f.dim);
+        f.vel = std::min(f.vel + 22 * dt, 30.0f);
+        const float next = f.pos.y - f.vel * dt;
+        const int x = (int)std::floor(f.pos.x), z = (int)std::floor(f.pos.z);
+        const int cell = (int)std::floor(next);
+        const ItemId below = cell >= 0 ? w.getBlock(x, cell, z) : (ItemId)BEDROCK;
+        if (cell < 0 || (!washedAway(below) && !isLiquid(below))) {
+            const int y = std::max(0, cell + 1);
+            if (y < kChunkHeight) w.setBlock(x, y, z, f.id);
+            fallingBlocks_[i] = fallingBlocks_.back();
+            fallingBlocks_.pop_back();
+            --i;
+            continue;
+        }
+        f.pos.y = next;
+    }
     // Saplings growing into trees.
     for (size_t i = 0; i < saplings_.size(); ++i) {
         Timed& s = saplings_[i];
@@ -675,21 +728,13 @@ void Session::updateBlocksOverTime(float dt) {
     }
 }
 
-namespace {
-uint64_t cellKey(int x, int y, int z) {
-    return ((uint64_t)((uint32_t)x & 0xFFFFFFFu) << 36) | ((uint64_t)((uint32_t)z & 0xFFFFFFFu) << 8) | (uint64_t)(y & 0xFF);
-}
-bool fallsDown(ItemId b) { return b == SAND || b == GRAVEL || b == RED_SAND || b == DEBRIS_GRAVEL || b == DARK_SAND || isConcretePowder(b); }  // 1.7.2 build 2: dusty concrete is a powder
-// What a falling block or a flowing liquid simply replaces.
-bool washedAway(ItemId b) { return b == AIR || isPlant(b) || isTorch(b) || b == SNOW_LAYER; }
-}  // namespace
 
 void Session::updateBlockPhysics(float dt) {
     if (mobsFromHost) {  // a guest: the host moves the blocks and sends the results
         for (auto& c : changes_) c.clear();
         return;
     }
-    const bool liquids = info_.expFlowingLiquids;
+    const bool liquids = !oldMode();  // 1.9.0 build 3: water and lava flow in every world (no longer an experiment)
     // New changes wake the blocks around them.
     for (int d = 0; d < 4; ++d) {
         if (changes_[d].empty()) continue;
@@ -712,9 +757,9 @@ void Session::updateBlockPhysics(float dt) {
                     }
                 }
                 const bool liquid = liquids && (b == WATER || b == LAVA);
-                if (!fallsDown(b) && !liquid && !flow_[d].count(cellKey(x, y, z))) continue;
+                if (!fallsDown(b) && !liquid && b != FIRE && !flow_[d].count(cellKey(x, y, z))) continue;
                 if (!ticking_[d].insert(cellKey(x, y, z)).second || blockTicks_.size() > 20000) continue;
-                const float delay = fallsDown(b) ? 0.05f : b == LAVA ? (d == 1 ? 0.5f : 1.0f) : 0.25f;
+                const float delay = b == FIRE ? 1.0f + fireRandom() : fallsDown(b) ? 0.05f : b == LAVA ? (d == 1 ? 0.5f : 1.0f) : 0.25f;
                 blockTicks_.push_back({d, x, y, z, delay});
             }
     }
@@ -734,15 +779,132 @@ void Session::updateBlockPhysics(float dt) {
             // Sand and gravel drop one block at a time until something holds them.
             const ItemId below = t.y > 0 ? w.getBlock(t.x, t.y - 1, t.z) : (ItemId)BEDROCK;
             if (washedAway(below) || isLiquid(below)) {
-                w.setBlock(t.x, t.y - 1, t.z, b);
+                // 1.9.0: it leaves the grid and falls smoothly; it lands where something holds it.
                 w.setBlock(t.x, t.y, t.z, AIR);
+                fallingBlocks_.push_back({t.dim, Vec3(t.x + 0.5f, (float)t.y, t.z + 0.5f), 0, b});
             }
+        } else if (b == FIRE) {
+            tickFire(t.dim, t.x, t.y, t.z);
         } else if (liquids) {
             tickLiquid(t.dim, t.x, t.y, t.z);
         } else {
             flow_[t.dim].erase(cellKey(t.x, t.y, t.z));
         }
     }
+}
+
+void Session::updateAmbientParticles(float dt) {
+    World& w = *world_;
+    const int px = (int)std::floor(player_.pos.x), py = (int)std::floor(player_.pos.y), pz = (int)std::floor(player_.pos.z);
+    if ((ambientScan_ -= dt) <= 0) {
+        // Twice a second: where the fires and campfires near the player are.
+        ambientScan_ = 0.5f;
+        fireSpots_.clear();
+        for (int dx = -8; dx <= 8; ++dx)
+            for (int dz = -8; dz <= 8; ++dz)
+                for (int dy = -4; dy <= 5 && fireSpots_.size() < 24; ++dy) {
+                    const ItemId b = w.getBlock(px + dx, py + dy, pz + dz);
+                    if (b == FIRE || b == CAMPFIRE) fireSpots_.push_back({px + dx, py + dy, pz + dz, b == CAMPFIRE});
+                }
+    }
+    for (const auto& f : fireSpots_) {
+        // Flames lick up; campfires send a column of smoke into the sky.
+        if (fireRandom() < dt * 6)
+            particles_.spawnAmbient(w, Vec3(f[0] + 0.3f + fireRandom() * 0.4f, f[1] + 0.3f, f[2] + 0.3f + fireRandom() * 0.4f),
+                                    Vec3(0, 0.6f, 0), FIRE, 0.5f + fireRandom() * 0.3f, 0.07f, -0.05f, 1.4f);
+        if (f[3] && fireRandom() < dt * 3)
+            particles_.spawnAmbient(w, Vec3(f[0] + 0.4f + fireRandom() * 0.2f, f[1] + 0.9f, f[2] + 0.4f + fireRandom() * 0.2f),
+                                    Vec3((fireRandom() - 0.5f) * 0.2f, 1.3f, (fireRandom() - 0.5f) * 0.2f), SNOW_BLOCK, 3.5f, 0.16f, -0.02f, 0.4f);
+    }
+    if (!settings_.fallingLeaves) return;
+    // A few leaves drift down from the crowns round the player.
+    ambientLeaf_ += dt * 14;
+    for (; ambientLeaf_ >= 1; ambientLeaf_ -= 1) {
+        const int x = px + (int)(fireRandom() * 24) - 12, z = pz + (int)(fireRandom() * 24) - 12, y = py + (int)(fireRandom() * 14) - 2;
+        const ItemId b = w.getBlock(x, y, z);
+        if (!isLeaves(b) || w.getBlock(x, y - 1, z) != AIR) continue;
+        particles_.spawnAmbient(w, Vec3(x + fireRandom(), (float)y - 0.05f, z + fireRandom()),
+                                Vec3((fireRandom() - 0.5f) * 0.6f, -0.3f, (fireRandom() - 0.5f) * 0.6f), b, 5.0f + fireRandom() * 2, 0.07f, 0.04f,
+                                0.85f * dayLight_ + 0.15f);
+    }
+}
+
+void Session::updateExperiments20(float dt) {
+    lightningFlash_ = std::max(0.0f, lightningFlash_ - dt * 3);
+    if (world_ != &overworld_) return;
+    World& w = *world_;
+    if (info_.expStorms && state_.raining && precipitation() == Precipitation::Rain && (stormTimer_ -= dt) <= 0) {
+        // 2.0 preview: lightning strikes the ground near the player, with a flash and thunder; dry
+        // ground it hits catches fire.
+        stormTimer_ = 6 + fireRandom() * 14;
+        const int x = (int)std::floor(player_.pos.x + (fireRandom() - 0.5f) * 60), z = (int)std::floor(player_.pos.z + (fireRandom() - 0.5f) * 60);
+        const int y = w.skyHeight(x, z);
+        if (y > 1 && y < kChunkHeight - 2) {
+            for (int k = 0; k < 40; ++k) {
+                const float h = y + k * 1.2f;
+                particles_.spawnAmbient(w, Vec3(x + 0.5f + std::sin(k * 1.7f) * 0.6f, h, z + 0.5f + std::cos(k * 2.3f) * 0.6f), Vec3(0, 0, 0), SNOW_BLOCK,
+                                        0.35f, 0.35f, 0, 3.0f);
+            }
+            lightningFlash_ = 1;
+            sound(Sound::Explode);
+            if (w.getBlock(x, y, z) == AIR && isSolid(w.getBlock(x, y - 1, z)) && fireRandom() < 0.5f) w.setBlock(x, y, z, FIRE);
+            if ((Vec3(x + 0.5f, (float)y, z + 0.5f) - player_.pos).length() < 2.5f) hurt(5, true, true);
+        }
+    }
+    if (info_.expStars && dayLight_ < 0.35f && !state_.raining && (starTimer_ -= dt) <= 0) {
+        // 2.0 preview: a shooting star streaks across the night sky.
+        starTimer_ = 3 + fireRandom() * 9;
+        const float a = fireRandom() * 2 * kPi;
+        const Vec3 from = player_.pos + Vec3(std::cos(a) * 30, 45 + fireRandom() * 15, std::sin(a) * 30);
+        const Vec3 dir = Vec3(-std::sin(a) - std::cos(a) * 0.3f, -0.25f, std::cos(a) - std::sin(a) * 0.3f).normalized();
+        for (int k = 0; k < 14; ++k)
+            particles_.spawnAmbient(w, from - dir * (k * 0.7f), dir * 26.0f, SNOW_BLOCK, 0.9f - k * 0.04f, 0.18f - k * 0.008f, 0, 2.4f);
+    }
+}
+
+float Session::fireRandom() {
+    fireSeed_ = fireSeed_ * 1664525u + 1013904223u;
+    return (fireSeed_ >> 8) / 16777216.0f;
+}
+
+// 1.9.0 build 2: a fire burns for a few seconds, catches the flammable blocks around it and burns
+// them away; it goes out in the rain. On netherrack it burns for ever.
+void Session::tickFire(int d, int x, int y, int z) {
+    World& w = worldAt(d);
+    if (w.getBlock(x, y, z) != FIRE) return;
+    const ItemId below = y > 0 ? w.getBlock(x, y - 1, z) : (ItemId)AIR;
+    static const int k6[6][3] = {{0, -1, 0}, {0, 1, 0}, {1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
+    bool fuel = false;
+    for (const auto& o : k6) fuel |= isFlammable(w.getBlock(x + o[0], y + o[1], z + o[2]));
+    const bool rained = d == 0 && state_.raining && precipitation() == Precipitation::Rain && y >= w.skyHeight(x, z);
+    const bool forever = below == NETHERRACK || below == SOULED_STONE;
+    if (rained || (!fuel && !isSolid(below)) || (!forever && fireRandom() < (fuel ? 0.07f : 0.3f))) {
+        w.setBlock(x, y, z, AIR);
+        return;
+    }
+    // Catch the neighbours: each flammable one may burn away into a new fire.
+    if (blockTicks_.size() < 4000)
+        for (const auto& o : k6) {
+            const int nx = x + o[0], ny = y + o[1], nz = z + o[2];
+            const ItemId n = w.getBlock(nx, ny, nz);
+            if (!isFlammable(n) || fireRandom() > 0.45f) continue;
+            if (isTnt(n) && d == dimIndex()) {
+                w.setBlock(nx, ny, nz, AIR);
+                igniteTnt(nx, ny, nz, 2.5f);
+                continue;
+            }
+            w.setBlock(nx, ny, nz, FIRE);
+        }
+    if (ticking_[d].insert(cellKey(x, y, z)).second) blockTicks_.push_back({d, x, y, z, 1.0f + fireRandom()});
+}
+
+bool Session::lightFire(World& w, int x, int y, int z) {
+    // Flint and steel sets fire to the cell in front of the tapped face, on any block.
+    const ItemId here = w.getBlock(x, y, z);
+    if (here != AIR && !(isPlant(here) && here != FIRE)) return false;
+    w.setBlock(x, y, z, FIRE);
+    sound(Sound::Fuse);
+    return true;
 }
 
 void Session::tickLiquid(int d, int x, int y, int z) {
@@ -1169,6 +1331,28 @@ void Session::touchUp(int id, float x, float y, double time) {
                     hand_.use();
                     sound(Sound::Splash);
                     achieve("milk");
+                } else if (mob >= 0 && info_.expBreeding && mobs_.mobs()[mob].love <= 0 &&
+                           (((mobs_.mobs()[mob].type == MobType::Pig || mobs_.mobs()[mob].type == MobType::Sheep ||
+                              mobs_.mobs()[mob].type == MobType::Cow) && heldNow.id == WHEAT) ||
+                            (mobs_.mobs()[mob].type == MobType::Chicken && heldNow.id == WHEAT_SEEDS))) {
+                    // 1.9.0 build 3 (2.0 preview): a fed animal looks for a mate; two of them have a young one.
+                    Mob& fed = mobs_.mobs()[mob];
+                    fed.love = 20;
+                    if (survival() && --heldNow.count == 0) heldNow = {};
+                    hand_.use();
+                    sound(Sound::Eat);
+                    const World& here = *world_;
+                    for (int k = 0; k < 6; ++k) particles_.spawnAmbient(here, fed.pos + Vec3(0, 1.0f + k * 0.1f, 0), Vec3(0, 0.5f, 0), POPPY, 1.0f, 0.1f, -0.05f, 1.2f);
+                    const MobType type = fed.type;
+                    const Vec3 at = fed.pos;
+                    const int fedDim = fed.dim;
+                    for (size_t k = 0; k < mobs_.mobs().size(); ++k) {
+                        Mob& o = mobs_.mobs()[k];
+                        if ((int)k == mob || o.type != type || o.dim != fedDim || o.love <= 0 || (o.pos - at).length() > 5) continue;
+                        o.love = mobs_.mobs()[mob].love = 0;
+                        mobs_.spawn(type, fedDim, (o.pos + at) * 0.5f);
+                        break;
+                    }
                 } else if (mob >= 0) {
                     attackMob(mob);
                 } else if (int other = pickOtherPlayer(x, y); other >= 0) {
@@ -1622,6 +1806,7 @@ void Session::updateMobs(float dt) {
         } else if (e.kind == MobEvent::Died) {
             float roll = spawnRandom();
             std::vector<std::pair<ItemId, int>> loot = mobDrops(e.type, roll);
+            if (dim == 3 && (e.type == MobType::Pig || e.type == MobType::Sheep) && roll > 0.6f) loot.emplace_back(PALE_CRYSTAL, 1);  // 1.9.0 build 3
             if (const ModMob* mod = ModRegistry::get().mob(e.variant)) {
                 loot.clear();
                 for (auto& [key, n] : mod->drops)
@@ -1813,6 +1998,13 @@ void Session::updateMobs(float dt) {
                 mobs_.spawn(MobType::CrimsonMan, 2, Vec3(ax + 0.5f, (float)ay, az - 6.5f));
                 if (onMessage) onMessage(tr("Karmínový muž se probudil!"));
             }
+        }
+    } else if (dim == 3) {
+        // 1.9.0 build 3: celestial pigs and sheep graze on the sky islands.
+        if (mobs_.count(3, false, player_.pos, 80) < 8 && spawnRandom() < 0.3f && spot(20, 40, at, ground) && ground == CELESTIAL_GRASS) {
+            const MobType type = spawnRandom() < 0.5f ? MobType::Pig : MobType::Sheep;
+            const int herd = 2 + (int)(spawnRandom() * 2);
+            for (int i = 0; i < herd; ++i) mobs_.spawn(type, 3, at + Vec3(spawnRandom() * 2 - 1, 0, spawnRandom() * 2 - 1));
         }
     }
 }
@@ -2070,7 +2262,8 @@ void Session::useItem(const RayHit& hit) {
             if (onMessage) onMessage(tr("Portál do Karmínové prázdnoty jde zapálit jen v dimenzi úhelného kamene."));
             return;
         }
-        if (tryLightPortal(w, x, y, z, held.id == VOID_FLINT_AND_STEEL)) {
+        if (tryLightPortal(w, x, y, z, held.id == VOID_FLINT_AND_STEEL) ||
+            (held.id == FLINT_AND_STEEL && lightFire(w, x, y, z))) {
             hand_.use();
             if (survival()) damageHeldTool();
         }
@@ -2383,10 +2576,33 @@ void Session::updateSurvival(float dt, bool jumped) {
         return;
     }
 
+    if (world_ == &celestial_) {
+        // Low gravity: falls hurt from three times higher, not at all with the celestium chestplate.
+        player_.landedFall = state_.armor[1].id == CELESTIUM_CHESTPLATE ? 0 : player_.landedFall / 3;
+    }
     if (player_.landedFall > 3) hurt(std::ceil(player_.landedFall - 3), true, true);
     if (player_.inLava) hurt(4, false, true);
+    if (player_.touches(*world_, FIRE) || player_.touches(*world_, CAMPFIRE)) {
+        hurt(1, false, true);  // 1.9.0: burns
+        burning_ = 3;
+    }
+    if (burning_ > 0) {
+        // Still on fire for a moment after stepping out, unless in water.
+        burning_ = player_.eyeInWater(*world_) || player_.inWater ? 0 : burning_ - dt;
+        if (burning_ > 0 && std::fmod(burning_, 1.0f) < dt) hurt(1, true, true);
+    }
     if (player_.touches(*world_, CACTUS)) {
-        hurt(1);  // prickly
+        // Prickly. 1.9.0 build 3: a real hit: it pushes the player back, so it is felt every time.
+        if (hurtCooldown_ <= 0) {
+            const int px = (int)std::floor(player_.pos.x), py = (int)std::floor(player_.pos.y), pz = (int)std::floor(player_.pos.z);
+            Vec3 away;
+            for (int dx = -1; dx <= 1; ++dx)
+                for (int dy = -1; dy <= 1; ++dy)
+                    for (int dz = -1; dz <= 1; ++dz)
+                        if (world_->getBlock(px + dx, py + dy, pz + dz) == CACTUS) away = away - Vec3((float)dx, 0, (float)dz);
+            if (away.length() > 0) player_.vel = player_.vel + away.normalized() * 4.0f + Vec3(0, 2.5f, 0);
+        }
+        hurt(1);
         achieve("cactus");
     }
     if (player_.pos.y < -20) hurt(4);
@@ -2546,6 +2762,11 @@ void Session::update(float dt, double time, float guiW, float guiH, const Settin
     // Developer modes (Game passes them only for the developer account).
     player_.speedMul = settings.devSpeed;
     player_.gravityMul = settings.expLowGravity ? 0.3f : 1.0f;
+    if (world_ == &celestial_) {
+        // 1.9.0: low gravity in the Celestial Reach; the celestium chestplate steadies it further.
+        const bool plate = state_.armor[1].id == CELESTIUM_CHESTPLATE;
+        player_.gravityMul = std::min(player_.gravityMul, plate ? 0.38f : 0.45f);
+    }
     player_.noclip = settings.devNoclip;
     if (survival() && player_.flying && !settings.devFly) player_.flying = false;
     if (oldMode()) {
@@ -2642,6 +2863,7 @@ void Session::update(float dt, double time, float guiW, float guiH, const Settin
         achievementTimer_ = 0;
         checkAchievements();
     }
+    updateAmbientParticles(dt);
     particles_.update(*world_, dt);
     clock_ += dt;
     updateWeather(dt);
@@ -2649,6 +2871,18 @@ void Session::update(float dt, double time, float guiW, float guiH, const Settin
     updateArrows(dt);
     updateFireballs(dt);
     updateBlocksOverTime(dt);
+    for (Mob& m : mobs_.mobs()) m.love = std::max(0.0f, m.love - dt);
+    updateExperiments20(dt);
+    if (settings_.season == Season::NewYear && world_ == &overworld_ && dayLight_ < 0.6f && (fireworkTimer_ -= dt) <= 0) {
+        // 1.9.0 New Year's Eve: fireworks burst over the player all night long.
+        auto rnd = [&] { fireworkSeed_ = fireworkSeed_ * 1664525u + 1013904223u; return (fireworkSeed_ >> 8) / 16777216.0f; };
+        fireworkTimer_ = 0.6f + rnd() * 1.2f;
+        // In the sky ahead of the player, where they can be seen without looking straight up.
+        const Vec3 ahead = Vec3(std::sin(player_.yaw), 0, -std::cos(player_.yaw)), side(ahead.z, 0, -ahead.x);
+        const Vec3 at = player_.pos + ahead * (14 + rnd() * 10) + side * ((rnd() - 0.5f) * 24) + Vec3(0, 9 + rnd() * 9, 0);
+        particles_.spawnFirework(*world_, at, 46, 1.4f / std::max(0.12f, dayLight_ * settings_.brightness));
+        sound(Sound::Fuse);
+    }
     if (settings_.addonAnniversary && world_ == &overworld_) updateShowcase();
     if (settings_.addonAnniversary && world_ == &overworld_ && (confettiTimer_ -= dt) <= 0) {
         confettiTimer_ = 0.4f;  // the first birthday: confetti all around
@@ -2743,9 +2977,13 @@ void Session::render(Renderer& renderer, Ui& ui, const Settings& settings, bool 
             const float red[3] = {0.42f, 0.06f, 0.04f};
             for (int i = 0; i < 3; ++i) sky.sky[i] = sky.sky[i] * 0.35f + red[i] * 0.65f * std::max(0.35f, sky.light);
             sky.light *= 0.8f;
+        } else if (settings.season == Season::Halloween) {
+            // 1.9.0 autumn: a warm, golden-orange sky.
+            const float amber[3] = {0.95f, 0.55f, 0.25f};
+            for (int i = 0; i < 3; ++i) sky.sky[i] = sky.sky[i] * 0.78f + amber[i] * 0.22f * sky.light;
         }
         renderer.setFogColors(sky.sky, config_.nether.fog);
-        renderer.setBrightness(settings.brightness * sky.light);
+        renderer.setBrightness(settings.brightness * (sky.light + lightningFlash_ * 0.9f));
         dayLight_ = sky.light;
         buildSkyObjects(camera_.eye(), (float)std::fmod(state_.dayTime, kDayTicks), sunMoonVerts_, starVerts_);
         if (settings.clouds) buildClouds(camera_.eye(), clock_, sky.clouds, cloudVerts_);
@@ -2832,6 +3070,26 @@ void Session::render(Renderer& renderer, Ui& ui, const Settings& settings, bool 
         }
     }
     if (!tntVerts_.empty()) renderer.drawParticles(tntVerts_);
+    fallingVerts_.clear();
+    for (const FallingBlock& fb : fallingBlocks_) {
+        if (fb.dim != dimIndex()) continue;
+        const Vec3 c = fb.pos + Vec3(0, 0.5f, 0);
+        const float shade[6] = {1.0f, 0.5f, 0.8f, 0.8f, 0.65f, 0.65f}, light = std::max(0.35f, dayLight_);
+        for (int f = 0; f < 6; ++f) {
+            int tile = tileFor(fb.id, (Face)f);
+            float u0 = (tile % kAtlasCols) * kTileUv, v0 = (tile / kAtlasCols) * kTileUv, u1 = u0 + kTileUv, v1 = v0 + kTileUv;
+            static const int kQuad[6][4][3] = {
+                {{-1, 1, -1}, {1, 1, -1}, {1, 1, 1}, {-1, 1, 1}}, {{-1, -1, 1}, {1, -1, 1}, {1, -1, -1}, {-1, -1, -1}},
+                {{1, -1, -1}, {-1, -1, -1}, {-1, 1, -1}, {1, 1, -1}}, {{-1, -1, 1}, {1, -1, 1}, {1, 1, 1}, {-1, 1, 1}},
+                {{1, -1, 1}, {1, -1, -1}, {1, 1, -1}, {1, 1, 1}}, {{-1, -1, -1}, {-1, -1, 1}, {-1, 1, 1}, {-1, 1, -1}}};
+            Vertex q[4];
+            const float uv[4][2] = {{u0, v1}, {u1, v1}, {u1, v0}, {u0, v0}};
+            for (int k = 0; k < 4; ++k)
+                q[k] = {c.x + kQuad[f][k][0] * 0.5f, c.y + kQuad[f][k][1] * 0.5f, c.z + kQuad[f][k][2] * 0.5f, uv[k][0], uv[k][1], shade[f] * light};
+            fallingVerts_.insert(fallingVerts_.end(), {q[0], q[1], q[2], q[0], q[2], q[3]});
+        }
+    }
+    if (!fallingVerts_.empty()) renderer.drawParticles(fallingVerts_);
     // Arrows: two crossed squares along the flight, the arrow sprite on their diagonal.
     arrowVerts_.clear();
     {
@@ -2937,7 +3195,7 @@ PlayerPose Session::pose() const {
 
 Precipitation Session::precipitation() const {
     if (world_ != &overworld_) return Precipitation::None;
-    if (settings_.addonWinter) return Precipitation::Snow;  // a white winter everywhere
+    if (settings_.addonWinter || snowySeason(settings_.season)) return Precipitation::Snow;  // a white winter everywhere
     const int x = (int)std::floor(player_.pos.x), z = (int)std::floor(player_.pos.z);
     const BiomeDef* b = overworld_.biomeAt(x, z);
     if (!b) return Precipitation::Rain;
@@ -2961,7 +3219,7 @@ void Session::updateWeather(float dt) {
         state_.weatherTimer = state_.raining ? 120.0f + r % 240 : 300.0f + r % 900;
     }
     const Precipitation kind = precipitation();
-    const bool falling = (state_.raining || settings_.addonWinter) && kind != Precipitation::None;
+    const bool falling = (state_.raining || settings_.addonWinter || snowySeason(settings_.season)) && kind != Precipitation::None;
     updateSnowCover(dt, falling && kind == Precipitation::Snow);
     if (falling && kind == Precipitation::Rain && world_ == &overworld_) {
         // 1.7.2 build 3: rain sets concrete powder that lies under the open sky.
@@ -3003,7 +3261,7 @@ void Session::updateSnowCover(float dt, bool snowing) {
         } else if (below == SNOW_LAYER || here == SNOW_LAYER) {
             const int sy = here == SNOW_LAYER ? y : y - 1;
             const BiomeDef* b = w.biomeAt(x, z);
-            const bool cold = settings_.addonWinter || (b && (b->freeze || b->id == "snowy_taiga" || b->id == "ice_plains" || b->id == "dappled_forest"));
+            const bool cold = settings_.addonWinter || snowySeason(settings_.season) || (b && (b->freeze || b->id == "snowy_taiga" || b->id == "ice_plains" || b->id == "dappled_forest"));
             if (!cold) w.setBlock(x, sy, z, AIR);
         }
     }

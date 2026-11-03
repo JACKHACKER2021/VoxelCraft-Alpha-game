@@ -258,13 +258,26 @@ void buildChunkMesh(const World& world, const Chunk& chunk, ChunkMesh& out) {
                             out.opaque.insert(out.opaque.end(), {q[0], q[1], q[2], q[0], q[2], q[3]});
                         }
                     }
+                    if (id == CAMPFIRE) {
+                        // 1.9.0: the flames between the logs, two crossed glowing planes.
+                        const int tile = T_FIRE;
+                        const float u0 = (tile % kAtlasCols) * kTile, v0 = (tile / kAtlasCols) * kTile, u1 = u0 + kTile, v1 = v0 + kTile;
+                        const float e = 0.2f, y0 = y + 0.1f, y1 = y + 0.95f;
+                        const float planes[2][4] = {{e, e, 1 - e, 1 - e}, {1 - e, e, e, 1 - e}};
+                        for (const auto& p : planes) {
+                            Vertex a{wx + p[0], y0, wz + p[1], u0, v1, 1, 1}, b{wx + p[2], y0, wz + p[3], u1, v1, 1, 1};
+                            Vertex c{wx + p[2], y1, wz + p[3], u1, v0, 1, 1}, d{wx + p[0], y1, wz + p[1], u0, v0, 1, 1};
+                            out.opaque.insert(out.opaque.end(), {a, b, c, a, c, d, a, c, b, a, d, c});
+                        }
+                    }
                     continue;
                 }
 
                 if (isPlant(id)) {
                     // Two crossed planes, each with both sides so they show from every angle.
                     float light = nether ? 0.75f : 0.95f * sky.at(x, y, z);
-                    const float block = glow.at(x, y, z) * 0.95f;
+                    float block = glow.at(x, y, z) * 0.95f;
+                    if (id == FIRE) light = block = 1;  // 1.9.0: fire glows
                     int tile = tileFor(id, F_SOUTH);
                     float u0 = (tile % kAtlasCols) * kTile, v0 = (tile / kAtlasCols) * kTile, u1 = u0 + kTile, v1 = v0 + kTile;
                     const float e = 0.15f;  // pulled in a little from the block corners
@@ -287,6 +300,21 @@ void buildChunkMesh(const World& world, const Chunk& chunk, ChunkMesh& out) {
                     if (!faceVisible(id, nb)) continue;
                     // Liquid surfaces sit slightly lower, like in the original.
                     float topCut = (isLiquid(id) && f != 1 && n.get(x, y + 1, z) != id) ? 0.1f : 0.0f;
+                    // 1.9.0 build 3: flowing water and lava get lower with every block away from the
+                    // source, and the surface slopes: each corner is the average of the liquid cells
+                    // that share it (full where liquid lies on top).
+                    auto cornerCut = [&](int ox, int oz) {
+                        float sum = 0;
+                        int cells = 0;
+                        for (int i = ox - 1; i <= ox; ++i)
+                            for (int j = oz - 1; j <= oz; ++j) {
+                                if (n.get(x + i, y, z + j) != id) continue;
+                                if (n.get(x + i, y + 1, z + j) == id) return 0.0f;
+                                sum += 0.1f + world.liquidLevel(wx + i, y, wz + j) * 0.16f;
+                                ++cells;
+                            }
+                        return cells ? sum / cells : topCut;
+                    };
 
                     float light;
                     // Glowing blocks shine in the dark; the light of lamps falls on the faces around them.
@@ -326,7 +354,8 @@ void buildChunkMesh(const World& world, const Chunk& chunk, ChunkMesh& out) {
                     Vertex q[4];
                     for (int i = 0; i < 4; ++i) {
                         const float* c = fd.corners[i];
-                        q[i] = {wx + c[0], y + c[1] - (c[1] > 0 ? topCut : 0), wz + c[2], uv[i][0], uv[i][1], light * ao[i], block * (0.4f + 0.6f * ao[i])};
+                        const float cut = c[1] > 0 && topCut > 0 ? cornerCut(c[0] > 0.5f ? 1 : 0, c[2] > 0.5f ? 1 : 0) : 0;
+                        q[i] = {wx + c[0], y + c[1] - cut, wz + c[2], uv[i][0], uv[i][1], light * ao[i], block * (0.4f + 0.6f * ao[i])};
                         if (wave == 1 || (wave == 2 && c[1] > 0)) q[i].block += wave == 1 ? kWaveSway : kWaveWater;
                     }
                     // Split the quad along the diagonal that keeps the shading smooth.

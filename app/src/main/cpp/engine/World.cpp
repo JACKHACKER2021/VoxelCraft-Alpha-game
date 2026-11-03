@@ -85,7 +85,8 @@ World::Column World::column(int x, int z) const {
         return col;
     }
     if (config_.flat || config_.biomes.empty()) {
-        col.height = config_.flat ? 3 : config_.overworld.seaLevel + 2;
+        ItemId layers[8];
+        col.height = config_.flat ? flatLayers(config_.flatPreset, layers) - 1 : config_.overworld.seaLevel + 2;
         col.biome = config_.biomes.empty() ? nullptr : &config_.biomes.front();
         return col;
     }
@@ -266,11 +267,11 @@ void World::generateOverworld(Chunk& c) {
         for (int z = 0; z < kChunkSize; ++z) {
             int wx = cx * kChunkSize + x, wz = cz * kChunkSize + z;
             if (config_.flat) {
-                // Superflat: bedrock, two dirt layers and grass, like the classic flat world.
-                c.set(x, 0, z, WORLD_END);
-                c.set(x, 1, z, DIRT);
-                c.set(x, 2, z, DIRT);
-                c.set(x, 3, z, GRASS);
+                // Superflat: bedrock, two dirt layers and grass, like the classic flat world;
+                // 1.9.0: or the layers of the picked look (desert, snow, stone, nether, void).
+                ItemId layers[8];
+                const int n = flatLayers(config_.flatPreset, layers);
+                for (int y = 0; y < n; ++y) c.set(x, y, z, layers[y]);
                 continue;
             }
             Column col = column(wx, wz);
@@ -1029,6 +1030,12 @@ void World::celestialSpot(int rx, int rz, int& px, int& pz) const {
     const int region = kCelestialRegion;
     const uint32_t hh = hash3(rx, 1552, rz, seed_ ^ 0xCE1Eu);
     px = rx * region + 16 + (int)(hh % (uint32_t)(region - 32)), pz = rz * region + 16 + (int)((hh >> 12) % (uint32_t)(region - 32));
+    if (config_.generation >= 6) {
+        // 1.9.0: always in the middle part of a chunk, so the frame is really built there (near a
+        // chunk edge it used to be skipped, and the compass pointed at nothing).
+        px = floorDiv(px, kChunkSize) * kChunkSize + 4 + (int)((hh >> 24) % 8);
+        pz = floorDiv(pz, kChunkSize) * kChunkSize + 4 + (int)((hh >> 4) % 8);
+    }
 }
 
 bool World::nearestCelestialFrame(int x, int z, int& outX, int& outZ) const {
@@ -1147,8 +1154,22 @@ void World::generateCelestial(Chunk& c) {
             const float d = std::sqrt((float)(wx * wx + wz * wz));
             if (d < 14) m = std::max(m, 0.16f + (14 - d) / 14 * 0.45f);
             const int depth = 3 + (int)((m - 0.16f) * 55 + caves_.perlin2(wx / 7.0f, wz / 7.0f) * 3);
-            for (int k = 0; k <= depth && top - k > 1; ++k)
-                c.set(x, top - k, z, k == 0 ? CELESTIAL_GRASS : k < 3 ? CELESTIAL_DIRT : CELESTIAL_STONE);
+            const bool newRock = config_.generation >= 6;
+            for (int k = 0; k <= depth && top - k > 1; ++k) {
+                ItemId b = k == 0 ? CELESTIAL_GRASS : k < 3 ? CELESTIAL_DIRT : CELESTIAL_STONE;
+                if (newRock && k >= 3) {
+                    // 1.9.0: white rock with blue bands, crystal veins and celestium in the deep part.
+                    const int yy = top - k;
+                    b = (yy + (int)(detail_.perlin2(wx / 9.0f, wz / 9.0f) * 3)) % 7 < 2 ? SKY_STONE : PALE_STONE;
+                    const uint32_t v = hash3(wx, yy, wz, seed_ ^ 0x5EEDu);
+                    if (k > 5 && v % 61 == 0) b = CELESTIUM_ORE;
+                    else if (detail_.perlin3(wx / 6.0f, yy / 6.0f, wz / 6.0f) > 0.62f) b = PALE_CRYSTAL;
+                }
+                c.set(x, top - k, z, b);
+            }
+            if (newRock && hash3(wx, 5, wz, seed_ ^ 0xC2u) % 37 == 0)
+                // Crystal spikes hang from the underside of the islands.
+                for (int k = 1; k < 2 + (int)(hash3(wx, 6, wz, seed_) % 4) && top - depth - k > 1; ++k) c.set(x, top - depth - k, z, PALE_CRYSTAL);
             // A chain hanging from the underside now and then.
             const uint32_t r = hash3(wx, 7, wz, seed_ ^ 0xC3A1u);
             if (r % 113 == 0)
@@ -1172,9 +1193,19 @@ void World::generateCelestial(Chunk& c) {
                             if (c.get(x + dx, top + dy, z + dz) == AIR) c.set(x + dx, top + dy, z + dz, CELESTIAL_LEAVES);
                         }
             } else if (r % 509 == 0) {
-                // A broken pillar of the lost kingdom.
+                // A broken pillar of the lost kingdom (1.9.0: of white rock with a crystal on top).
                 const int h = 2 + (int)((r >> 5) % 5);
-                for (int k = 1; k <= h; ++k) c.set(x, top + k, z, CELESTIAL_STONE_BRICKS);
+                for (int k = 1; k <= h; ++k) c.set(x, top + k, z, config_.generation >= 6 && k % 3 == 0 ? PALE_STONE : CELESTIAL_STONE_BRICKS);
+                if (config_.generation >= 6) c.set(x, top + h + 1, z, PALE_CRYSTAL);
+            } else if (config_.generation >= 6 && r % 1201 == 7 && x >= 3 && x <= 12 && z >= 3 && z <= 12) {
+                // 1.9.0: a bridge remnant: a short broken deck of bricks and planks on two posts.
+                const bool alongX = (r >> 9) & 1;
+                for (int k = -3; k <= 3; ++k) {
+                    const int bx = x + (alongX ? k : 0), bz = z + (alongX ? 0 : k);
+                    if (hash3(bx, 9, bz, seed_) % 4 == 0) continue;  // missing planks
+                    c.set(bx, top + 2, bz, std::abs(k) == 3 ? CELESTIAL_STONE_BRICKS : CELESTIAL_PLANKS);
+                }
+                for (int k : {-3, 3}) c.set(x + (alongX ? k : 0), top + 1, z + (alongX ? 0 : k), CELESTIAL_STONE_BRICKS);
             }
         }
     if (config_.generation >= 5) stampCelestialBridges(c);
@@ -1489,8 +1520,23 @@ void World::generateVoid(Chunk& c) {
                 celestialSpot(rx, rz, px, pz);
                 const int lx = px - cx * kChunkSize, lz = pz - cz * kChunkSize;
                 if (lx < 3 || lx > 12 || lz < 3 || lz > 12 || voidBiomeAt(px, pz) != VoidBiome::Forgotten) continue;
-                const int top = forgottenTop(px, pz, heights[lx][lz]);
-                if (c.get(lx, top, lz) == AIR) continue;  // on a missing piece: none here
+                int top = forgottenTop(px, pz, heights[lx][lz]);
+                if (config_.generation >= 6) {
+                    // 1.9.0: on a raised platform over the highest ground round it, never buried
+                    // by a higher piece of land and never missing over a hole.
+                    for (int dx = -3; dx <= 3; ++dx)
+                        for (int dz = -3; dz <= 3; ++dz) top = std::max(top, forgottenTop(px + dx, pz + dz, heights[lx + dx][lz + dz]) + 1);
+                    top = std::min(top, kChunkHeight - 10);
+                    for (int dx = -3; dx <= 3; ++dx)
+                        for (int dz = -3; dz <= 3; ++dz) {
+                            for (int y = top + 1; y < top + 8; ++y) c.set(lx + dx, y, lz + dz, AIR);
+                            if (std::abs(dx) == 3 || std::abs(dz) == 3) c.set(lx + dx, top, lz + dz, SOULED_STONE);  // the rim
+                            for (int y = top - 1; y > 1 && y > top - 12 && c.get(lx + dx, y, lz + dz) == AIR; --y)
+                                c.set(lx + dx, y, lz + dz, SOULED_STONE);  // the pillar down to the ground
+                        }
+                } else if (c.get(lx, top, lz) == AIR) {
+                    continue;  // on a missing piece: none here
+                }
                 for (int dx = -2; dx <= 2; ++dx)
                     for (int dz = -2; dz <= 2; ++dz) {
                         const bool corner = std::abs(dx) == 2 && std::abs(dz) == 2, inside = std::abs(dx) <= 1 && std::abs(dz) <= 1;

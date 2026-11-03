@@ -55,6 +55,7 @@ struct Mob {
     int killer = -1;         // multiplayer: the guest who dealt the last blow
     bool cave = false;       // spawned underground: daylight does not send it away
     float calm = 0;          // 1.5.7 hog man: seconds it stays peaceful after a gift of powerstone
+    float love = 0;          // 1.9.0 build 3 (2.0 preview): seconds an animal looks for a mate after being fed
     float barter = 0;        // 1.5.7 hog man: > 0 while it looks over the powerstone, then it pays
     bool alive() const { return deathTime <= 0; }
 };

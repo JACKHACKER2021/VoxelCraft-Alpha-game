@@ -1,4 +1,6 @@
 #pragma once
+
+#include "Seasons.h"
 #include <array>
 #include <cstdint>
 #include <map>
@@ -29,6 +31,10 @@ struct WorldInfo {
     bool expOreRedesign = false;  // 1.5.1-1.5.5 only: the redesigned ores are standard since 1.5.7
     bool expFlowingLiquids = false;  // 1.5.7: water and lava flow and spread
     bool expExplorationMaps = false; // 1.5.7: explorer maps to mineshafts in chests and debris gravel
+    // 1.9.0 build 3: previews of VoxelCraft 2.0.0.
+    bool expStorms = false;    // thunderstorms: lightning strikes and sets fires
+    bool expStars = false;     // shooting stars streak over the night sky
+    bool expBreeding = false;  // feed two animals and a young one is born
 };
 
 // Everything about the player that survives quitting the game.
@@ -109,6 +115,10 @@ struct Settings {
     bool mpProtectSpawn = true;
     // Store addons in effect (filled in from the profile every frame, never saved).
     bool addonWinter = false, addonHalloween = false, addonAnniversary = false;
+    // 1.9.0: seasonal events by the date (saved on/off; the season itself is filled in every frame).
+    bool seasonalEvents = true;
+    bool fallingLeaves = true;  // 1.9.0 build 2: leaves drift down from the trees
+    Season season = Season::None;
 };
 
 // Seeds typed by the player: numbers are used as they are, any other text

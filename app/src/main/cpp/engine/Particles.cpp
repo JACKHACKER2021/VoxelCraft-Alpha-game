@@ -86,6 +86,34 @@ void ParticleSystem::spawnConfetti(const World& world, const Vec3& centre, int c
     }
 }
 
+void ParticleSystem::spawnFirework(const World& world, const Vec3& centre, int count, float glow) {
+    const int px = (int)(random() * 3) * 4, py = (int)(random() * 3) * 4;  // one colour per burst
+    for (int i = 0; i < count; ++i) {
+        // An even ball of sparks flying out from the centre.
+        Vec3 d((random() - 0.5f) * 2, (random() - 0.5f) * 2, (random() - 0.5f) * 2);
+        if (d.length() < 0.05f) d = Vec3(0, 1, 0);
+        d = d.normalized() * (5 + random() * 2.5f);
+        add(world, centre, d, AIR, 1.2f + random() * 0.6f);
+        Particle& p = particles_.back();
+        p.u0 = (T_CONFETTI % kAtlasCols) * kTile + px / 16.0f * kTile;
+        p.v0 = (T_CONFETTI / kAtlasCols) * kTile + py / 16.0f * kTile;
+        p.u1 = p.u0 + 4 / 16.0f * kTile;
+        p.v1 = p.v0 + 4 / 16.0f * kTile;
+        p.size = 0.4f;
+        p.light = glow;  // bright against the night sky
+        p.fall = 0.12f;
+    }
+}
+
+void ParticleSystem::spawnAmbient(const World& world, const Vec3& pos, const Vec3& vel, ItemId block, float life, float size, float fall,
+                                  float light) {
+    add(world, pos, vel, block, life);
+    Particle& p = particles_.back();
+    p.size = size;
+    p.fall = fall;
+    p.light = light;
+}
+
 void ParticleSystem::update(const World& world, float dt) {
     for (Particle& p : particles_) {
         p.life -= dt;

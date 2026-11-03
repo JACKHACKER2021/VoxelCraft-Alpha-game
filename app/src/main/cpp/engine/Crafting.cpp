@@ -114,7 +114,34 @@ const RecipeBook& RecipeBook::defaults() {
 const RecipeBook& recipes() { return current(); }
 void setRecipes(RecipeBook book) { current() = std::move(book); }
 
+namespace {
+// 1.9.0 build 3: every wood works for the basic wooden things (crafting table, sticks, chest,
+// tools, doors...): planks and logs of any tree count as oak's when no recipe of their own fits.
+ItemId asOak(ItemId id) {
+    if (id == PLANKS || id == LOG) return id;
+    if (isLog(id) && id != EYE_LOG) return LOG;
+    const int m = shapeMaterialOf(id);
+    return m >= 0 && isWoodMaterial(m) ? (ItemId)PLANKS : id;
+}
+CraftResult matchExact(const ItemStack* grid, int size);
+}  // namespace
+
 CraftResult matchRecipe(const ItemStack* grid, int size) {
+    CraftResult r = matchExact(grid, size);
+    if (!r.empty()) return r;
+    std::vector<ItemStack> oak(grid, grid + size * size);
+    bool changed = false;
+    for (ItemStack& s : oak)
+        if (!s.empty() && asOak(s.id) != s.id) s.id = asOak(s.id), changed = true;
+    if (!changed) return {};
+    r = matchExact(oak.data(), size);
+    // Never turn other planks into oak planks or a log into oak planks that way.
+    if (r.id == PLANKS) return {};
+    return r;
+}
+
+namespace {
+CraftResult matchExact(const ItemStack* grid, int size) {
     const RecipeBook& book = recipes();
     for (const ShapedRecipe& r : book.shaped) {
         if (r.w > size || r.h > size) continue;
@@ -130,6 +157,7 @@ CraftResult matchRecipe(const ItemStack* grid, int size) {
         if (r.ingredients == items) return r.result;
     return {};
 }
+}  // namespace
 
 ItemId smeltResult(ItemId id) {
     auto it = recipes().smelting.find(id);
