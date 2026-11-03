@@ -302,10 +302,11 @@ enum BlockId : uint16_t {
     BRUSHER = 1600,
     FORTRESS_COMPASS = 1601,
     OLD_DOCUMENT = 1602,     // 1602..1609: the eight pages of the forgotten kingdom's story
-    // 1.9.0 build 2: celestium from the Celestial Reach (1603..1608).
-    CELESTIUM = 1603,
-    CELESTIUM_PICKAXE = 1604, CELESTIUM_SWORD = 1605, CELESTIUM_AXE = 1606, CELESTIUM_SHOVEL = 1607,
-    CELESTIUM_CHESTPLATE = 1608,  // the only celestium armour: steadier, softer falls in low gravity
+    // 1.9.0 build 2: celestium from the Celestial Reach (1990..1995; 1603..1608 are the old
+    // documents' pages, which these first collided with).
+    CELESTIUM = 1990,
+    CELESTIUM_PICKAXE = 1991, CELESTIUM_SWORD = 1992, CELESTIUM_AXE = 1993, CELESTIUM_SHOVEL = 1994,
+    CELESTIUM_CHESTPLATE = 1995,  // the only celestium armour: steadier, softer falls in low gravity
     ANCIENT_COIN = 1610,
     POWERSTONE_RELIC = 1611,
     POTTERY_SHARD = 1612,
@@ -499,7 +500,7 @@ int modFood(ItemId id);
 inline bool isNewBlock(ItemId id) {
     if (id >= kModIdBase) return modIsBlock(id);
     return isStairs(id) || isSlab(id) || (id >= TAR && id <= SNOW_LAYER) || isStainedGlass(id) || (id >= WALL_CABLE && id < WALL_CABLE + 8) || (id >= WALL_SWITCH && id < WALL_SWITCH + 8) ||
-           (id >= ANNIV_LOGO && id <= PAINTED_PLANKS + 3) || (id >= POWERSTONE_BRICKS && id <= LOOT_BARREL_CAMP && id != 1518 && id != 1519) ||
+           (id >= ANNIV_LOGO && id <= PAINTED_PLANKS + 3) || (id >= POWERSTONE_BRICKS && id <= CAMPFIRE && id != 1518 && id != 1519) ||
            (id >= CONCRETE_POWDER && id <= LOOT_CHEST_CHAMBER);
 }
 // The full block a stair or slab is cut from (its texture, hardness and tool).

@@ -3896,6 +3896,11 @@ static int testSeasons190() {
         CHECK(w.getBlock(5, n - 1, 5) == tops[p] && w.getBlock(5, n, 5) == AIR && w.getBlock(5, 0, 5) == WORLD_END);
     }
     std::printf("seasons: event dates ok, %d flat world looks\n", kFlatPresets);
+    // 1.9.0: the new blocks can be placed, the celestium items have their own icons (they first
+    // shared ids with the old documents) and are not blocks.
+    for (ItemId b : {PALE_STONE, SKY_STONE, CELESTIUM_ORE, PALE_CRYSTAL, CAMPFIRE}) CHECK(isPlaceable(b));
+    for (ItemId i : {CELESTIUM, CELESTIUM_PICKAXE, CELESTIUM_SWORD, CELESTIUM_AXE, CELESTIUM_SHOVEL, CELESTIUM_CHESTPLATE})
+        CHECK(!isPlaceable(i) && !isDocument(i) && tileFor(i, F_SOUTH) != T_DOCUMENT && tileFor(i, F_SOUTH) != T_STONE);
     // 1.9.0 build 3: every wood crafts the basic wooden things, and every log gives its own planks.
     for (ItemId log : {LOG, SPRUCE_LOG, VOID_LOG, NETHERPERK_LOG, CRIMSON_LOG, CELESTIAL_LOG, GRAY_LOG, CRIMSONIUM_LOG}) {
         ItemStack g1[4] = {{log, 1, 0}, {}, {}, {}};
