@@ -1,3 +1,5 @@
+#include <array>
+#include "Items.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -1796,6 +1798,67 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
                 // Worn celestium: pale gold plates with white seams.
                 a.put(T_CELESTIUM_PLATE, px, py, px % 8 == 0 || py % 8 == 0 ? Rgb{255, 252, 230} : Rgb{232, 205, 120}.plus(n));
             }
+        // 1.9.5: leaf litter: scattered brown and rust leaves with the ground showing between them.
+        for (int py = 0; py < 16; ++py)
+            for (int px = 0; px < 16; ++px) {
+                const uint32_t h = hash3(px / 2, py / 2, 1582, 6);
+                const int n = (int)(hash3(px, py, 1582, 2) % 18) - 9;
+                if (h % 5 < 3) {
+                    const Rgb c = h % 3 == 0 ? Rgb{150, 82, 34} : h % 3 == 1 ? Rgb{118, 70, 36} : Rgb{170, 110, 48};
+                    a.put(T_LEAF_LITTER, px, py, c.plus(n));
+                } else {
+                    a.clear(T_LEAF_LITTER, px, py);
+                }
+            }
+        // 1.9.5 the celestial wings: an item of two feathered wings, and the worn look.
+        for (int py = 0; py < 16; ++py)
+            for (int px = 0; px < 16; ++px) {
+                const int dx = px < 8 ? 7 - px : px - 8;
+                const bool wing = py >= 3 + dx / 2 && py <= 12 - dx / 3 && dx <= 7 && dx >= 1;
+                if (wing) a.put(T_CELESTIAL_WINGS, px, py, (py + dx) % 3 == 0 ? Rgb{170, 215, 250} : Rgb{240, 248, 255});
+                else a.clear(T_CELESTIAL_WINGS, px, py);
+                a.put(T_WINGS_PLATE, px, py, (px + py) % 4 == 0 ? Rgb{180, 220, 250} : Rgb{235, 245, 255});
+            }
+        // 1.9.5 build 3: honey; and the builder blocks in a clean, modern look: dark panels with
+        // glowing lines (command block cyan, structure block blue), the barrier a red no-entry sign.
+        for (int py = 0; py < 16; ++py)
+            for (int px = 0; px < 16; ++px) {
+                const int n = (int)(hash3(px, py, 1583, 3) % 12) - 6;
+                const bool rim = px == 0 || py == 0 || px == 15 || py == 15;
+                a.put(T_HONEY_BLOCK, px, py, rim ? Rgb{196, 110, 20} : Rgb{238, 162, 40}.plus(n));
+                a.put(T_HONEY_BLOCK_TOP, px, py, rim || (px > 3 && px < 12 && (py == 4 || py == 11)) ? Rgb{205, 120, 24} : Rgb{246, 178, 52}.plus(n));
+                const int dx = px - 8, dy = py - 8;
+                const float r = std::sqrt((float)(dx * dx + dy * dy) + 0.5f);
+                if (r < 5.5f) a.put(T_HONEY_BALL, px, py, r < 2.5f && dx < 0 && dy < 0 ? Rgb{255, 225, 130} : Rgb{232, 150, 30}.plus(n));
+                else a.clear(T_HONEY_BALL, px, py);
+                const Rgb panel = Rgb{34, 38, 48}.plus(n / 2);
+                const bool frame = px <= 1 || py <= 1 || px >= 14 || py >= 14;
+                const bool corner = (px < 5 || px > 10) && (py < 5 || py > 10) && (px == 3 || px == 12 || py == 3 || py == 12);
+                a.put(T_STRUCTURE_BLOCK, px, py, frame ? Rgb{70, 78, 96} : corner ? Rgb{90, 170, 255} : panel);
+                const bool arrow = (py >= 5 && py <= 10 && px >= 3 && px <= 3 + (py <= 7 ? py - 5 : 10 - py) + 2) || (py == 10 && px >= 8 && px <= 12);
+                a.put(T_COMMAND_BLOCK, px, py, frame ? Rgb{60, 66, 82} : arrow ? Rgb{80, 240, 220} : panel);
+                a.put(T_COMMAND_BLOCK_SIDE, px, py, frame ? Rgb{60, 66, 82} : (px + py) % 6 == 0 || (py == 8 && px % 3 != 0) ? Rgb{40, 140, 150} : panel);
+                const bool ring = r > 5.0f && r < 7.2f, slash = std::abs(dx + dy) <= 1 && r < 7.0f;
+                if (ring || slash) a.put(T_BARRIER, px, py, Rgb{225, 40, 40});
+                else a.clear(T_BARRIER, px, py);
+            }
+        // 1.9.5 the creatures of the Celestial Reach.
+        for (int py = 0; py < 16; ++py)
+            for (int px = 0; px < 16; ++px) {
+                const int n = (int)(hash3(px, py, 1995, 4) % 14) - 7;
+                const Rgb cel = Rgb{200, 230, 255}.plus(n);
+                a.put(T_CELESTLING_BODY, px, py, (px + py * 3) % 9 == 0 ? Rgb{255, 240, 180} : cel);
+                const bool eye = py >= 5 && py <= 8 && (px == 4 || px == 5 || px == 10 || px == 11);
+                a.put(T_CELESTLING_FACE, px, py, eye ? Rgb{80, 170, 255} : py == 11 && px > 6 && px < 9 ? Rgb{150, 180, 220} : cel);
+                const Rgb st = Rgb{58, 62, 92}.plus(n);
+                a.put(T_STALKER_BODY, px, py, (px * 3 + py) % 13 == 0 ? Rgb{120, 130, 200} : st);
+                const bool seye = py >= 6 && py <= 7 && ((px >= 3 && px <= 5) || (px >= 10 && px <= 12));
+                a.put(T_STALKER_FACE, px, py, seye ? Rgb{235, 245, 255} : Rgb{205, 210, 225}.plus(n));
+                const Rgb dr = Rgb{150, 195, 235}.plus(n);
+                a.put(T_DRIFTER_BODY, px, py, py % 4 == 0 ? dr.scaled(1.12f) : dr);
+                a.put(T_DRIFTER_FACE, px, py, py >= 6 && py <= 8 && (px == 3 || px == 12) ? Rgb{30, 40, 70} : dr);
+                a.put(T_DRIFTER_WING, px, py, (px % 4 == 0) ? Rgb{235, 245, 255} : Rgb{170, 210, 245}.plus(n));
+            }
         a.sprite(T_CELESTIUM, kSprite_gem, {240, 205, 110}, {255, 250, 225});
         a.sprite(T_CELESTIUM_PICKAXE, kSprite_pickaxe, {240, 210, 120});
         a.sprite(T_CELESTIUM_SWORD, kSprite_sword, {240, 210, 120}, {255, 255, 255});
@@ -2657,8 +2720,209 @@ void oreRedesignTile(int index, uint8_t out[16 * 16 * 4]) {
 
 // 1.8.0 Old World: the procedural textures of VoxelCraft 0.2-0.3 (FallbackAtlas.cpp at commit
 // feed712), for the blocks that existed back then. Drawn over a finished atlas of any tile size.
+namespace {
+// 2.0.0: every block without a hand-made 0.3 texture gets an aged look: 16x16 pixels, fewer
+// and flatter colours and the grainy noise of the old tiles. Item icons stay as they are.
+void ageTile(std::vector<uint8_t>& rgba, int size, int tile, const std::vector<std::array<int, 3>>& palette) {
+    const int t = size / kAtlasCols;
+    const int cell = std::max(1, t / 16);
+    auto at = [&](int x, int y) { return &rgba[((size_t)((tile / kAtlasCols) * t + y) * size + (tile % kAtlasCols) * t + x) * 4]; };
+    float mean[3] = {0, 0, 0};
+    int opaque = 0;
+    for (int y = 0; y < t; ++y)
+        for (int x = 0; x < t; ++x) {
+            const uint8_t* c = at(x, y);
+            if (c[3] < 128) continue;
+            for (int k = 0; k < 3; ++k) mean[k] += c[k];
+            ++opaque;
+        }
+    if (!opaque) return;
+    for (float& m : mean) m /= opaque;
+    for (int py = 0; py < t / cell; ++py)
+        for (int px = 0; px < t / cell; ++px) {
+            float sum[4] = {0, 0, 0, 0};
+            int n = 0;
+            for (int y = py * cell; y < (py + 1) * cell; ++y)
+                for (int x = px * cell; x < (px + 1) * cell; ++x) {
+                    const uint8_t* c = at(x, y);
+                    for (int k = 0; k < 4; ++k) sum[k] += c[k];
+                    ++n;
+                }
+            const int a = sum[3] / n >= 128 ? 255 : 0;
+            const int noise = (int)(hash3(px, py, tile, 303) % 21) - 10;
+            uint8_t out[4];
+            const float grey = (sum[0] + sum[1] + sum[2]) / (3.0f * n);
+            for (int k = 0; k < 3; ++k) {
+                float v = sum[k] / n;
+                v = v + (grey - v) * 0.3f;               // flatter colours
+                v = mean[k] + (v - mean[k]) * 0.8f;      // softer contrast, like the 0.3 tiles
+                v = std::round(v / 20.0f) * 20.0f + noise;  // fewer shades, old grain
+                out[k] = (uint8_t)std::clamp((int)v, 0, 255);
+            }
+            // 2.0.0: only colours the hand-made 0.3 tiles use, so nothing still looks modern.
+            if (!palette.empty()) {
+                int best = 0, bestD = 1 << 30;
+                for (size_t i = 0; i < palette.size(); ++i) {
+                    const int d0 = out[0] - palette[i][0], d1 = out[1] - palette[i][1], d2 = out[2] - palette[i][2];
+                    const int d = 3 * d0 * d0 + 4 * d1 * d1 + 2 * d2 * d2;
+                    if (d < bestD) bestD = d, best = (int)i;
+                }
+                for (int k = 0; k < 3; ++k) out[k] = (uint8_t)palette[best][k];
+            }
+            out[3] = (uint8_t)a;
+            for (int y = py * cell; y < (py + 1) * cell; ++y)
+                for (int x = px * cell; x < (px + 1) * cell; ++x) std::copy_n(out, 4, at(x, y));
+        }
+}
+// 2.0.0 build 1 fix: the family a block belongs to takes the hand-made 0.3 tile of that family,
+// recoloured to its own colour: every leaf looks like the old oak leaves, every log like the old log...
+int legacyTemplate(int tile) {
+    switch (tile) {
+        case T_SPRUCE_LEAVES: case T_VOID_LEAVES: case T_CELESTIAL_LEAVES: case T_RED_LEAVES: case T_ORANGE_LEAVES:
+        case T_YELLOW_LEAVES: case T_CRIMSONIUM_LEAVES: return T_LEAVES;
+        case T_SPRUCE_LOG_SIDE: case T_VOID_LOG_SIDE: case T_NETHERPERK_LOG_SIDE: case T_CRIMSON_LOG_SIDE:
+        case T_CELESTIAL_LOG_SIDE: case T_GRAY_LOG_SIDE: case T_CRIMSONIUM_LOG_SIDE: return T_LOG_SIDE;
+        case T_SPRUCE_LOG_TOP: case T_VOID_LOG_TOP: case T_NETHERPERK_LOG_TOP: case T_CRIMSON_LOG_TOP:
+        case T_CELESTIAL_LOG_TOP: case T_GRAY_LOG_TOP: case T_CRIMSONIUM_LOG_TOP: return T_LOG_TOP;
+        case T_SPRUCE_PLANKS: case T_NETHERPERK_PLANKS: case T_VOID_PLANKS: case T_CRIMSON_PLANKS: case T_ROTTEN_PLANKS:
+        case T_CELESTIAL_PLANKS: case T_GRAY_PLANKS: case T_CRIMSONIUM_PLANKS: return T_PLANKS;
+        case T_DEEPSTONE: case T_HARDENED_STONE: case T_VOID_STONE: case T_CRIMSON_STONE: case T_SOULED_STONE:
+        case T_CELESTIAL_STONE: case T_SHATTERED_STONE: case T_PALE_STONE: case T_SKY_STONE: case T_MOSSY_DEEPSTONE:
+        case T_FUNGAL_DEEPSTONE: return T_STONE;
+        case T_MOSSY_COBBLE: return T_COBBLE;
+        case T_STONE_BRICKS: case T_VOID_STONE_BRICKS: case T_DEEPSTONE_BRICKS: case T_CRACKED_DEEPSTONE_BRICKS:
+        case T_MOSSY_DEEPSTONE_BRICKS: case T_CELESTIAL_STONE_BRICKS: case T_SHATTERED_BRICKS: case T_POWERSTONE_BRICKS:
+        case T_CRACKED_POWERSTONE_BRICKS: case T_FESTIVE_BRICKS: return T_BRICKS;
+        case T_CRACKED_NETHER_BRICKS: case T_CHISELED_NETHER_BRICKS: return T_NETHER_BRICK;
+        case T_SOULED_DIRT: case T_CELESTIAL_DIRT: return T_DIRT;
+        case T_NETHER_GRASS_TOP: case T_VOID_GRASS_TOP: case T_WASTELAND_GRASS_TOP: case T_SOULED_GRASS_TOP:
+        case T_CELESTIAL_GRASS_TOP: case T_GRASS_TOP_ORANGE: case T_GRASS_TOP_DARK: return T_GRASS_TOP;
+        case T_NETHER_GRASS_SIDE: case T_VOID_GRASS_SIDE: case T_WASTELAND_GRASS_SIDE: case T_SOULED_GRASS_SIDE:
+        case T_CELESTIAL_GRASS_SIDE: case T_GRASS_SIDE_ORANGE: case T_GRASS_SIDE_DARK: return T_GRASS_SIDE;
+        case T_RED_SAND: case T_DARK_SAND: return T_SAND;
+        case T_BRONZE_ORE: case T_STEEL_ORE: case T_RUBY_ORE: case T_POWERSTONE_ORE: case T_HARDIUM_ORE:
+        case T_CRIMSONIUM_ORE: case T_CELESTIUM_ORE: return T_COAL_ORE;
+        default: return -1;
+    }
+}
+
+// Paints `tile` with the template's pattern in the tile's own colours. Ores keep their own spots
+// (the pixels far from the rock colour), on the recoloured old rock.
+void legacyFromTemplate(std::vector<uint8_t>& rgba, int size, int tile, int tmpl, bool ore) {
+    const int t = size / kAtlasCols;
+    auto at = [&](int tl, int x, int y) { return &rgba[((size_t)((tl / kAtlasCols) * t + y) * size + (tl % kAtlasCols) * t + x) * 4]; };
+    // Means per band of rows (the grass side needs the grass band and the dirt band apart).
+    const int bands = 1;
+    std::vector<uint8_t> own((size_t)t * t * 4);
+    for (int y = 0; y < t; ++y)
+        for (int x = 0; x < t; ++x) std::copy_n(at(tile, x, y), 4, &own[((size_t)y * t + x) * 4]);
+    auto bandMean = [&](auto px, int b, float* m) {
+        int n = 0;
+        m[0] = m[1] = m[2] = 0;
+        for (int y = b * t / bands; y < (b + 1) * t / bands; ++y)
+            for (int x = 0; x < t; ++x) {
+                const uint8_t* c = px(x, y);
+                if (c[3] < 128) continue;
+                for (int k = 0; k < 3; ++k) m[k] += c[k];
+                ++n;
+            }
+        for (int k = 0; k < 3; ++k) m[k] = n ? m[k] / n : 128;
+        return n;
+    };
+    auto ownPx = [&](int x, int y) { return &own[((size_t)y * t + x) * 4]; };
+    auto tmplPx = [&](int x, int y) { return at(tmpl, x, y); };
+    if (tmpl == T_GRASS_SIDE) {
+        // 2.0.0 fix: the old grass side pixel by pixel, the grass of the old tile in this block's
+        // grass colour (its top rows) and the dirt in its dirt colour (its bottom half).
+        float grass[3] = {0, 0, 0}, dirt[3] = {0, 0, 0}, oldGrass[3], oldDirt[3];
+        int ng = 0, nd = 0;
+        for (int y = 0; y < t; ++y)
+            for (int x = 0; x < t; ++x) {
+                const uint8_t* c = ownPx(x, y);
+                if (y < t / 8) { for (int k = 0; k < 3; ++k) grass[k] += c[k]; ++ng; }
+                else if (y >= t / 2) { for (int k = 0; k < 3; ++k) dirt[k] += c[k]; ++nd; }
+            }
+        for (int k = 0; k < 3; ++k) grass[k] /= std::max(1, ng), dirt[k] /= std::max(1, nd);
+        bandMean([&](int x, int y) { return at(T_GRASS_TOP, x, y); }, 0, oldGrass);
+        bandMean([&](int x, int y) { return at(T_DIRT, x, y); }, 0, oldDirt);
+        for (int y = 0; y < t; ++y)
+            for (int x = 0; x < t; ++x) {
+                const uint8_t* src = tmplPx(x, y);
+                const bool isGrass = src[1] > src[0] + 20;  // the old grass is green, the old dirt brown
+                const float* want = isGrass ? grass : dirt;
+                const float* have = isGrass ? oldGrass : oldDirt;
+                uint8_t* dst = at(tile, x, y);
+                for (int k = 0; k < 3; ++k) dst[k] = (uint8_t)std::clamp((int)(src[k] * want[k] / std::max(1.0f, have[k])), 0, 255);
+                dst[3] = 255;
+            }
+        return;
+    }
+    float rock[3];
+    bandMean(ownPx, 0, rock);
+    if (ore) {
+        // The rock colour: the mean of the pixels nearest the median brightness.
+        float sum[3] = {0, 0, 0};
+        int n = 0;
+        for (int y = 0; y < t; ++y)
+            for (int x = 0; x < t; ++x) {
+                const uint8_t* c = ownPx(x, y);
+                float d = 0;
+                for (int k = 0; k < 3; ++k) d += std::abs(c[k] - rock[k]);
+                if (d < 60) { for (int k = 0; k < 3; ++k) sum[k] += c[k]; ++n; }
+            }
+        if (n) for (int k = 0; k < 3; ++k) rock[k] = sum[k] / n;
+    }
+    for (int b = 0; b < bands; ++b) {
+        float want[3], have[3];
+        bandMean(ownPx, b, want);
+        bandMean(tmplPx, b, have);
+        if (ore) {
+            // The old stone under the ore, in this ore's rock colour.
+            bandMean([&](int x, int y) { return at(T_STONE, x, y); }, 0, have);
+            for (int k = 0; k < 3; ++k) want[k] = rock[k];
+        }
+        for (int y = b * t / bands; y < (b + 1) * t / bands; ++y)
+            for (int x = 0; x < t; ++x) {
+                uint8_t* dst = at(tile, x, y);
+                const uint8_t* src = ore ? at(T_STONE, x, y) : tmplPx(x, y);
+                const uint8_t* mine = ownPx(x, y);
+                if (ore) {
+                    float d = 0;
+                    for (int k = 0; k < 3; ++k) d += std::abs(mine[k] - rock[k]);
+                    if (d > 90 && mine[3] >= 128) {  // a spot of the ore: kept, in flat old colours
+                        for (int k = 0; k < 3; ++k) dst[k] = (uint8_t)std::clamp((int)std::round(mine[k] / 24.0f) * 24, 0, 255);
+                        dst[3] = 255;
+                        continue;
+                    }
+                }
+                for (int k = 0; k < 3; ++k) dst[k] = (uint8_t)std::clamp((int)(src[k] * want[k] / std::max(1.0f, have[k])), 0, 255);
+                dst[3] = src[3];
+            }
+    }
+}
+}  // namespace
+
 void applyLegacyTiles(std::vector<uint8_t>& rgba, int size) {
     const int t = size / kAtlasCols;
+    std::vector<std::pair<int, int>> pending;  // family tiles: painted once the old templates are drawn
+    {
+        std::vector<bool> handMade(kAtlasCols * kAtlasCols, false), aged(kAtlasCols * kAtlasCols, false);
+        pending.clear();
+        for (int tile : {T_STONE, T_GRASS_TOP, T_DIRT, T_GRASS_SIDE, T_COBBLE, T_PLANKS, T_BEDROCK, T_WATER, T_SAND, T_GRAVEL,
+                         T_LOG_SIDE, T_LOG_TOP, T_LEAVES, T_GLASS, T_BRICKS, T_LAVA, T_OBSIDIAN, T_NETHERRACK, T_PORTAL,
+                         T_NETHER_BRICK, T_COAL_ORE, T_IRON_ORE})
+            handMade[tile] = true;
+        for (int id = 1; id < kModIdBase && id < kItemIdLimit; ++id) {
+            if (!isPlaceable((ItemId)id)) continue;
+            for (int f = 0; f < 6; ++f) {
+                const int tile = tileFor((ItemId)id, (Face)f);
+                if (tile < 0 || tile >= kAtlasCols * kAtlasCols || handMade[tile] || aged[tile]) continue;
+                aged[tile] = true;
+                const int tmpl = legacyTemplate(tile);
+                pending.push_back({tile, tmpl});
+            }
+        }
+    }
     auto put = [&](int tile, int px, int py, int r, int g, int b, int a = 255) {
         auto c8 = [](int v) { return (uint8_t)(v < 0 ? 0 : v > 255 ? 255 : v); };
         for (int sy = py * t / 16; sy < (py + 1) * t / 16; ++sy)
@@ -2765,6 +3029,31 @@ void applyLegacyTiles(std::vector<uint8_t>& rgba, int size) {
                     }
                 }
             }
+    for (auto [tile, tmpl] : pending)
+        if (tmpl >= 0) legacyFromTemplate(rgba, size, tile, tmpl, tmpl == T_COAL_ORE);
+    // The palette of the old tiles (and the family tiles made from them), a few levels per channel.
+    std::vector<std::array<int, 3>> palette;
+    {
+        std::vector<bool> seen(1 << 15, false);
+        auto addTile = [&](int tile) {
+            for (int y = 0; y < t; ++y)
+                for (int x = 0; x < t; ++x) {
+                    const uint8_t* c = &rgba[((size_t)((tile / kAtlasCols) * t + y) * size + (tile % kAtlasCols) * t + x) * 4];
+                    if (c[3] < 128) continue;
+                    const int key = (c[0] >> 3) << 10 | (c[1] >> 3) << 5 | (c[2] >> 3);
+                    if (seen[key]) continue;
+                    seen[key] = true;
+                    palette.push_back({c[0] & ~7, c[1] & ~7, c[2] & ~7});
+                }
+        };
+        for (int tile : {T_STONE, T_GRASS_TOP, T_DIRT, T_GRASS_SIDE, T_COBBLE, T_PLANKS, T_BEDROCK, T_SAND, T_GRAVEL, T_LOG_SIDE,
+                         T_LOG_TOP, T_LEAVES, T_BRICKS, T_LAVA, T_OBSIDIAN, T_NETHERRACK, T_PORTAL, T_NETHER_BRICK, T_COAL_ORE, T_IRON_ORE})
+            addTile(tile);
+        for (auto [tile, tmpl] : pending)
+            if (tmpl >= 0) addTile(tile);
+    }
+    for (auto [tile, tmpl] : pending)
+        if (tmpl < 0) ageTile(rgba, size, tile, palette);
 }
 
 }  // namespace vc

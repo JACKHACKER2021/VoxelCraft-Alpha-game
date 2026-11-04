@@ -22,6 +22,8 @@ enum class MobType : uint8_t {
     Spider, Bat, TntZombie, TarMonster,  // 1.4.0
     Husking,                             // 1.5.0: armless, head bent aside, spits fireballs
     Hogman,                              // 1.5.7: a pig man of the Cornerstone Dimension; calmed by powerstone
+    Celestling, ReachStalker, SkyDrifter,  // 1.9.5: the creatures of the Celestial Reach
+    SkyGuardian,                           // 1.9.5: the boss of the Celestial Temple
     Count
 };
 
@@ -65,7 +67,7 @@ struct Mob {
 constexpr float kBossDeathTime = 3.5f;
 
 struct MobEvent {
-    enum Kind { HitPlayer, Died, BossRoar, Explode, TarSpread, Fireball, Barter, BossWave, BossSummon } kind;  // 1.6.0: wave, summon
+    enum Kind { HitPlayer, Died, BossRoar, Explode, TarSpread, Fireball, Barter, BossWave, BossSummon, Teleport } kind;  // 1.6.0: wave, summon; 1.9.5 teleport
     MobType type;
     Vec3 pos;
     float damage = 0;

@@ -26,7 +26,8 @@ public:
     void spawnFirework(const World& world, const Vec3& centre, int count, float glow);
     // 1.9.0 build 2: one ambient particle: a leaf drifting down, a flame or a puff of smoke.
     // `fall` scales gravity (negative rises), `light` is fixed (glow for flames).
-    void spawnAmbient(const World& world, const Vec3& pos, const Vec3& vel, ItemId block, float life, float size, float fall, float light);
+    void spawnAmbient(const World& world, const Vec3& pos, const Vec3& vel, ItemId block, float life, float size, float fall, float light,
+                      bool wholeTile = false);  // wholeTile: the whole texture, not a small piece of it
     void update(const World& world, float dt);
     // Camera-facing quads for the renderer (atlas texture).
     void buildVertices(const Vec3& cameraRight, const Vec3& cameraUp, std::vector<Vertex>& out) const;

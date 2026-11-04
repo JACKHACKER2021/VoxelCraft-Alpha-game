@@ -106,9 +106,14 @@ void ParticleSystem::spawnFirework(const World& world, const Vec3& centre, int c
 }
 
 void ParticleSystem::spawnAmbient(const World& world, const Vec3& pos, const Vec3& vel, ItemId block, float life, float size, float fall,
-                                  float light) {
+                                  float light, bool wholeTile) {
     add(world, pos, vel, block, life);
     Particle& p = particles_.back();
+    if (wholeTile) {
+        const int tile = tileFor(block, F_SOUTH);
+        p.u0 = (tile % kAtlasCols) * kTile, p.v0 = (tile / kAtlasCols) * kTile;
+        p.u1 = p.u0 + kTile, p.v1 = p.v0 + kTile;
+    }
     p.size = size;
     p.fall = fall;
     p.light = light;

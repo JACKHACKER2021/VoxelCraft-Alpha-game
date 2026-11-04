@@ -252,10 +252,24 @@ public class VoxelActivity extends NativeActivity {
 
     // ---- audio: the native side synthesises files/sounds/*.wav, we just play them
 
+    private volatile boolean soundsReady = false;
+    private boolean soundsStarted = false;
+
+    /** 2.0.0: the ~300 recordings load on their own thread; the game never waits for them. */
     private synchronized void ensureSounds() {
-        if (soundPool != null) return;
+        if (soundsStarted) return;
+        soundsStarted = true;
+        Thread loader = new Thread(() -> {
+            loadSounds();
+            soundsReady = true;
+        }, "sound-loader");
+        loader.setPriority(Thread.MIN_PRIORITY);
+        loader.start();
+    }
+
+    private void loadSounds() {
         soundPool = new SoundPool.Builder()
-                .setMaxStreams(6)
+                .setMaxStreams(10)
                 .setAudioAttributes(new AudioAttributes.Builder()
                         .setUsage(AudioAttributes.USAGE_GAME)
                         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
@@ -263,18 +277,58 @@ public class VoxelActivity extends NativeActivity {
                 .build();
         File dir = new File(getFilesDir(), "sounds");
         File[] files = dir.listFiles();
-        if (files == null) return;
-        for (File f : files) {
-            String name = f.getName();
-            if (name.endsWith(".wav") && !name.equals("music.wav") && !name.startsWith("biome_"))
-                sounds.put(name.substring(0, name.length() - 4), soundPool.load(f.getPath(), 1));
+        if (files != null)
+            for (File f : files) {
+                String name = f.getName();
+                if (name.endsWith(".wav") && !name.equals("music.wav") && !name.startsWith("biome_"))
+                    sounds.put(name.substring(0, name.length() - 4), soundPool.load(f.getPath(), 1));
+            }
+        // 1.9.5: recorded sounds (CC0) from assets/sounds, name_1.ogg, name_2.ogg ...: a random take
+        // of each plays, a little higher or lower every time. The synthesized ones stay for the Old World.
+        try {
+            String[] list = getAssets().list("sounds");
+            if (list != null)
+                for (String f : list) {
+                    if (!f.endsWith(".ogg")) continue;
+                    int cut = f.lastIndexOf('_');  // kind[@style]_N.ogg
+                    if (cut <= 0) continue;
+                    String kind = f.substring(0, cut);
+                    java.util.List<Integer> takes = recorded.get(kind);
+                    if (takes == null) recorded.put(kind, takes = new java.util.ArrayList<>());
+                    takes.add(soundPool.load(getAssets().openFd("sounds/" + f), 1));
+                }
+        } catch (java.io.IOException e) {
+            recorded.clear();
         }
     }
 
-    /** Called from native code (game thread). */
+    private final java.util.HashMap<String, java.util.List<Integer>> recorded = new java.util.HashMap<>();
+    private final java.util.Random soundRandom = new java.util.Random();
+    private final java.util.HashMap<String, Integer> nextTake = new java.util.HashMap<>();
+
+    /** Called from native code (game thread). "px:name" asks for the synthesized sound. */
     @SuppressWarnings("unused")
     public void playSound(String name, float volume) {
         ensureSounds();
+        if (!soundsReady) return;  // still loading: silent rather than stuck
+        if (!name.startsWith("px:")) {
+            java.util.List<Integer> takes = recorded.get(name);
+            // 1.9.5: "kind@style" falls back to the plain kind when the style has no takes.
+            if ((takes == null || takes.isEmpty()) && name.indexOf('@') > 0) {
+                name = name.substring(0, name.indexOf('@'));
+                takes = recorded.get(name);
+            }
+            if (takes != null && !takes.isEmpty()) {
+                // Takes of the same kind in turn (a random start).
+                Integer turn = nextTake.get(name);
+                int t = (turn == null ? soundRandom.nextInt(takes.size()) : turn + 1) % takes.size();
+                nextTake.put(name, t);
+                soundPool.play(takes.get(t), volume, volume, 1, 0, 1f);  // 2.0.0: the recording as it is, no pitch change
+                return;
+            }
+        } else {
+            name = name.substring(3);
+        }
         Integer id = sounds.get(name);
         if (id != null) soundPool.play(id, volume, volume, 1, 0, 1f);
     }

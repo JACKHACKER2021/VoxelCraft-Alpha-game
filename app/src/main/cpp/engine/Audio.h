@@ -7,7 +7,17 @@ namespace vc {
 
 // Sound effects and background music synthesised in code (our own, no
 // samples from anywhere), written as WAV files the Android side can play.
-enum class Sound { Click, Dig, Place, Step, Hurt, Eat, Coin, Explode, Fuse, Splash, Grunt, Count };
+enum class Sound {
+    Click, Dig, Place, Step, Hurt, Eat, Coin, Explode, Fuse, Splash, Grunt,
+    // 1.9.5: kinds with their own recordings (the Old World plays the nearest synthesized one).
+    StepWood, StepWet, DigWood, Glass, Door, Chest, Thunder, Page, Confirm,
+    // 1.9.5 (Minetest Game sounds): every surface and material its own.
+    StepSand, StepGravel, StepStone, StepSnow, StepIce, DigDirt, DigGravel, DigLeaves, DigIce,
+    PlaceStone, ToolBreak, FlintSteel, Extinguish, DoorIron, Fire, LavaCool,
+    Count
+};
+// The synthesized sound a kind falls back to (the Old World keeps the sounds of 0.1-0.3).
+Sound synthesizedKind(Sound s);
 
 const char* soundName(Sound s);
 std::vector<uint8_t> synthesizeSound(Sound s);

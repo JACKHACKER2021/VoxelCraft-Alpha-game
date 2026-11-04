@@ -525,6 +525,23 @@ const TileSource kSources[] = {
     /* celestial_wool   */ {-1, "entity", {"vc_celestial_wool"}, 0},
     /* celestial_shp_fc */ {-1, "entity", {"vc_celestial_sheep_face"}, 0},
     /* celestial_shp_sk */ {-1, "entity", {"vc_celestial_sheep_skin"}, 0},
+    /* leaf_litter      */ {-1, "blocks", {"vc_leaf_litter"}, 0},
+    /* celestial_wings  */ {-1, "items", {"vc_celestial_wings"}, 0},
+    /* wings_plate      */ {-1, "blocks", {"vc_celestial_wings_plate"}, 0},
+    /* honey_block      */ {-1, "blocks", {"vc_honey_block_side"}, 0},
+    /* honey_block_top  */ {-1, "blocks", {"vc_honey_block_top"}, 0},
+    /* honey_ball       */ {-1, "items", {"vc_honey_ball"}, 0},
+    /* structure_block  */ {-1, "blocks", {"vc_structure_block"}, 0},
+    /* barrier          */ {-1, "items", {"vc_barrier"}, 0},
+    /* command_block    */ {-1, "blocks", {"vc_command_block_front"}, 0},
+    /* command_side     */ {-1, "blocks", {"vc_command_block_side"}, 0},
+    /* celestling       */ {-1, "entity", {"vc_celestling"}, 0},
+    /* celestling_face  */ {-1, "entity", {"vc_celestling_face"}, 0},
+    /* stalker          */ {-1, "entity", {"vc_reach_stalker"}, 0},
+    /* stalker_face     */ {-1, "entity", {"vc_reach_stalker_face"}, 0},
+    /* drifter          */ {-1, "entity", {"vc_sky_drifter"}, 0},
+    /* drifter_face     */ {-1, "entity", {"vc_sky_drifter_face"}, 0},
+    /* drifter_wing     */ {-1, "entity", {"vc_sky_drifter_wing"}, 0},
 };
 static_assert(sizeof(kSources) / sizeof(kSources[0]) == T_COUNT, "a texture source for every tile");
 

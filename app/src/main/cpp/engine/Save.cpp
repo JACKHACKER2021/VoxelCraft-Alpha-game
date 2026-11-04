@@ -109,7 +109,7 @@ bool saveLevel(const WorldInfo& info, const PlayerState& p) {
     o << "showCoordinates=" << (info.showCoordinates ? 1 : 0) << "\nkeepInventory=" << (info.keepInventory ? 1 : 0)
       << "\nallowCommands=" << (info.allowCommands ? 1 : 0) << "\nexp.oreRedesign=" << (info.expOreRedesign ? 1 : 0)
       << "\nexp.flowingLiquids=" << (info.expFlowingLiquids ? 1 : 0) << "\nexp.explorationMaps=" << (info.expExplorationMaps ? 1 : 0)
-      << "\nexp.storms=" << (info.expStorms ? 1 : 0) << "\nexp.stars=" << (info.expStars ? 1 : 0) << "\nexp.breeding=" << (info.expBreeding ? 1 : 0) << "\n";
+      << "\nexp.storms=" << (info.expStorms ? 1 : 0) << "\nexp.stars=" << (info.expStars ? 1 : 0) << "\nexp.breeding=" << (info.expBreeding ? 1 : 0) << "\npacks=" << info.packs << "\n";
     if (p.valid) {
         o << "player.x=" << p.pos.x << "\nplayer.y=" << p.pos.y << "\nplayer.z=" << p.pos.z << "\n";
         o << "spawn.x=" << p.spawn.x << "\nspawn.y=" << p.spawn.y << "\nspawn.z=" << p.spawn.z << "\n";
@@ -153,6 +153,7 @@ bool loadLevel(const std::string& folder, WorldInfo& info, PlayerState& p) {
     info.expStorms = num(kv, "exp.storms", 0) != 0;
     info.expStars = num(kv, "exp.stars", 0) != 0;
     info.expBreeding = num(kv, "exp.breeding", 0) != 0;
+    if (auto it = kv.find("packs"); it != kv.end()) info.packs = it->second;
 
     p = PlayerState{};
     if (!kv.count("player.x")) return true;

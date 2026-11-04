@@ -131,6 +131,11 @@ void buildClouds(const Vec3& eye, float seconds, float brightness, std::vector<V
         }
 }
 
+namespace {
+float gWind = 0;
+}
+void setPrecipitationWind(float wind) { gWind = wind; }
+
 void buildPrecipitation(const World& world, const Vec3& eye, Precipitation kind, float seconds, float intensity,
                         float light, std::vector<Vertex>& out) {
     out.clear();
@@ -166,8 +171,10 @@ void buildPrecipitation(const World& world, const Vec3& eye, Precipitation kind,
                     float cxp = x + 0.5f, czp = z + 0.5f;
                     for (int p = 0; p < 2; ++p) {
                         float ox = p ? 0.5f : 0, oz = p ? 0 : 0.5f;
-                        Vertex a{cxp - ox, ya, czp - oz, u0, va, light}, b{cxp + ox, ya, czp + oz, u0 + kTile, va, light};
-                        Vertex c{cxp + ox, yb, czp + oz, u0 + kTile, vb, light}, d{cxp - ox, yb, czp - oz, u0, vb, light};
+                        // The wind leans the streaks: the higher, the farther along x.
+                        const float la = (ya - bottom) * gWind * 0.12f, lb = (yb - bottom) * gWind * 0.12f;
+                        Vertex a{cxp - ox + la, ya, czp - oz, u0, va, light}, b{cxp + ox + la, ya, czp + oz, u0 + kTile, va, light};
+                        Vertex c{cxp + ox + lb, yb, czp + oz, u0 + kTile, vb, light}, d{cxp - ox + lb, yb, czp - oz, u0, vb, light};
                         out.insert(out.end(), {a, b, c, a, c, d});
                     }
                 }
@@ -193,7 +200,7 @@ void buildPrecipitation(const World& world, const Vec3& eye, Precipitation kind,
                     uint32_t q = hash3(x, f, z, 0x5A0Fu);
                     float span = top - bottom;
                     float y = top - std::fmod(seconds * (1.2f + (q % 7) * 0.1f) + (q >> 8) % 1000 / 1000.0f * span, span);
-                    float fx = x + 0.2f + (q >> 3) % 60 / 100.0f + std::sin(seconds + f) * 0.15f;
+                    float fx = x + 0.2f + (q >> 3) % 60 / 100.0f + std::sin(seconds + f) * 0.15f + (y - bottom) * gWind * 0.25f;
                     float fz = z + 0.2f + (q >> 9) % 60 / 100.0f;
                     Vec3 to = Vec3(fx, y, fz) - eye;
                     Vec3 right = cross(to, Vec3(0, 1, 0)).normalized() * 0.09f;

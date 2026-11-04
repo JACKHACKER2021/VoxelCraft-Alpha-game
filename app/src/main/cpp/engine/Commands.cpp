@@ -199,6 +199,9 @@ std::vector<std::string> runCommand(Session& s, const std::string& line, bool ch
         else if (a == "tar" || a == "tar_monster") type = MobType::TarMonster;
         else if (a == "husking") type = MobType::Husking;
         else if (a == "hogman" || a == "hog_man") type = MobType::Hogman;
+        else if (a == "celestling") type = MobType::Celestling;
+        else if (a == "reach_stalker" || a == "stalker") type = MobType::ReachStalker;
+        else if (a == "sky_drifter" || a == "drifter") type = MobType::SkyDrifter;
         else return usage();
         s.summon(type);
         return {trf("Přivoláno: {0}", {tr(mobInfo(type).name)})};

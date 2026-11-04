@@ -17,7 +17,15 @@ PICTURES = [("plains", "e01_plains"), ("dappled", "v05_dappled"), ("mountains", 
             ("shattered", "e10_shattered"), ("shard_desert", "e11_shard_desert"), ("celestial", "e13_celestial"),
             ("old_world", "e14_old_world"), ("forest", "f01_forest"), ("desert", "f02_desert"), ("taiga", "f03_taiga"),
             ("ice", "f04_ice"), ("cornerstone", "f05_cornerstone"), ("shrine", "f06_shrine"), ("portal", "f08_portal"),
-            ("camp", "v06_camp"), ("bridges", "v09_bridges"), ("concrete", "v04_concrete"), ("cutters", "v07_cutters")]
+            ("camp", "v06_camp"), ("bridges", "v09_bridges"), ("concrete", "v04_concrete"), ("cutters", "v07_cutters"),
+            # 1.9.5 build 3: the structures, and the pictures of the world types and presets.
+            ("ruin", "g01_ruin"), ("shipwreck", "g02_shipwreck"), ("dungeon", "g03_dungeon"), ("fortress", "g05_fortress"),
+            ("arena", "g06_arena"), ("void_dungeon", "g07_void_dungeon"), ("void_tower", "g08_void_tower"),
+            ("desert_temple", "g09_desert_temple"), ("igloo", "g10_igloo"), ("watchtower", "g11_watchtower"), ("village", "g12_village"),
+            ("forgotten_village", "g13_forgotten_village"), ("drowned_ruins", "g14_drowned_ruins"), ("broken_portal", "g15_broken_portal"),
+            ("void_watchtower", "g18_void_watchtower"), ("ruined_village", "g19_ruined_village"), ("cave_dungeon", "g20_cave_dungeon"),
+            ("temple", "g21_temple"), ("bounded", "e01_bounded"), ("flat_classic", "t11_flat_classic"), ("flat_desert", "t07_flat_desert"),
+            ("flat_snow", "t08_flat_snow"), ("flat_stone", "t12_flat_stone"), ("flat_nether", "t09_flat_nether"), ("flat_void", "t10_flat_void")]
 W, H = 192, 108
 
 out = ["// Encyclopedia pictures (1.7.2 build 3): screenshots from the game itself (tests/film), 192 x 108 RGB,",

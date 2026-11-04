@@ -5908,3 +5908,246 @@ SHOT(c05_portal) {
     d.shot("c05_portal");
     d.seconds(0.5f);
 }
+
+// ---------------------------------------------------------------- 1.9.5 build 1 pictures
+SHOT(d01_creatures) {
+    Director d(out, "d01");
+    d.game->seasonOverride_ = 0;
+    d.openWorld("Reach", 4242, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    enterReach(d);
+    Session& s = d.s();
+    Player& p = s.player();
+    const Vec3 f = p.forward();
+    s.mobs().spawn(MobType::Celestling, 3, p.pos + Vec3(f.x * 4 - 1, 0, f.z * 4));
+    s.mobs().spawn(MobType::Celestling, 3, p.pos + Vec3(f.x * 4 + 1, 0, f.z * 4 + 1));
+    s.mobs().spawn(MobType::ReachStalker, 3, p.pos + Vec3(f.x * 7 + 2, 0, f.z * 7));
+    s.mobs().spawn(MobType::SkyDrifter, 3, p.pos + Vec3(f.x * 9 - 2, 4, f.z * 9));
+    p.pitch = 0.05f;
+    d.settings().hideGui = true;
+    d.idle(20);
+    d.shot("d01_creatures");
+    d.seconds(1.0f);
+}
+SHOT(d02_temple) {
+    Director d(out, "d02");
+    d.game->seasonOverride_ = 0;
+    d.openWorld("Reach", 4242, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    enterReach(d);
+    Session& s = d.s();
+    Player& p = s.player();
+    p.flying = true;
+    s.currentWorld().ensureChunksAround(96 / 16, 40 / 16, 3, 64);
+    p.pos = Vec3(96.5f, World::kTempleY + 14, 40.5f + 26);
+    p.yaw = 0, p.pitch = -0.45f;
+    s.mobs().spawn(MobType::SkyGuardian, 3, Vec3(96.5f, World::kTempleY + 2, 40.5f));
+    d.settings().hideGui = true;
+    d.idle(40);
+    d.shot("d02_temple");
+    d.seconds(1.0f);
+}
+SHOT(d03_weather) {
+    // A thunderstorm in the forest: wind, slanted rain, a dark sky.
+    Director d(out, "d03");
+    d.game->seasonOverride_ = 0;
+    d.openWorld("Storm", 4242, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    flyToBiome(d, [](World& w, int x, int z) { return overAll(w, x, z, "forest"); });
+    Session& s = d.s();
+    s.setWeather(true);
+    s.setStorm(true);
+    s.player().pitch = -0.1f;
+    s.setTimeOfDay(7000);
+    d.settings().hideGui = true;
+    d.seconds(10.0f);
+    d.shot("d03_weather");
+    d.seconds(1.0f);
+}
+SHOT(d04_hud) {
+    // Survival in the ice plains at night: the temperature chip says "Very cold".
+    Director d(out, "d04");
+    d.game->seasonOverride_ = 0;
+    d.openWorld("Cold", 4242, GameMode::Survival);
+    d.settings().calmMode = true;
+    flyToBiome(d, [](World& w, int x, int z) { return overAll(w, x, z, "ice_plains"); });
+    Player& p = d.s().player();
+    p.flying = false;
+    p.pos.y = (float)d.s().currentWorld().skyHeight((int)std::floor(p.pos.x), (int)std::floor(p.pos.z)) + 0.05f;
+    p.vel = {};
+    d.s().setTimeOfDay(18000);
+    for (int k = 0; k < 5; ++k) {
+        d.seconds(5.0f);
+        std::printf("t=%d health %.1f temp %.2f level %d y %.1f water %d\n", (k + 1) * 5, d.s().stats().health, d.s().bodyTemperature(), d.s().temperatureLevel(), p.pos.y, (int)p.inWater);
+    }
+    d.shot("d04_hud");
+    d.seconds(0.5f);
+}
+SHOT(e01_bounded) {
+    // The classic bounded world from high above: the forest square and its bedrock wall.
+    Director d(out, "e01b");
+    d.game->seasonOverride_ = 0;
+    d.openWorld("Bounded", 4242, GameMode::Creative, [](GenConfig& g) { g.boundedChunks = 8; });
+    d.settings().graphics = GraphicsMode::Enhanced;
+    Player& p = d.s().player();
+    p.flying = true;
+    p.pos = Vec3(0.5f, 118, 58);
+    p.yaw = 0, p.pitch = -0.5f;
+    d.settings().clouds = false;
+    d.s().setTimeOfDay(6000);
+    d.settings().hideGui = true;
+    d.idle(40);
+    d.shot("e01_bounded");
+    d.seconds(1.0f);
+}
+SHOT(e02_bounded_ground) {
+    Director d(out, "e02b");
+    d.game->seasonOverride_ = 0;
+    d.openWorld("Bounded", 4242, GameMode::Creative, [](GenConfig& g) { g.boundedChunks = 8; });
+    d.settings().graphics = GraphicsMode::Enhanced;
+    d.s().player().pitch = -0.05f;
+    d.s().setTimeOfDay(6000);
+    d.settings().hideGui = true;
+    d.idle(40);
+    d.shot("e02_bounded_ground");
+    d.seconds(1.0f);
+}
+SHOT(e03_create) {
+    Director d(out, "e03c");
+    d.game->toolCreateBounded();
+    d.idle(10);
+    d.shot("e03_create");
+    d.seconds(0.3f);
+}
+
+// ---------------------------------------------------------------- 1.9.5 build 3: encyclopedia structures
+// A structure's blueprint built on flat grass and filmed from above at an angle.
+static void structurePicture(Director& d, WorldStructure kind, const char* name, float distanceScale = 1.0f) {
+    d.game->seasonOverride_ = 0;
+    d.openWorld("Structure", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    d.settings().graphics = GraphicsMode::Enhanced;
+    d.settings().clouds = false;
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    const Structure st = buildWorldStructure(kind, 7);
+    const int ox = 0 - st.sx / 2, oz = -st.sz - 6, oy = 4;
+    w.ensureChunksAround(floorDiv(ox + st.sx / 2, 16), floorDiv(oz + st.sz / 2, 16), (std::max(st.sx, st.sz) + 31) / 16, 600);
+    for (int y = 0; y < st.sy && oy + y < kChunkHeight; ++y)
+        for (int z = 0; z < st.sz; ++z)
+            for (int x = 0; x < st.sx; ++x) {
+                const ItemId b = st.at(x, y, z);
+                if (b != Structure::kVoid && (b != AIR || y > 0)) w.setBlock(ox + x, oy + y, oz + z, b);
+            }
+    Player& p = s.player();
+    p.flying = true;
+    const float size = (float)std::max(std::max(st.sx, st.sz), st.sy) * distanceScale;
+    const Vec3 c(0.5f, oy + st.sy * 0.4f, oz + st.sz * 0.5f);
+    p.pos = c + Vec3(size * 0.42f, size * 0.38f + 3, size * 0.5f + 3);
+    d.settings().renderDistance = 10;
+    const Vec3 to = c - p.eye();
+    p.yaw = std::atan2(to.x, -to.z);
+    p.pitch = std::atan2(to.y, std::sqrt(to.x * to.x + to.z * to.z));
+    s.setTimeOfDay(6000);
+    d.settings().hideGui = true;
+    d.idle(30);
+    d.shot(name);
+    d.seconds(0.5f);
+}
+#define STRUCT_SHOT(NAME, KIND, SCALE) SHOT(NAME) { Director d(out, #NAME); structurePicture(d, WorldStructure::KIND, #NAME, SCALE); }
+STRUCT_SHOT(g01_ruin, Ruin, 0.9f)
+STRUCT_SHOT(g02_shipwreck, Shipwreck, 0.8f)
+STRUCT_SHOT(g03_dungeon, Dungeon, 0.9f)
+STRUCT_SHOT(g04_mineshaft, Mineshaft, 0.7f)
+STRUCT_SHOT(g05_fortress, GreatFortress, 0.6f)
+STRUCT_SHOT(g06_arena, BossArena, 0.6f)
+STRUCT_SHOT(g07_void_dungeon, VoidDungeon, 0.9f)
+STRUCT_SHOT(g08_void_tower, VoidTower, 0.6f)
+STRUCT_SHOT(g09_desert_temple, DesertTemple, 0.8f)
+STRUCT_SHOT(g10_igloo, Igloo, 1.0f)
+STRUCT_SHOT(g11_watchtower, Watchtower, 0.7f)
+STRUCT_SHOT(g12_village, Village, 0.55f)
+STRUCT_SHOT(g13_forgotten_village, ForgottenVillage, 0.55f)
+STRUCT_SHOT(g14_drowned_ruins, DrownedRuins, 0.8f)
+STRUCT_SHOT(g15_broken_portal, BrokenPortal, 0.9f)
+STRUCT_SHOT(g16_crimson_mineshaft, CrimsonMineshaft, 0.7f)
+STRUCT_SHOT(g17_void_mineshaft, VoidMineshaft, 0.7f)
+STRUCT_SHOT(g18_void_watchtower, VoidWatchtower, 0.7f)
+STRUCT_SHOT(g19_ruined_village, RuinedVillage, 0.55f)
+STRUCT_SHOT(g20_cave_dungeon, CaveDungeon, 1.0f)
+SHOT(g21_temple) {
+    // The Celestial Temple, where it really stands.
+    Director d(out, "g21");
+    d.game->seasonOverride_ = 0;
+    d.openWorld("Reach", 4242, GameMode::Creative);
+    d.settings().graphics = GraphicsMode::Enhanced;
+    enterReach(d);
+    Session& s = d.s();
+    Player& p = s.player();
+    p.flying = true;
+    s.currentWorld().ensureChunksAround(96 / 16, 40 / 16, 3, 64);
+    p.pos = Vec3(96.5f + 18, World::kTempleY + 16, 40.5f + 22);
+    const Vec3 to = Vec3(96.5f, World::kTempleY + 2, 40.5f) - p.eye();
+    p.yaw = std::atan2(to.x, -to.z);
+    p.pitch = std::atan2(to.y, std::sqrt(to.x * to.x + to.z * to.z));
+    d.settings().hideGui = true;
+    d.idle(40);
+    d.shot("g21_temple");
+    d.seconds(0.5f);
+}
+FLAT_SHOT(t11_flat_classic, 0)
+FLAT_SHOT(t12_flat_stone, 3)
+SHOT(e04_create_flat) { Director d(out, "e04c"); d.game->toolCreateWorldType(1, 1); d.idle(10); d.shot("e04_create_flat"); d.seconds(0.3f); }
+SHOT(e05_create_preset) { Director d(out, "e05c"); d.game->toolCreateWorldType(0, 2); d.idle(10); d.shot("e05_create_preset"); d.seconds(0.3f); }
+SHOT(e06_pick_type) { Director d(out, "e06p"); d.game->toolWorldPicker(0); d.idle(10); d.shot("e06_pick_type"); d.seconds(0.3f); }
+SHOT(e07_pick_flat) { Director d(out, "e07p"); d.game->toolWorldPicker(1); d.idle(10); d.shot("e07_pick_flat"); d.seconds(0.3f); }
+SHOT(e08_pick_preset) { Director d(out, "e08p"); d.game->toolWorldPicker(2); d.idle(10); d.shot("e08_pick_preset"); d.seconds(0.3f); }
+SHOT(h01_blocks) {
+    // Honey, the structure block, the command block, and the barrier shown with a barrier in hand.
+    Director d(out, "h01");
+    d.game->seasonOverride_ = 0;
+    d.openWorld("Blocks", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z) - 5, y = feetY(w, x, z);
+    w.setBlock(x - 3, y, z, HONEY_BLOCK); w.setBlock(x - 3, y + 1, z, HONEY_BLOCK); w.setBlock(x - 2, y, z, HONEY_BLOCK);
+    w.setBlock(x, y, z, STRUCTURE_BLOCK);
+    w.setBlock(x + 2, y, z, COMMAND_BLOCK);
+    w.setBlock(x + 3, y, z, POWERSTONE_BLOCK);
+    for (int k = -2; k <= 2; ++k) w.setBlock(x + k, y, z + 3, BARRIER), w.setBlock(x + k, y + 1, z + 3, BARRIER);
+    s.inventory().slots[0] = {BARRIER, 1, 0};
+    s.inventory().slots[1] = {HONEY_BLOCK, 64, 0};
+    s.inventory().slots[2] = {HONEY_BALL, 16, 0};
+    s.inventory().slots[3] = {STRUCTURE_BLOCK, 1, 0};
+    s.inventory().slots[4] = {COMMAND_BLOCK, 1, 0};
+    s.selectedSlot() = 0;
+    p.yaw = 0, p.pitch = -0.25f;
+    s.setTimeOfDay(6000);
+    d.seconds(1.5f);
+    d.shot("h01_blocks");
+    d.seconds(0.5f);
+}
+// ---------------------------------------------------------------- 2.0.0 Pre-Alpha Style everywhere
+SHOT(p01_pa_picker) { Director d(out, "p01"); d.idle(4); preAlpha(d); d.game->toolWorldPicker(0); d.idle(10); d.shot("p01_pa_picker"); d.seconds(0.3f); }
+SHOT(p02_pa_world) {
+    Director d(out, "p02");
+    d.idle(4);
+    preAlpha(d);
+    d.openWorld("PA", 4242, GameMode::Survival);
+    d.s().player().pitch = -0.1f;
+    d.s().setTimeOfDay(6000);
+    d.idle(30);
+    d.shot("p02_pa_world");
+    d.seconds(0.3f);
+}
+SHOT(p03_pa_howto) {
+    Director d(out, "p03");
+    d.idle(4);
+    preAlpha(d);
+    d.openWorld("PA", 4242, GameMode::Survival);
+    d.game->toolHowToCraft(0, -1);
+    d.idle(10);
+    d.shot("p03_pa_howto");
+    d.seconds(0.3f);
+}
+SHOT(p04_pa_create) { Director d(out, "p04"); d.idle(4); preAlpha(d); d.game->toolCreateWorldType(0, 0); d.idle(10); d.shot("p04_pa_create"); d.seconds(0.3f); }

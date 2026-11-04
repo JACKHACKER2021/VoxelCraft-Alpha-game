@@ -50,8 +50,10 @@ public:
     std::string shaderPackDir() const;
 
 private:
-    std::vector<std::string> enabledOrder() const;
+public:
+    std::vector<std::string> enabledOrder() const;  // 2.0.0: public for the packs of each world
     void saveOrder(const std::vector<std::string>& order);
+private:
     std::string root_, statePath_;
 };
 

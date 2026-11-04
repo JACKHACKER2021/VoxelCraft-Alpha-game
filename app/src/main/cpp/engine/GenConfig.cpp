@@ -548,7 +548,9 @@ const char* kUpdate190 = R"({
     {"type": "shaped", "pattern": ["CC", "CS", ".S"], "key": {"C": "celestium", "S": "stick"}, "result": "celestium_axe"},
     {"type": "shaped", "pattern": ["C", "S", "S"], "key": {"C": "celestium", "S": "stick"}, "result": "celestium_shovel"},
     {"type": "shaped", "pattern": ["C.C", "CPC", "CCC"], "key": {"C": "celestium", "P": "pale_crystal"}, "result": "celestium_chestplate"},
-    {"type": "shaped", "pattern": [".S.", "SCS", "LLL"], "key": {"S": "stick", "C": "coal", "L": "log"}, "result": "campfire"}
+    {"type": "shaped", "pattern": [".S.", "SCS", "LLL"], "key": {"S": "stick", "C": "coal", "L": "log"}, "result": "campfire"},
+    {"type": "shaped", "pattern": ["HH", "HH"], "key": {"H": "honey_ball"}, "result": "honey_block"},
+    {"type": "shapeless", "ingredients": ["honey_block"], "result": "honey_ball", "count": 4}
   ]
 })";
 
@@ -882,6 +884,9 @@ GenConfig GenConfig::fromJson(const Json& doc, std::vector<std::string>* w) {
     }
     c.flat = doc["flat"].boolean(false);
     c.flatPreset = std::clamp((int)doc["flat_preset"].num(0), 0, kFlatPresets - 1);
+    c.boundedChunks = std::clamp((int)doc["bounded_chunks"].num(0), 0, 64);
+    c.spawnX = (int)doc["spawn_x"].num(8);
+    c.spawnZ = (int)doc["spawn_z"].num(8);
     c.crimsonDesert = std::clamp((int)doc["crimson_desert"].num(2), 1, 2);
     c.generation = std::clamp((int)doc["generation"].num(2), 1, 6);
     c.oldWorld = doc["old_world"].boolean(false);
@@ -969,6 +974,9 @@ Json GenConfig::toJson() const {
     Json doc = Json::object();
     doc.set("flat", Json::fromBool(flat));
     doc.set("flat_preset", Json::number(flatPreset));
+    doc.set("bounded_chunks", Json::number(boundedChunks));
+    doc.set("spawn_x", Json::number(spawnX));
+    doc.set("spawn_z", Json::number(spawnZ));
     doc.set("crimson_desert", Json::number(crimsonDesert));
     doc.set("generation", Json::number(generation));
     doc.set("old_world", Json::fromBool(oldWorld));

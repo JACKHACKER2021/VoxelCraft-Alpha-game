@@ -1,0 +1,21 @@
+VoxelCraft sound effects (since 1.9.5)
+
+Most sounds come from Minetest Game (github.com/luanti-org/minetest_game), with their own licenses:
+- CC BY-SA 3.0: Mito551 (dig, dug, place, grass/gravel/wood/dirt/glass footsteps), celeron55 (fire)
+- CC BY 3.0: cmusounddesign, Tomlija, lsprice (glass breaking); yadronoff (metal); HerbertBoland (tool breaking);
+  AGFX (water footsteps); blukotek (dig snappy); Percy Duke, kingsamas, bulbastre (chest, mixed by sofar);
+  Ryding (snow footsteps); sonictechtonic (player damage); Sheyvan (dig choppy); lolamadeus (gravel);
+  Benboncan (dig cracky, flint and steel); Erdie (hard footsteps); worthahep88 (sand footsteps);
+  dheming (ice dig); InspectorJ (ice footsteps); Angel_Perez_Grandi (ice dug); iankath (furnace);
+  CGEffex, modified by BlockMen (door open); bennstir (door close); HazMattt (steel doors);
+  dobroide, Dynamicell (fire)
+- CC0: qubodup, mypantsfelldown, Ogrebane, Sevin7, Yoyodaman234, TumeniNodes, steveygos93,
+  theneedle.tv, frankelmedico (TNT), Yuval, Halion (water, lava)
+Coins, book pages, menu clicks, thunder and splashes: Kenney (www.kenney.nl) and rubberduck
+("100 CC0 SFX", opengameart.org), CC0.
+
+Changes made for VoxelCraft: trimmed, levelled, converted to mono Ogg Vorbis; the "@cs", "@void",
+"@sky", "@crystal" and "@power" versions are pitch-shifted, filtered and given echo or tremolo for the
+blocks and dimensions of VoxelCraft. The modified CC BY-SA sounds are shared under CC BY-SA 3.0 too.
+License texts: https://creativecommons.org/licenses/by-sa/3.0/ and https://creativecommons.org/licenses/by/3.0/
+The Old World plays VoxelCraft's own synthesized sounds.

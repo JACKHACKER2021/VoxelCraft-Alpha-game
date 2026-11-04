@@ -613,7 +613,7 @@ static int testJsonAndPacks() {
     std::vector<std::string> warn;
     GenConfig round = GenConfig::fromJson(def.toJson(), &warn);
     CHECK(warn.empty() && round.biomes.size() == 8 && round.biomes[2].surface == def.biomes[2].surface);
-    CHECK(RecipeBook::defaults().shaped.size() == 12 + 35 + 6 + 2 + 16 + 6 + 24 + 16 + 3 + 10 + 12 + 5 + 3 + 8 + 7 + 1 + 10 + 33 + 16 + 11 + 6 && RecipeBook::defaults().shapeless.size() == 2 + 4 + 1 + 1 + 6 + 1 + 1 + 3 + 1 + 3 + 3 + 1 + 2 + 49 + 1);  // 1.8.0: concrete, gray planks, 10 stairs and slabs  // 1.5.7: + book and quill; 1.6.0: + 3: torch, shield, lamp; crimson planks  // 1.5.1: no planks from Eye Logs
+    CHECK(RecipeBook::defaults().shaped.size() == 12 + 35 + 6 + 2 + 16 + 6 + 24 + 16 + 3 + 10 + 12 + 5 + 3 + 8 + 7 + 1 + 10 + 33 + 16 + 11 + 7 && RecipeBook::defaults().shapeless.size() == 2 + 4 + 1 + 1 + 6 + 1 + 1 + 3 + 1 + 3 + 3 + 1 + 2 + 49 + 1 + 1);  // 1.8.0: concrete, gray planks, 10 stairs and slabs  // 1.5.7: + book and quill; 1.6.0: + 3: torch, shield, lamp; crimson planks  // 1.5.1: no planks from Eye Logs
 
     // Biomes really show up in the world: deserts are sandy, forests have trees.
     World w(1234, Dimension::Overworld);
@@ -835,13 +835,14 @@ static int testThirdPersonCamera() {
     s.touchDown(3, 52, 190, t);  // D-pad: up
     run(2);
     s.touchUp(3, 52, 190, t);
-    CHECK(std::count(sounds.begin(), sounds.end(), Sound::Step) >= 1);
+    CHECK(std::count_if(sounds.begin(), sounds.end(), [](Sound x) { return synthesizedKind(x) == Sound::Step; }) >= 1);
     // Breaking a block makes the dig sound.
     s.player().pitch = -1.5f;
     s.touchDown(4, 300, 135, t);
     run(0.6f);
     s.touchUp(4, 300, 135, t);
-    CHECK(std::count(sounds.begin(), sounds.end(), Sound::Dig) >= 1);
+    // (1.9.5: the dig sound of the block's material, all of them dig sounds underneath)
+    CHECK(std::count_if(sounds.begin(), sounds.end(), [](Sound x) { return synthesizedKind(x) == Sound::Dig; }) >= 1);
     fs::remove_all(root);
     return 0;
 }
@@ -3896,6 +3897,66 @@ static int testSeasons190() {
         CHECK(w.getBlock(5, n - 1, 5) == tops[p] && w.getBlock(5, n, 5) == AIR && w.getBlock(5, 0, 5) == WORLD_END);
     }
     std::printf("seasons: event dates ok, %d flat world looks\n", kFlatPresets);
+    {
+        // 1.9.5 build 3: the structure block saves a box and builds it again; the command block runs
+        // its command when powered; slimes drop honey.
+        namespace fs = std::filesystem;
+        fs::path root = fs::temp_directory_path() / "vc_builder_blocks";
+        fs::remove_all(root);
+        WorldInfo info;
+        info.folder = createWorldFolder(root.string());
+        info.name = "builder";
+        info.seed = 5;
+        info.mode = GameMode::Creative;
+        Session s(info, PlayerState{});
+        World& w = s.currentWorld();
+        w.ensureChunksAround(0, 0, 2, 25);
+        const int bx = 4, by = 100, bz = 4;
+        w.setBlock(bx, by, bz, STRUCTURE_BLOCK);
+        for (int i = 0; i < 3; ++i) w.setBlock(bx + i, by + 1 + i, bz, BRICKS);
+        const FurnaceKey key{0, bx, by, bz};
+        const std::string saved = s.setBlockText(key, "save tower 3 3 1");
+        for (int i = 0; i < 3; ++i) w.setBlock(bx + i, by + 1 + i, bz, AIR);
+        const std::string loaded = s.setBlockText(key, "load tower");
+        std::printf("structure block: %s / %s\n", saved.c_str(), loaded.c_str());
+        CHECK(w.getBlock(bx + 2, by + 3, bz) == BRICKS && w.getBlock(bx, by + 1, bz) == BRICKS);
+        w.setBlock(bx, by, bz + 3, COMMAND_BLOCK);
+        s.setBlockText({0, bx, by, bz + 3}, "/gamemode survival");
+        CHECK(!s.survival());
+        w.setBlock(bx + 1, by, bz + 3, POWERSTONE_BLOCK);
+        s.powerChangedAt(bx + 1, by, bz + 3);
+        CHECK(s.survival());
+        int honey = 0;
+        for (int k = 0; k < 20; ++k)
+            for (auto [id, n] : mobDrops(MobType::PumpkinSlime, k / 20.0f)) honey += id == HONEY_BALL ? n : 0;
+        CHECK(honey >= 20);
+        fs::remove_all(root);
+    }
+    {
+        // 1.9.5 build 2: the classic bounded world: walled in by bedrock, nothing outside, an oak forest inside.
+        GenConfig g = GenConfig::defaults();
+        g.boundedChunks = 4;
+        World bw(77, Dimension::Overworld, g);
+        bw.ensureChunksAround(0, 0, 3, 64);
+        CHECK(bw.getBlock(32, 100, 5) == WORLD_END && bw.getBlock(-33, 10, 0) == WORLD_END && bw.getBlock(5, 127, -33) == WORLD_END);
+        CHECK(bw.getBlock(40, 60, 0) == AIR && bw.getBlock(0, 0, 0) == WORLD_END && !bw.insideBounds(32, 0) && bw.insideBounds(31, 31));
+        int logs = 0, leaves = 0;
+        for (int x = -32; x < 32; ++x)
+            for (int z = -32; z < 32; ++z)
+                for (int y = 60; y < 100; ++y) logs += bw.getBlock(x, y, z) == LOG, leaves += bw.getBlock(x, y, z) == LEAVES;
+        std::printf("bounded: %d logs, %d leaves in 4x4 chunks\n", logs, leaves);
+        CHECK(logs > 40 && leaves > 200);
+    }
+    for (int p = 1; p < kSeedPresets; ++p) {
+        const auto t0 = std::chrono::steady_clock::now();
+        int x = 0, z = 0;
+        const bool found = findPresetSpot(p, GenConfig::defaults(), 1234, x, z);
+        const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+        World w(1234, Dimension::Overworld);
+        const BiomeDef* b = w.biomeAt(x, z);
+        std::printf("preset %s: %s at %d %d in %.0f ms, biome %s\n", seedPresetName(p), found ? "found" : "none", x, z, ms, b ? b->id.c_str() : "-");
+        CHECK(found && ms < 6000);
+    }
     // 1.9.0: the new blocks can be placed, the celestium items have their own icons (they first
     // shared ids with the old documents) and are not blocks.
     for (ItemId b : {PALE_STONE, SKY_STONE, CELESTIUM_ORE, PALE_CRYSTAL, CAMPFIRE}) CHECK(isPlaceable(b));

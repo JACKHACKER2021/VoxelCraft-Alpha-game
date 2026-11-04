@@ -227,7 +227,13 @@ enum BlockId : uint16_t {
     CELESTIUM_ORE = 1578,     // in white and blue rock; an iron pickaxe or better
     PALE_CRYSTAL = 1579,      // glowing crystal veins
     FIRE = 1580,              // lit with flint and steel on any block; burns wood, leaves and wool
-    CAMPFIRE = 1581,          // logs round a fire: light, warmth and smoke  // 1.7.2 build 3: a barrel of the Overworld camps, filled the first time it opens
+    CAMPFIRE = 1581,          // logs round a fire: light, warmth and smoke
+    LEAF_LITTER = 1582,       // 1.9.5: fallen brown leaves lying on the ground, like in Survivalcraft 2
+    // 1.9.5 build 3: honey from pumpkin slimes, and three creative blocks for builders.
+    HONEY_BLOCK = 1583,       // sticky: slows you down, no fall damage on it
+    STRUCTURE_BLOCK = 1584,   // saves and loads a box of blocks as a structure
+    BARRIER = 1585,           // an invisible wall (seen only with a barrier in hand)
+    COMMAND_BLOCK = 1586,     // runs its command when powerstone powers it  // 1.7.2 build 3: a barrel of the Overworld camps, filled the first time it opens
     EGG_HUSKING = 1307,
     // Blocks of the forgotten civilization, the wasteland and the fortress.
     POWERSTONE_BRICKS = 1500,
@@ -307,6 +313,8 @@ enum BlockId : uint16_t {
     CELESTIUM = 1990,
     CELESTIUM_PICKAXE = 1991, CELESTIUM_SWORD = 1992, CELESTIUM_AXE = 1993, CELESTIUM_SHOVEL = 1994,
     CELESTIUM_CHESTPLATE = 1995,  // the only celestium armour: steadier, softer falls in low gravity
+    CELESTIAL_WINGS = 1996,       // 1.9.5: from the Sky Guardian; worn on the chest, they let you glide
+    HONEY_BALL = 1997,            // 1.9.5 build 3: from pumpkin slimes; a sweet bite, four make a honey block
     ANCIENT_COIN = 1610,
     POWERSTONE_RELIC = 1611,
     POTTERY_SHARD = 1612,
@@ -500,7 +508,7 @@ int modFood(ItemId id);
 inline bool isNewBlock(ItemId id) {
     if (id >= kModIdBase) return modIsBlock(id);
     return isStairs(id) || isSlab(id) || (id >= TAR && id <= SNOW_LAYER) || isStainedGlass(id) || (id >= WALL_CABLE && id < WALL_CABLE + 8) || (id >= WALL_SWITCH && id < WALL_SWITCH + 8) ||
-           (id >= ANNIV_LOGO && id <= PAINTED_PLANKS + 3) || (id >= POWERSTONE_BRICKS && id <= CAMPFIRE && id != 1518 && id != 1519) ||
+           (id >= ANNIV_LOGO && id <= PAINTED_PLANKS + 3) || (id >= POWERSTONE_BRICKS && id <= COMMAND_BLOCK && id != 1518 && id != 1519) ||
            (id >= CONCRETE_POWDER && id <= LOOT_CHEST_CHAMBER);
 }
 // The full block a stair or slab is cut from (its texture, hardness and tool).
@@ -595,6 +603,10 @@ enum Tile : uint16_t {
     T_PALE_STONE, T_SKY_STONE, T_CELESTIUM_ORE, T_PALE_CRYSTAL, T_FIRE, T_CAMPFIRE_TOP, T_CAMPFIRE_SIDE,  // 1.9.0 build 2
     T_CELESTIUM, T_CELESTIUM_PICKAXE, T_CELESTIUM_SWORD, T_CELESTIUM_AXE, T_CELESTIUM_SHOVEL, T_CELESTIUM_CHESTPLATE, T_CELESTIUM_PLATE,
     T_CELESTIAL_PIG_SKIN, T_CELESTIAL_PIG_FACE, T_CELESTIAL_WOOL, T_CELESTIAL_SHEEP_FACE, T_CELESTIAL_SHEEP_SKIN,  // 1.9.0 build 3 (made in Game::loadTextures)
+    T_LEAF_LITTER,  // 1.9.5
+    T_CELESTIAL_WINGS, T_WINGS_PLATE,
+    T_HONEY_BLOCK, T_HONEY_BLOCK_TOP, T_HONEY_BALL, T_STRUCTURE_BLOCK, T_BARRIER, T_COMMAND_BLOCK, T_COMMAND_BLOCK_SIDE,  // 1.9.5 build 3
+    T_CELESTLING_BODY, T_CELESTLING_FACE, T_STALKER_BODY, T_STALKER_FACE, T_DRIFTER_BODY, T_DRIFTER_FACE, T_DRIFTER_WING,
     T_COUNT
 };
 static_assert(T_COUNT <= kAtlasCols * kAtlasCols, "the atlas has room for every tile");
@@ -649,7 +661,7 @@ inline bool isBed(ItemId id) { return id >= BED && id < BED + 8; }
 inline bool isShaped(ItemId id) {
     return isDoor(id) || isTrapdoor(id) || isChest(id) || isFence(id) || isSkeletonHead(id) || id == CACTUS || isBed(id) || isCable(id) ||
            isSwitch(id) || id == CAKE || id == FARMLAND || isStairs(id) || (isSlab(id) && !isDoubleSlab(id)) ||
-           isBalloon(id) || id == PARTY_LANTERN || id == SNOW_LAYER || isTorch(id) || isCarpet(id) || id == CAMPFIRE;
+           isBalloon(id) || id == PARTY_LANTERN || id == SNOW_LAYER || isTorch(id) || isCarpet(id) || id == CAMPFIRE || id == LEAF_LITTER;
 }
 inline bool isLeaves(ItemId id) { return id == LEAVES || id == SPRUCE_LEAVES || id == VOID_LEAVES || id == NETHERPERK_CAP || id == CELESTIAL_LEAVES ||
                                          (id >= RED_LEAVES && id <= YELLOW_LEAVES) || id == CRIMSONIUM_LEAVES; }
@@ -667,7 +679,8 @@ inline bool isSolid(ItemId id) { return id != AIR && !isLiquid(id) && !isPortal(
 inline bool isTargetable(ItemId id) { return isSolid(id) || isPlant(id); }
 // Opaque blocks fully hide the faces of their neighbours.
 inline bool isOpaque(ItemId id) {
-    return isSolid(id) && !isLeaves(id) && id != GLASS && id != POWERSTONE_GLASS && !isShaped(id) && !isStainedGlass(id) &&
+    return isSolid(id) && !isLeaves(id) && id != GLASS && id != POWERSTONE_GLASS && !isShaped(id) && !isStainedGlass(id) && id != BARRIER &&
+           id != HONEY_BLOCK &&
            !(id >= kModIdBase && modIsTransparent(id));
 }
 // Rendered at full brightness regardless of shading.
@@ -699,12 +712,12 @@ inline int lightLevel(ItemId id) {
 inline int woolColor(ItemId id) { return id == WOOL ? 0 : (id >= WOOL_ORANGE && id <= WOOL_BLACK) ? id - WOOL_ORANGE + 1 : -1; }
 inline ItemId woolBlock(int color) { return color == 0 ? (ItemId)WOOL : (ItemId)(WOOL_ORANGE + color - 1); }
 inline bool isArmor(ItemId id) {
-    return (id >= FIRST_ARMOR && id <= LAST_ARMOR) || (id >= HARDIUM_ARMOR && id < HARDIUM_ARMOR + 4) || id == CELESTIUM_CHESTPLATE;
+    return (id >= FIRST_ARMOR && id <= LAST_ARMOR) || (id >= HARDIUM_ARMOR && id < HARDIUM_ARMOR + 4) || id == CELESTIUM_CHESTPLATE || id == CELESTIAL_WINGS;
 }
 // Drawn in the blended pass after everything else.
-inline bool isTranslucent(ItemId id) { return id == WATER || isPortal(id) || isStainedGlass(id); }  // 1.7.0: ice is solid (no see-through grid)
+inline bool isTranslucent(ItemId id) { return id == WATER || isPortal(id) || isStainedGlass(id) || id == HONEY_BLOCK; }  // 1.7.0: ice is solid (no see-through grid)
 inline bool isFood(ItemId id) {
-    return id == APPLE || (id >= RAW_PORK && id <= COOKED_MUTTON) || id == CANDY_CANE || id == BREAD ||
+    return id == APPLE || (id >= RAW_PORK && id <= COOKED_MUTTON) || id == CANDY_CANE || id == BREAD || id == HONEY_BALL ||
            (id >= RAW_CHICKEN && id <= STEAK) || id == MILK_BUCKET || (id >= kModIdBase && modFood(id) > 0);
 }
 // Old saves (chunk format VCC1) still hold the Nether blocks removed in 1.2.0, whose ids 1.3.0 reuses.
@@ -883,6 +896,12 @@ inline int tileFor(ItemId id, Face face) {
                 case SKY_STONE: return T_SKY_STONE;
                 case CELESTIUM_ORE: return T_CELESTIUM_ORE;
                 case PALE_CRYSTAL: return T_PALE_CRYSTAL;
+                case LEAF_LITTER: return T_LEAF_LITTER;
+                case HONEY_BLOCK: return face == F_TOP || face == F_BOTTOM ? T_HONEY_BLOCK_TOP : T_HONEY_BLOCK;
+                case HONEY_BALL: return T_HONEY_BALL;
+                case STRUCTURE_BLOCK: return T_STRUCTURE_BLOCK;
+                case BARRIER: return T_BARRIER;
+                case COMMAND_BLOCK: return face == F_TOP || face == F_BOTTOM ? T_COMMAND_BLOCK_SIDE : T_COMMAND_BLOCK;
                 case FIRE: return T_FIRE;
                 case CAMPFIRE: return face == F_TOP ? T_CAMPFIRE_TOP : face == F_BOTTOM ? T_LOG_TOP : T_CAMPFIRE_SIDE;
                 case CELESTIUM: return T_CELESTIUM;
@@ -891,6 +910,7 @@ inline int tileFor(ItemId id, Face face) {
                 case CELESTIUM_AXE: return T_CELESTIUM_AXE;
                 case CELESTIUM_SHOVEL: return T_CELESTIUM_SHOVEL;
                 case CELESTIUM_CHESTPLATE: return T_CELESTIUM_CHESTPLATE;
+                case CELESTIAL_WINGS: return T_CELESTIAL_WINGS;
                 default: break;
             }
             if (id >= kModIdBase) return modTileFor(id, face);

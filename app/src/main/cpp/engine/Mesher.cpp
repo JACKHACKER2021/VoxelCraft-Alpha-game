@@ -196,7 +196,7 @@ void buildChunkMesh(const World& world, const Chunk& chunk, ChunkMesh& out) {
         for (int z = 0; z < kChunkSize; ++z)
             for (int y = 0; y < kChunkHeight; ++y) {
                 ItemId id = chunk.get(x, y, z);
-                if (id == AIR) continue;
+                if (id == AIR || id == BARRIER) continue;  // 1.9.5: barriers are invisible
                 int wx = baseX + x, wz = baseZ + z;
                 auto& dst = isTranslucent(id) ? out.translucent : out.opaque;
 
@@ -310,7 +310,9 @@ void buildChunkMesh(const World& world, const Chunk& chunk, ChunkMesh& out) {
                             for (int j = oz - 1; j <= oz; ++j) {
                                 if (n.get(x + i, y, z + j) != id) continue;
                                 if (n.get(x + i, y + 1, z + j) == id) return 0.0f;
-                                sum += 0.1f + world.liquidLevel(wx + i, y, wz + j) * 0.16f;
+                                // Water drops by a fifth of a block per step; lava over its longer reach.
+                                const float step = id == WATER ? 0.16f : 0.13f;
+                                sum += std::min(0.9f, 0.1f + world.liquidLevel(wx + i, y, wz + j) * step);
                                 ++cells;
                             }
                         return cells ? sum / cells : topCut;

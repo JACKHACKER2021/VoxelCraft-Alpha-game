@@ -35,6 +35,7 @@ struct WorldInfo {
     bool expStorms = false;    // thunderstorms: lightning strikes and sets fires
     bool expStars = false;     // shooting stars streak over the night sky
     bool expBreeding = false;  // feed two animals and a young one is born
+    std::string packs;  // 2.0.0: the packs of this world, comma separated ("" = the global choice)
 };
 
 // Everything about the player that survives quitting the game.

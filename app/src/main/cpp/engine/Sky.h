@@ -40,6 +40,8 @@ void buildClouds(const Vec3& eye, float seconds, float brightness, std::vector<V
 
 // Rain and snow fall in the open columns around the camera.
 enum class Precipitation { None, Rain, Snow };
+// 1.9.5: the wind (0..1) slants the rain and drifts the snow.
+void setPrecipitationWind(float wind);
 void buildPrecipitation(const World& world, const Vec3& eye, Precipitation kind, float seconds, float intensity,
                         float light, std::vector<Vertex>& out);
 

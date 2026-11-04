@@ -12,7 +12,7 @@ namespace {
 
 constexpr int kRate = 22050;
 constexpr float kTau = 6.2831853f;
-const char* kVersionTag = "synth-v4";  // 1.6.0: sounds only, the generated music is gone
+const char* kVersionTag = "synth-v6";  // 1.6.0: sounds only, the generated music is gone
 
 std::vector<uint8_t> toWav(const std::vector<float>& samples) {
     std::vector<uint8_t> out;
@@ -84,12 +84,52 @@ const char* soundName(Sound s) {
         case Sound::Fuse: return "fuse";
         case Sound::Splash: return "splash";
         case Sound::Grunt: return "grunt";
+        case Sound::StepWood: return "step_wood";
+        case Sound::StepWet: return "step_wet";
+        case Sound::DigWood: return "dig_wood";
+        case Sound::Glass: return "glass";
+        case Sound::Door: return "door";
+        case Sound::Chest: return "chest";
+        case Sound::Thunder: return "thunder";
+        case Sound::Page: return "page";
+        case Sound::Confirm: return "confirm";
+        case Sound::StepSand: return "step_sand";
+        case Sound::StepGravel: return "step_gravel";
+        case Sound::StepStone: return "step_stone";
+        case Sound::StepSnow: return "step_snow";
+        case Sound::StepIce: return "step_ice";
+        case Sound::DigDirt: return "dig_dirt";
+        case Sound::DigGravel: return "dig_gravel";
+        case Sound::DigLeaves: return "dig_leaves";
+        case Sound::DigIce: return "dig_ice";
+        case Sound::PlaceStone: return "place_stone";
+        case Sound::ToolBreak: return "tool_break";
+        case Sound::FlintSteel: return "flint_steel";
+        case Sound::Extinguish: return "extinguish";
+        case Sound::DoorIron: return "door_iron";
+        case Sound::Fire: return "fire";
+        case Sound::LavaCool: return "lava_cool";
         default: return "";
+    }
+}
+
+Sound synthesizedKind(Sound s) {
+    switch (s) {
+        case Sound::StepWood: case Sound::StepWet: case Sound::StepSand: case Sound::StepGravel: case Sound::StepStone:
+        case Sound::StepSnow: case Sound::StepIce: return Sound::Step;
+        case Sound::DigWood: case Sound::Glass: case Sound::DigDirt: case Sound::DigGravel: case Sound::DigLeaves: case Sound::DigIce:
+        case Sound::ToolBreak: return Sound::Dig;
+        case Sound::Door: case Sound::Chest: case Sound::PlaceStone: case Sound::DoorIron: return Sound::Place;
+        case Sound::FlintSteel: case Sound::Extinguish: case Sound::Fire: case Sound::LavaCool: return Sound::Fuse;
+        case Sound::Thunder: return Sound::Explode;
+        case Sound::Page: case Sound::Confirm: return Sound::Click;
+        default: return s;
     }
 }
 
 std::vector<uint8_t> synthesizeSound(Sound s) {
     std::vector<float> o;
+    s = synthesizedKind(s);
     switch (s) {
         case Sound::Click: tone(o, 0, 0.05f, 1100, 900, 0.35f, 60); break;
         case Sound::Dig: noiseBurst(o, 0, 0.16f, 1800, 0.9f, 22, 7); break;

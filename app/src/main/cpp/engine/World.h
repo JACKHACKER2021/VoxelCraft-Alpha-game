@@ -53,6 +53,13 @@ struct Chunk {
     void recalcHeightmap();
 };
 
+// 1.9.5 build 2: seed presets: a seed whose spawn lies in a taiga, by a village, on ice...
+constexpr int kSeedPresets = 8;
+const char* seedPresetName(int preset);  // Czech, for tr()
+// Finds the nearest place of the seed's world that fits the preset (a taiga, a village...), searched
+// outwards from the middle; false when there is none within a few thousand blocks.
+bool findPresetSpot(int preset, const GenConfig& config, uint32_t seed, int& outX, int& outZ);
+
 class World {
 public:
     World(uint32_t seed, Dimension dim, const GenConfig& config = GenConfig::defaults());
@@ -115,6 +122,12 @@ public:
     bool nearestCelestialFrame(int x, int z, int& outX, int& outZ) const;
     static constexpr int kCelestialRegion = 240;
     void celestialSpot(int rx, int rz, int& px, int& pz) const;  // where a region's frame would lie
+    // 1.9.5: the Celestial Temple of a region of the Reach (one near the arrival island), and its floor height.
+    static constexpr int kTempleRegion = 320, kTempleY = 92, kTempleRadius = 15;
+    void templeCentre(int rx, int rz, int& tx, int& tz) const;
+    void stampCelestialTemple(Chunk& c);
+    void generateBounded(Chunk& c);  // 1.9.5 build 2
+    bool insideBounds(int x, int z) const;  // a bounded world's square (always true for endless worlds)
     // 1.5.7: the middle of the nearest mineshaft (Overworld: the wooden one; Cornerstone
     // Dimension: the crimson one), for explorer maps. False when none is within ~1000 blocks.
     bool nearestMineshaft(int x, int z, int& outX, int& outY, int& outZ);

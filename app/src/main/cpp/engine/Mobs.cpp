@@ -33,6 +33,10 @@ const MobInfo kInfo[] = {
     {"Dehtová příšera", 1.1f, 1.7f, 30, 1.9f, 5, true, false},
     {"Husking", 0.6f, 1.95f, 24, 2.2f, 4, true, false},
     {"Prasák", 0.7f, 1.95f, 22, 2.7f, 5, true, false},
+    {"Celestling", 0.5f, 0.7f, 8, 1.8f, 0, false, false},
+    {"Reach Stalker", 0.6f, 2.3f, 26, 3.0f, 5, true, false},
+    {"Sky Drifter", 1.4f, 0.8f, 14, 2.2f, 0, false, false},
+    {"Strážce Nebe", 1.1f, 3.9f, 260, 2.6f, 8, true, true},
 };
 static_assert(sizeof(kInfo) / sizeof(kInfo[0]) == (size_t)MobType::Count, "info for every mob");
 
@@ -251,6 +255,17 @@ void MobSystem::update(const World& world, int dim, const Vec3& target, bool hun
                 const Vec3 aim = (goal + Vec3(0, 1.2f, 0) - mouth).normalized();
                 events.push_back({MobEvent::Fireball, m.type, mouth, info.damage, aim * 12.0f});
             }
+        } else if (hunting && m.type == MobType::ReachStalker && dist > 5 && m.attackCooldown <= 0) {
+            // 1.9.5: the Reach Stalker blinks: it vanishes and appears a few blocks behind the player.
+            m.attackCooldown = 3.5f + random() * 2;
+            const float a = random() * 2 * kPi;
+            const Vec3 to = goal + Vec3(std::cos(a) * 3, 0.5f, std::sin(a) * 3);
+            if (!boxCollides(world, to, info.width / 2, info.height)) {
+                events.push_back({MobEvent::Teleport, m.type, m.pos, 0, {}});
+                m.pos = to;
+                m.vel = {};
+                events.push_back({MobEvent::Teleport, m.type, m.pos, 0, {}});
+            }
         } else if (hunting) {
             m.yaw = turnTo(m.yaw, yawTo(m.pos, goal), dt * 6);
             want = dist > (info.boss ? 1.6f : 0.9f) ? info.speed : 0;
@@ -304,7 +319,23 @@ void MobSystem::update(const World& world, int dim, const Vec3& target, bool hun
 
         // Slimes hop instead of walking; bats flutter about.
         Vec3 fwd(std::sin(m.yaw), 0, -std::cos(m.yaw));
-        if (m.type == MobType::Bat) {
+        if (m.type == MobType::SkyDrifter) {
+            // 1.9.5: glides in wide, slow circles over the islands, wings spread.
+            if (!m.wandering || (m.target - m.pos).length() < 1.5f) {
+                float a = random() * 2 * kPi;
+                m.target = m.pos + Vec3(std::cos(a) * 12, random() * 4 - 2, std::sin(a) * 12);
+                m.wandering = true;
+            }
+            Vec3 d = (m.target - m.pos).normalized() * info.speed;
+            m.vel = m.vel + (d - m.vel) * std::min(1.0f, 0.8f * dt);
+            m.yaw = turnTo(m.yaw, yawTo(m.pos, m.target), dt * 1.2f);
+        } else if (m.type == MobType::Celestling) {
+            // Light as a feather: it bobs along in long, floaty hops.
+            float accel = m.onGround ? 10.0f : 1.5f;
+            m.vel.x += (fwd.x * want - m.vel.x) * std::min(1.0f, accel * dt);
+            m.vel.z += (fwd.z * want - m.vel.z) * std::min(1.0f, accel * dt);
+            if (m.onGround && want > 0 && std::fmod(m.age, 1.3f) < dt) m.vel.y = 4.0f;
+        } else if (m.type == MobType::Bat) {
             if (!m.wandering || (m.target - m.pos).length() < 0.6f) {
                 float a = random() * 2 * kPi;
                 m.target = m.pos + Vec3(std::cos(a) * 4, random() * 3 - 1.4f, std::sin(a) * 4);
@@ -330,7 +361,8 @@ void MobSystem::update(const World& world, int dim, const Vec3& target, bool hun
 
         // Water carries mobs up; gravity everywhere else.
         ItemId inside = world.getBlock((int)std::floor(m.pos.x), (int)std::floor(m.pos.y + 0.3f), (int)std::floor(m.pos.z));
-        if (m.type == MobType::Bat) {}  // flies
+        if (m.type == MobType::Bat || m.type == MobType::SkyDrifter) {}  // flies
+        else if (m.dim == 3) m.vel.y -= kGravity * 0.45f * dt;  // 1.9.5: low gravity in the Celestial Reach
         else if (inside == WATER) m.vel.y = std::min(m.vel.y + 30 * dt, 2.5f);
         else if (inside == TAR) m.vel.y = std::max(m.vel.y - 6 * dt, -1.0f);  // sinks slowly
         else m.vel.y -= kGravity * dt;
@@ -360,7 +392,7 @@ void MobSystem::update(const World& world, int dim, const Vec3& target, bool hun
             }
             m.vel.y = 0;
         }
-        if (blocked && m.type == MobType::Bat) m.wandering = false;  // turn around at walls
+        if (blocked && (m.type == MobType::Bat || m.type == MobType::SkyDrifter)) m.wandering = false;  // turn around at walls
         else if (blocked && want > 0 && m.type == MobType::Spider) m.vel.y = 3.5f;  // spiders climb walls
         else if (blocked && m.onGround && want > 0 && m.type != MobType::PumpkinSlime) m.vel.y = info.boss ? 10.5f : 8.2f;
         if (p.y < -30) p.y = -30;
@@ -644,6 +676,60 @@ void MobSystem::buildVertices(int dim, float time, std::vector<Vertex>& out) con
                 }
                 break;
             }
+            case MobType::Celestling: {
+                // A small round sky sprite with stubby feet and two glowing eyes; it glows a little.
+                b.light = std::max(b.light, 1.25f);
+                int legT[6];
+                tilesAll(T_CELESTLING_BODY, legT);
+                b.box({-0.15f, 0, -0.05f}, {-0.04f, 0.18f, 0.06f}, legT, m.swing, {-0.1f, 0.18f, 0}, roll);
+                b.box({0.04f, 0, -0.05f}, {0.15f, 0.18f, 0.06f}, legT, -m.swing, {0.1f, 0.18f, 0}, roll);
+                faceTiles(T_CELESTLING_BODY, T_CELESTLING_FACE);
+                const float bob = std::sin(time * 3 + m.age) * 0.03f;
+                b.box({-0.25f, 0.16f + bob, -0.25f}, {0.25f, 0.66f + bob, 0.25f}, t, 0, {}, roll);
+                break;
+            }
+            case MobType::SkyGuardian:
+                // The boss: a Reach Stalker grown huge and bright, with a Sky Drifter's wings on his back.
+                b.scale = 1.7f;
+                b.light = std::max(b.light, 1.15f);
+                {
+                    int wing[6];
+                    tilesAll(T_DRIFTER_WING, wing);
+                    const float flap = std::sin(time * 1.8f + m.age) * 0.3f;
+                    b.box({-1.4f, 1.3f, 0.12f}, {-0.2f, 1.36f, 0.6f}, wing, 0, {-0.2f, 1.33f, 0.2f}, roll + flap);
+                    b.box({0.2f, 1.3f, 0.12f}, {1.4f, 1.36f, 0.6f}, wing, 0, {0.2f, 1.33f, 0.2f}, roll - flap);
+                }
+                [[fallthrough]];
+            case MobType::ReachStalker: {
+                // Tall and thin, long arms, a pale face with no mouth.
+                int legT[6], armT[6];
+                tilesAll(T_STALKER_BODY, legT);
+                tilesAll(T_STALKER_BODY, armT);
+                b.box({-0.18f, 0, -0.09f}, {-0.02f, 1.1f, 0.09f}, legT, m.swing * 0.7f, {-0.1f, 1.1f, 0}, roll);
+                b.box({0.02f, 0, -0.09f}, {0.18f, 1.1f, 0.09f}, legT, -m.swing * 0.7f, {0.1f, 1.1f, 0}, roll);
+                tilesAll(T_STALKER_BODY, t);
+                b.box({-0.22f, 1.1f, -0.11f}, {0.22f, 1.85f, 0.11f}, t, 0, {}, roll);
+                const float reach = 0.3f + m.attackAnim * 1.2f;
+                b.box({-0.32f, 0.75f, -0.07f}, {-0.22f, 1.83f, 0.07f}, armT, reach, {-0.27f, 1.8f, 0}, roll);
+                b.box({0.22f, 0.75f, -0.07f}, {0.32f, 1.83f, 0.07f}, armT, reach, {0.27f, 1.8f, 0}, roll);
+                faceTiles(T_STALKER_BODY, T_STALKER_FACE);
+                b.box({-0.2f, 1.85f, -0.2f}, {0.2f, 2.28f, 0.2f}, t, 0, {}, roll);
+                break;
+            }
+            case MobType::SkyDrifter: {
+                // A long flat ray of the sky with broad slow wings and a tail.
+                tilesAll(T_DRIFTER_BODY, t);
+                b.box({-0.25f, 0.3f, -0.7f}, {0.25f, 0.5f, 0.5f}, t, 0, {}, roll);
+                faceTiles(T_DRIFTER_BODY, T_DRIFTER_FACE);
+                b.box({-0.18f, 0.32f, -0.95f}, {0.18f, 0.5f, -0.7f}, t, 0, {}, roll);
+                int wing[6];
+                tilesAll(T_DRIFTER_WING, wing);
+                const float flap = std::sin(time * 2.2f + m.age) * 0.35f;
+                b.box({-1.3f, 0.38f, -0.5f}, {-0.25f, 0.42f, 0.35f}, wing, 0, {-0.25f, 0.4f, 0}, roll + flap);
+                b.box({0.25f, 0.38f, -0.5f}, {1.3f, 0.42f, 0.35f}, wing, 0, {0.25f, 0.4f, 0}, roll - flap);
+                b.box({-0.06f, 0.36f, 0.5f}, {0.06f, 0.42f, 1.2f}, t, std::sin(time * 3) * 0.2f, {0, 0.4f, 0.5f}, roll);
+                break;
+            }
             case MobType::Bat: {
                 tilesAll(T_BAT_BODY, t);
                 b.box({-0.11f, 0.15f, -0.1f}, {0.11f, 0.45f, 0.12f}, t, 0, {}, roll);
@@ -785,7 +871,10 @@ std::vector<std::pair<ItemId, int>> mobDrops(MobType type, float roll) {
     switch (type) {
         case MobType::Pig: return {{RAW_PORK, 1 + (int)(roll * 3)}};
         case MobType::Sheep: return {{WOOL, 1 + (int)(roll * 2)}, {RAW_MUTTON, 1 + (int)(roll * 2) % 2}};
-        case MobType::PumpkinSlime: return roll < 0.35f ? std::vector<std::pair<ItemId, int>>{{PUMPKIN, 1}} : std::vector<std::pair<ItemId, int>>{{COAL, 1}};
+        // 1.9.5 build 3: and honey balls.
+        case MobType::PumpkinSlime:
+            return roll < 0.35f ? std::vector<std::pair<ItemId, int>>{{PUMPKIN, 1}, {HONEY_BALL, 1}}
+                                : std::vector<std::pair<ItemId, int>>{{HONEY_BALL, 1 + (int)(roll * 3)}, {COAL, 1}};
         case MobType::ForgottenMan:
             return roll < 0.12f ? std::vector<std::pair<ItemId, int>>{{IRON_INGOT, 1}, {COAL, 1}}
                                 : std::vector<std::pair<ItemId, int>>{{COAL, 1 + (int)(roll * 2)}};
@@ -801,6 +890,11 @@ std::vector<std::pair<ItemId, int>> mobDrops(MobType type, float roll) {
         case MobType::Hogman:
             return roll < 0.2f ? std::vector<std::pair<ItemId, int>>{{RAW_PORK, 2}, {CRIMSON_LOG, 2}}
                                : std::vector<std::pair<ItemId, int>>{{RAW_PORK, 1 + (int)(roll * 2)}};
+        case MobType::Celestling: return {{PALE_CRYSTAL, 1 + (int)(roll * 2)}};
+        case MobType::ReachStalker: return roll < 0.3f ? std::vector<std::pair<ItemId, int>>{{CELESTIUM, 1}, {PALE_CRYSTAL, 1}}
+                                                       : std::vector<std::pair<ItemId, int>>{{PALE_CRYSTAL, 1 + (int)(roll * 2)}};
+        case MobType::SkyDrifter: return {{FEATHER, 2 + (int)(roll * 3)}};
+        case MobType::SkyGuardian: return {{CELESTIAL_WINGS, 1}, {CELESTIUM, 6}, {PALE_CRYSTAL, 8}};
         case MobType::CrimsonMan:
             // 1.7.0 preview: his twelve heads, which open the Celestial portal, and the compass to it.
             return {{CRIMSON_HEAD, 12}, {CELESTIAL_COMPASS, 1}};

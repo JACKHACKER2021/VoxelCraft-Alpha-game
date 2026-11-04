@@ -1,6 +1,8 @@
 #include "Session.h"
 
+#include <filesystem>
 #include <fstream>
+#include <sstream>
 
 #include <algorithm>
 #include <cmath>
@@ -14,6 +16,8 @@
 #include "Sky.h"
 #include "Trading.h"
 #include "WorldStructures.h"
+#include "Commands.h"
+#include "Structure.h"
 
 namespace vc {
 
@@ -31,11 +35,63 @@ const ItemId kCreativeHotbar[kHotbarSize] = {GRASS, COBBLESTONE, PLANKS, LOG, GL
 uint64_t cellKey(int x, int y, int z) { return World::liquidCellKey(x, y, z); }
 bool fallsDown(ItemId b) { return b == SAND || b == GRAVEL || b == RED_SAND || b == DEBRIS_GRAVEL || b == DARK_SAND || isConcretePowder(b); }  // 1.7.2 build 2: dusty concrete is a powder
 // What a falling block or a flowing liquid simply replaces.
-bool washedAway(ItemId b) { return b == AIR || isPlant(b) || isTorch(b) || b == SNOW_LAYER; }
+bool washedAway(ItemId b) { return b == AIR || isPlant(b) || isTorch(b) || b == SNOW_LAYER || b == LEAF_LITTER; }
+// 1.9.5: what a block sounds like underfoot and when it is dug (the Minetest Game sound sets).
+enum class SoundMat { Grass, Dirt, Sand, Gravel, Stone, Wood, Snow, Ice, Glass, Leaves };
+SoundMat soundMaterial(ItemId b) {
+    const ItemId base = isStairs(b) || isSlab(b) ? shapeMaterial(b) : b;
+    const int m = shapeMaterialOf(base);
+    if (base == GLASS || base == POWERSTONE_GLASS || isStainedGlass(base) || base == PALE_CRYSTAL || base == VOID_SHARD_BLOCK) return SoundMat::Glass;
+    if (base == ICE) return SoundMat::Ice;
+    if (base == SNOW_BLOCK || base == SNOW_LAYER) return SoundMat::Snow;
+    if (isLeaves(base) || isPlant(base) || base == LEAF_LITTER || base == VINES || base == MOSS_BLOCK || base == HAY_BALE || woolColor(base) >= 0 || isCarpet(base))
+        return SoundMat::Leaves;
+    if (base == SAND || base == RED_SAND || base == DARK_SAND || isConcretePowder(base)) return SoundMat::Sand;
+    if (base == GRAVEL || base == DEBRIS_GRAVEL || base == CLAY) return SoundMat::Gravel;
+    if (isLog(base) || (m >= 0 && isWoodMaterial(m)) || isChest(base) || isFence(base) || base == BARREL || base == CRAFTING_TABLE || base == BOOKSHELF ||
+        isDoor(base) || isTrapdoor(base) || base == CAMPFIRE || base == WOOD_CUTTER)
+        return SoundMat::Wood;
+    if (base == GRASS || base == NETHER_GRASS || base == VOID_GRASS || base == SOULED_GRASS || base == CELESTIAL_GRASS || base == WASTELAND_GRASS)
+        return SoundMat::Grass;
+    if (base == DIRT || base == FARMLAND || base == SOULED_DIRT || base == CELESTIAL_DIRT) return SoundMat::Dirt;
+    return SoundMat::Stone;
+}
+// 1.9.5: the sound style of the blocks Minecraft does not have: deep for the Cornerstone
+// Dimension, dark and echoing for the Crimson Void, airy for the Celestial Reach, ringing for
+// crystals and buzzing for powerstone ("" = the plain sound).
+const char* blockSoundStyle(ItemId b) {
+    const ItemId base = isStairs(b) || isSlab(b) ? shapeMaterial(b) : b;
+    switch (base) {
+        case PALE_CRYSTAL: case VOID_SHARD_BLOCK: case SHARD_CLUSTER: return "crystal";
+        case POWERSTONE_ORE: case POWERSTONE_BLOCK: case POWERSTONE_LAMP: case POWERSTONE_LAMP_ON: case POWERSTONE_LIGHT:
+        case POWERSTONE_BRICKS: case CRACKED_POWERSTONE_BRICKS: case CHISELED_POWERSTONE_BRICKS: case POWERSTONE_GLASS: case POWERSTONE_FENCE:
+        case POWERSTONE_FURNACE: case POWERSTONE_FURNACE_ON: return "power";
+        case CELESTIAL_GRASS: case CELESTIAL_DIRT: case CELESTIAL_STONE: case CELESTIAL_STONE_BRICKS: case CELESTIAL_LOG: case CELESTIAL_PLANKS:
+        case CELESTIAL_LEAVES: case PALE_STONE: case SKY_STONE: case CELESTIUM_ORE: return "sky";
+        case VOID_STONE: case VOID_GRASS: case VOID_LOG: case VOID_PLANKS: case VOID_LEAVES: case VOID_STONE_BRICKS: case EYE_LOG: case VOID_BRICK_EYE:
+        case CRIMSON_STONE: case CRIMSONIUM_LOG: case CRIMSONIUM_PLANKS: case CRIMSONIUM_LEAVES: case CRIMSONIUM_ORE: case SHATTERED_STONE:
+        case SHATTERED_BRICKS: case DARK_SAND: case DARK_SANDSTONE: case SOULED_GRASS: case SOULED_DIRT: case SOULED_STONE: return "void";
+        case NETHERRACK: case NETHER_GRASS: case NETHER_BRICK: case CRACKED_NETHER_BRICKS: case CHISELED_NETHER_BRICKS: case NETHER_BRICK_FENCE:
+        case NETHERPERK_LOG: case NETHERPERK_CAP: case NETHERPERK_PLANKS: case WASTELAND_GRASS: return "cs";
+        default: return "";
+    }
+}
+
+Sound stepSound(SoundMat m) {
+    static const Sound k[] = {Sound::Step, Sound::Step, Sound::StepSand, Sound::StepGravel, Sound::StepStone, Sound::StepWood, Sound::StepSnow,
+                              Sound::StepIce, Sound::StepIce, Sound::Step};
+    return k[(int)m];
+}
+Sound digSound(SoundMat m) {
+    static const Sound k[] = {Sound::DigDirt, Sound::DigDirt, Sound::DigDirt, Sound::DigGravel, Sound::Dig, Sound::DigWood, Sound::DigDirt,
+                              Sound::DigIce, Sound::Glass, Sound::DigLeaves};
+    return k[(int)m];
+}
+
 // 1.9.0 build 2: what fire catches on and burns away.
 bool isFlammable(ItemId b) {
     if (b == FIRE || b == SHARD_CLUSTER) return false;
-    if (isLog(b) || isLeaves(b) || isPlant(b) || woolColor(b) >= 0 || isCarpet(b) || isTnt(b)) return true;
+    if (isLog(b) || isLeaves(b) || isPlant(b) || woolColor(b) >= 0 || isCarpet(b) || isTnt(b) || b == LEAF_LITTER) return true;
     if (b == BOOKSHELF || b == BARREL || b == LOOT_BARREL_CAMP || b == CHEST || b == WOOD_CUTTER || b == CRAFTING_TABLE || b == HAY_BALE)
         return true;
     if (isFence(b)) return b != NETHER_BRICK_FENCE && b != POWERSTONE_FENCE;
@@ -123,9 +179,19 @@ Session::Session(const WorldInfo& info, const PlayerState& player)
 }
 
 void Session::findSpawn() {
-    int x = 8, z = 8;
+    int x = overworld_.config().spawnX, z = overworld_.config().spawnZ;
     // Walk outward until we find dry land.
-    for (int i = 0; i < 64 && !overworld_.config().flat && overworld_.surfaceHeight(x, z) <= overworld_.seaLevel(); ++i) x += 16;
+    if (overworld_.config().boundedChunks > 0) {
+        // 1.9.5 build 2: a bounded world: dry land inside the square, spiralling out from the middle.
+        const int half = overworld_.config().boundedChunks * kChunkSize / 2 - 3;
+        x = z = 0;
+        for (int r = 0, found = 0; r <= half && !found; r += 2)
+            for (int dx = -r; dx <= r && !found; dx += 2)
+                for (int dz = -r; dz <= r && !found; dz += 2)
+                    if (overworld_.surfaceHeight(dx, dz) > overworld_.seaLevel()) x = dx, z = dz, found = 1;
+    }
+    for (int i = 0; i < 64 && !overworld_.config().flat && overworld_.config().boundedChunks <= 0 && overworld_.surfaceHeight(x, z) <= overworld_.seaLevel(); ++i)
+        x += 16;
     overworld_.ensureChunksAround(floorDiv(x, kChunkSize), floorDiv(z, kChunkSize), 1, 9);
     state_.spawn = Vec3(x + 0.5f, (float)overworld_.skyHeight(x, z) + 0.01f, z + 0.5f);
 }
@@ -220,6 +286,7 @@ ChestContents& Session::chestFor(const FurnaceKey& key) {
 Furnace& Session::furnaceFor(const FurnaceKey& key) { return furnaces_[key]; }
 
 void Session::openChestAt(const FurnaceKey& key) {
+    sound(Sound::Chest);  // 1.9.5
     World& w = worldAt(key.dim);
     ItemId block = w.getBlock(key.x, key.y, key.z);
     if (!chests_.count(key)) {
@@ -285,7 +352,7 @@ void Session::readDocument(int page) {
     achieve("historian");
     if (state_.documentsRead == (1 << kDocumentPages) - 1) achieve("lore_master");
     hand_.use();
-    sound(Sound::Click);
+    sound(Sound::Page);  // 1.9.5: a page turns
 }
 
 bool Session::toggleDoor(int x, int y, int z) {
@@ -295,7 +362,7 @@ bool Session::toggleDoor(int x, int y, int z) {
         DoorState s = doorState(id);
         s.open = !s.open;
         w.setBlock(x, y, z, doorId(OAK_TRAPDOOR, s));
-        sound(Sound::Place);
+        sound(Sound::Door);
         return true;
     }
     if (!isDoor(id)) return false;
@@ -311,7 +378,7 @@ bool Session::toggleDoor(int x, int y, int z) {
         ps.open = s.open;
         w.setBlock(x, lowerY + half, z, doorId(base, ps));
     }
-    sound(Sound::Place);
+    sound(base == IRON_DOOR ? Sound::DoorIron : Sound::Door);
     return true;
 }
 
@@ -367,7 +434,7 @@ bool Session::placeSpecial(const RayHit& hit, ItemStack& held, int x, int y, int
     }
     if (survival()) state_.inventory.removeOne(state_.selectedSlot);
     hand_.place();
-    sound(Sound::Place);
+    styledSound(soundMaterial(w.getBlock(x, y, z)) == SoundMat::Stone ? Sound::PlaceStone : Sound::Place, w.getBlock(x, y, z));  // 2.0.0: by the block
     return true;
 }
 
@@ -402,7 +469,7 @@ void Session::placeShape(const RayHit& hit, ItemStack& held, int x, int y, int z
     if (!w.setBlock(x, y, z, place)) return;
     if (survival()) state_.inventory.removeOne(state_.selectedSlot);
     hand_.place();
-    sound(Sound::Place);
+    styledSound(soundMaterial(place) == SoundMat::Stone ? Sound::PlaceStone : Sound::Place, place);  // 2.0.0: by the block
 }
 
 void Session::giveItem(const ItemStack& stack) {
@@ -454,7 +521,10 @@ void Session::damageHeldTool() {
     ItemStack& held = state_.inventory.slots[state_.selectedSlot];
     int durability = toolDurability(held.id);
     if (held.empty() || durability == 0) return;
-    if (++held.damage >= durability) held = {};  // the tool breaks
+    if (++held.damage >= durability) {
+        held = {};  // the tool breaks
+        sound(Sound::ToolBreak);
+    }
 }
 
 void Session::healAndFeed() {
@@ -627,6 +697,22 @@ void Session::scheduleLeafDecay(int x, int y, int z) {
 void Session::powerChanged(int x, int y, int z) {
     std::vector<std::array<int, 3>> ignite;
     updatePower(*world_, x, y, z, ignite);
+    // 1.9.5 build 3: command blocks run their command when power reaches them (once per switch-on).
+    for (int dx = -2; dx <= 2; ++dx)
+        for (int dy = -2; dy <= 2; ++dy)
+            for (int dz = -2; dz <= 2; ++dz) {
+                const int cx = x + dx, cy = y + dy, cz = z + dz;
+                if (world_->getBlock(cx, cy, cz) != COMMAND_BLOCK) continue;
+                bool powered = false;
+                static const int k6[6][3] = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
+                for (const auto& o : k6) {
+                    const ItemId n = world_->getBlock(cx + o[0], cy + o[1], cz + o[2]);
+                    powered |= cableOn(n) || switchOn(n) || n == POWERSTONE_BLOCK;
+                }
+                const FurnaceKey key{dimIndex(), cx, cy, cz};
+                if (powered && poweredCommands_.insert(key).second) runCommandBlock(key);
+                if (!powered) poweredCommands_.erase(key);
+            }
     for (int dx = -1; dx <= 1; ++dx)
         for (int dy = -1; dy <= 1; ++dy)
             for (int dz = -1; dz <= 1; ++dz)
@@ -757,7 +843,7 @@ void Session::updateBlockPhysics(float dt) {
                     }
                 }
                 const bool liquid = liquids && (b == WATER || b == LAVA);
-                if (!fallsDown(b) && !liquid && b != FIRE && !flow_[d].count(cellKey(x, y, z))) continue;
+                if ((!fallsDown(b) || oldMode()) && !liquid && b != FIRE && !flow_[d].count(cellKey(x, y, z))) continue;  // 1.9.5: sand stays put in the Old World
                 if (!ticking_[d].insert(cellKey(x, y, z)).second || blockTicks_.size() > 20000) continue;
                 const float delay = b == FIRE ? 1.0f + fireRandom() : fallsDown(b) ? 0.05f : b == LAVA ? (d == 1 ? 0.5f : 1.0f) : 0.25f;
                 blockTicks_.push_back({d, x, y, z, delay});
@@ -793,7 +879,65 @@ void Session::updateBlockPhysics(float dt) {
     }
 }
 
+// 1.9.5: temperature. The place sets what the body warms or cools towards: the biome's climate,
+// the dimension, height, night, rain and snow, water; fire, campfires, lava and torches warm it up.
+// The body follows slowly. Hot makes you hungry faster, cold slows you down, very cold hurts.
+float Session::targetTemperature() const {
+    const World& w = *world_;
+    const int x = (int)std::floor(player_.pos.x), y = (int)std::floor(player_.pos.y), z = (int)std::floor(player_.pos.z);
+    float t = 0.3f;
+    if (world_ == &overworld_) {
+        const BiomeDef* b = overworld_.biomeAt(x, z);
+        if (b) t = (b->temperature - 0.5f) * 3.0f + 0.3f;
+        if (b && (b->freeze || b->id == "ice_plains")) t -= 1.2f;
+        if (b && b->id == "snowy_taiga") t -= 0.6f;
+        if (y > 95) t -= (y - 95) / 25.0f;  // high peaks are cold
+        if (dayLight_ < 0.5f) t -= 0.5f;
+        if (state_.raining) t -= precipitation() == Precipitation::Snow ? 0.8f : 0.4f;
+        if (snowySeason(settings_.season)) t -= 0.5f;
+    } else if (world_ == &nether_) {
+        t = 1.6f;
+    } else if (world_ == &void_) {
+        t = 0.2f;
+    } else {
+        t = -0.4f;  // the Celestial Reach: thin cold air up there
+    }
+    if (player_.inWater) t -= 1.0f;
+    if (player_.inLava) t += 3.0f;
+    for (const auto& f : fireSpots_) {
+        const float d = Vec3(f[0] + 0.5f - player_.pos.x, f[1] + 0.5f - player_.pos.y, f[2] + 0.5f - player_.pos.z).length();
+        if (d < 4) t = std::max(t, std::min(t + 2.0f, 0.9f));  // the warmth of a fire: comfortable, not hot
+    }
+    if (isTorch(state_.inventory.slots[state_.selectedSlot].id) || state_.offhand.id == TORCH) t = std::max(t, std::min(t + 0.6f, 0.6f));
+    for (int dx = -2; dx <= 2; ++dx)
+        for (int dz = -2; dz <= 2; ++dz)
+            for (int dy = -1; dy <= 1; ++dy)
+                if (w.getBlock(x + dx, y + dy, z + dz) == LAVA) return std::max(t + 1.5f, 1.6f);
+    return t;
+}
+
+int Session::temperatureLevel() const {
+    return bodyTemp_ > 1.2f ? 1 : bodyTemp_ > -0.6f ? 0 : bodyTemp_ > -1.6f ? -1 : -2;  // hot, warm, cold, very cold
+}
+
+void Session::updateTemperature(float dt) {
+    if (oldMode()) {
+        bodyTemp_ = 0.3f;  // 1.9.5: no temperature in the Old World
+        return;
+    }
+    bodyTemp_ += (targetTemperature() - bodyTemp_) * std::min(1.0f, dt * 0.08f);
+    const int level = temperatureLevel();
+    if (level == 1) addExhaustion(dt * 0.06f);  // hot: hungry sooner
+    if (level == -2 && (freezeTimer_ += dt) >= 4) {
+        freezeTimer_ = 0;
+        if (state_.health > 2) hurt(1, true);  // very cold: freezing, but not to death
+    } else if (level != -2) {
+        freezeTimer_ = 0;
+    }
+}
+
 void Session::updateAmbientParticles(float dt) {
+    if (oldMode()) return;  // 1.9.5: no falling leaves, leaf litter, smoke or crackle in the Old World
     World& w = *world_;
     const int px = (int)std::floor(player_.pos.x), py = (int)std::floor(player_.pos.y), pz = (int)std::floor(player_.pos.z);
     if ((ambientScan_ -= dt) <= 0) {
@@ -807,6 +951,20 @@ void Session::updateAmbientParticles(float dt) {
                     if (b == FIRE || b == CAMPFIRE) fireSpots_.push_back({px + dx, py + dy, pz + dz, b == CAMPFIRE});
                 }
     }
+    if (state_.inventory.slots[state_.selectedSlot].id == BARRIER && (barrierScan_ -= dt) <= 0) {
+        // 1.9.5 build 3: with a barrier in hand, the barriers around show as red signs.
+        barrierScan_ = 0.5f;
+        for (int dx = -8; dx <= 8; ++dx)
+            for (int dy = -5; dy <= 6; ++dy)
+                for (int dz = -8; dz <= 8; ++dz)
+                    if (w.getBlock(px + dx, py + dy, pz + dz) == BARRIER)
+                        particles_.spawnAmbient(w, Vec3(px + dx + 0.5f, py + dy + 0.5f, pz + dz + 0.5f), Vec3(), BARRIER, 0.6f, 0.42f, 0, 1.4f, true);
+    }
+    if (!fireSpots_.empty() && (fireSound_ -= dt) <= 0) {
+        // 1.9.5: the crackle of the nearest fire.
+        fireSound_ = 2.5f + fireRandom() * 2;
+        sound(Sound::Fire);
+    }
     for (const auto& f : fireSpots_) {
         // Flames lick up; campfires send a column of smoke into the sky.
         if (fireRandom() < dt * 6)
@@ -816,6 +974,11 @@ void Session::updateAmbientParticles(float dt) {
             particles_.spawnAmbient(w, Vec3(f[0] + 0.4f + fireRandom() * 0.2f, f[1] + 0.9f, f[2] + 0.4f + fireRandom() * 0.2f),
                                     Vec3((fireRandom() - 0.5f) * 0.2f, 1.3f, (fireRandom() - 0.5f) * 0.2f), SNOW_BLOCK, 3.5f, 0.16f, -0.02f, 0.4f);
     }
+    // 1.9.5: leaf litter rots away little by little (faster in the rain).
+    for (int k = 0; k < 4; ++k) {
+        const int x = px + (int)(fireRandom() * 32) - 16, z = pz + (int)(fireRandom() * 32) - 16, y = py + (int)(fireRandom() * 12) - 6;
+        if (w.getBlock(x, y, z) == LEAF_LITTER && fireRandom() < dt * (state_.raining ? 6.0f : 2.0f)) w.setBlock(x, y, z, AIR);
+    }
     if (!settings_.fallingLeaves) return;
     // A few leaves drift down from the crowns round the player.
     ambientLeaf_ += dt * 14;
@@ -824,19 +987,30 @@ void Session::updateAmbientParticles(float dt) {
         const ItemId b = w.getBlock(x, y, z);
         if (!isLeaves(b) || w.getBlock(x, y - 1, z) != AIR) continue;
         particles_.spawnAmbient(w, Vec3(x + fireRandom(), (float)y - 0.05f, z + fireRandom()),
-                                Vec3((fireRandom() - 0.5f) * 0.6f, -0.3f, (fireRandom() - 0.5f) * 0.6f), b, 5.0f + fireRandom() * 2, 0.07f, 0.04f,
+                                Vec3((fireRandom() - 0.5f) * 0.6f + wind_ * 1.2f, -0.3f, (fireRandom() - 0.5f) * 0.6f), b, 5.0f + fireRandom() * 2, 0.07f, 0.04f,
                                 0.85f * dayLight_ + 0.15f);
+        // 1.9.5: and some of them stay: brown leaf litter gathers on the ground under the trees (more
+        // in autumn), in loose patches, never on top of other litter.
+        if (world_ == &overworld_ && fireRandom() < (settings_.season == Season::Halloween ? 0.08f : 0.03f)) {
+            const int lx = x + (int)std::round((fireRandom() - 0.5f) * 3), lz = z + (int)std::round((fireRandom() - 0.5f) * 3);
+            int gy = y - 1;
+            while (gy > 1 && w.getBlock(lx, gy, lz) == AIR) --gy;
+            const ItemId g = w.getBlock(lx, gy, lz);
+            if ((g == GRASS || g == DIRT || g == MOSS_BLOCK) && w.getBlock(lx, gy + 1, lz) == AIR) w.setBlock(lx, gy + 1, lz, LEAF_LITTER);
+        }
     }
 }
 
 void Session::updateExperiments20(float dt) {
     lightningFlash_ = std::max(0.0f, lightningFlash_ - dt * 3);
-    if (world_ != &overworld_) return;
+    if (world_ != &overworld_ || oldMode()) return;  // 1.9.5: nothing of this in the Old World
     World& w = *world_;
-    if (info_.expStorms && state_.raining && precipitation() == Precipitation::Rain && (stormTimer_ -= dt) <= 0) {
-        // 2.0 preview: lightning strikes the ground near the player, with a flash and thunder; dry
+    if (thunderIn_ >= 0 && (thunderIn_ -= dt) < 0) sound(Sound::Thunder);  // thunder, late by the distance
+    if ((storm_ || info_.expStorms) && state_.raining && precipitation() == Precipitation::Rain && (stormTimer_ -= dt) <= 0) {
+        // 1.9.5: thunderstorms (the 2.0 preview of 1.9.0): lightning strikes the ground near the
+        // player with a flash; the thunder follows a moment later the farther it struck, and dry
         // ground it hits catches fire.
-        stormTimer_ = 6 + fireRandom() * 14;
+        stormTimer_ = 5 + fireRandom() * 12;
         const int x = (int)std::floor(player_.pos.x + (fireRandom() - 0.5f) * 60), z = (int)std::floor(player_.pos.z + (fireRandom() - 0.5f) * 60);
         const int y = w.skyHeight(x, z);
         if (y > 1 && y < kChunkHeight - 2) {
@@ -845,8 +1019,9 @@ void Session::updateExperiments20(float dt) {
                 particles_.spawnAmbient(w, Vec3(x + 0.5f + std::sin(k * 1.7f) * 0.6f, h, z + 0.5f + std::cos(k * 2.3f) * 0.6f), Vec3(0, 0, 0), SNOW_BLOCK,
                                         0.35f, 0.35f, 0, 3.0f);
             }
-            lightningFlash_ = 1;
-            sound(Sound::Explode);
+            const float far = (Vec3(x + 0.5f, (float)y, z + 0.5f) - player_.pos).length();
+            lightningFlash_ = std::clamp(1.2f - far / 60, 0.4f, 1.0f);
+            thunderIn_ = far / 34.0f;  // about the speed of sound, scaled to the game
             if (w.getBlock(x, y, z) == AIR && isSolid(w.getBlock(x, y - 1, z)) && fireRandom() < 0.5f) w.setBlock(x, y, z, FIRE);
             if ((Vec3(x + 0.5f, (float)y, z + 0.5f) - player_.pos).length() < 2.5f) hurt(5, true, true);
         }
@@ -859,6 +1034,88 @@ void Session::updateExperiments20(float dt) {
         const Vec3 dir = Vec3(-std::sin(a) - std::cos(a) * 0.3f, -0.25f, std::cos(a) - std::sin(a) * 0.3f).normalized();
         for (int k = 0; k < 14; ++k)
             particles_.spawnAmbient(w, from - dir * (k * 0.7f), dir * 26.0f, SNOW_BLOCK, 0.9f - k * 0.04f, 0.18f - k * 0.008f, 0, 2.4f);
+    }
+}
+
+void Session::styledSound(Sound s, ItemId block) const {
+    // The block's own style, or the dimension's (steps on ordinary blocks in another dimension).
+    const char* style = blockSoundStyle(block);
+    if (!*style) style = world_ == &nether_ ? "cs" : world_ == &void_ ? "void" : world_ == &celestial_ ? "sky" : "";
+    soundStyle_ = style;
+    sound(s);
+    soundStyle_ = "";
+}
+
+std::string Session::blockText(const FurnaceKey& key) const {
+    auto it = blockTexts_.find(key);
+    return it == blockTexts_.end() ? std::string() : it->second;
+}
+
+void Session::runCommandBlock(const FurnaceKey& key) {
+    const std::string cmd = blockText(key);
+    if (cmd.empty()) return;
+    for (const std::string& line : runCommand(*this, cmd[0] == '/' ? cmd : "/" + cmd, true))
+        if (onMessage) onMessage(line);
+}
+
+std::string Session::setBlockText(const FurnaceKey& key, const std::string& text) {
+    // The command of a command block, or the job of a structure block:
+    //   save <name> <width> <height> <depth>   (the box starts on top of the block)
+    //   load <name>
+    blockTexts_[key] = text;
+    World& w = worldAt(key.dim);
+    if (w.getBlock(key.x, key.y, key.z) != STRUCTURE_BLOCK) return trf("Příkaz uložen: {0}", {text});
+    std::istringstream in(text);
+    std::string mode, name;
+    in >> mode >> name;
+    namespace fs = std::filesystem;
+    std::error_code ec;
+    fs::create_directories(info_.folder + "/structures", ec);
+    const std::string path = info_.folder + "/structures/" + name + ".vcs";
+    if (name.empty()) return tr("Napiš: save <název> <šířka> <výška> <hloubka>, nebo load <název>");
+    if (mode == "save") {
+        int sx = 0, sy = 0, sz = 0;
+        in >> sx >> sy >> sz;
+        if (sx < 1 || sy < 1 || sz < 1 || sx > 64 || sy > 64 || sz > 64) return tr("Rozměry 1 až 64 bloků");
+        Structure st;
+        std::string error;
+        if (!captureStructure(w, key.x, key.y + 1, key.z, sx, sy, sz, st, error)) return error;
+        st.name = name;
+        const std::vector<uint8_t> data = writeVcStructure(st);
+        std::ofstream(path, std::ios::binary).write(reinterpret_cast<const char*>(data.data()), (std::streamsize)data.size());
+        return trf("Struktura {0} uložena ({1} bloků)", {name, std::to_string(st.blockCount())});
+    }
+    if (mode == "load") {
+        std::ifstream f(path, std::ios::binary);
+        std::vector<uint8_t> data((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+        Structure st;
+        std::string error;
+        if (data.empty() || !readVcStructure(data, st, error)) return trf("Struktura {0} nenalezena", {name});
+        std::vector<BlockChange> undo;
+        if (!placeStructure(w, st, key.x, key.y + 1, key.z, undo, error)) return error;
+        return trf("Struktura {0} postavena", {name});
+    }
+    return tr("Napiš: save <název> <šířka> <výška> <hloubka>, nebo load <název>");
+}
+
+void Session::saveBlockTexts() const {
+    std::ofstream out(info_.folder + "/blocktexts.dat");
+    out << "VCBT1\n";
+    for (const auto& [k, t] : blockTexts_) out << k.dim << " " << k.x << " " << k.y << " " << k.z << " " << t << "\n";
+}
+
+void Session::loadBlockTexts() {
+    std::ifstream in(info_.folder + "/blocktexts.dat");
+    std::string line;
+    if (!std::getline(in, line) || line != "VCBT1") return;
+    while (std::getline(in, line)) {
+        std::istringstream l(line);
+        FurnaceKey k;
+        if (!(l >> k.dim >> k.x >> k.y >> k.z)) continue;
+        std::string t;
+        std::getline(l, t);
+        if (!t.empty() && t[0] == ' ') t.erase(0, 1);
+        blockTexts_[k] = t;
     }
 }
 
@@ -880,6 +1137,7 @@ void Session::tickFire(int d, int x, int y, int z) {
     const bool forever = below == NETHERRACK || below == SOULED_STONE;
     if (rained || (!fuel && !isSolid(below)) || (!forever && fireRandom() < (fuel ? 0.07f : 0.3f))) {
         w.setBlock(x, y, z, AIR);
+        if (d == dimIndex() && (Vec3(x + 0.5f, (float)y, z + 0.5f) - player_.pos).length() < 12) sound(Sound::Extinguish);
         return;
     }
     // Catch the neighbours: each flammable one may burn away into a new fire.
@@ -899,11 +1157,12 @@ void Session::tickFire(int d, int x, int y, int z) {
 }
 
 bool Session::lightFire(World& w, int x, int y, int z) {
+    if (oldMode()) return false;  // 1.9.5: flint and steel only lights portals in the Old World
     // Flint and steel sets fire to the cell in front of the tapped face, on any block.
     const ItemId here = w.getBlock(x, y, z);
     if (here != AIR && !(isPlant(here) && here != FIRE)) return false;
     w.setBlock(x, y, z, FIRE);
-    sound(Sound::Fuse);
+    sound(Sound::FlintSteel);
     return true;
 }
 
@@ -924,7 +1183,7 @@ void Session::tickLiquid(int d, int x, int y, int z) {
         const bool source = !flow_[d].count(cellKey(lx, ly, lz));
         flow_[d].erase(cellKey(lx, ly, lz));
         w.setBlock(lx, ly, lz, source ? OBSIDIAN : COBBLESTONE);
-        sound(Sound::Fuse);
+        sound(Sound::LavaCool);
     };
     for (int k = 0; k < 6; ++k) {
         const int nx = x + (k < 4 ? kSide[k][0] : 0), ny = y + (k == 4 ? 1 : k == 5 ? -1 : 0), nz = z + (k < 4 ? kSide[k][1] : 0);
@@ -957,7 +1216,7 @@ void Session::tickLiquid(int d, int x, int y, int z) {
         return;
     }
     if (below == b) return;  // already falling into its own pool
-    const int reach = b == WATER ? 4 : d == 1 ? 4 : 2;
+    const int reach = b == WATER ? 4 : d == 1 ? 6 : 4;  // 1.9.5: lava runs like water (farther in the Nether)
     if (level >= reach) return;
     for (const auto& o : kSide) {
         const ItemId n = w.getBlock(x + o[0], y, z + o[1]);
@@ -984,12 +1243,14 @@ void Session::loadFlow() {
 }
 
 void Session::saveTimers() const {
+    saveBlockTexts();
     std::ofstream out(info_.folder + "/saplings.dat");
     out << "VCSAP1\n";
     for (const Timed& s : saplings_) out << s.dim << " " << s.x << " " << s.y << " " << s.z << " " << s.time << "\n";
 }
 
 void Session::loadTimers() {
+    loadBlockTexts();
     std::ifstream in(info_.folder + "/saplings.dat");
     std::string magic;
     if (!std::getline(in, magic) || magic != "VCSAP1") return;
@@ -1504,7 +1765,7 @@ bool Session::tillOrHarvest(const RayHit& hit, ItemStack& held) {
     w.setBlock(hit.x, hit.y, hit.z, FARMLAND);
     particles_.spawnChips(w, hit.x, hit.y, hit.z, 0, 1, 0, DIRT, 6);
     hand_.use();
-    sound(Sound::Dig);
+    sound(Sound::DigDirt);
     if (survival()) damageHeldTool();
     (void)held;
     return true;
@@ -1825,8 +2086,12 @@ void Session::updateMobs(float dt) {
                 ++state_.bossesDefeated;
                 int ax, ay, az;
                 if (world_->nearestStructure((int)e.pos.x, (int)e.pos.z, ax, ay, az)) state_.bossArenas.emplace_back(ax, az);
-                achieve("crimson_man");
-                if (onMessage) onMessage(tr("Karmínový muž byl poražen!"));
+                if (e.type == MobType::SkyGuardian) {
+                    if (onMessage) onMessage(tr("Strážce Nebe byl poražen! Získáváš Nebeská křídla."));
+                } else {
+                    achieve("crimson_man");
+                    if (onMessage) onMessage(tr("Karmínový muž byl poražen!"));
+                }
             }
         } else if (e.kind == MobEvent::BossRoar) {
             sound(Sound::Hurt);
@@ -1845,6 +2110,14 @@ void Session::updateMobs(float dt) {
                 if (shieldBlocks(push)) player_.vel = player_.vel + push * 0.4f;
                 else hurt(e.damage, false, true), player_.vel = player_.vel + push;
             }
+        } else if (e.kind == MobEvent::BossSummon && e.type == MobType::SkyGuardian) {
+            // 1.9.5: the Sky Guardian calls two Reach Stalkers out of the air.
+            if (mobs_.countType(dim, MobType::ReachStalker, player_.pos, 24) < 3)
+                for (int k = 0; k < 2; ++k) {
+                    const float a = spawnRandom() * 2 * kPi;
+                    mobs_.spawn(MobType::ReachStalker, dim, player_.pos + Vec3(std::cos(a) * 5, 1, std::sin(a) * 5));
+                }
+            if (onMessage) onMessage(tr("Strážce Nebe volá Reach Stalkery!"));
         } else if (e.kind == MobEvent::BossSummon) {
             // Two forgotten men rise near the player.
             if (mobs_.countType(dim, MobType::ForgottenMan, player_.pos, 24) < 4)
@@ -1859,6 +2132,12 @@ void Session::updateMobs(float dt) {
             if (onMessage) onMessage(tr("Karmínový muž volá zapomenuté na pomoc!"));
         } else if (e.kind == MobEvent::Explode) {
             explode(e.pos, 3.5f * (settings_.expBigBoom ? 2.0f : 1.0f), false);
+        } else if (e.kind == MobEvent::Teleport) {
+            // 1.9.5: a puff of pale sparks where the Reach Stalker vanishes and appears.
+            for (int k = 0; k < 12; ++k)
+                particles_.spawnAmbient(*world_, e.pos + Vec3(0, 0.3f + k * 0.15f, 0), Vec3((fireRandom() - 0.5f) * 2, 0.5f, (fireRandom() - 0.5f) * 2),
+                                        PALE_CRYSTAL, 0.7f, 0.08f, 0, 1.5f);
+            sound(Sound::Fuse);
         } else if (e.kind == MobEvent::TarSpread) {
             spreadTar(e.pos);
         } else if (e.kind == MobEvent::Fireball) {
@@ -2000,9 +2279,26 @@ void Session::updateMobs(float dt) {
             }
         }
     } else if (dim == 3) {
+        // 1.9.5: the Sky Guardian wakes when the player steps onto a temple he still guards.
+        int tx, ty, tz;
+        if (!mobs_.boss(3) && celestial_.nearestStructure((int)player_.pos.x, (int)player_.pos.z, tx, ty, tz)) {
+            const float d = std::hypot(player_.pos.x - tx, player_.pos.z - tz);
+            const bool beaten = std::find(state_.bossArenas.begin(), state_.bossArenas.end(), std::make_pair(tx, tz)) != state_.bossArenas.end();
+            if (d < World::kTempleRadius - 1 && std::fabs(player_.pos.y - ty) < 6 && !beaten && survival() && !calm) {
+                mobs_.spawn(MobType::SkyGuardian, 3, Vec3(tx + 0.5f, (float)ty + 1, tz + 0.5f));
+                if (onMessage) onMessage(tr("Strážce Nebe se probudil!"));
+            }
+        }
         // 1.9.0 build 3: celestial pigs and sheep graze on the sky islands.
+        // 1.9.5: and Celestlings; Sky Drifters glide over; at night Reach Stalkers hunt.
+        if (!calm && night && mobs_.countType(3, MobType::ReachStalker, player_.pos, 64) < 2 && spawnRandom() < 0.15f && spot(18, 36, at, ground) &&
+            ground == CELESTIAL_GRASS)
+            mobs_.spawn(MobType::ReachStalker, 3, at);
+        if (mobs_.countType(3, MobType::SkyDrifter, player_.pos, 80) < 3 && spawnRandom() < 0.15f && spot(20, 40, at, ground))
+            mobs_.spawn(MobType::SkyDrifter, 3, at + Vec3(0, 6 + spawnRandom() * 6, 0));
         if (mobs_.count(3, false, player_.pos, 80) < 8 && spawnRandom() < 0.3f && spot(20, 40, at, ground) && ground == CELESTIAL_GRASS) {
-            const MobType type = spawnRandom() < 0.5f ? MobType::Pig : MobType::Sheep;
+            const float r = spawnRandom();
+            const MobType type = r < 0.35f ? MobType::Pig : r < 0.7f ? MobType::Sheep : MobType::Celestling;
             const int herd = 2 + (int)(spawnRandom() * 2);
             for (int i = 0; i < herd; ++i) mobs_.spawn(type, 3, at + Vec3(spawnRandom() * 2 - 1, 0, spawnRandom() * 2 - 1));
         }
@@ -2077,6 +2373,13 @@ void Session::useItem(const RayHit& hit) {
         }
         if (isFurnace(block)) {
             openFurnaceAt({dimIndex(), hit.x, hit.y, hit.z});
+            return;
+        }
+        if ((block == COMMAND_BLOCK || block == STRUCTURE_BLOCK) && !survival()) {
+            // 1.9.5 build 3: their editor (Game asks for the text).
+            wantsBlockEditor = block == COMMAND_BLOCK ? 1 : 2;
+            blockEditorKey = {dimIndex(), hit.x, hit.y, hit.z};
+            sound(Sound::Click);
             return;
         }
         if (isChest(block) || block == BARREL || block == LOOT_BARREL_CAMP) {  // 1.7.2 build 2: the barrel keeps 27 stacks too
@@ -2195,6 +2498,7 @@ void Session::useItem(const RayHit& hit) {
         if (held.id == RAW_MUTTON) food = 2, saturation = 1.2f;
         if (held.id == COOKED_MUTTON) food = 6, saturation = 9.6f;
         if (held.id == BREAD) food = 5, saturation = 6;
+        if (held.id == HONEY_BALL) food = 3, saturation = 1.5f;  // 1.9.5 build 3
         if (held.id == RAW_CHICKEN) food = 2, saturation = 1.2f;
         if (held.id == COOKED_CHICKEN) food = 6, saturation = 7.2f;
         if (held.id == RAW_BEEF) food = 3, saturation = 1.8f;
@@ -2326,7 +2630,7 @@ void Session::useItem(const RayHit& hit) {
     if (survival()) state_.inventory.removeOne(state_.selectedSlot);
     hand_.place();  // only after the game really placed it
     ++blocksPlaced;
-    sound(Sound::Place);
+    styledSound(soundMaterial(place) == SoundMat::Stone || soundMaterial(place) == SoundMat::Glass ? Sound::PlaceStone : Sound::Place, place);
 }
 
 void Session::dropAt(int x, int y, int z, const ItemStack& stack) {
@@ -2376,7 +2680,7 @@ void Session::breakBlock(const RayHit& hit) {
             }
     }
     if (settings_.vibrate && onVibrate) onVibrate(25);
-    sound(Sound::Dig);
+    styledSound(digSound(soundMaterial(id)), id);  // 1.9.5: by material and style
     // A broken frame makes the whole portal disappear.
     const int d[6][3] = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
     for (auto& o : d)
@@ -2509,6 +2813,11 @@ void Session::updateMining(float dt, double time) {
         if (settings_.devInstantMine) bt = 0.05f;
         miningNow_ = true;
         // Chips fly off the face while digging: a few right away, then steadily.
+        if ((digHitTimer_ -= dt) <= 0) {
+            // 2.0.0: each hit of the tool sounds like the block being dug.
+            digHitTimer_ = 0.27f;
+            styledSound(digSound(soundMaterial(block)), block);
+        }
         if (breakProgress_ == 0) {
             particles_.spawnChips(*world_, hit.x, hit.y, hit.z, hit.nx, hit.ny, hit.nz, block, 4);
             chipTimer_ = 0;
@@ -2580,6 +2889,9 @@ void Session::updateSurvival(float dt, bool jumped) {
         // Low gravity: falls hurt from three times higher, not at all with the celestium chestplate.
         player_.landedFall = state_.armor[1].id == CELESTIUM_CHESTPLATE ? 0 : player_.landedFall / 3;
     }
+    if (player_.landedFall > 0 &&
+        world_->getBlock((int)std::floor(player_.pos.x), (int)std::floor(player_.pos.y - 0.05f), (int)std::floor(player_.pos.z)) == HONEY_BLOCK)
+        player_.landedFall = 0;  // 1.9.5 build 3: honey catches every fall
     if (player_.landedFall > 3) hurt(std::ceil(player_.landedFall - 3), true, true);
     if (player_.inLava) hurt(4, false, true);
     if (player_.touches(*world_, FIRE) || player_.touches(*world_, CAMPFIRE)) {
@@ -2606,6 +2918,7 @@ void Session::updateSurvival(float dt, bool jumped) {
         achieve("cactus");
     }
     if (player_.pos.y < -20) hurt(4);
+    updateTemperature(dt);
 
     // Breath
     if (player_.eyeInWater(*world_)) {
@@ -2760,8 +3073,22 @@ void Session::update(float dt, double time, float guiW, float guiH, const Settin
     settings_ = settings;
     player_.autoJump = settings.autoJump;
     // Developer modes (Game passes them only for the developer account).
-    player_.speedMul = settings.devSpeed;
+    // 1.9.5 build 3: honey is sticky underfoot.
+    const bool onHoney = world_->getBlock((int)std::floor(player_.pos.x), (int)std::floor(player_.pos.y - 0.05f), (int)std::floor(player_.pos.z)) == HONEY_BLOCK;
+    player_.speedMul = (onHoney ? 0.4f : 1.0f) * settings.devSpeed * (survival() && temperatureLevel() <= -1 ? (temperatureLevel() == -2 ? 0.78f : 0.9f) : 1.0f);
     player_.gravityMul = settings.expLowGravity ? 0.3f : 1.0f;
+    gliding_ = false;
+    if (state_.armor[1].id == CELESTIAL_WINGS && !player_.onGround && !player_.flying && !player_.inWater && player_.vel.y < -2.0f) {
+        // 1.9.5: the celestial wings: falling turns into a glide along the look.
+        gliding_ = true;
+        const Vec3 look = player_.forward();
+        const Vec3 flat = Vec3(look.x, 0, look.z).normalized();
+        const float speed = 9.0f - look.y * 6.0f;  // diving is faster, looking up slows down
+        player_.vel.x += (flat.x * speed - player_.vel.x) * std::min(1.0f, dt * 2.5f);
+        player_.vel.z += (flat.z * speed - player_.vel.z) * std::min(1.0f, dt * 2.5f);
+        player_.vel.y = std::max(player_.vel.y, -2.2f + std::min(0.0f, look.y) * 5.0f);
+        player_.fallDistance = 0;
+    }
     if (world_ == &celestial_) {
         // 1.9.0: low gravity in the Celestial Reach; the celestium chestplate steadies it further.
         const bool plate = state_.armor[1].id == CELESTIUM_CHESTPLATE;
@@ -2850,7 +3177,16 @@ void Session::update(float dt, double time, float guiW, float guiH, const Settin
     bool walking = player_.onGround && player_.walked > 0.001f && !player_.flying;
     if (walking && (stepDistance_ += player_.walked) > 1.7f) {
         stepDistance_ = 0;
-        sound(Sound::Step);
+        // 1.9.5: the step sounds like what is underfoot.
+        // The block the feet stand on (when the feet are a little above it, the one below that;
+        // empty air used to count as stone, so steps on grass mixed in stone steps).
+        const int fx = (int)std::floor(player_.pos.x), fz = (int)std::floor(player_.pos.z);
+        ItemId under = world_->getBlock(fx, (int)std::floor(player_.pos.y - 0.05f), fz);
+        if (!isSolid(under)) under = world_->getBlock(fx, (int)std::floor(player_.pos.y - 0.6f), fz);
+        if (!isSolid(under)) under = GRASS;
+        const ItemId on = world_->getBlock((int)std::floor(player_.pos.x), (int)std::floor(player_.pos.y + 0.05f), (int)std::floor(player_.pos.z));
+        const ItemId surface = on == SNOW_LAYER || on == LEAF_LITTER || isCarpet(on) ? on : under;
+        styledSound(player_.inWater ? Sound::StepWet : stepSound(soundMaterial(surface)), surface);
     }
     updateCamera(dt, walking);
     {
@@ -2873,7 +3209,7 @@ void Session::update(float dt, double time, float guiW, float guiH, const Settin
     updateBlocksOverTime(dt);
     for (Mob& m : mobs_.mobs()) m.love = std::max(0.0f, m.love - dt);
     updateExperiments20(dt);
-    if (settings_.season == Season::NewYear && world_ == &overworld_ && dayLight_ < 0.6f && (fireworkTimer_ -= dt) <= 0) {
+    if (!oldMode() && settings_.season == Season::NewYear && world_ == &overworld_ && dayLight_ < 0.6f && (fireworkTimer_ -= dt) <= 0) {
         // 1.9.0 New Year's Eve: fireworks burst over the player all night long.
         auto rnd = [&] { fireworkSeed_ = fireworkSeed_ * 1664525u + 1013904223u; return (fireworkSeed_ >> 8) / 16777216.0f; };
         fireworkTimer_ = 0.6f + rnd() * 1.2f;
@@ -2972,6 +3308,12 @@ void Session::render(Renderer& renderer, Ui& ui, const Settings& settings, bool 
     } else if (world_ == &overworld_) {
         // Morning, day, evening, night and midnight: the sky, the light, sun, moon, stars and clouds.
         SkyState sky = computeSky((float)std::fmod(state_.dayTime, kDayTicks), config_.overworld.sky, skyRain_);
+        {
+            // 1.9.5: rain clouds darken the sky and the land, a thunderstorm even more.
+            const float dark = skyRain_ * (storm() ? 0.45f : 0.28f);
+            for (int i = 0; i < 3; ++i) sky.sky[i] = sky.sky[i] * (1 - dark) + 0.18f * dark;
+            sky.light *= 1 - dark * 0.8f;
+        }
         if (settings.addonHalloween) {
             // Halloween: a blood-red sky and gloom.
             const float red[3] = {0.42f, 0.06f, 0.04f};
@@ -3044,8 +3386,10 @@ void Session::render(Renderer& renderer, Ui& ui, const Settings& settings, bool 
         particles_.buildVertices(right, up, particleVerts_);
         renderer.drawParticles(particleVerts_);
     }
+    renderer.setWind(world_ == &overworld_ ? wind_ : 0.1f);
+    setPrecipitationWind(wind_);
     if (world_ == &overworld_ && rain_ > 0.01f) {
-        buildPrecipitation(*world_, camera_.eye(), precipitation(), clock_, rain_, dayLight_ * 0.9f, weatherVerts_);
+        buildPrecipitation(*world_, camera_.eye(), precipitation(), clock_, rain_, 0.45f + dayLight_ * 0.55f, weatherVerts_);
         if (!weatherVerts_.empty()) renderer.drawParticles(weatherVerts_);
     }
     tntVerts_.clear();
@@ -3238,6 +3582,16 @@ void Session::updateWeather(float dt) {
     rain_ += ((falling ? most : 0.0f) - rain_) * std::min(1.0f, dt * 0.4f);
     // The sky greys only where it rains or snows (not over a desert).
     skyRain_ += ((falling ? 1.0f : 0.0f) - skyRain_) * std::min(1.0f, dt * 0.3f);
+    // 1.9.5 weather 2.0: wind. A breeze by day, a strong wind in rain and snow, gusting; it bends
+    // the leaves, the grass and the rain.
+    if (oldMode()) storm_ = false;  // 1.9.5: the Old World has plain rain only, no wind or storms
+    const float want = oldMode() ? 0.0f : (falling ? (storm_ ? 1.0f : 0.7f) : 0.12f) * (0.75f + 0.25f * std::sin(clock_ * 0.37f) + 0.15f * std::sin(clock_ * 1.9f));
+    wind_ += (want - wind_) * std::min(1.0f, dt * 0.25f);
+    // Some rains are thunderstorms (chosen when the rain starts).
+    if (state_.raining != wasRaining_) {
+        wasRaining_ = state_.raining;
+        storm_ = state_.raining && hash3((int)state_.dayTime, 9, (int)info_.seed, 0x570Au) % 100 < 45;
+    }
 }
 
 void Session::updateSnowCover(float dt, bool snowing) {
@@ -3558,10 +3912,23 @@ void Session::drawHud(Ui& ui) const {
         const int points = armorPoints();
         ui.icon(l.hotbarX + barW + (gapW - 7) / 2, rowY + 1, points > 0 ? Font::ArmorFull : Font::ArmorEmpty,
                 points > 0 ? Color{0.85f, 0.88f, 0.95f, 1} : Color{0.6f, 0.6f, 0.6f, 0.7f});
+        {
+            // 1.9.5: the temperature, a small labelled chip above the health bar.
+            static const char* const kNames[4] = {"Velká zima", "Zima", "Teplo", "Horko"};
+            static const Color kColors[4] = {{0.55f, 0.8f, 1, 1}, {0.75f, 0.9f, 1, 1}, {0.95f, 0.85f, 0.55f, 1}, {1, 0.45f, 0.2f, 1}};
+            const int lv = temperatureLevel() + 2;
+            const std::string name = tr(kNames[lv]);
+            // Centred over the bars, above the armour shield in the middle.
+            const float tw = ui.textWidth(name) + 8, tx = std::floor(l.hotbarX + total / 2 - tw / 2);
+            ui.frame(tx, rowY - 11, tw, 10, {0.08f, 0.07f, 0.06f, 0.7f}, kColors[lv]);
+            ui.text(tx + 4, rowY - 10, name, kColors[lv], 1, false);
+        }
         float right = l.hotbarX + l.slot * 9;
         if (state_.air < kMaxAir) {
             int bubbles = (int)std::ceil(state_.air / kMaxAir * 10);
-            for (int i = 0; i < bubbles; ++i) ui.icon(right - 8 - i * 8, rowY - 10, Font::Bubble, {0.6f, 0.8f, 1, 1});
+            // 1.9.5: centred above the temperature chip.
+            const float bx = std::floor(l.hotbarX + total / 2 - bubbles * 4);
+            for (int i = 0; i < bubbles; ++i) ui.icon(bx + i * 8, rowY - 22, Font::Bubble, {0.6f, 0.8f, 1, 1});
         }
     }
 

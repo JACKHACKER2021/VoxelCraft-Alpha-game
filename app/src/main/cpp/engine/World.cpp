@@ -76,7 +76,7 @@ bool World::setBlock(int x, int y, int z, ItemId id) {
 
 World::Column World::column(int x, int z) const {
     Column col;
-    if (config_.oldWorld) {
+    if (config_.oldWorld || (config_.boundedChunks > 0 && dim_ == Dimension::Overworld)) {
         // The height formula of VoxelCraft 0.1-0.3, unchanged (see generateOldWorld).
         const float continent = terrain_.fbm2(x / 256.0f, z / 256.0f, 4);
         const float hills = detail_.fbm2(x / 64.0f, z / 64.0f, 4);
@@ -151,6 +151,74 @@ Chunk* World::generateChunk(int cx, int cz) {
 // of dirt, grass, sand on the shores, sea at 62, worm caves, and round oaks in forest patches.
 // The noises are seeded the same way as back then, so a seed gives the same land as in 0.3.
 // Not part of it (it did not exist yet): biomes, ores, caverns, structures, deepstone.
+// 1.9.5 build 2: the classic bounded world. Inside the square: the old rolling terrain covered in
+// an oak forest, with lakes, sandy shores and gravel on the lake beds and in patches; coal and
+// iron in the stone. On the edge a wall of bedrock from the bottom to the top; outside nothing.
+bool World::insideBounds(int x, int z) const {
+    const int half = config_.boundedChunks * kChunkSize / 2;
+    return config_.boundedChunks <= 0 || (x >= -half && x < half && z >= -half && z < half);
+}
+
+void World::generateBounded(Chunk& c) {
+    constexpr int kSea = 62;
+    const int half = config_.boundedChunks * kChunkSize / 2;
+    const int cx = c.cx, cz = c.cz;
+    for (int x = 0; x < kChunkSize; ++x)
+        for (int z = 0; z < kChunkSize; ++z) {
+            const int wx = cx * kChunkSize + x, wz = cz * kChunkSize + z;
+            const bool wall = (wx == -half - 1 || wx == half || wz == -half - 1 || wz == half) && wx >= -half - 1 && wx <= half && wz >= -half - 1 &&
+                              wz <= half;
+            if (wall) {
+                for (int y = 0; y < kChunkHeight; ++y) c.set(x, y, z, WORLD_END);
+                continue;
+            }
+            if (!insideBounds(wx, wz)) continue;
+            const int h = std::min(column(wx, wz).height, kChunkHeight - 20);
+            const bool shore = h <= kSea + 1;
+            const bool gravelPatch = detail_.perlin2(wx / 11.0f + 40, wz / 11.0f - 70) > 0.45f;
+            for (int y = 0; y <= std::max(h, kSea); ++y) {
+                ItemId id = AIR;
+                if (y == 0) id = WORLD_END;
+                else if (y < h - 3) {
+                    id = STONE;
+                    const uint32_t r = hash3(wx, y, wz, seed_ ^ 0x0EEu);
+                    if (r % 90 == 0) id = COAL_ORE;
+                    else if (r % 160 == 1 && y < 50) id = IRON_ORE;
+                } else if (y < h) {
+                    id = shore ? (h < kSea - 1 && gravelPatch ? GRAVEL : SAND) : DIRT;
+                } else if (y == h) {
+                    id = h < kSea ? (gravelPatch ? GRAVEL : SAND) : shore ? SAND : gravelPatch && h < kSea + 4 ? GRAVEL : GRASS;
+                } else if (y <= kSea) {
+                    id = WATER;
+                }
+                c.set(x, y, z, id);
+            }
+        }
+    // The oak forest: trees everywhere on grass, away from the wall.
+    for (int x = 2; x <= 13; ++x)
+        for (int z = 2; z <= 13; ++z) {
+            const int wx = cx * kChunkSize + x, wz = cz * kChunkSize + z;
+            if (!insideBounds(wx - 3, wz - 3) || !insideBounds(wx + 3, wz + 3)) continue;
+            const int h = std::min(column(wx, wz).height, kChunkHeight - 20);
+            const uint32_t r = hash3(wx, 1, wz, seed_ ^ 0x0A4Eu);
+            if (c.get(x, h, z) != GRASS) continue;
+            if (r % 100 >= 6) {
+                if (r % 100 < 30 && c.get(x, h + 1, z) == AIR) c.set(x, h + 1, z, r % 7 == 0 ? (r % 2 ? DANDELION : POPPY) : TALL_GRASS);
+                continue;
+            }
+            const int trunk = 4 + (int)((r >> 8) % 3);
+            for (int dy = 1; dy <= trunk; ++dy) c.set(x, h + dy, z, LOG);
+            for (int dy = trunk - 1; dy <= trunk + 2; ++dy) {
+                const int rr = dy >= trunk + 1 ? 1 : 2;
+                for (int dx = -rr; dx <= rr; ++dx)
+                    for (int dz = -rr; dz <= rr; ++dz) {
+                        if (std::abs(dx) == rr && std::abs(dz) == rr && ((r >> (dx + dz + 10)) & 1)) continue;
+                        if (c.get(x + dx, h + dy, z + dz) == AIR) c.set(x + dx, h + dy, z + dz, LEAVES);
+                    }
+            }
+        }
+}
+
 void World::generateOldWorld(Chunk& c) {
     constexpr int kOldSeaLevel = 62;
     const int cx = c.cx, cz = c.cz;
@@ -257,6 +325,10 @@ void World::generateOldNether(Chunk& c) {
 void World::generateOverworld(Chunk& c) {
     if (config_.oldWorld) {
         generateOldWorld(c);
+        return;
+    }
+    if (config_.boundedChunks > 0) {
+        generateBounded(c);
         return;
     }
     const int cx = c.cx, cz = c.cz;
@@ -1038,6 +1110,46 @@ void World::celestialSpot(int rx, int rz, int& px, int& pz) const {
     }
 }
 
+void World::templeCentre(int rx, int rz, int& tx, int& tz) const {
+    if (rx == 0 && rz == 0) {
+        tx = 96, tz = 40;  // close to where players arrive
+        return;
+    }
+    const uint32_t h = hash3(rx, 1996, rz, seed_ ^ 0x7E3Bu);
+    tx = rx * kTempleRegion + 40 + (int)(h % (uint32_t)(kTempleRegion - 80));
+    tz = rz * kTempleRegion + 40 + (int)((h >> 12) % (uint32_t)(kTempleRegion - 80));
+}
+
+// 1.9.5: the Celestial Temple: a round island of white rock with a floor of bricks, a ring of
+// pillars crowned with crystals and a raised dais in the middle where the Sky Guardian waits.
+void World::stampCelestialTemple(Chunk& c) {
+    const int x0 = c.cx * kChunkSize, z0 = c.cz * kChunkSize, R = kTempleRadius, Y = kTempleY;
+    for (int rx = floorDiv(x0 - R, kTempleRegion); rx <= floorDiv(x0 + 15 + R, kTempleRegion); ++rx)
+        for (int rz = floorDiv(z0 - R, kTempleRegion); rz <= floorDiv(z0 + 15 + R, kTempleRegion); ++rz) {
+            int tx, tz;
+            templeCentre(rx, rz, tx, tz);
+            if (tx + R < x0 || tx - R > x0 + 15 || tz + R < z0 || tz - R > z0 + 15) continue;
+            for (int lx = 0; lx < kChunkSize; ++lx)
+                for (int lz = 0; lz < kChunkSize; ++lz) {
+                    const int dx = x0 + lx - tx, dz = z0 + lz - tz;
+                    const float d = std::sqrt((float)(dx * dx + dz * dz));
+                    if (d > R + 0.5f) continue;
+                    for (int y = Y + 1; y < Y + 14; ++y) c.set(lx, y, lz, AIR);
+                    // The island under the floor narrows downwards.
+                    const int depth = 2 + (int)((R - d) * 0.7f);
+                    for (int k = 1; k <= depth; ++k) c.set(lx, Y - k, lz, (Y - k) % 4 == 0 ? SKY_STONE : PALE_STONE);
+                    c.set(lx, Y, lz, d > R - 1.5f ? PALE_STONE : (dx + dz) % 2 == 0 ? CELESTIAL_STONE_BRICKS : PALE_STONE);
+                    if (d < 3.5f) c.set(lx, Y + 1, lz, d < 1.5f ? PALE_CRYSTAL : CELESTIAL_STONE_BRICKS);  // the dais
+                    // Twelve pillars on a ring.
+                    const float a = std::atan2((float)dz, (float)dx);
+                    const float sector = std::fmod(a + kPi * 2, kPi / 6);
+                    if (d > R - 4.5f && d < R - 2.5f && (sector < 0.12f || sector > kPi / 6 - 0.12f)) {
+                        for (int y = Y + 1; y <= Y + 7; ++y) c.set(lx, y, lz, y == Y + 7 ? PALE_CRYSTAL : PALE_STONE);
+                    }
+                }
+        }
+}
+
 bool World::nearestCelestialFrame(int x, int z, int& outX, int& outZ) const {
     if (dim_ != Dimension::Void || config_.generation < 4) return false;
     const int rx0 = floorDiv(x, kCelestialRegion), rz0 = floorDiv(z, kCelestialRegion);
@@ -1085,6 +1197,16 @@ bool World::nearestStructure(int x, int z, int& outX, int& outY, int& outZ) cons
                     outY = cy;
                     outZ = cz;
                 }
+            }
+    } else if (dim_ == Dimension::Celestial && config_.generation >= 6) {
+        // 1.9.5: the Celestial Temples.
+        const int brx = floorDiv(x, kTempleRegion), brz = floorDiv(z, kTempleRegion);
+        for (int rx = brx - 1; rx <= brx + 1; ++rx)
+            for (int rz = brz - 1; rz <= brz + 1; ++rz) {
+                int tx, tz;
+                templeCentre(rx, rz, tx, tz);
+                const long d = (long)(tx - x) * (tx - x) + (long)(tz - z) * (tz - z);
+                if (best < 0 || d < best) best = d, outX = tx, outY = kTempleY + 1, outZ = tz;
             }
     } else if (dim_ == Dimension::Void) {
         const int brx = floorDiv(x, kArenaRegion), brz = floorDiv(z, kArenaRegion);
@@ -1209,6 +1331,7 @@ void World::generateCelestial(Chunk& c) {
             }
         }
     if (config_.generation >= 5) stampCelestialBridges(c);
+    if (config_.generation >= 6) stampCelestialTemple(c);
 }
 
 // 1.8.0: bridges in the Celestial Reach. The sky is cut into a grid of kBridgeCell cells; each cell
@@ -1832,6 +1955,61 @@ void World::saveModifiedChunks() {
     for (auto& [k, c] : chunks_)
         if (c->modified) saveChunk(*c);
     flushRegions();
+}
+
+const char* seedPresetName(int preset) {
+    static const char* kNames[kSeedPresets] = {"Žádná", "Tajgový les", "Vesnice", "Led", "Pláně", "Strakatý les", "Velký strakatý les s tajgou",
+                                               "Důl poblíž"};
+    return kNames[std::clamp(preset, 0, kSeedPresets - 1)];
+}
+
+bool findPresetSpot(int preset, const GenConfig& config, uint32_t seed, int& outX, int& outZ) {
+    if (preset <= 0) return false;
+    World w(seed, Dimension::Overworld, config);
+    auto all = [&](const char* id, int x, int z, int r) {
+        for (int dx = -r; dx <= r; dx += 8)
+            for (int dz = -r; dz <= r; dz += 8) {
+                const BiomeDef* b = w.biomeAt(x + dx, z + dz);
+                if (!b || b->id != id) return false;
+            }
+        return true;
+    };
+    auto any = [&](const char* id, int x, int z, int r) {
+        for (int dx = -r; dx <= r; dx += 16)
+            for (int dz = -r; dz <= r; dz += 16) {
+                const BiomeDef* b = w.biomeAt(x + dx, z + dz);
+                if (b && b->id == id) return true;
+            }
+        return false;
+    };
+    if (preset == 2 || preset == 7) {
+        // A village or a mineshaft: the nearest one, and the spawn a little way from it.
+        int x, y, z;
+        const bool ok = preset == 2 ? w.nearestStructure(0, 0, x, y, z) : w.nearestMineshaft(0, 0, x, y, z);
+        if (!ok) return false;
+        outX = x + (preset == 2 ? 14 : 6), outZ = z + 6;
+        return true;
+    }
+    // Rings of growing radius, 32 blocks apart.
+    for (int r = 0; r <= 4000; r += 32)
+        for (int k = 0, steps = std::max(1, r / 8); k < steps; ++k) {
+            const float a = k * 2 * 3.14159265f / steps;
+            const int x = (int)(std::cos(a) * r), z = (int)(std::sin(a) * r);
+            bool ok = false;
+            switch (preset) {
+                case 1: ok = all("snowy_taiga", x, z, 24); break;
+                case 3: ok = all("ice_plains", x, z, 24); break;
+                case 4: ok = all("plains", x, z, 24); break;
+                case 5: ok = all("dappled_forest", x, z, 24); break;
+                case 6: ok = all("dappled_forest", x, z, 32) && any("snowy_taiga", x, z, 320); break;
+                default: break;
+            }
+            if (ok && w.surfaceHeight(x, z) > w.seaLevel()) {
+                outX = x, outZ = z;
+                return true;
+            }
+        }
+    return false;
 }
 
 }  // namespace vc

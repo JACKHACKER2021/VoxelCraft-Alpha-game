@@ -65,6 +65,12 @@ public:
     void toolEndSession() { endSession(); }
     void toolHowToCraft(int cat, int pick) { howBack_ = Screen::Playing, howCat_ = cat, howPick_ = pick, setScreen(Screen::HowToCraft); }
     void toolCreateWorld(bool experiments) { setScreen(Screen::CreateWorld), newWorldExpOpen_ = experiments; }
+    void toolCreateWorldType(int type, int option) {  // 0 endless + preset, 1 flat + look
+        setScreen(Screen::CreateWorld);
+        newWorldFlat_ = type == 1, newWorldSeedPreset_ = type == 0 ? option : 0, newWorldFlatPreset_ = type == 1 ? option : 0;
+    }
+    void toolWorldPicker(int which) { setScreen(Screen::CreateWorld), worldPicker_ = which; }
+    void toolCreateBounded() { setScreen(Screen::CreateWorld), newWorldBounded_ = true, newWorldBoundSize_ = 1; }
     void toolConfirmDelete() {  // tests and films: the delete question for the first world
         setScreen(Screen::WorldList);
         if (!worlds_.empty()) deleteIndex_ = 0, setScreen(Screen::ConfirmDelete);
@@ -126,7 +132,8 @@ private:
                     PromptPlayerName = 6, PromptSkinImported = 7, PromptEditWorldName = 8,
                     PromptStructureImported = 9, PromptDevName = 10, PromptDevPassword = 11, PromptMusicEnded = 12,
                     PromptJoinAddress = 13, PromptChat = 14, PromptCode = 15, PromptPublicIp = 16, PromptWorldImported = 17,
-                    PromptShaderPackName = 18, PromptWaypoint = 19, PromptBookPage = 20, PromptBookTitle = 21 };
+                    PromptShaderPackName = 18, PromptWaypoint = 19, PromptBookPage = 20, PromptBookTitle = 21,
+                    PromptBlockText = 22 };  // 1.9.5 build 3: command and structure blocks
 
     void setScreen(Screen s);
     Settings playSettings() const;  // settings_ without developer options for normal players
@@ -150,6 +157,13 @@ private:
     int encCat_ = 0, encSel_ = 0;
     float encScroll_ = 0;
     std::string encPicture_;  // the picture now in the map texture
+    bool showPicture(const std::string& id);
+    bool preAlphaPack() const;  // the Pre-Alpha Style pack is on
+    // 2.0.0: packs chosen per world (Create World): the global choice is put back when it closes.
+    std::vector<std::string> newWorldPacks_, savedPackOrder_;
+    bool newWorldPacksOpen_ = false, worldPacksActive_ = false;
+    bool worldPickerScreen(float x, float y, float w, float h);  // 1.9.5 build 3
+    int worldPicker_ = -1;  // -1 closed, 0 world type, 1 flat look, 2 seed preset  // puts an encyclopedia picture there (false: no such picture)
     ItemId cutterPick_ = 0;  // the block chosen in the cutter
     bool cutterWood_ = false;  // the wood cutter (wood) or the stonecutter (the rest)
     bool texturesOld_ = false;  // the atlas holds the 0.3 textures (an Old World is open)  // 1.8.0 Old World: the settings screen of 0.3
@@ -330,6 +344,8 @@ private:
     GameMode newWorldMode_ = GameMode::Creative;
     bool newWorldOld_ = false;  // 1.8.0: World type "Old (historic generation)"
     int newWorldFlatPreset_ = 0;  // 1.9.0 the look of a flat world
+    bool newWorldBounded_ = false;  // 1.9.5 build 2: the classic bounded world
+    int newWorldBoundSize_ = 0, newWorldSeedPreset_ = 0;
     bool newWorldExpStorms_ = false, newWorldExpStars_ = false, newWorldExpBreeding_ = false;  // 1.9.0 build 3
     bool newWorldFlat_ = false, newWorldCoords_ = false, newWorldKeepInventory_ = false, newWorldCommands_ = false;
     bool newWorldExpLiquids_ = false, newWorldExpMaps_ = false, newWorldExpOpen_ = false;  // 1.5.1 Experimental Features

@@ -35,7 +35,7 @@ namespace vc {
 namespace vc {
 
 namespace {
-const char* kVersion = "VoxelCraft 1.9.0 Celestial Reach & Seasons";
+const char* kVersion = "VoxelCraft 2.0.0 build 1";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -213,7 +213,8 @@ void Game::loadTextures() {
     int size = 0;
     auto rgba = buildFallbackAtlas(size);
     // 1.8.0 Old World: the built-in textures of 0.3; a picked texture pack still goes over them.
-    texturesOld_ = session_ && session_->oldMode();
+    // 2.0.0: and with the Pre-Alpha Style pack, which now brings the textures of 0.3 too.
+    texturesOld_ = (session_ && session_->oldMode()) || preAlphaPack();
     if (texturesOld_) applyLegacyTiles(rgba, size);
     Atlas atlas = loadTexturePack(texturePackDir_, rgba, size);
     for (const std::string& dir : packs_.textureDirs()) atlas = loadTexturePack(dir, atlas.rgba, atlas.size);
@@ -329,6 +330,10 @@ void Game::applyOreRedesign(bool on) {
         else std::copy_n(&oreBase_[(size_t)i * 1024], 1024, px);
         renderer_.updateAtlasTile(kOreRedesignTiles[i], px);
     }
+}
+
+bool Game::preAlphaPack() const {
+    return std::any_of(packList_.begin(), packList_.end(), [](const PackInfo& p) { return p.enabled && p.style == "pre_alpha"; });
 }
 
 void Game::rebuildFromPacks() {
@@ -475,6 +480,7 @@ Settings Game::playSettings() const {
 }
 
 void Game::setScreen(Screen s) {
+    encPicture_.clear();  // 1.9.5: the map texture may hold anything after a screen change
     ui_.cancelTouches();
     if (session_) session_->cancelTouches();
     // Items left in a crafting grid go back to the inventory when it closes.
@@ -507,6 +513,22 @@ void Game::refreshWorldList() {
 
 void Game::startSession(const WorldInfo& info, const PlayerState& player) {
     endSession();
+    if (!info.packs.empty()) {
+        // 2.0.0: the world's own packs while it is open.
+        savedPackOrder_ = packs_.enabledOrder();
+        std::vector<std::string> order;
+        std::string id;
+        for (char c : info.packs + ",")
+            if (c == ',') {
+                if (!id.empty()) order.push_back(id);
+                id.clear();
+            } else {
+                id += c;
+            }
+        packs_.saveOrder(order);
+        worldPacksActive_ = true;
+        rebuildFromPacks();
+    }
     session_ = std::make_unique<Session>(info, player);
     chat_.clear();  // a new world starts with an empty chat
     session_->onVibrate = [this](int ms) {
@@ -546,6 +568,11 @@ void Game::endSession() {
     session_.reset();
     profile_.save(profilePath_);
     meshedWorld_ = nullptr;
+    if (worldPacksActive_) {
+        worldPacksActive_ = false;
+        packs_.saveOrder(savedPackOrder_);
+        rebuildFromPacks();
+    }
 }
 
 void Game::drawWorldOnce(World& world) {
@@ -708,6 +735,9 @@ void Game::frame(double time) {
                 std::string address;
                 int port = 0;
                 internetCode_ = net::parseJoinAddress(text, address, port) ? net::roomCode(address, lan_.port()) : "";
+            } else if (id == PromptBlockText && session_) {
+                toast_ = session_->setBlockText(session_->blockEditorKey, text.substr(0, 256));
+                toastUntil_ = time + 4;
             } else if (id == PromptWaypoint && session_ && !text.empty()) {
                 session_->waypoints().push_back({session_->dimIndex(), (int)std::floor(mapCx_), (int)std::floor(mapCz_), text.substr(0, 32)});
             } else if (id == PromptBookPage && session_ && bookId_ > 0 && !session_->bookSigned(bookId_)) {
@@ -760,10 +790,10 @@ void Game::frame(double time) {
 
     ui_.begin(width_ / guiScale_, height_ / guiScale_);
     // 1.8.0: the "Pre-Alpha Style" pack (or any pack with "style": "pre_alpha") restyles the UI.
-    Ui::preAlpha = std::any_of(packList_.begin(), packList_.end(), [](const PackInfo& p) { return p.enabled && p.style == "pre_alpha"; });
+    Ui::preAlpha = preAlphaPack();
     // 1.8.0: an Old World always looks like 0.3: the old widgets and the old textures.
     if (session_ && session_->oldMode()) Ui::preAlpha = true;
-    if ((session_ && session_->oldMode()) != texturesOld_) loadTextures();
+    if (((session_ && session_->oldMode()) || preAlphaPack()) != texturesOld_) loadTextures();
     const float W = ui_.width(), H = ui_.height();
     renderer_.setBrightness(settings_.brightness);
 
@@ -797,6 +827,15 @@ void Game::frame(double time) {
                 bookId_ = session_->wantsBook, bookPage_ = 0;
                 setScreen(Screen::Book);
             }
+            if (session_->wantsBlockEditor && onTextPrompt) {
+                // 1.9.5 build 3: the editor of a command or structure block.
+                const bool command = session_->wantsBlockEditor == 1;
+                onTextPrompt(PromptBlockText,
+                             tr(command ? "Příkaz (spustí se, když blok dostane powerstone energii)"
+                                        : "Struktura: save <název> <šířka> <výška> <hloubka>, nebo load <název>"),
+                             session_->blockText(session_->blockEditorKey));
+            }
+            session_->wantsBlockEditor = 0;
             session_->wantsBook = 0;
             session_->wantsTrade = -1;
             session_->wantsDocument = -1;
@@ -1555,6 +1594,12 @@ void Game::creditsScreen() {
         {"MUSIC, TEXTURES AND TRAILERS", 2, gold, false},
         {"Made for VoxelCraft, our own", 1, dim, false},
         {"", 1, white, false},
+        {"SOUND EFFECTS", 2, gold, false},
+        {"Minetest Game sounds (CC BY-SA 3.0, CC BY 3.0, CC0)", 1, dim, false},
+        {"Mito551, celeron55, Benboncan, Sheyvan, sofar and others", 1, dim, false},
+        {"Kenney and rubberduck (CC0)", 1, dim, false},
+        {"Full list: assets/sounds/CREDITS.txt", 1, dim, false},
+        {"", 1, white, false},
         {"Made with love by and for people with autism", 1, green, false},
         {"Special thanks to our community and modders!", 1, green, false},
         {"", 1, white, false},
@@ -1771,6 +1816,7 @@ void Game::trailersScreen() {
         {"1.7.0: The Celestial Reach", "trailers/t09_1.7.0.mp4"},
         {"1.8.0: Concrete & Old World", "trailers/t10_1.8.0.mp4"},
         {"1.9.0: Celestial Reach & Seasons", "trailers/t11_1.9.0.mp4"},
+        {"2.0.0: The whole story (15 min)", "trailers/t12_2.0.0.mp4"},
     };
     const float rowH = 22, top = y + 28, colW = (w - 8) / 2;
     for (int i = 0; i < (int)(sizeof(trailers) / sizeof(trailers[0])); ++i) {
@@ -1892,6 +1938,8 @@ void Game::worldListScreen() {
             newWorldSeed_.clear();
             newWorldMode_ = GameMode::Survival;
             newWorldFlatPreset_ = 0;
+            newWorldBounded_ = false, newWorldBoundSize_ = 0, newWorldSeedPreset_ = 0, worldPicker_ = -1;
+            newWorldPacks_ = packs_.enabledOrder(), newWorldPacksOpen_ = false;
             newWorldOld_ = newWorldFlat_ = newWorldCoords_ = newWorldKeepInventory_ = newWorldCommands_ = newWorldExpLiquids_ = newWorldExpMaps_ = newWorldExpOpen_ = false;
             newWorldExpStorms_ = newWorldExpStars_ = newWorldExpBreeding_ = false;
             setScreen(Screen::CreateWorld);
@@ -1936,18 +1984,26 @@ void Game::createWorldScreen() {
         newWorldMode_ = GameMode::Creative;
     // 1.8.0: three world types, tapped through in turn: modern, flat, and the Old World of 0.1-0.3.
     ui_.text(x, cy + 72, "Typ světa:", kText, 1, false);
-    if (ui_.dropdown(x, cy + 82, col, 18, newWorldOld_ ? "Starý (historická generace)" : newWorldFlat_ ? "Plochý" : "Nekonečný (moderní generace)")) {
-        if (newWorldOld_) newWorldOld_ = false;
-        else if (newWorldFlat_) newWorldFlat_ = false, newWorldOld_ = true;
-        else newWorldFlat_ = true;
+    // 1.9.5 build 2: and a fourth, the classic bounded world.
+    if (ui_.dropdown(x, cy + 82, col, 18, newWorldBounded_ ? "Ohraničený (klasický)" : newWorldOld_ ? "Starý (historická generace)" : newWorldFlat_ ? "Plochý" : "Nekonečný (moderní generace)"))
+        worldPicker_ = 0;  // 1.9.5 build 3: a choice of picture cards
+    static const int kBoundSizes[3] = {4, 8, 16};
+    if (newWorldBounded_) {
+        // The size of the square, in chunks across.
+        const int n = kBoundSizes[newWorldBoundSize_];
+        if (ui_.dropdown(x, cy + 104, col, 18, trf("Velikost: {0} x {0} chunků ({1} bloků)", {std::to_string(n), std::to_string(n * 16)})))
+            newWorldBoundSize_ = (newWorldBoundSize_ + 1) % 3;
+    } else if (!newWorldOld_ && !newWorldFlat_) {
+        // A preset finds a seed whose spawn lies where the player wants it.
+        if (ui_.dropdown(x, cy + 104, col, 18, trf("Předvolba: {0}", {tr(seedPresetName(newWorldSeedPreset_))}))) worldPicker_ = 2;
     }
-    if (newWorldOld_) {
+    if (newWorldBounded_) {
+    } else if (newWorldOld_) {
         newWorldMode_ = GameMode::Creative;  // the old versions had creative only
         ui_.text(x, cy + 101, "Terén verzí 0.1-0.3, jen kreativní, bez hudby", Color{0.9f, 0.8f, 0.4f, 1}, 1, false, col);
     } else if (newWorldFlat_) {
         // 1.9.0: the flat world's look, tapped through in turn.
-        if (ui_.dropdown(x, cy + 104, col, 18, trf("Vzhled: {0}", {tr(flatPresetName(newWorldFlatPreset_))})))
-            newWorldFlatPreset_ = (newWorldFlatPreset_ + 1) % kFlatPresets;
+        if (ui_.dropdown(x, cy + 104, col, 18, trf("Vzhled: {0}", {tr(flatPresetName(newWorldFlatPreset_))}))) worldPicker_ = 1;
     }
 
     // Right column: seed and options
@@ -1977,10 +2033,35 @@ void Game::createWorldScreen() {
     int enabled = 0;
     for (const PackInfo& p : packList_) enabled += p.enabled;
     std::string info = trf("Biomy a Nether z {0} aktivních balíčků", {std::to_string(enabled)});
-    if (!newWorldOld_) ui_.text(x, cy + 108, info, kTextDim, 1, false, w);
+    if (!newWorldOld_ && !newWorldBounded_ && newWorldFlat_) ui_.text(x, cy + 148, info, kTextDim, 1, false, w);
+    if (worldPicker_ >= 0 && worldPickerScreen(x, y, w, h)) return;  // the panel covers the screen
+    // 2.0.0: the packs this world plays with (modpacks, textures, the Pre-Alpha Style...).
+    if (ui_.button(x, cy + 148, col, 18, trf("Balíčky světa ({0})", {std::to_string(newWorldPacks_.size())}))) newWorldPacksOpen_ = true;
+    if (newWorldPacksOpen_) {
+        ui_.frame(x, y, w, h, kPanel, kSeparator);
+        ui_.text(x + 6, y + 6, "Balíčky světa", kTitle, 1, false);
+        ui_.text(x + 6, y + 18, "Zapnuté balíčky platí jen v tomto světě. Ostatní světy si nechají své.", kTextDim, 1, false, w - 12);
+        float ry = y + 34;
+        for (const PackInfo& p : packList_) {
+            if (ry > y + h - 30) break;
+            bool on = std::find(newWorldPacks_.begin(), newWorldPacks_.end(), p.id) != newWorldPacks_.end();
+            const bool was = on;
+            ui_.frame(x + 6, ry, w - 12, 20, kPanelInner, kSeparator);
+            ui_.text(x + 12, ry + 3, p.name.empty() ? p.id : p.name, kText, 1, false, w - 60);
+            ui_.text(x + 12, ry + 12, p.description, kTextDim, 1, false, w - 60);
+            if (!p.builtin) ui_.checkbox(x + w - 30, ry + 3, on);
+            if (on != was) {
+                if (on) newWorldPacks_.push_back(p.id);
+                else newWorldPacks_.erase(std::remove(newWorldPacks_.begin(), newWorldPacks_.end(), p.id), newWorldPacks_.end());
+            }
+            ry += 22;
+        }
+        if (ui_.button(x + w - 66, y + h - 22, 60, 16, "Hotovo")) newWorldPacksOpen_ = false;
+        return;
+    }
     // 1.5.1: Experimental Features, for everyone, saved with the world.
     const int expCount = newWorldExpStorms_ + newWorldExpStars_ + newWorldExpBreeding_;
-    if (ui_.button(x, cy + 120, col, 18, expCount ? trf("Experimentální funkce ({0})", {std::to_string(expCount)}) : tr("Experimentální funkce")))
+    if (!newWorldOld_ && ui_.button(x, cy + 128, col, 18, expCount ? trf("Experimentální funkce ({0})", {std::to_string(expCount)}) : tr("Experimentální funkce")))
         newWorldExpOpen_ = !newWorldExpOpen_;
     if (newWorldExpOpen_) {
         const float ex = x + 8, ey = y + 24, ew = w - 16;
@@ -2017,14 +2098,27 @@ void Game::createWorldScreen() {
         wi.allowCommands = newWorldCommands_;
         wi.expFlowingLiquids = newWorldExpLiquids_;
         wi.expExplorationMaps = newWorldExpMaps_;
-        wi.expStorms = newWorldExpStorms_;
-        wi.expStars = newWorldExpStars_;
-        wi.expBreeding = newWorldExpBreeding_;
+        // 1.9.5: the Old World takes none of the experiments.
+        wi.expStorms = newWorldExpStorms_ && !newWorldOld_;
+        wi.expStars = newWorldExpStars_ && !newWorldOld_;
+        wi.expBreeding = newWorldExpBreeding_ && !newWorldOld_;
+        // 2.0.0: the chosen packs, kept with the world (only when they differ from the global ones).
+        if (newWorldPacks_ != packs_.enabledOrder()) {
+            for (const std::string& id : newWorldPacks_) wi.packs += (wi.packs.empty() ? "" : ",") + id;
+            if (wi.packs.empty()) wi.packs = "default";
+        }
         // The world keeps its own copy of the generator, so later pack edits do not reshape it.
         GenConfig config = packs_.buildConfig();
         config.flat = newWorldFlat_;
         config.flatPreset = newWorldFlatPreset_;
         config.oldWorld = newWorldOld_;
+        if (newWorldBounded_) config.boundedChunks = kBoundSizes[newWorldBoundSize_];
+        if (!newWorldOld_ && !newWorldFlat_ && !newWorldBounded_ && newWorldSeedPreset_ > 0) {
+            // The seed stays the player's; the world just starts at the nearest place that fits.
+            int sx, sz;
+            if (findPresetSpot(newWorldSeedPreset_, config, wi.seed, sx, sz)) config.spawnX = sx, config.spawnZ = sz;
+            else toast_ = tr("Pro tuto předvolbu se v tomto seedu nic nenašlo"), toastUntil_ = now_ + 4;
+        }
         saveGenerator(wi.folder, config);
         startSession(wi, PlayerState{});
         return;
@@ -3040,7 +3134,13 @@ void Game::playSound(Sound s) {
     if (!onPlaySound || settings_.soundVolume <= 0) return;
     float volume = settings_.soundVolume;
     if (settings_.calmMode) volume *= (s == Sound::Explode || s == Sound::Hurt || s == Sound::Grunt) ? 0.35f : 0.6f;  // softer
-    onPlaySound(soundName(s), volume);
+    // 1.9.5: recorded sounds (assets/sounds) everywhere; the Old World keeps the synthesized ones.
+    const bool old = session_ && session_->oldMode();
+    // 1.9.5: "name@style" for the blocks and dimensions Minecraft does not have (the player falls
+    // back to the plain sound when a style has no recordings).
+    std::string name = soundName(s);
+    if (session_ && *session_->soundStyle()) name += std::string("@") + session_->soundStyle();
+    onPlaySound(old ? std::string("px:") + soundName(synthesizedKind(s)) : name, volume);
 }
 
 void Game::loadSkins() {
@@ -3740,8 +3840,12 @@ bool Game::containerWindow(const std::string& title, float contentH, float& gx, 
     if (crafting && ui_.button(px + pw - 80, py + 3, 60, 14, "Recepty", true, recipeBook_)) recipeBook_ = !recipeBook_;
     {
         // 1.9.0 build 3: the full guide, with the furnace and the cutters too.
-        const float hw = ui_.textWidth(tr("Jak vyrobit?")) + 12;
-        if (crafting && ui_.button(px + pw - 84 - hw, py + 3, hw, 14, "Jak vyrobit?")) {
+        // 1.9.5: never over the window's title; where there is no room, just a "?" button.
+        const float titleEnd = px + 7 + ui_.textWidth(tr(title)) + 6;
+        float hw = ui_.textWidth(tr("Jak vyrobit?")) + 12;
+        const bool small = px + pw - 84 - hw < titleEnd;
+        if (small) hw = 16;
+        if (crafting && ui_.button(px + pw - 84 - hw, py + 3, hw, 14, small ? "?" : "Jak vyrobit?")) {
             howBack_ = screen_;
             setScreen(Screen::HowToCraft);
             return false;
@@ -4017,7 +4121,7 @@ void Game::howToCraftScreen() {
     // shows its ingredients in place and where it is made.
     struct How {
         CraftResult result;
-        int where;  // 0 inventory, 1 crafting table, 2 furnace, 3 stonecutter, 4 wood cutter
+        int where;  // 0 inventory, 1 crafting table, 2 furnace, 3 stonecutter, 4 wood cutter, 5 creative only, 6 found
         std::vector<ItemId> cells;
         int width;  // -1 shapeless
     };
@@ -4039,6 +4143,9 @@ void Game::howToCraftScreen() {
         }
         for (ItemId log : {LOG, SPRUCE_LOG, VOID_LOG, NETHERPERK_LOG, CRIMSON_LOG, CELESTIAL_LOG, GRAY_LOG, CRIMSONIUM_LOG})
             if (const ItemId planks = logPlanks(log)) all.push_back({{planks, 6}, 4, {log}, 1});
+        // 1.9.5 build 3: things no recipe makes: where they come from.
+        for (ItemId id : {STRUCTURE_BLOCK, BARRIER, COMMAND_BLOCK}) all.push_back({{id, 1}, 5, {}, 1});
+        for (ItemId id : {HONEY_BALL, CELESTIUM, CELESTIAL_WINGS, PALE_CRYSTAL, VOID_SHARD, CRIMSONIUM, HARDIUM}) all.push_back({{id, 1}, 6, {}, 1});
     }
     static const char* const kCats[] = {"Vše", "Powerstone", "Nástroje a brnění", "Stavební", "Pec", "Řezačky"};
     auto inCat = [&](const How& e, int c) {
@@ -4051,7 +4158,7 @@ void Game::howToCraftScreen() {
             case 2: return tool;
             case 3: return !power && !tool && isPlaceable(e.result.id) && e.where < 2;
             case 4: return e.where == 2;
-            case 5: return e.where >= 3;
+            case 5: return e.where == 3 || e.where == 4;
             default: return true;
         }
     };
@@ -4091,9 +4198,28 @@ void Game::howToCraftScreen() {
     if (howPick_ < 0 || howPick_ >= (int)all.size()) return;
     const How& e = all[(size_t)howPick_];
     static const char* const kWhere[] = {"Inventář (mřížka 2x2) nebo pracovní stůl", "Pracovní stůl (mřížka 3x3)", "Pec: vlož dovnitř a přidej palivo",
-                                         "Kamenořez", "Dřevořez"};
+                                         "Kamenořez", "Dřevořez", "Jen v kreativním režimu", "Najdeš ve světě"};
     ui_.text(rx + 6, ly + 6, itemName(e.result.id), kTextBright, 1, false, rw - 12);
     ui_.text(rx + 6, ly + 18, kWhere[e.where], kGold, 1, false, rw - 12);
+    if (e.where >= 5) {
+        // Not crafted: where it comes from.
+        static const std::map<ItemId, const char*> kFrom = {
+            {STRUCTURE_BLOCK, "Ukládá a staví struktury: save <název> <š> <v> <h>, nebo load <název>. Ťukni na něj v kreativu."},
+            {BARRIER, "Neviditelná stěna. Uvidíš ji, jen když držíš bariéru v ruce."},
+            {COMMAND_BLOCK, "Ťukni na něj v kreativu a napiš příkaz. Spustí se, když ho napájí powerstone."},
+            {HONEY_BALL, "Padá z Dýňového slizu. Čtyři dají medový blok, dá se i sníst."},
+            {CELESTIUM, "Celestiová ruda hluboko v ostrovech Nebeské říše."},
+            {CELESTIAL_WINGS, "Odměna za poražení Strážce Nebe v Nebeském chrámu."},
+            {PALE_CRYSTAL, "Krystalové žíly a hroty Nebeské říše, nebeská zvířata."},
+            {VOID_SHARD, "Krystaly a bloky střepů v Karmínové prázdnotě."},
+            {CRIMSONIUM, "Crimsoniová ruda v Crimsoniovém lese Karmínové prázdnoty."},
+            {HARDIUM, "Hardiová ruda v hlubinném kameni, ocelový krumpáč nebo lepší."}};
+        auto it = kFrom.find(e.result.id);
+        float ty = ly + 34;
+        if (it != kFrom.end())
+            for (const std::string& line : wrapText(it->second, rw - 12)) ui_.text(rx + 6, ty, line, kText, 1, false), ty += 10;
+        return;
+    }
     const float gx = rx + 8, gy = ly + 34;
     const int gw = e.where >= 2 ? 1 : e.where == 0 && e.width != -1 ? 2 : 3;
     for (int k = 0; k < gw * gw; ++k) {
@@ -4118,6 +4244,95 @@ void Game::howToCraftScreen() {
         float hy = ly + lh - 26;
         for (const std::string& line : wrapText("Prkna a kmeny z jakéhokoliv dřeva fungují jako dubová.", rw - 12)) ui_.text(rx + 6, hy, line, kTextDim, 1, false), hy += 10;
     }
+}
+
+bool Game::worldPickerScreen(float x, float y, float w, float h) {
+    // 1.9.5 build 3: world type, flat look and seed preset chosen from picture cards. The pictures
+    // of one choice are packed side by side into the map texture, so all show at once.
+    struct Card { const char* name; const char* pic; };
+    static const Card kTypes[] = {{"Nekonečný", "forest"}, {"Plochý", "flat_classic"}, {"Starý svět", "old_world"}, {"Ohraničený", "bounded"}};
+    static const char* const kFlatPics[kFlatPresets] = {"flat_classic", "flat_desert", "flat_snow", "flat_stone", "flat_nether", "flat_void"};
+    static const char* const kPresetPics[kSeedPresets] = {"forest", "taiga", "village", "ice", "plains", "dappled", "dappled", "cave_dungeon"};
+    std::vector<Card> cards;
+    const char* title = worldPicker_ == 0 ? "Typ světa" : worldPicker_ == 1 ? "Vzhled plochého světa" : "Předvolba seedu";
+    if (worldPicker_ == 0) cards.assign(std::begin(kTypes), std::end(kTypes));
+    else if (worldPicker_ == 1) for (int i = 0; i < kFlatPresets; ++i) cards.push_back({flatPresetName(i), kFlatPics[i]});
+    else for (int i = 0; i < kSeedPresets; ++i) cards.push_back({seedPresetName(i), kPresetPics[i]});
+    const int n = (int)cards.size(), cols = n <= 4 ? 2 : 4, rows = (n + cols - 1) / cols;
+    const std::string sheetId = "#picker" + std::to_string(worldPicker_);
+    if (encPicture_ != sheetId) {
+        std::vector<uint8_t> sheet((size_t)kPicW * cols * kPicH * rows * 4, 40);
+        for (int c = 0; c < n; ++c)
+            for (const EncPicture& p : kPictures)
+                if (std::string(p.id) == cards[(size_t)c].pic) {
+                    std::vector<uint8_t> rgb((size_t)kPicW * kPicH * 3);
+                    uLongf len = (uLongf)rgb.size();
+                    uncompress(rgb.data(), &len, p.data, p.size);
+                    const int ox = (c % cols) * kPicW, oy = (c / cols) * kPicH;
+                    for (int py = 0; py < kPicH; ++py)
+                        for (int px = 0; px < kPicW; ++px) {
+                            uint8_t* d = &sheet[((size_t)(oy + py) * kPicW * cols + ox + px) * 4];
+                            std::copy_n(&rgb[((size_t)py * kPicW + px) * 3], 3, d);
+                            d[3] = 255;
+                        }
+                }
+        renderer_.setMapTexture(sheet, kPicW * cols, kPicH * rows);
+        encPicture_ = sheetId;
+    }
+    ui_.frame(x, y, w, h, kPanel, kSeparator);
+    ui_.text(x + 6, y + 6, title, kTitle, 1, false);
+    if (ui_.button(x + w - 66, y + 3, 60, 16, "Zpět")) {
+        worldPicker_ = -1;
+        return true;
+    }
+    const float gx = x + 6, gy = y + 24, gw = w - 12, gh = h - 30, gap = 6;
+    float cw = std::floor((gw - gap * (cols - 1)) / cols), ch = std::floor(cw * 9 / 16) + 14;
+    if (ch * rows + gap * (rows - 1) > gh) ch = std::floor((gh - gap * (rows - 1)) / rows), cw = std::floor((ch - 14) * 16 / 9);
+    const float left = gx + std::floor((gw - (cw * cols + gap * (cols - 1))) / 2);
+    for (int c = 0; c < n; ++c) {
+        const float cx = left + (c % cols) * (cw + gap), cy = gy + (c / cols) * (ch + gap), ph = ch - 14;
+        const bool chosen = worldPicker_ == 0 ? (c == 3 ? newWorldBounded_ : c == 2 ? newWorldOld_ : c == 1 ? newWorldFlat_ && !newWorldOld_ && !newWorldBounded_
+                                                                                                    : !newWorldFlat_ && !newWorldOld_ && !newWorldBounded_)
+                            : worldPicker_ == 1 ? c == newWorldFlatPreset_ : c == newWorldSeedPreset_;
+        ui_.fill(cx - 1, cy - 1, cw + 2, ch + 2, chosen ? kGreenBorder : kBorder);
+        ui_.image(TexMap, cx, cy, cw, ph, (float)(c % cols) / cols, (float)(c / cols) / rows, (float)(c % cols + 1) / cols, (float)(c / cols + 1) / rows);
+        ui_.fill(cx, cy + ph, cw, 14, chosen ? kGreen : kPanelInner);
+        // Long names are cut to fit the card.
+        std::string label = tr(cards[(size_t)c].name);
+        while (label.size() > 3 && ui_.textWidth(label) > cw - 6) {
+            label.pop_back();
+            while (!label.empty() && ((unsigned char)label.back() & 0xC0) == 0x80) label.pop_back();  // whole UTF-8 letters
+        }
+        if (label != tr(cards[(size_t)c].name)) label += ".";
+        ui_.textCentered(cx + cw / 2, cy + ph + 3, label, kTextBright, 1);
+        if (ui_.tapped(cx, cy, cw, ch)) {
+            if (worldPicker_ == 0) newWorldFlat_ = c == 1, newWorldOld_ = c == 2, newWorldBounded_ = c == 3;
+            else if (worldPicker_ == 1) newWorldFlatPreset_ = c;
+            else newWorldSeedPreset_ = c;
+            worldPicker_ = -1;
+            return true;
+        }
+    }
+    return true;
+}
+
+bool Game::showPicture(const std::string& id) {
+    // An encyclopedia picture, unpacked into the map texture when it changes.
+    if (encPicture_ == id) return true;
+    for (const EncPicture& p : kPictures)
+        if (id == p.id) {
+            std::vector<uint8_t> rgb((size_t)kPicW * kPicH * 3), rgba((size_t)kPicW * kPicH * 4);
+            uLongf len = (uLongf)rgb.size();
+            uncompress(rgb.data(), &len, p.data, p.size);
+            for (int i = 0; i < kPicW * kPicH; ++i) {
+                std::copy_n(&rgb[i * 3], 3, &rgba[i * 4]);
+                rgba[i * 4 + 3] = 255;
+            }
+            renderer_.setMapTexture(rgba, kPicW, kPicH);
+            encPicture_ = id;
+            return true;
+        }
+    return false;
 }
 
 void Game::encyclopediaScreen() {
@@ -4173,19 +4388,7 @@ void Game::encyclopediaScreen() {
     const float dx = x + lw + 8, dw = w - lw - 8;
     float dy = ly;
     if (r.picture[0]) {
-        if (encPicture_ != r.picture) {
-            for (const EncPicture& p : kPictures)
-                if (encPicture_ = r.picture, std::string(p.id) == r.picture) {
-                    std::vector<uint8_t> rgb((size_t)kPicW * kPicH * 3), rgba((size_t)kPicW * kPicH * 4);
-                    uLongf len = (uLongf)rgb.size();
-                    uncompress(rgb.data(), &len, p.data, p.size);
-                    for (int i = 0; i < kPicW * kPicH; ++i) {
-                        std::copy_n(&rgb[i * 3], 3, &rgba[i * 4]);
-                        rgba[i * 4 + 3] = 255;
-                    }
-                    renderer_.setMapTexture(rgba, kPicW, kPicH);
-                }
-        }
+        showPicture(r.picture);
         const float pw = std::min(dw, (h - 90) * 16 / 9.0f), ph = std::floor(pw * 9 / 16);
         ui_.fill(dx - 1, dy - 1, pw + 2, ph + 2, kBorder);
         ui_.image(TexMap, dx, dy, pw, ph, 0, 0, 1, 1);

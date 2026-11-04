@@ -1,6 +1,7 @@
 #pragma once
 #include <functional>
 #include <map>
+#include <set>
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
@@ -266,6 +267,11 @@ private:
     void drawOldHud(Ui& ui) const;  // 1.8.0 Old World
     void updateCamera(float dt, bool walking);
     void sound(Sound s) const { if (onSound) onSound(s); }
+    void styledSound(Sound s, ItemId block) const;  // 1.9.5: with the style of the block or dimension
+    mutable const char* soundStyle_ = "";
+public:
+    const char* soundStyle() const { return soundStyle_; }  // read while a sound is being played
+private:
     void damageHeldTool();
 
     WorldInfo info_;
@@ -338,6 +344,35 @@ private:
     float burning_ = 0;  // seconds the player keeps burning
     void updateExperiments20(float dt);  // 1.9.0 build 3: the previews of 2.0.0
     float stormTimer_ = 8, starTimer_ = 4, lightningFlash_ = 0;
+    // 1.9.5 weather 2.0
+    float wind_ = 0.1f, thunderIn_ = -1;
+    // 1.9.5 temperature
+    float bodyTemp_ = 0.3f, freezeTimer_ = 0;
+    float targetTemperature() const;
+    void updateTemperature(float dt);
+    bool storm_ = false, wasRaining_ = false;
+    bool gliding_ = false;  // 1.9.5 celestial wings
+    float fireSound_ = 0, barrierScan_ = 0, digHitTimer_ = 0;
+    // 1.9.5 build 3: command and structure block texts, and command blocks that are powered now.
+    std::map<FurnaceKey, std::string> blockTexts_;
+    std::set<FurnaceKey> poweredCommands_;
+    void runCommandBlock(const FurnaceKey& key);
+    void saveBlockTexts() const;
+    void loadBlockTexts();
+public:
+    int wantsBlockEditor = 0;  // 1 command block, 2 structure block (Game opens the editor)
+    FurnaceKey blockEditorKey;
+    std::string blockText(const FurnaceKey& key) const;
+    std::string setBlockText(const FurnaceKey& key, const std::string& text);  // returns a message
+    void powerChangedAt(int x, int y, int z) { powerChanged(x, y, z); }  // tests
+private:
+public:
+    float wind() const { return wind_; }
+    int temperatureLevel() const;  // 1 hot, 0 warm, -1 cold, -2 very cold
+    float bodyTemperature() const { return bodyTemp_; }
+    bool storm() const { return storm_ && state_.raining; }
+    void setStorm(bool s) { storm_ = s; wasRaining_ = state_.raining; }  // commands, tests and films
+private:
     // 1.9.0 build 2: falling leaves, flames and smoke round the player.
     void updateAmbientParticles(float dt);
     float ambientScan_ = 0, ambientLeaf_ = 0;

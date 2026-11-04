@@ -561,7 +561,8 @@ void Renderer::drawWorld(const Player& player, Dimension dim, const RayHit& sele
 
     // 1.5.5 Enhanced: swaying leaves and rippling water, and the sun's shadows.
     shaderTime_ += 1.0f / 60;
-    const float wave = enhanced_ && waves_ ? 1.0f : 0.0f;
+    // 1.9.5: wind makes it stronger; a strong wind sways leaves even in Classic graphics.
+    const float wave = std::max(enhanced_ && waves_ ? 1.0f : 0.0f, wind_ > 0.45f ? wind_ : 0.0f) * (1 + wind_ * 2.2f);
     const bool shadows = enhanced_ && shadows_ && shadowProg_ && dim == Dimension::Overworld && sunStrength_ > 0.02f &&
                          !player.headInWater && !player.headInLava && !player.headInTar;
     Mat4 lightMvp = Mat4::identity();
