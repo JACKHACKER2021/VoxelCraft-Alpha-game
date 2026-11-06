@@ -872,7 +872,7 @@ public class VoxelActivity extends NativeActivity {
         int count = 0;
         for (Enumeration<? extends ZipEntry> e = zip.entries(); e.hasMoreElements() && count < MAX_FILES; ) {
             ZipEntry entry = e.nextElement();
-            String name = entry.getName().replace('\', '/');
+            String name = entry.getName().replace('\\', '/');
             if (entry.isDirectory() || name.contains("..") || name.startsWith("/")) continue;
             boolean valid = name.endsWith(".json") || name.endsWith(".png") || name.endsWith(".tga")
                     || name.endsWith(".lang") || name.endsWith(".txt");
