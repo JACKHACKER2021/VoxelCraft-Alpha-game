@@ -790,13 +790,14 @@ public class VoxelActivity extends NativeActivity {
         }
         try (ZipFile zip = new ZipFile(archive)) {
             String prefix = null;
-            boolean java = false, shaders = false;
+            boolean java = false, shaders = false, bedrock = false;
             for (Enumeration<? extends ZipEntry> e = zip.entries(); e.hasMoreElements(); ) {
                 String name = e.nextElement().getName().replace('\\', '/');
                 // A Java Edition mod (.jar) or datapack / resource pack (.zip).
                 if (name.startsWith("assets/") || name.startsWith("data/") || name.equals("fabric.mod.json")
                         || name.equals("quilt.mod.json") || name.equals("pack.mcmeta") || name.startsWith("META-INF/mods.toml")
                         || name.equals("META-INF/neoforge.mods.toml")) java = true;
+                if (name.startsWith("blocks/") || name.contains("/blocks/") || name.startsWith("items/") || name.contains("/items/") || name.contains("terrain_texture.json") || name.contains("item_texture.json") || name.endsWith(".mcpack")) bedrock = true;
                 String candidate = null;
                 if (name.endsWith("manifest.json")) candidate = name.substring(0, name.length() - "manifest.json".length());
                 if (candidate == null && name.endsWith("content.json")) candidate = name.substring(0, name.length() - "content.json".length());
@@ -810,6 +811,7 @@ public class VoxelActivity extends NativeActivity {
             }
             String base = slug(displayName(uri).replaceAll("\\.(zip|mcpack|mcaddon|jar)$", ""));
             if (prefix == null && java && !shaders) return installJavaMod(zip, base);
+            if ((prefix == null || bedrock) && bedrock && !shaders) return installBedrockAddon(zip, base);
             if (prefix == null) throw new IOException(str(R.string.modpack_invalid));
 
             File packs = new File(getFilesDir(), "packs");
@@ -855,6 +857,38 @@ public class VoxelActivity extends NativeActivity {
      * block loot tables and the mod's metadata. Compiled code is only counted (it never
      * runs); the game converts the rest (JavaImport.cpp). Returns "java:<id>".
      */
+    
+    /**
+     * Unpacks a Minecraft Bedrock addon (.mcpack, .mcaddon or zip) into
+     * files/packs/<id>/bedrock/: manifest.json, blocks/, items/, textures/, recipes/, texts/.
+     * The C++ engine then converts it into VoxelCraft pack format (BedrockImport.cpp).
+     * Returns "bedrock:" + id.
+     */
+    private String installBedrockAddon(ZipFile zip, String base) throws IOException {
+        File packs = new File(getFilesDir(), "packs");
+        String id = base;
+        for (int n = 2; new File(packs, id).exists(); n++) id = base + "_" + n;
+        File root = new File(new File(packs, id), "bedrock");
+        int count = 0;
+        for (Enumeration<? extends ZipEntry> e = zip.entries(); e.hasMoreElements() && count < MAX_FILES; ) {
+            ZipEntry entry = e.nextElement();
+            String name = entry.getName().replace('\', '/');
+            if (entry.isDirectory() || name.contains("..") || name.startsWith("/")) continue;
+            boolean valid = name.endsWith(".json") || name.endsWith(".png") || name.endsWith(".tga")
+                    || name.endsWith(".lang") || name.endsWith(".txt");
+            if (!valid) continue;
+            File target = new File(root, name);
+            File parent = target.getParentFile();
+            if (parent != null && !parent.isDirectory() && !parent.mkdirs()) throw new IOException("mkdir");
+            try (InputStream in = zip.getInputStream(entry)) {
+                copy(in, target);
+            }
+            count++;
+        }
+        if (count == 0) throw new IOException(str(R.string.modpack_invalid));
+        return "bedrock:" + id;
+    }
+
     private String installJavaMod(ZipFile zip, String base) throws IOException {
         File packs = new File(getFilesDir(), "packs");
         String id = base;

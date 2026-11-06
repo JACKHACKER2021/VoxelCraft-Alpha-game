@@ -1,0 +1,5 @@
+{"namespace": "trains",
+ "blocks": [
+  {"id": "spruce_tie", "name": "Spruce Tie", "name_cs": "Smrkový pražec", "texture": "spruce_tie.png", "hardness": 1.0, "tool": "axe"},
+  {"id": "iron_rail", "name": "Iron Rail", "name_cs": "Železná kolej", "texture": "iron_rail.png", "hardness": 2.0, "tool": "pickaxe"}
+ ]}

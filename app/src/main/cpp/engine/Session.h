@@ -8,6 +8,7 @@
 
 #include "Audio.h"
 #include "Boats.h"
+#include "Trains.h"
 #include "Mobs.h"
 #include "Trees.h"
 #include "Drops.h"
@@ -170,6 +171,12 @@ public:
     const DropSystem& drops() const { return drops_; }
     const HandAnimator& hand() const { return hand_; }
     const BoatSystem& boats() const { return boats_; }
+    // VoxelCraft Trains (see Trains.h)
+    TrainSystem& trains() { return trains_; }
+    World& world() { return *world_; }
+    void rideTrain(int index) { trainRide_ = index; }
+    int trainRide() const { return trainRide_; }
+    void applyTrainPacks();  // the look of cars and track from the enabled packs
     MobSystem& mobs() { return mobs_; }
     void summon(MobType type);  // in front of the player (commands, tests)
     // An explosion like TNT's (radius in blocks); public for commands and tests.
@@ -303,6 +310,9 @@ private:
     void achieve(const char* id) const { if (survival() && onAchievement) onAchievement(id); }
     void checkAchievements();
     BoatSystem boats_;
+    TrainSystem trains_;
+    int trainRide_ = -1;  // index of the train the player rides, -1 none
+    std::vector<Vertex> trainVerts_;
     MobSystem mobs_;
     // 1.2.0: lit TNT, growing saplings, leaves about to fall.
     struct PrimedTnt {

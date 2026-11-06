@@ -47,6 +47,7 @@ add_library(voxelcraft SHARED
     engine/Loot.cpp
     engine/WorldStructures.cpp
     engine/Boats.cpp
+    engine/Trains.cpp
     engine/Achievements.cpp
     engine/Net.cpp
     engine/Multiplayer.cpp
@@ -58,6 +59,7 @@ add_library(voxelcraft SHARED
     engine/Trading.cpp
     engine/Mods.cpp
     engine/JavaImport.cpp
+    engine/BedrockImport.cpp
     engine/WorldFiles.cpp)
 
 target_include_directories(voxelcraft PRIVATE

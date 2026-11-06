@@ -11,6 +11,7 @@
 #include "Lang.h"
 #include "Session.h"
 #include "Sky.h"
+#include "Trains.h"
 
 namespace vc {
 
@@ -30,6 +31,8 @@ const CommandInfo kCommands[] = {
     {"/heal", "Doplní zdraví a jídlo", true},
     {"/clear", "Vyprázdní inventář", true},
     {"/kill", "Zemřeš (jen v Přežití)", true},
+    {"/rail <straight|curve|cross|stop|line|remove> [north|east|south|west|počet]", "Položí kolejový díl tam, kde stojíš", true},
+    {"/train <spawn|go|stop|reverse|ride|remove> [vozy|rychlost]", "Vlak: vytvoř (steam boxcar passenger), jeď, zastav, otoč, nastup, odstraň", true},
 };
 const int kCommandCount = sizeof(kCommands) / sizeof(kCommands[0]);
 
@@ -229,6 +232,80 @@ std::vector<std::string> runCommand(Session& s, const std::string& line, bool ch
         if (!s.survival()) return {tr("V Kreativním režimu nelze zemřít")};
         s.kill();
         return {};
+    }
+    if (cmd == "rail" || cmd == "train") {
+        // VoxelCraft Trains: everything happens where the player stands, looking along `heading`.
+        TrainSystem& ts = s.trains();
+        const int dim = s.dimIndex();
+        const int x = (int)std::floor(p.pos.x), y = (int)std::floor(p.pos.y + 0.05f), z = (int)std::floor(p.pos.z);
+        const float hx = std::sin(p.yaw), hz = -std::cos(p.yaw);
+        const int heading = std::fabs(hx) > std::fabs(hz) ? (hx > 0 ? 1 : 3) : (hz < 0 ? 0 : 2);
+        const int kDx[4] = {0, 1, 0, -1}, kDz[4] = {-1, 0, 1, 0};
+        if (args.size() < 2) return usage();
+        const std::string sub = lower(args[1]);
+        if (cmd == "rail") {
+            auto dirArg = [&](size_t i, int def) {
+                if (args.size() <= i) return def;
+                const std::string d = lower(args[i]);
+                return d == "north" ? 0 : d == "east" ? 1 : d == "south" ? 2 : d == "west" ? 3 : def;
+            };
+            std::string why;
+            if (sub == "remove") return {ts.removePiece(dim, x, y, z) ? "OK" : tr("Tady není kolej")};
+            if (sub == "line") {
+                int n = args.size() > 2 ? std::clamp(std::atoi(args[2].c_str()), 1, 64) : 8, done = 0;
+                for (int i = 0; i < n; ++i)
+                    if (ts.placePiece(s.world(), dim, x + kDx[heading] * i, y, z + kDz[heading] * i, PieceKind::Straight, heading, &why)) ++done;
+                    else break;
+                return {trf("Položeno kolejí: {0}", {std::to_string(done)}) + (done < n && !why.empty() ? " (" + tr(why) + ")" : "")};
+            }
+            PieceKind kind;
+            int dir = heading;
+            if (sub == "straight") kind = PieceKind::Straight, dir = dirArg(2, heading);
+            else if (sub == "curve") kind = PieceKind::Curve, dir = dirArg(2, heading);  // ports: dir and the next one clockwise
+            else if (sub == "cross") kind = PieceKind::Cross;
+            else if (sub == "stop") kind = PieceKind::Stop, dir = dirArg(2, (heading + 2) & 3);  // the side the track comes from
+            else return usage();
+            if (!ts.placePiece(s.world(), dim, x, y, z, kind, dir, &why)) return {tr(why)};
+            return {"OK"};
+        }
+        // /train
+        auto kindOf = [](const std::string& w, CarKind& k) {
+            const std::string a = lower(w);
+            if (a == "steam" || a == "s") k = CarKind::Steam;
+            else if (a == "boxcar" || a == "b") k = CarKind::Boxcar;
+            else if (a == "passenger" || a == "p") k = CarKind::Passenger;
+            else return false;
+            return true;
+        };
+        if (sub == "spawn") {
+            std::vector<CarKind> cars;
+            for (size_t i = 2; i < args.size() && cars.size() < 8; ++i) {
+                CarKind k;
+                if (!kindOf(args[i], k)) return {trf("Neznámý vůz: {0} (steam, boxcar, passenger)", {args[i]})};
+                cars.push_back(k);
+            }
+            if (cars.empty()) cars = {CarKind::Steam, CarKind::Boxcar, CarKind::Passenger};
+            std::string why;
+            int idx = ts.spawnTrain(dim, x, y, z, heading, cars, &why);
+            if (idx < 0) return {tr(why.empty() ? "Tady není kolej" : why)};
+            return {why.empty() ? std::string("OK") : tr(why)};
+        }
+        int idx = ts.nearestTrain(dim, p.pos, 24.0f);
+        if (idx < 0) return {tr("Poblíž není žádný vlak")};
+        if (sub == "go") {
+            ts.setTarget(idx, args.size() > 2 ? (float)std::atof(args[2].c_str()) : 6.0f);
+            return {"OK"};
+        }
+        if (sub == "stop") { ts.setTarget(idx, 0); return {"OK"}; }
+        if (sub == "reverse") { ts.reverse(idx); return {"OK"}; }
+        if (sub == "ride") { s.rideTrain(idx); return {"OK"}; }
+        if (sub == "remove") {
+            if (s.trainRide() == idx) s.rideTrain(-1);
+            else if (s.trainRide() > idx) s.rideTrain(s.trainRide() - 1);
+            ts.removeTrain(idx);
+            return {"OK"};
+        }
+        return usage();
     }
     return {trf("Neznámý příkaz: /{0}. Napiš /help", {cmd})};  // /list is answered by the game
 }

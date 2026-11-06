@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <zlib.h>
 
 #include "Save.h"
 
@@ -54,6 +55,19 @@ std::string stamp() {
     char buf[32];
     std::strftime(buf, sizeof buf, "%Y%m%d-%H%M%S", &tm);
     return buf;
+}
+
+bool inflateRaw(const uint8_t* src, size_t srcLen, std::vector<uint8_t>& dst, size_t uncompressedSize) {
+    dst.resize(uncompressedSize);
+    z_stream strm = {};
+    if (inflateInit2(&strm, -MAX_WBITS) != Z_OK) return false;
+    strm.next_in = const_cast<Bytef*>(src);
+    strm.avail_in = (uInt)srcLen;
+    strm.next_out = dst.data();
+    strm.avail_out = (uInt)dst.size();
+    int ret = inflate(&strm, Z_FINISH);
+    inflateEnd(&strm);
+    return ret == Z_STREAM_END || ret == Z_OK;
 }
 
 }  // namespace
@@ -159,46 +173,96 @@ bool importWorld(const std::string& file, const std::string& worldsRoot, std::st
         if (p == 0) break;
     }
     if (end == std::string::npos) {
-        error = "Není to soubor .vcworld";
+        error = "Není to platný archiv světa (.vcworld nebo .mcworld)";
         return false;
     }
     const uint32_t count = get16(d, end + 10);
     size_t at = get32(d, end + 16);
     struct Entry {
         std::string name;
-        size_t data, size;
+        size_t data, compSize, uncompSize;
+        uint16_t method;
     };
     std::vector<Entry> entries;
     bool hasLevel = false;
+    std::string bedrockName;
+
     for (uint32_t i = 0; i < count; ++i) {
         if (get32(d, at) != 0x02014b50) break;
-        const uint32_t method = get16(d, at + 10), size = get32(d, at + 20), nameLen = get16(d, at + 28);
-        const uint32_t extra = get16(d, at + 30), comment = get16(d, at + 32), local = get32(d, at + 42);
+        const uint16_t method = get16(d, at + 10);
+        const uint32_t compSize = get32(d, at + 20), uncompSize = get32(d, at + 24);
+        const uint16_t nameLen = get16(d, at + 28), extra = get16(d, at + 30), comment = get16(d, at + 32);
+        const uint32_t local = get32(d, at + 42);
         if (at + 46 + nameLen > d.size()) break;
         std::string name(d.begin() + (long)at + 46, d.begin() + (long)(at + 46 + nameLen));
         at += 46 + nameLen + extra + comment;
-        if (method != 0) {
-            error = "Komprimovaný soubor: použij export z VoxelCraftu";
+        if (method != 0 && method != 8) {
+            error = "Nepodporovaná komprese v archivu";
             return false;
         }
         if (name.empty() || name.back() == '/' || name.find("..") != std::string::npos || name[0] == '/') continue;
         if (get32(d, local) != 0x04034b50) continue;
         const size_t dataAt = local + 30 + get16(d, local + 26) + get16(d, local + 28);
-        if (dataAt + size > d.size()) continue;
-        hasLevel |= name == "level.dat";
-        entries.push_back({name, dataAt, size});
+        if (dataAt + compSize > d.size()) continue;
+
+        if (name == "level.dat" || name.rfind("/level.dat") != std::string::npos) hasLevel = true;
+        if (name.find("levelname.txt") != std::string::npos) {
+            // Read Bedrock world name
+            std::vector<uint8_t> nameBuf;
+            if (method == 0) {
+                nameBuf.assign(d.begin() + dataAt, d.begin() + dataAt + compSize);
+            } else {
+                inflateRaw(d.data() + dataAt, compSize, nameBuf, uncompSize);
+            }
+            bedrockName = std::string(nameBuf.begin(), nameBuf.end());
+            while (!bedrockName.empty() && (bedrockName.back() == '\r' || bedrockName.back() == '\n' || bedrockName.back() == ' '))
+                bedrockName.pop_back();
+        }
+
+        entries.push_back({name, dataAt, compSize, uncompSize, method});
     }
-    if (!hasLevel) {
-        error = "V souboru není svět";
+
+    if (!hasLevel && bedrockName.empty()) {
+        error = "V souboru není svět (chybí level.dat nebo levelname.txt)";
         return false;
     }
+
     folder = createWorldFolder(worldsRoot);
     for (const Entry& e : entries) {
         const fs::path target = fs::path(folder) / e.name;
         std::error_code ec;
         fs::create_directories(target.parent_path(), ec);
-        std::ofstream(target, std::ios::binary).write((const char*)d.data() + e.data, (std::streamsize)e.size);
+
+        if (e.method == 0) {
+            std::ofstream(target, std::ios::binary).write((const char*)d.data() + e.data, (std::streamsize)e.compSize);
+        } else {
+            std::vector<uint8_t> uncomp;
+            if (inflateRaw(d.data() + e.data, e.compSize, uncomp, e.uncompSize)) {
+                std::ofstream(target, std::ios::binary).write((const char*)uncomp.data(), (std::streamsize)uncomp.size());
+            }
+        }
     }
+
+    // If imported Bedrock world without VoxelCraft level.dat, generate default level.dat
+    if (!fs::is_regular_file(fs::path(folder) / "level.dat")) {
+        std::string wName = bedrockName.empty() ? "Bedrock World" : bedrockName;
+        std::ofstream ldat(fs::path(folder) / "level.dat");
+        ldat << "version=1\n";
+        ldat << "name=" << wName << "\n";
+        ldat << "seed=987654321\n";
+        ldat << "mode=0\n";
+        ldat << "lastPlayed=" << std::time(nullptr) << "\n";
+        ldat << "showCoordinates=1\n";
+        ldat << "allowCommands=1\n";
+        ldat << "exp.oreRedesign=1\n";
+        ldat << "exp.flowingLiquids=1\n";
+        ldat << "exp.explorationMaps=1\n";
+        ldat << "packs=\n";
+        ldat << "player.x=0\nplayer.y=80\nplayer.z=0\n";
+        ldat << "spawn.x=0\nspawn.y=80\nspawn.z=0\n";
+        ldat << "yaw=0\npitch=0\ndimension=0\nhealth=20\nfood=20\nsaturation=5\nair=15\nflying=1\nselected=0\n";
+    }
+
     return true;
 }
 

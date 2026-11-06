@@ -1,6 +1,7 @@
 #include "Game.h"
 
 #include <algorithm>
+#include <fstream>
 #include <sstream>
 #include <cmath>
 #include <cctype>
@@ -12,7 +13,9 @@
 #include "Items.h"
 #include "WorldFiles.h"
 #include "JavaImport.h"
+#include "BedrockImport.h"
 #include "Mods.h"
+#include "Trains.h"
 #include "Achievements.h"
 #include "Commands.h"
 #include "Developer.h"
@@ -344,6 +347,15 @@ void Game::rebuildFromPacks() {
     for (const PackInfo& p : packList_)
         if (p.enabled) modDirs.push_back(p.dir);
     ModRegistry::get().load(modDirs, dataDir_ + "/mod_ids.txt", &packWarnings_);
+    // VoxelCraft Trains: trains.json of each enabled pack (the look of cars and track).
+    TrainSystem::packConfigs().clear();
+    for (const std::string& dir : modDirs) {
+        std::ifstream tin(dir + "/trains.json");
+        if (!tin) continue;
+        std::stringstream buf;
+        buf << tin.rdbuf();
+        TrainSystem::packConfigs().push_back(buf.str());
+    }
     setRecipes(packs_.buildRecipes(&packWarnings_));
     packs_.buildConfig(&packWarnings_);  // only to report problems; worlds snapshot it when created
     packSelected_ = std::clamp(packSelected_, 0, std::max(0, (int)packList_.size() - 1));
@@ -644,6 +656,16 @@ void Game::frame(double time) {
             else if (id == PromptJson) editorApply(text, true);
             else if (id == PromptPackImported) {
                 std::string packId = text;
+                                if (packId.rfind("bedrock:", 0) == 0) {
+                    // A Minecraft Bedrock addon or mod: convert what can be converted.
+                    packId = packId.substr(8);
+                    const std::string dir = packs_.packDir(packId);
+                    BedrockImportReport rep = convertBedrockAddon(dir + "/bedrock", dir);
+                    toast_ = rep.ok() ? trf("Import Bedrock: {0} bloků, {1} předmětů, {2} textur",
+                                            {std::to_string(rep.blocks), std::to_string(rep.items), std::to_string(rep.textures)})
+                                      : tr("Bedrock doplněk nainstalován");
+                    toastUntil_ = time + 8;
+                }
                 if (packId.rfind("java:", 0) == 0) {
                     // A Java Edition mod or datapack: convert what can be converted, report the rest.
                     packId = packId.substr(5);

@@ -154,6 +154,8 @@ Session::Session(const WorldInfo& info, const PlayerState& player)
     drops_.load(info.folder);
     chests_ = loadChests(info.folder);
     boats_.load(info.folder);
+    trains_.load(info.folder);
+    applyTrainPacks();
     mobs_.load(info.folder);
     paperMaps_.load(info.folder);
     loadTimers();
@@ -228,6 +230,7 @@ void Session::save() {
     drops_.save(info_.folder);
     saveChests(info_.folder, chests_);
     boats_.save(info_.folder);
+    trains_.save(info_.folder);
     mobs_.save(info_.folder);
     paperMaps_.save(info_.folder);
     saveTimers();
@@ -3149,6 +3152,7 @@ void Session::update(float dt, double time, float guiW, float guiH, const Settin
     int pcx = floorDiv((int)std::floor(player_.pos.x), kChunkSize);
     int pcz = floorDiv((int)std::floor(player_.pos.z), kChunkSize);
     bool jumped = false;
+    trains_.update(*world_, dimIndex(), dt);
     // Only simulate the player once the ground below exists.
     if (riding_ >= 0) {
         // In a boat: the D-pad rows the boat and the player sits in it.
@@ -3160,7 +3164,17 @@ void Session::update(float dt, double time, float guiW, float guiH, const Settin
         player_.fallDistance = 0;
         player_.onGround = true;
         player_.walked = Vec3(player_.pos.x - before.x, 0, player_.pos.z - before.z).length();
+    } else if (trainRide_ >= 0 && trainRide_ < (int)trains_.trains().size() && trains_.trains()[trainRide_].dim == dimIndex() && !jump) {
+        // On a train: the player stands on the front car (the jump button gets off).
+        boats_.update(*world_, dimIndex(), dt, -1, 0, 0, 0);
+        Vec3 before = player_.pos;
+        player_.pos = trains_.frontPosition(trainRide_) + Vec3(0, 0.45f, 0);
+        player_.vel = {};
+        player_.fallDistance = 0;
+        player_.onGround = true;
+        player_.walked = Vec3(player_.pos.x - before.x, 0, player_.pos.z - before.z).length();
     } else {
+        trainRide_ = -1;
         boats_.update(*world_, dimIndex(), dt, -1, 0, 0, 0);
         if (world_->getChunk(pcx, pcz)) {
             jumped = jump && player_.onGround && !player_.flying;
@@ -3479,6 +3493,8 @@ void Session::render(Renderer& renderer, Ui& ui, const Settings& settings, bool 
     if (!mobVerts_.empty()) renderer.drawParticles(mobVerts_);
     boats_.buildVertices(dimIndex(), boatVerts_);
     if (!boatVerts_.empty()) renderer.drawParticles(boatVerts_);
+    trains_.buildVertices(dimIndex(), player_.pos, 96.0f, trainVerts_);
+    if (!trainVerts_.empty()) renderer.drawParticles(trainVerts_);
     drops_.buildVertices(dimIndex(), clock_, dropVerts_);
     if (!dropVerts_.empty()) renderer.drawParticles(dropVerts_);
     if (settings.cameraMode != 0) {
@@ -4062,6 +4078,21 @@ void Session::drawHud(Ui& ui) const {
             ui.text(5, y, line, {0.6f, 1, 0.6f, 1});
             y += 11;
         }
+    }
+}
+
+
+// Cars and track look like the enabled packs say (trains.json, blocks of mods or vanilla keys).
+void Session::applyTrainPacks() {
+    trains_.resetLook();
+    auto resolve = [](const std::string& key) -> int {
+        ItemId id = ModRegistry::get().find(key);
+        if (id == AIR) id = itemFromKey(key);
+        return id == AIR ? -1 : tileFor(id, F_NORTH);
+    };
+    for (const std::string& text : TrainSystem::packConfigs()) {
+        std::string err;
+        trains_.loadConfig(text, resolve, err);  // a bad pack keeps the default look
     }
 }
 

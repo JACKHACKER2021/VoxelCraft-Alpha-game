@@ -1,0 +1,11 @@
+{
+ "materials": {
+  "tie": "trains:spruce_tie",
+  "rail": "trains:iron_rail",
+  "buffer": "trains:iron_rail",
+  "steam_body": "black_wool",
+  "steam_boiler": "black_wool",
+  "steam_dark": "black_wool",
+  "steam_trim": "steel_block"
+ }
+}
