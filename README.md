@@ -1,5 +1,9 @@
 # VoxelCraft
 
+> **Trains Edition 2.1.0** — samostatný build oddělený od základní verze VoxelCraft.
+> Změny této edice jsou připravovány ve větvi `trains-2.1.0`; základní větev `master` zůstává beze změn.
+
+
 Vlastní voxelový engine v C++ pro **Android 16** (arm64), inspirovaný starými
 verzemi Pocket Edition. Kód je kompletně náš, nic od Mojangu neobsahuje.
 
