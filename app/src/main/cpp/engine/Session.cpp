@@ -1621,6 +1621,10 @@ void Session::touchUp(int id, float x, float y, double time) {
                     attackMob(mob);
                 } else if (int other = pickOtherPlayer(x, y); other >= 0) {
                     attackPlayer(other);
+                } else if (int nearTrain = trains_.nearestTrain(dimIndex(), player_.eye() + player_.forward() * 2.5f, 3.5f); nearTrain >= 0 && trainRide_ < 0) {
+                    rideTrain(nearTrain);
+                    player_.flying = false;
+                    sound(Sound::Click);
                 } else if (boat >= 0 && boat != riding_) {
                     riding_ = boat;
                     player_.flying = false;
@@ -2536,6 +2540,94 @@ void Session::useItem(const RayHit& hit) {
         protectedSpot();
         return;
     }
+    if (held.id == TRAIN_LOCOMOTIVE) {
+        int dir = ((int)std::floor((player_.yaw + 45.0f) / 90.0f) + 4) % 4;
+        std::string why;
+        int tIdx = trains_.spawnTrain(dimIndex(), hit.x, hit.y, hit.z, dir, {CarKind::Steam}, &why);
+        if (tIdx < 0) tIdx = trains_.spawnTrain(dimIndex(), hit.x, hit.y + 1, hit.z, dir, {CarKind::Steam}, &why);
+        if (tIdx >= 0) {
+            sound(Sound::Place);
+            hand_.place();
+            if (survival()) state_.inventory.removeOne(state_.selectedSlot);
+            if (onMessage) onMessage(tr("Parní lokomotiva položena na kolej"));
+        } else if (onMessage) {
+            onMessage(why.empty() ? tr("Kolej nenalezena") : tr(why));
+        }
+        return;
+    }
+    if (held.id == TRAIN_BOXCAR || held.id == TRAIN_PASSENGER) {
+        int nearT = trains_.nearestTrain(dimIndex(), Vec3(hit.x + 0.5f, hit.y + 0.5f, hit.z + 0.5f), 6.0f);
+        std::string why;
+        CarKind kind = held.id == TRAIN_BOXCAR ? CarKind::Boxcar : CarKind::Passenger;
+        if (nearT < 0) {
+            if (onMessage) onMessage(tr("Nejdřív polož lokomotivu, pak k ní připoj vagón"));
+            return;
+        }
+        if (trains_.addCar(nearT, kind, &why) >= 0) {
+            sound(Sound::Place);
+            hand_.place();
+            if (survival()) state_.inventory.removeOne(state_.selectedSlot);
+            if (onMessage) onMessage(held.id == TRAIN_BOXCAR ? tr("Nákladní vagón připojen k vlaku") : tr("Osobní vagón připojen k vlaku"));
+        } else if (onMessage) {
+            onMessage(why.empty() ? tr("Vagón nelze připojit") : tr(why));
+        }
+        return;
+    }
+    if (held.id >= TRAIN_TRACK_STRAIGHT && held.id <= TRAIN_TRACK_STOP) {
+        int px = x;
+        int py = y;
+        int pz = z;
+        PieceKind pk = PieceKind::Straight;
+        if (held.id == TRAIN_TRACK_CURVE) pk = PieceKind::Curve;
+        else if (held.id == TRAIN_TRACK_SWITCH) pk = PieceKind::Cross;
+        else if (held.id == TRAIN_TRACK_STOP) pk = PieceKind::Stop;
+
+        int heading = ((int)std::floor((player_.yaw + 45.0f) / 90.0f) + 4) % 4;
+        int dir = pk == PieceKind::Straight ? ((heading == 1 || heading == 3) ? 1 : 0) : heading;
+
+        std::string why;
+        if (trains_.placePiece(w, dimIndex(), px, py, pz, pk, dir, &why)) {
+            sound(Sound::Place);
+            hand_.place();
+            if (survival()) state_.inventory.removeOne(state_.selectedSlot);
+        } else if (onMessage) {
+            onMessage(why.empty() ? tr("Kolej sem nelze položit") : tr(why));
+        }
+        return;
+    }
+    if (held.id == TRAIN_WRENCH) {
+        int trIdx = trains_.nearestTrain(dimIndex(), Vec3(hit.x + 0.5f, hit.y + 0.5f, hit.z + 0.5f), 4.5f);
+        if (trIdx < 0) trIdx = trains_.nearestTrain(dimIndex(), player_.eye() + player_.forward() * 2.5f, 4.5f);
+        if (trIdx >= 0) {
+            if (player_.sneaking) {
+                trains_.reverse(trIdx);
+                sound(Sound::Click);
+                hand_.use();
+                if (onMessage) onMessage(tr("Směr vlaku obrácen"));
+            } else {
+                Train& t = trains_.trains()[trIdx];
+                float spd = (t.target == 0 ? 5.0f : (t.target <= 6.0f ? 10.0f : (t.target <= 11.0f ? 14.0f : 0.0f)));
+                trains_.setTarget(trIdx, spd);
+                sound(Sound::Click);
+                hand_.use();
+                if (onMessage) onMessage(spd == 0 ? tr("Vlak zastaven") : (tr("Rychlost: ") + std::to_string((int)spd) + " bl/s"));
+            }
+            return;
+        }
+    }
+    if (held.id == POWERSTONE_DUST || held.id == POWERSTONE_CHIP) {
+        int trIdx = trains_.nearestTrain(dimIndex(), Vec3(hit.x + 0.5f, hit.y + 0.5f, hit.z + 0.5f), 4.0f);
+        if (trIdx >= 0) {
+            Train& t = trains_.trains()[trIdx];
+            t.target = 12.0f;
+            t.blocked = false;
+            sound(Sound::Click);
+            hand_.use();
+            if (survival()) state_.inventory.removeOne(state_.selectedSlot);
+            if (onMessage) onMessage(tr("Vlak napájen Powerstonem! (Plná rychlost)"));
+            return;
+        }
+    }
     if (isSpawnEgg(held.id)) {
         const Vec3 feet(x + 0.5f, (float)y, z + 0.5f);
         switch (held.id) {
@@ -3153,6 +3245,13 @@ void Session::update(float dt, double time, float guiW, float guiH, const Settin
     int pcz = floorDiv((int)std::floor(player_.pos.z), kChunkSize);
     bool jumped = false;
     trains_.update(*world_, dimIndex(), dt);
+    player_.customCollider = [&](const Vec3& min, const Vec3& max) {
+        return trains_.collides(dimIndex(), min, max, trainRide_);
+    };
+    if (trainRide_ < 0) {
+        Vec3 push = trains_.collisionPush(dimIndex(), player_.pos, Player::kWidth * 0.5f, Player::kHeight, -1);
+        if (push.x != 0 || push.z != 0) player_.pos += push;
+    }
     // Only simulate the player once the ground below exists.
     if (riding_ >= 0) {
         // In a boat: the D-pad rows the boat and the player sits in it.
@@ -3165,10 +3264,13 @@ void Session::update(float dt, double time, float guiW, float guiH, const Settin
         player_.onGround = true;
         player_.walked = Vec3(player_.pos.x - before.x, 0, player_.pos.z - before.z).length();
     } else if (trainRide_ >= 0 && trainRide_ < (int)trains_.trains().size() && trains_.trains()[trainRide_].dim == dimIndex() && !jump) {
-        // On a train: the player stands on the front car (the jump button gets off).
+        // On a train: the player sits inside the cab of the locomotive (the jump button gets off).
         boats_.update(*world_, dimIndex(), dt, -1, 0, 0, 0);
+        Train& t = trains_.trains()[trainRide_];
+        if (moveZ > 0.3f && t.target < 14.0f) t.target = std::min(14.0f, t.target + 6.0f * dt);
+        else if (moveZ < -0.3f && t.target > 0.0f) t.target = std::max(0.0f, t.target - 10.0f * dt);
         Vec3 before = player_.pos;
-        player_.pos = trains_.frontPosition(trainRide_) + Vec3(0, 0.45f, 0);
+        player_.pos = trains_.frontPosition(trainRide_) + Vec3(0, 0.95f, 0);
         player_.vel = {};
         player_.fallDistance = 0;
         player_.onGround = true;

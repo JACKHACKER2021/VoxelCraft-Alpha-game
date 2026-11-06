@@ -63,7 +63,7 @@ struct ModelBox {
 
 class TrainSystem {
 public:
-    static constexpr float kCarSpacing = 2.2f;   // distance between car centres
+    static constexpr float kCarSpacing = 4.5f;   // distance between car centres (Minecraft train scale: cars ~4.4 blocks long)
     static constexpr float kMaxSpeed = 14.0f;    // blocks per second
     static constexpr float kAccel = 3.0f;
     static constexpr float kRailHeight = 0.12f;  // the track is this thick
@@ -82,6 +82,8 @@ public:
     // (front first). Returns the index of the new train, -1 when there is no track.
     int spawnTrain(int dim, int x, int y, int z, int dir, const std::vector<CarKind>& kinds, std::string* why = nullptr);
     void removeTrain(int index);
+    int addCar(int trainIndex, CarKind kind, std::string* why = nullptr);
+    bool removeCar(int trainIndex, CarKind* removedKind = nullptr);
     int nearestTrain(int dim, const Vec3& p, float maxDist) const;
     void setTarget(int index, float speed);  // 0 = brake
     void reverse(int index);
@@ -91,6 +93,13 @@ public:
     // ground below it (pieces over broken blocks are dropped).
     void update(int dim, float dt, const std::function<bool(int, int, int)>& supported);
     void update(const World& world, int dim, float dt);
+
+    // --- Collision -----------------------------------------------------------
+    // Returns true if the given AABB overlaps any car in .
+    // If ignoreTrainIdx >= 0, that train is ignored (e.g. the train the player is riding).
+    bool collides(int dim, const Vec3& pMin, const Vec3& pMax, int ignoreTrainIdx = -1) const;
+    // Returns push vector if  overlaps a train car, to push out players hit by moving trains.
+    Vec3 collisionPush(int dim, const Vec3& p, float radius, float height, int ignoreTrainIdx = -1) const;
 
     // Geometry for the renderer: textured quads in the terrain atlas, like boats.
     void buildVertices(int dim, const Vec3& eye, float maxDist, std::vector<Vertex>& out) const;

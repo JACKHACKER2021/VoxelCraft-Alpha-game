@@ -54,6 +54,7 @@ const ItemId kCreativeItems[] = {
     WOOD_SWORD, STONE_SWORD, IRON_SWORD, BRONZE_SWORD, STEEL_SWORD, RUBY_SWORD, BUCKET, WATER_BUCKET, LAVA_BUCKET, BOSS_COMPASS,
     HOE, BOW, ARROW, MAP, BRUSHER, FORTRESS_COMPASS, SHIELD, EXPLORER_MAP, WRITABLE_BOOK, HARDIUM_PICKAXE, CELESTIAL_COMPASS, HARDIUM_SWORD, HARDIUM_AXE, HARDIUM_SHOVEL,
     CELESTIUM_PICKAXE, CELESTIUM_SWORD, CELESTIUM_AXE, CELESTIUM_SHOVEL,
+    TRAIN_LOCOMOTIVE, TRAIN_BOXCAR, TRAIN_PASSENGER, TRAIN_TRACK_STRAIGHT, TRAIN_TRACK_CURVE, TRAIN_TRACK_SWITCH, TRAIN_TRACK_STOP, TRAIN_WRENCH,
     // Armour
     228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247,
     HARDIUM_ARMOR, HARDIUM_ARMOR + 1, HARDIUM_ARMOR + 2, HARDIUM_ARMOR + 3, CELESTIUM_CHESTPLATE, CELESTIAL_WINGS,
@@ -68,9 +69,9 @@ const ItemId kCreativeItems[] = {
     OLD_DOCUMENT + 7, ANCIENT_COIN, POWERSTONE_RELIC, POTTERY_SHARD, EGG_HUSKING, EGG_HOGMAN, HARDIUM, CELESTIUM, HONEY_BALL,
 };
 const int kCreativeItemCount = sizeof(kCreativeItems) / sizeof(kCreativeItems[0]);
-static_assert(sizeof(kCreativeItems) / sizeof(kCreativeItems[0]) == 237 + 85 + 48 + 26 + 71, "the creative tabs cover the whole catalog");
+static_assert(sizeof(kCreativeItems) / sizeof(kCreativeItems[0]) == 237 + 85 + 56 + 26 + 71, "the creative tabs cover the whole catalog");
 const CreativeTab kCreativeTabs[] = {
-    {"Stavební", 0, 237}, {"Příroda", 237, 85}, {"Nástroje", 322, 48}, {"Brnění", 370, 26}, {"Suroviny", 396, 71},
+    {"Stavební", 0, 237}, {"Příroda", 237, 85}, {"Nástroje", 322, 56}, {"Brnění", 378, 26}, {"Suroviny", 404, 71},
 };
 const int kCreativeTabCount = sizeof(kCreativeTabs) / sizeof(kCreativeTabs[0]);
 
@@ -82,6 +83,7 @@ bool keyEnds(ItemId id, const char* tail) {
 }
 
 int categoryOf(ItemId id, int oldTab) {
+    if (id >= TRAIN_LOCOMOTIVE && id <= TRAIN_WRENCH) return CatTools;
     if (isSpawnEgg(id)) return CatEggs;
     if (isArmor(id) || id == SHIELD) return id == SHIELD ? CatTools : CatArmor;
     if (id == MAP || id == EXPLORER_MAP || id == FORTRESS_COMPASS || id == BOSS_COMPASS || id == WRITABLE_BOOK ||
@@ -190,6 +192,9 @@ const KeyEntry kKeys[] = {
     {SPRUCE_LOG, "spruce_log"}, {SPRUCE_LEAVES, "spruce_leaves"}, {SPRUCE_PLANKS, "spruce_planks"}, {ICE, "ice"},
     {CACTUS, "cactus"}, {HARDENED_STONE, "hardened_stone"}, {CHEST, "chest"}, {FENCE, "fence"},
     {OAK_TRAPDOOR, "trapdoor"}, {OAK_DOOR_ITEM, "oak_door"}, {IRON_DOOR_ITEM, "iron_door"}, {BOAT, "boat"},
+    {TRAIN_LOCOMOTIVE, "train_locomotive"}, {TRAIN_BOXCAR, "train_boxcar"}, {TRAIN_PASSENGER, "train_passenger"},
+    {TRAIN_TRACK_STRAIGHT, "train_track_straight"}, {TRAIN_TRACK_CURVE, "train_track_curve"}, {TRAIN_TRACK_SWITCH, "train_track_switch"},
+    {TRAIN_TRACK_STOP, "train_track_stop"}, {TRAIN_WRENCH, "train_wrench"},
     {NETHER_GRASS, "nether_grass"}, {NETHER_SPROUTS, "nether_sprouts"}, {VOID_STONE, "void_stone"},
     {VOID_GRASS, "void_grass"}, {VOID_LOG, "void_log"}, {EYE_LOG, "eye_log"}, {VOID_LEAVES, "void_leaves"},
     {RED_SAND, "red_sand"}, {VOID_PORTAL, "void_portal"}, {VOID_STONE_BRICKS, "void_stone_bricks"}, {PUMPKIN, "pumpkin"},
@@ -588,6 +593,14 @@ const char* itemName(ItemId id) {
         case OAK_DOOR_ITEM: return "Dubové dveře";
         case IRON_DOOR_ITEM: return "Železné dveře";
         case BOAT: return "Loďka";
+        case TRAIN_LOCOMOTIVE: return "Parní lokomotiva";
+        case TRAIN_BOXCAR: return "Nákladní vagón";
+        case TRAIN_PASSENGER: return "Osobní vagón";
+        case TRAIN_TRACK_STRAIGHT: return "Kolej přímá";
+        case TRAIN_TRACK_CURVE: return "Kolej zatáčka";
+        case TRAIN_TRACK_SWITCH: return "Křížení kolejí";
+        case TRAIN_TRACK_STOP: return "Zarážedlo";
+        case TRAIN_WRENCH: return "Klíč na vlaky";
         case NETHER_GRASS: return "Úhelná tráva";
         case NETHER_SPROUTS: return "Grasser";
         case VOID_STONE: return "Prázdnotný kámen";
@@ -747,6 +760,8 @@ float armorReduction(const ItemStack armor[4]) {
 
 int maxStack(ItemId id) {
     if (const ModItem* m = id >= kModIdBase ? ModRegistry::get().item(id) : nullptr) return m->stack;
+    if (id == TRAIN_LOCOMOTIVE || id == TRAIN_BOXCAR || id == TRAIN_PASSENGER || id == TRAIN_WRENCH) return 1;
+    if (id >= TRAIN_TRACK_STRAIGHT && id <= TRAIN_TRACK_STOP) return 64;
     if (id == WATER_BUCKET || id == LAVA_BUCKET || id == BOSS_COMPASS || id == CAKE || id == MILK_BUCKET || id == MAP || id == ANNIV_MEDAL ||
         id == FORTRESS_COMPASS || id == EXPLORER_MAP || id == WRITABLE_BOOK || id == WRITTEN_BOOK || id == CELESTIAL_COMPASS)
         return 1;

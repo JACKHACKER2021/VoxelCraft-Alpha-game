@@ -94,6 +94,8 @@ Vec3 Player::forward() const {
 bool Player::collides(const World& world, const Vec3& p) const {
     if (noclip && flying) return false;
     const float h = kWidth / 2;
+    if (customCollider && customCollider(Vec3(p.x - h, p.y, p.z - h), Vec3(p.x + h, p.y + kHeight, p.z + h)))
+        return true;
     int x0 = (int)std::floor(p.x - h), x1 = (int)std::floor(p.x + h - 1e-4f);
     int y0 = (int)std::floor(p.y), y1 = (int)std::floor(p.y + kHeight - 1e-4f);
     int z0 = (int)std::floor(p.z - h), z1 = (int)std::floor(p.z + h - 1e-4f);

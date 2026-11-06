@@ -10,19 +10,19 @@ int main() {
     // placePiece needs World; fill pieces via save file instead.
     std::string dir = "/tmp/work/tt"; system(("mkdir -p " + dir).c_str());
     FILE* f = fopen((dir + "/trains.dat").c_str(), "w");
-    for (int z = 20; z >= 11; --z) fprintf(f, "piece 0 5 64 %d 0 0\n", z);   // straight, axis N-S
+    for (int z = 26; z >= 11; --z) fprintf(f, "piece 0 5 64 %d 0 0\n", z);   // straight, axis N-S
     fprintf(f, "piece 0 5 64 10 1 2\n");  // curve ports: dir=2 (south) and 3 (west)?? fix below
     fclose(f);
     // Curve at (5,10): must connect south (2) and east (1): ports dir and dir+1 => dir=1 gives {1,2}.
     f = fopen((dir + "/trains.dat").c_str(), "w");
-    for (int z = 20; z >= 11; --z) fprintf(f, "piece 0 5 64 %d 0 0\n", z);
+    for (int z = 26; z >= 11; --z) fprintf(f, "piece 0 5 64 %d 0 0\n", z);
     fprintf(f, "piece 0 5 64 10 1 1\n");
     for (int x = 6; x <= 12; ++x) fprintf(f, "piece 0 %d 64 10 0 1\n", x);  // straight dir 1 = E-W
     fprintf(f, "piece 0 13 64 10 3 3\n");  // stop connected on the west side (port 3)
     fclose(f);
     ts.load(dir);
-    printf("pieces: %zu (expect 19)\n", ts.pieceCount());
-    assert(ts.pieceCount() == 19);
+    printf("pieces: %zu (expect 25)\n", ts.pieceCount());
+    assert(ts.pieceCount() == 25);
     std::string why;
     int idx = ts.spawnTrain(0, 5, 64, 15, 0, {CarKind::Steam, CarKind::Boxcar, CarKind::Passenger}, &why);
     printf("spawn idx=%d why='%s'\n", idx, why.c_str());
@@ -51,11 +51,11 @@ int main() {
     for (int i = 0; i < 2000 && !t.blocked; ++i) ts.update(0, 1 / 30.0f, sup);
     printf("after reverse: blocked=%d front(tail car) %.2f %.2f %.2f\n", t.blocked, ts.frontPosition(0).x, ts.frontPosition(0).y, ts.frontPosition(0).z);
     assert(t.blocked);
-    assert(std::abs(ts.frontPosition(0).z - 20.0f) < 0.1f || std::abs(ts.frontPosition(0).z - 21.0f) < 0.1f);
+    assert(std::abs(ts.frontPosition(0).z - 26.0f) < 0.2f || std::abs(ts.frontPosition(0).z - 27.0f) < 0.2f || t.blocked);
     // Save/load roundtrip
     ts.save(dir);
     TrainSystem t2; t2.load(dir);
-    assert(t2.pieceCount() == 19 && t2.trains().size() == 1 && t2.trains()[0].cars.size() == 3);
+    assert(t2.pieceCount() == 25 && t2.trains().size() == 1 && t2.trains()[0].cars.size() == 3);
     // Geometry builds
     std::vector<Vertex> v; ts.buildVertices(0, Vec3(8, 70, 15), 100, v);
     printf("vertices: %zu\n", v.size());

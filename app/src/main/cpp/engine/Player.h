@@ -1,3 +1,4 @@
+#include <functional>
 #pragma once
 #include "Math.h"
 #include "World.h"
@@ -44,6 +45,7 @@ public:
     Vec3 eye() const { return pos + Vec3(0, sneaking && !flying ? kEyeHeight - 0.25f : kEyeHeight, 0); }
     Vec3 forward() const;
     bool touches(const World& world, ItemId block) const;  // e.g. cactus
+    std::function<bool(const Vec3& min, const Vec3& max)> customCollider;
     bool collides(const World& world, const Vec3& p) const;  // the body at `p` overlaps a block
 
     // moveX/moveZ are joystick axes in [-1, 1] relative to the view direction.

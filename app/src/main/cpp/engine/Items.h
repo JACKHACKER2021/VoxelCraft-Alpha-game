@@ -9,6 +9,7 @@
 namespace vc {
 
 // Items that never stand in the world: 200 and up, and the ranges 1.2.0 took below that.
+inline bool isTrainItem(ItemId id) { return id >= TRAIN_LOCOMOTIVE && id <= TRAIN_WRENCH; }
 inline bool isItemOnly(ItemId id) {
     return (id >= 186 && id < STAIRS) || (id >= STAIRS && !isNewBlock(id)) || (id >= 99 && id <= 111) || (id >= 154 && id <= 158);
 }

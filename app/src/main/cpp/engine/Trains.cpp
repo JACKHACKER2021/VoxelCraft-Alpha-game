@@ -232,6 +232,50 @@ void TrainSystem::removeTrain(int index) {
     if (index >= 0 && index < (int)trains_.size()) trains_.erase(trains_.begin() + index);
 }
 
+int TrainSystem::addCar(int trainIndex, CarKind kind, std::string* why) {
+    if (trainIndex < 0 || trainIndex >= (int)trains_.size()) {
+        if (why) *why = "Vlak neexistuje";
+        return -1;
+    }
+    Train& t = trains_[trainIndex];
+    if (t.cars.empty()) {
+        if (why) *why = "Vlak nemá žádné vozy";
+        return -1;
+    }
+    if (t.cars.size() >= 12) {
+        if (why) *why = "Vlak už má maximální počet vozů";
+        return -1;
+    }
+    const Car& last = t.cars.back();
+    TrackState back = flipped(t.dim, last.st);
+    float moved = 0;
+    bool ok = step(t.dim, back, kCarSpacing, moved);
+    if (!ok || moved < kCarSpacing - 1e-3f) {
+        if (why) *why = "Kolej za vlakem je příliš krátká";
+        return -1;
+    }
+    Car c;
+    c.kind = kind;
+    c.st = flipped(t.dim, back);
+    t.cars.push_back(c);
+    refreshCars(t);
+    return (int)t.cars.size() - 1;
+}
+
+bool TrainSystem::removeCar(int trainIndex, CarKind* removedKind) {
+    if (trainIndex < 0 || trainIndex >= (int)trains_.size()) return false;
+    Train& t = trains_[trainIndex];
+    if (t.cars.empty()) return false;
+    if (removedKind) *removedKind = t.cars.back().kind;
+    t.cars.pop_back();
+    if (t.cars.empty()) {
+        removeTrain(trainIndex);
+    } else {
+        refreshCars(t);
+    }
+    return true;
+}
+
 int TrainSystem::nearestTrain(int dim, const Vec3& p, float maxDist) const {
     int best = -1;
     float bd = maxDist;
@@ -321,6 +365,26 @@ void TrainSystem::update(const World& world, int dim, float dt) {
         if (!world.getChunk(floorDiv(x, kChunkSize), floorDiv(z, kChunkSize))) return true;
         return isSolid(world.getBlock(x, y - 1, z));
     });
+    // Powerstone interaction:
+    // Tracks powered by powerstone blocks, cables or switches give trains an energy boost!
+    for (Train& t : trains_) {
+        if (t.dim != dim || t.cars.empty()) continue;
+        const int lead = t.reversed ? (int)t.cars.size() - 1 : 0;
+        const TrackState& st = t.cars[lead].st;
+        static const int kUnder[5][3] = {{0,-1,0}, {1,0,0}, {-1,0,0}, {0,0,1}, {0,0,-1}};
+        bool hasPower = false;
+        for (const auto& o : kUnder) {
+            ItemId b = world.getBlock(st.x + o[0], st.y + o[1], st.z + o[2]);
+            if (b == POWERSTONE_BLOCK || b == POWERSTONE_LIGHT || cableOn(b) || switchOn(b) || b == POWERSTONE_DUST) {
+                hasPower = true;
+                break;
+            }
+        }
+        if (hasPower && t.target < 8.0f) {
+            t.target = 10.0f;
+            t.blocked = false;
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -351,45 +415,292 @@ void TrainSystem::resetLook() {
     defaultModels();
 }
 
+// Auto-generated Minecraft train models from My_Own_Trains.mcaddon
 void TrainSystem::defaultModels() {
     auto B = [&](std::vector<ModelBox>& v, float x0, float y0, float z0, float x1, float y1, float z1, const char* mat) {
         v.push_back({x0, y0, z0, x1, y1, z1, materialIndex(mat)});
     };
-    auto wheels = [&](std::vector<ModelBox>& v, std::initializer_list<float> zs) {
-        for (float z : zs) {
-            B(v, -0.5f, 0.0f, z - 0.12f, -0.4f, 0.26f, z + 0.12f, "wheel");
-            B(v, 0.4f, 0.0f, z - 0.12f, 0.5f, 0.26f, z + 0.12f, "wheel");
-        }
-    };
     for (auto& m : models_) m.clear();
-    // Steam engine: boiler in front, cab behind, chimney on top.
+
+    // 1. Subway Locomotive (Minecraft scale: 4.4 blocks long, 1.8 blocks wide, 2.6 blocks high)
     auto& s = models_[(int)CarKind::Steam];
-    B(s, -0.42f, 0.12f, -0.9f, 0.42f, 0.3f, 0.9f, "steam_dark");
-    B(s, -0.3f, 0.3f, -0.9f, 0.3f, 0.86f, 0.2f, "steam_boiler");
-    B(s, -0.1f, 0.86f, -0.75f, 0.1f, 1.2f, -0.55f, "steam_dark");
-    B(s, -0.16f, 0.86f, -0.25f, 0.16f, 1.0f, 0.0f, "steam_trim");
-    B(s, -0.42f, 0.3f, 0.2f, 0.42f, 1.25f, 0.9f, "steam_body");
-    B(s, -0.48f, 1.25f, 0.15f, 0.48f, 1.33f, 0.95f, "steam_dark");
-    B(s, -0.3f, 0.12f, -0.9f, 0.3f, 0.26f, -0.8f, "steam_trim");
-    wheels(s, {-0.55f, 0.0f, 0.55f});
-    // Boxcar: a closed wooden box with a sliding door strip on each side.
-    auto& b = models_[(int)CarKind::Boxcar];
-    B(b, -0.45f, 0.12f, -0.9f, 0.45f, 0.2f, 0.9f, "boxcar_trim");
-    B(b, -0.45f, 0.2f, -0.88f, 0.45f, 1.1f, 0.88f, "boxcar_body");
-    B(b, -0.5f, 1.1f, -0.92f, 0.5f, 1.18f, 0.92f, "boxcar_roof");
-    B(b, 0.45f, 0.25f, -0.22f, 0.48f, 1.0f, 0.22f, "boxcar_trim");
-    B(b, -0.48f, 0.25f, -0.22f, -0.45f, 1.0f, 0.22f, "boxcar_trim");
-    wheels(b, {-0.55f, 0.55f});
-    // Passenger car: coloured body with a row of windows.
+    B(s, 0.625f, 0.266f, -0.812f, 0.875f, 0.641f, 0.812f, "steam_dark");
+    B(s, -0.875f, 0.266f, -0.812f, -0.625f, 0.641f, 0.812f, "steam_dark");
+    B(s, -0.75f, 0.328f, -1.875f, 0.75f, 0.641f, 1.875f, "steam_dark");
+    B(s, -0.75f, 0.641f, -1.875f, 0.75f, 2.266f, 1.5f, "steam_body");
+    B(s, -0.75f, 0.641f, -1.875f, 0.75f, 2.266f, 1.75f, "steam_body");
+    B(s, -0.75f, 2.266f, -1.875f, 0.75f, 2.453f, 1.5f, "steam_body");
+    B(s, -0.625f, 2.453f, -1.875f, 0.625f, 2.578f, 1.25f, "steam_body");
+    B(s, -0.062f, 0.766f, -0.062f, 0.062f, 2.578f, 0.062f, "steam_body");
+    B(s, -0.75f, 0.766f, -1.75f, -0.438f, 2.203f, -0.75f, "steam_body");
+    B(s, 0.438f, 0.766f, -1.75f, 0.75f, 2.203f, -0.75f, "steam_body");
+    B(s, -0.75f, 0.641f, 1.5f, 0.75f, 2.078f, 1.75f, "steam_body");
+    B(s, -0.625f, 0.641f, 1.75f, 0.625f, 1.703f, 2.0f, "steam_body");
+    B(s, -0.625f, 0.266f, 1.75f, 0.625f, 0.641f, 1.875f, "steam_body");
+    B(s, -0.562f, 0.391f, 1.875f, -0.312f, 0.641f, 2.0f, "steam_body");
+    B(s, 0.312f, 0.391f, 1.875f, 0.562f, 0.641f, 2.0f, "steam_body");
+    B(s, 0.312f, 0.703f, 2.0f, 0.562f, 0.953f, 2.125f, "steam_body");
+    B(s, -0.562f, 0.703f, 2.0f, -0.312f, 0.953f, 2.125f, "steam_body");
+    B(s, -0.125f, 2.141f, 1.5f, 0.125f, 2.391f, 1.625f, "steam_body");
+    B(s, -0.375f, 2.141f, 1.5f, -0.125f, 2.391f, 1.625f, "steam_body");
+    B(s, 0.125f, 2.141f, 1.5f, 0.375f, 2.391f, 1.625f, "steam_body");
+    B(s, -0.438f, 2.453f, -1.688f, -0.312f, 2.578f, 0.312f, "steam_trim");
+    B(s, 0.312f, 2.453f, -1.688f, 0.438f, 2.578f, 0.312f, "steam_trim");
+    B(s, -0.681f, 0.766f, -1.5f, -0.181f, 0.953f, -1.0f, "steam_body");
+    B(s, -0.744f, 0.766f, -1.438f, -0.619f, 1.453f, -1.062f, "steam_body");
+    B(s, 0.181f, 0.766f, -1.5f, 0.681f, 0.953f, -1.0f, "steam_body");
+    B(s, 0.619f, 0.766f, -1.438f, 0.744f, 1.453f, -1.062f, "steam_body");
+    B(s, -0.244f, 0.766f, 0.875f, 0.256f, 0.953f, 1.375f, "passenger_body");
+    B(s, -0.181f, 0.766f, 0.812f, 0.194f, 1.453f, 0.938f, "passenger_body");
+    B(s, -0.062f, 0.453f, 1.837f, 0.062f, 0.578f, 1.9f, "steam_trim");
+    B(s, -0.094f, 0.453f, 1.9f, 0.156f, 0.641f, 2.15f, "steam_trim");
+    B(s, -0.116f, 0.481f, 2.076f, -0.033f, 0.606f, 2.21f, "steam_trim");
+    B(s, -0.043f, 0.481f, 2.087f, 0.091f, 0.606f, 2.17f, "steam_trim");
+    B(s, -0.062f, 0.453f, -1.9f, 0.062f, 0.578f, -1.525f, "steam_trim");
+    B(s, -0.156f, 0.453f, -2.15f, 0.094f, 0.641f, -1.9f, "steam_trim");
+    B(s, 0.033f, 0.481f, -2.21f, 0.116f, 0.606f, -2.076f, "steam_trim");
+    B(s, -0.091f, 0.481f, -2.17f, 0.043f, 0.606f, -2.087f, "steam_trim");
+    B(s, -0.75f, 0.766f, -0.75f, 0.75f, 2.328f, 0.0f, "steam_dark");
+    B(s, -0.688f, 0.762f, -2.0f, 0.688f, 2.388f, -1.875f, "steam_body");
+    B(s, -0.625f, 0.825f, -2.062f, 0.625f, 2.325f, -2.0f, "steam_body");
+    B(s, -0.625f, 0.766f, 1.625f, 0.625f, 1.391f, 2.0f, "steam_body");
+    B(s, -0.062f, 1.141f, 1.562f, 0.125f, 1.328f, 1.625f, "steam_body");
+    B(s, -0.438f, 0.826f, 1.568f, -0.312f, 1.251f, 2.1f, "steam_body");
+    B(s, 0.25f, 0.953f, 1.562f, 0.562f, 1.266f, 1.625f, "steam_body");
+    B(s, -0.25f, 0.078f, 0.438f, 0.25f, 0.641f, 1.562f, "steam_dark");
+    B(s, -0.556f, 0.056f, 1.125f, -0.431f, 0.431f, 1.188f, "wheel");
+    B(s, -0.556f, 0.0f, 1.188f, -0.431f, 0.494f, 1.562f, "wheel");
+    B(s, -0.556f, 0.056f, 1.562f, -0.431f, 0.431f, 1.625f, "wheel");
+    B(s, 0.431f, 0.0f, 1.188f, 0.556f, 0.494f, 1.562f, "wheel");
+    B(s, 0.431f, 0.056f, 1.125f, 0.556f, 0.431f, 1.188f, "wheel");
+    B(s, 0.431f, 0.056f, 1.562f, 0.556f, 0.431f, 1.625f, "wheel");
+    B(s, -0.438f, 0.181f, 1.312f, 0.438f, 0.306f, 1.438f, "wheel");
+    B(s, -0.556f, 0.0f, 0.438f, -0.431f, 0.494f, 0.812f, "wheel");
+    B(s, -0.556f, 0.056f, 0.375f, -0.431f, 0.431f, 0.438f, "wheel");
+    B(s, -0.556f, 0.056f, 0.812f, -0.431f, 0.431f, 0.875f, "wheel");
+    B(s, 0.431f, 0.0f, 0.438f, 0.556f, 0.494f, 0.812f, "wheel");
+    B(s, 0.431f, 0.056f, 0.375f, 0.556f, 0.431f, 0.438f, "wheel");
+    B(s, 0.431f, 0.056f, 0.812f, 0.556f, 0.431f, 0.875f, "wheel");
+    B(s, -0.438f, 0.181f, 0.562f, 0.438f, 0.306f, 0.688f, "wheel");
+    B(s, -0.25f, 0.078f, -1.562f, 0.25f, 0.641f, -0.438f, "steam_dark");
+    B(s, -0.556f, 0.0f, -0.812f, -0.431f, 0.494f, -0.438f, "wheel");
+    B(s, -0.556f, 0.056f, -0.875f, -0.431f, 0.431f, -0.812f, "wheel");
+    B(s, -0.556f, 0.056f, -0.438f, -0.431f, 0.431f, -0.375f, "wheel");
+    B(s, 0.431f, 0.0f, -0.812f, 0.556f, 0.494f, -0.438f, "wheel");
+    B(s, 0.431f, 0.056f, -0.875f, 0.556f, 0.431f, -0.812f, "wheel");
+    B(s, 0.431f, 0.056f, -0.438f, 0.556f, 0.431f, -0.375f, "wheel");
+    B(s, -0.438f, 0.181f, -0.688f, 0.438f, 0.306f, -0.562f, "wheel");
+    B(s, -0.556f, 0.0f, -1.562f, -0.431f, 0.494f, -1.188f, "wheel");
+    B(s, -0.556f, 0.056f, -1.625f, -0.431f, 0.431f, -1.562f, "wheel");
+    B(s, -0.556f, 0.056f, -1.188f, -0.431f, 0.431f, -1.125f, "wheel");
+    B(s, 0.431f, 0.0f, -1.562f, 0.556f, 0.494f, -1.188f, "wheel");
+    B(s, 0.431f, 0.056f, -1.625f, 0.556f, 0.431f, -1.562f, "wheel");
+    B(s, 0.431f, 0.056f, -1.188f, 0.556f, 0.431f, -1.125f, "wheel");
+    B(s, -0.438f, 0.181f, -1.438f, 0.438f, 0.306f, -1.312f, "wheel");
+
+    // 2. Boxcar Freight Car (Minecraft scale: 4.4 blocks long, 1.7 blocks wide, 2.7 blocks high)
+    auto& bc = models_[(int)CarKind::Boxcar];
+    B(bc, -0.25f, 0.078f, 0.438f, 0.25f, 0.641f, 1.562f, "boxcar_trim");
+    B(bc, -0.556f, 0.0f, 1.188f, -0.431f, 0.494f, 1.562f, "wheel");
+    B(bc, -0.556f, 0.056f, 1.125f, -0.431f, 0.431f, 1.188f, "wheel");
+    B(bc, -0.556f, 0.056f, 1.562f, -0.431f, 0.431f, 1.625f, "wheel");
+    B(bc, 0.431f, 0.0f, 1.188f, 0.556f, 0.494f, 1.562f, "wheel");
+    B(bc, 0.431f, 0.056f, 1.125f, 0.556f, 0.431f, 1.188f, "wheel");
+    B(bc, 0.431f, 0.056f, 1.562f, 0.556f, 0.431f, 1.625f, "wheel");
+    B(bc, -0.438f, 0.181f, 1.312f, 0.438f, 0.306f, 1.438f, "wheel");
+    B(bc, -0.556f, 0.0f, 0.438f, -0.431f, 0.494f, 0.812f, "wheel");
+    B(bc, -0.556f, 0.056f, 0.375f, -0.431f, 0.431f, 0.438f, "wheel");
+    B(bc, -0.556f, 0.056f, 0.812f, -0.431f, 0.431f, 0.875f, "wheel");
+    B(bc, 0.431f, 0.0f, 0.438f, 0.556f, 0.494f, 0.812f, "wheel");
+    B(bc, 0.431f, 0.056f, 0.375f, 0.556f, 0.431f, 0.438f, "wheel");
+    B(bc, 0.431f, 0.056f, 0.812f, 0.556f, 0.431f, 0.875f, "wheel");
+    B(bc, -0.438f, 0.181f, 0.562f, 0.438f, 0.306f, 0.688f, "wheel");
+    B(bc, -0.25f, 0.078f, -1.562f, 0.25f, 0.641f, -0.438f, "boxcar_trim");
+    B(bc, -0.556f, 0.0f, -0.812f, -0.431f, 0.494f, -0.438f, "wheel");
+    B(bc, -0.556f, 0.056f, -0.875f, -0.431f, 0.431f, -0.812f, "wheel");
+    B(bc, -0.556f, 0.056f, -0.438f, -0.431f, 0.431f, -0.375f, "wheel");
+    B(bc, 0.431f, 0.0f, -0.812f, 0.556f, 0.494f, -0.438f, "wheel");
+    B(bc, 0.431f, 0.056f, -0.875f, 0.556f, 0.431f, -0.812f, "wheel");
+    B(bc, 0.431f, 0.056f, -0.438f, 0.556f, 0.431f, -0.375f, "wheel");
+    B(bc, -0.438f, 0.181f, -0.688f, 0.438f, 0.306f, -0.562f, "wheel");
+    B(bc, -0.556f, 0.0f, -1.562f, -0.431f, 0.494f, -1.188f, "wheel");
+    B(bc, -0.556f, 0.056f, -1.625f, -0.431f, 0.431f, -1.562f, "wheel");
+    B(bc, -0.556f, 0.056f, -1.188f, -0.431f, 0.431f, -1.125f, "wheel");
+    B(bc, 0.431f, 0.0f, -1.562f, 0.556f, 0.494f, -1.188f, "wheel");
+    B(bc, 0.431f, 0.056f, -1.625f, 0.556f, 0.431f, -1.562f, "wheel");
+    B(bc, 0.431f, 0.056f, -1.188f, 0.556f, 0.431f, -1.125f, "wheel");
+    B(bc, -0.438f, 0.181f, -1.438f, 0.438f, 0.306f, -1.312f, "wheel");
+    B(bc, -0.75f, 0.641f, -1.875f, 0.75f, 0.766f, 1.875f, "boxcar_body");
+    B(bc, -0.75f, 0.766f, -1.812f, 0.75f, 2.703f, 1.812f, "boxcar_body");
+    B(bc, -0.75f, 0.766f, -1.812f, 0.75f, 2.703f, 1.812f, "boxcar_body");
+    B(bc, -0.781f, 0.766f, -0.875f, 0.781f, 2.516f, 0.0f, "boxcar_trim");
+    B(bc, -0.781f, 0.766f, 0.0f, 0.781f, 2.516f, 0.875f, "boxcar_trim");
+    B(bc, -0.725f, 0.762f, 1.182f, -0.023f, 1.269f, 1.79f, "boxcar_roof");
+    B(bc, -0.067f, 0.764f, -1.766f, 0.702f, 1.267f, -1.063f, "boxcar_roof");
+    B(bc, -0.719f, 0.764f, -1.77f, -0.167f, 1.267f, -1.102f, "boxcar_roof");
+    B(bc, -0.05f, 0.762f, 1.043f, 0.634f, 1.268f, 1.806f, "boxcar_roof");
+    B(bc, -0.517f, 0.763f, 0.602f, 0.132f, 1.142f, 1.132f, "boxcar_roof");
+    B(bc, -0.237f, 0.374f, -0.638f, 0.355f, 0.76f, 0.041f, "boxcar_roof");
+    B(bc, -0.057f, 1.266f, -1.694f, 0.592f, 1.641f, -1.168f, "boxcar_roof");
+    B(bc, -0.746f, 1.266f, -1.755f, -0.045f, 1.766f, -0.986f, "boxcar_roof");
+    B(bc, -0.382f, 0.76f, 1.1f, 0.403f, 1.273f, 1.841f, "boxcar_roof");
+    B(bc, 0.043f, 0.762f, 0.398f, 0.705f, 1.143f, 1.064f, "boxcar_roof");
+    B(bc, -0.344f, 1.141f, 0.612f, 0.331f, 1.516f, 1.218f, "boxcar_roof");
+    B(bc, -0.806f, 0.261f, -0.072f, -0.048f, 0.77f, 0.618f, "boxcar_roof");
+    B(bc, -0.064f, 0.764f, -1.106f, 0.732f, 1.268f, -0.308f, "boxcar_roof");
+    B(bc, 0.142f, 0.763f, -0.187f, 0.672f, 1.08f, 0.346f, "boxcar_roof");
+    B(bc, 0.071f, 1.266f, -1.2f, 0.53f, 1.578f, -0.741f, "boxcar_roof");
+    B(bc, -0.73f, 1.26f, 1.239f, -0.208f, 1.584f, 1.768f, "boxcar_roof");
+    B(bc, -0.48f, 1.141f, -1.073f, 0.042f, 1.453f, -0.551f, "boxcar_roof");
+    B(bc, -0.206f, 0.381f, -1.335f, 0.371f, 0.765f, -0.662f, "boxcar_roof");
+    B(bc, -0.427f, 1.278f, 0.61f, 0.061f, 1.69f, 1.261f, "boxcar_roof");
+    B(bc, -0.34f, 1.2f, 0.79f, 0.189f, 1.52f, 1.325f, "boxcar_roof");
+    B(bc, -0.55f, 1.453f, -1.718f, -0.103f, 1.766f, -1.271f, "boxcar_roof");
+    B(bc, -0.671f, 0.45f, -0.389f, -0.141f, 0.769f, 0.145f, "boxcar_roof");
+    B(bc, -0.275f, 1.141f, -0.572f, 0.253f, 1.453f, -0.043f, "boxcar_roof");
+    B(bc, 0.242f, 1.078f, -1.142f, 0.891f, 1.453f, -0.614f, "boxcar_roof");
+    B(bc, 0.048f, 1.766f, 0.687f, 0.515f, 2.141f, 1.306f, "boxcar_roof");
+    B(bc, 0.11f, 1.078f, -0.176f, 0.516f, 1.391f, 0.23f, "boxcar_roof");
+    B(bc, -0.433f, 1.641f, 0.171f, 0.095f, 1.953f, 0.7f, "boxcar_roof");
+    B(bc, -0.062f, 0.453f, 1.525f, 0.062f, 0.578f, 1.9f, "boxcar_trim");
+    B(bc, -0.094f, 0.453f, 1.9f, 0.156f, 0.641f, 2.15f, "boxcar_trim");
+    B(bc, -0.116f, 0.481f, 2.076f, -0.033f, 0.606f, 2.21f, "boxcar_trim");
+    B(bc, -0.043f, 0.481f, 2.087f, 0.091f, 0.606f, 2.17f, "boxcar_trim");
+    B(bc, -0.062f, 0.453f, -1.9f, 0.062f, 0.578f, -1.525f, "boxcar_trim");
+    B(bc, -0.156f, 0.453f, -2.15f, 0.094f, 0.641f, -1.9f, "boxcar_trim");
+    B(bc, 0.033f, 0.481f, -2.21f, 0.116f, 0.606f, -2.076f, "boxcar_trim");
+    B(bc, -0.091f, 0.481f, -2.17f, 0.043f, 0.606f, -2.087f, "boxcar_trim");
+
+    // 3. Passenger Car (Minecraft scale: 4.4 blocks long, 1.6 blocks wide, 2.8 blocks high)
     auto& p = models_[(int)CarKind::Passenger];
-    B(p, -0.45f, 0.12f, -0.9f, 0.45f, 0.2f, 0.9f, "passenger_trim");
-    B(p, -0.45f, 0.2f, -0.88f, 0.45f, 1.0f, 0.88f, "passenger_body");
-    B(p, -0.5f, 1.0f, -0.92f, 0.5f, 1.1f, 0.92f, "passenger_roof");
-    for (float z : {-0.6f, 0.0f, 0.6f}) {
-        B(p, 0.45f, 0.55f, z - 0.22f, 0.47f, 0.88f, z + 0.22f, "passenger_window");
-        B(p, -0.47f, 0.55f, z - 0.22f, -0.45f, 0.88f, z + 0.22f, "passenger_window");
+    B(p, -0.75f, 0.641f, -1.75f, 0.75f, 2.266f, 1.75f, "passenger_body");
+    B(p, -0.75f, 0.647f, -1.75f, 0.75f, 2.272f, 1.75f, "passenger_body");
+    B(p, -0.812f, 2.253f, -1.875f, 0.812f, 2.566f, 1.875f, "passenger_body");
+    B(p, -0.312f, 2.562f, -1.375f, 0.312f, 2.812f, -0.5f, "passenger_body");
+    B(p, -0.312f, 2.562f, 0.5f, 0.312f, 2.812f, 1.375f, "passenger_body");
+    B(p, -0.75f, 0.641f, 1.75f, 0.75f, 0.766f, 1.875f, "passenger_body");
+    B(p, -0.75f, 0.641f, -1.875f, 0.75f, 0.766f, -1.75f, "passenger_body");
+    B(p, -0.25f, 2.366f, -0.25f, 0.25f, 2.553f, 0.25f, "passenger_window");
+    B(p, -0.25f, 2.366f, -0.25f, 0.25f, 2.553f, 0.25f, "passenger_window");
+    B(p, -0.125f, 2.366f, -0.125f, 0.125f, 2.553f, 0.125f, "passenger_window");
+    B(p, -0.25f, 0.778f, -1.312f, 0.25f, 0.966f, -0.812f, "passenger_roof");
+    B(p, -0.188f, 0.778f, -1.375f, 0.188f, 1.466f, -1.25f, "passenger_roof");
+    B(p, -0.25f, 0.778f, -0.188f, 0.25f, 0.966f, 0.312f, "passenger_roof");
+    B(p, -0.188f, 0.778f, -0.25f, 0.188f, 1.466f, -0.125f, "passenger_roof");
+    B(p, -0.25f, 0.778f, 0.938f, 0.25f, 0.966f, 1.438f, "passenger_roof");
+    B(p, -0.188f, 0.778f, 0.875f, 0.188f, 1.466f, 1.0f, "passenger_roof");
+    B(p, -0.062f, 0.453f, 1.525f, 0.062f, 0.578f, 1.9f, "passenger_trim");
+    B(p, -0.094f, 0.453f, 1.9f, 0.156f, 0.641f, 2.15f, "passenger_trim");
+    B(p, -0.116f, 0.481f, 2.076f, -0.033f, 0.606f, 2.21f, "passenger_trim");
+    B(p, -0.043f, 0.481f, 2.087f, 0.091f, 0.606f, 2.17f, "passenger_trim");
+    B(p, -0.062f, 0.453f, -1.9f, 0.062f, 0.578f, -1.525f, "passenger_trim");
+    B(p, -0.156f, 0.453f, -2.15f, 0.094f, 0.641f, -1.9f, "passenger_trim");
+    B(p, 0.033f, 0.481f, -2.21f, 0.116f, 0.606f, -2.076f, "passenger_trim");
+    B(p, -0.091f, 0.481f, -2.17f, 0.043f, 0.606f, -2.087f, "passenger_trim");
+    B(p, -0.25f, 0.078f, 0.438f, 0.25f, 0.641f, 1.562f, "passenger_trim");
+    B(p, -0.556f, 0.0f, 1.188f, -0.431f, 0.494f, 1.562f, "wheel");
+    B(p, -0.556f, 0.056f, 1.125f, -0.431f, 0.431f, 1.188f, "wheel");
+    B(p, -0.556f, 0.056f, 1.562f, -0.431f, 0.431f, 1.625f, "wheel");
+    B(p, 0.431f, 0.0f, 1.188f, 0.556f, 0.494f, 1.562f, "wheel");
+    B(p, 0.431f, 0.056f, 1.125f, 0.556f, 0.431f, 1.188f, "wheel");
+    B(p, 0.431f, 0.056f, 1.562f, 0.556f, 0.431f, 1.625f, "wheel");
+    B(p, -0.438f, 0.181f, 1.312f, 0.438f, 0.306f, 1.438f, "wheel");
+    B(p, -0.556f, 0.0f, 0.438f, -0.431f, 0.494f, 0.812f, "wheel");
+    B(p, -0.556f, 0.056f, 0.375f, -0.431f, 0.431f, 0.438f, "wheel");
+    B(p, -0.556f, 0.056f, 0.812f, -0.431f, 0.431f, 0.875f, "wheel");
+    B(p, 0.431f, 0.0f, 0.438f, 0.556f, 0.494f, 0.812f, "wheel");
+    B(p, 0.431f, 0.056f, 0.375f, 0.556f, 0.431f, 0.438f, "wheel");
+    B(p, 0.431f, 0.056f, 0.812f, 0.556f, 0.431f, 0.875f, "wheel");
+    B(p, -0.438f, 0.181f, 0.562f, 0.438f, 0.306f, 0.688f, "wheel");
+    B(p, -0.25f, 0.078f, -1.562f, 0.25f, 0.641f, -0.438f, "passenger_trim");
+    B(p, -0.556f, 0.0f, -0.812f, -0.431f, 0.494f, -0.438f, "wheel");
+    B(p, -0.556f, 0.056f, -0.875f, -0.431f, 0.431f, -0.812f, "wheel");
+    B(p, -0.556f, 0.056f, -0.438f, -0.431f, 0.431f, -0.375f, "wheel");
+    B(p, 0.431f, 0.0f, -0.812f, 0.556f, 0.494f, -0.438f, "wheel");
+    B(p, 0.431f, 0.056f, -0.875f, 0.556f, 0.431f, -0.812f, "wheel");
+    B(p, 0.431f, 0.056f, -0.438f, 0.556f, 0.431f, -0.375f, "wheel");
+    B(p, -0.438f, 0.181f, -0.688f, 0.438f, 0.306f, -0.562f, "wheel");
+    B(p, -0.556f, 0.0f, -1.562f, -0.431f, 0.494f, -1.188f, "wheel");
+    B(p, -0.556f, 0.056f, -1.625f, -0.431f, 0.431f, -1.562f, "wheel");
+    B(p, -0.556f, 0.056f, -1.188f, -0.431f, 0.431f, -1.125f, "wheel");
+    B(p, 0.431f, 0.0f, -1.562f, 0.556f, 0.494f, -1.188f, "wheel");
+    B(p, 0.431f, 0.056f, -1.625f, 0.556f, 0.431f, -1.562f, "wheel");
+    B(p, 0.431f, 0.056f, -1.188f, 0.556f, 0.431f, -1.125f, "wheel");
+    B(p, -0.438f, 0.181f, -1.438f, 0.438f, 0.306f, -1.312f, "wheel");
+}
+
+
+// ---------------------------------------------------------------------------------------------
+// Collision
+
+bool TrainSystem::collides(int dim, const Vec3& pMin, const Vec3& pMax, int ignoreTrainIdx) const {
+    const float hw = 0.90f;   // half width (1.8 blocks wide)
+    const float hl = 2.22f;   // half length (4.44 blocks long)
+    const float carHeight = 2.80f;
+
+    const Vec3 P = (pMin + pMax) * 0.5f;
+    const Vec3 E = (pMax - pMin) * 0.5f;
+
+    for (int i = 0; i < (int)trains_.size(); ++i) {
+        if (i == ignoreTrainIdx || trains_[i].dim != dim) continue;
+        for (const Car& c : trains_[i].cars) {
+            if (pMax.y <= c.pos.y || pMin.y >= c.pos.y + carHeight) continue;
+
+            const float dx = P.x - c.pos.x;
+            const float dz = P.z - c.pos.z;
+            const float cs = std::cos(c.yaw), sn = std::sin(c.yaw);
+
+            const float lx = dx * cs + dz * sn;
+            const float lz = -dx * sn + dz * cs;
+
+            const float rx = E.x * std::abs(cs) + E.z * std::abs(sn);
+            const float rz = E.x * std::abs(sn) + E.z * std::abs(cs);
+
+            if (std::abs(lx) <= hw + rx && std::abs(lz) <= hl + rz) return true;
+        }
     }
-    wheels(p, {-0.55f, 0.55f});
+    return false;
+}
+
+Vec3 TrainSystem::collisionPush(int dim, const Vec3& p, float radius, float height, int ignoreTrainIdx) const {
+    const float hw = 0.90f;
+    const float hl = 2.22f;
+    const float carHeight = 2.80f;
+    Vec3 totalPush(0, 0, 0);
+
+    for (int i = 0; i < (int)trains_.size(); ++i) {
+        if (i == ignoreTrainIdx || trains_[i].dim != dim) continue;
+        for (const Car& c : trains_[i].cars) {
+            if (p.y + height <= c.pos.y || p.y >= c.pos.y + carHeight) continue;
+
+            const float dx = p.x - c.pos.x;
+            const float dz = p.z - c.pos.z;
+            const float cs = std::cos(c.yaw), sn = std::sin(c.yaw);
+
+            const float lx = dx * cs + dz * sn;
+            const float lz = -dx * sn + dz * cs;
+
+            const float ox = (hw + radius) - std::abs(lx);
+            const float oz = (hl + radius) - std::abs(lz);
+
+            if (ox > 0 && oz > 0) {
+                float pushDist = 0;
+                float px = 0, pz = 0;
+                if (ox < oz) {
+                    pushDist = (lx >= 0 ? ox : -ox);
+                    px = pushDist * cs;
+                    pz = pushDist * sn;
+                } else {
+                    pushDist = (lz >= 0 ? oz : -oz);
+                    px = -pushDist * sn;
+                    pz = pushDist * cs;
+                }
+                totalPush.x += px;
+                totalPush.z += pz;
+            }
+        }
+    }
+    return totalPush;
 }
 
 bool TrainSystem::loadConfig(const std::string& text, const std::function<int(const std::string&)>& blockTile, std::string& error) {

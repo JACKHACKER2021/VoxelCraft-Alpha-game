@@ -204,6 +204,15 @@ enum BlockId : uint16_t {
     ANNIV_TOKEN = 1420,      // collectibles hidden in chests
     ANNIV_MEDAL = 1421,      // made from five tokens
     PARTY_POPPER = 1422,
+    // 2.1.0 Trains Edition
+    TRAIN_LOCOMOTIVE = 1430,
+    TRAIN_BOXCAR = 1431,
+    TRAIN_PASSENGER = 1432,
+    TRAIN_TRACK_STRAIGHT = 1433,
+    TRAIN_TRACK_CURVE = 1434,
+    TRAIN_TRACK_SWITCH = 1435,
+    TRAIN_TRACK_STOP = 1436,
+    TRAIN_WRENCH = 1437,
     // 1.5.0 Forgotten Powerstone: powerstone stairs live here (the first range is full).
     STAIRS_EXTRA = 1140,     // 1140..1147: material 12 (powerstone bricks)
     // 1.7.0: stairs and slabs of the blocks added since 1.5.0 (materials 13..16).
@@ -808,6 +817,14 @@ inline int tileFor(ItemId id, Face face) {
         case OAK_DOOR_ITEM: return T_OAK_DOOR_ITEM;
         case IRON_DOOR_ITEM: return T_IRON_DOOR_ITEM;
         case BOAT: return T_BOAT;
+        case TRAIN_LOCOMOTIVE: return T_BOAT;
+        case TRAIN_BOXCAR: return T_CHEST_FRONT;
+        case TRAIN_PASSENGER: return T_OAK_DOOR_ITEM;
+        case TRAIN_TRACK_STRAIGHT: return T_IRON_INGOT;
+        case TRAIN_TRACK_CURVE: return T_FLINT;
+        case TRAIN_TRACK_SWITCH: return T_SWITCH;
+        case TRAIN_TRACK_STOP: return T_BRICKS;
+        case TRAIN_WRENCH: return T_IRON_PICKAXE;
         case TALL_GRASS: return T_TALL_GRASS;
         case DANDELION: return T_DANDELION;
         case POPPY: return T_POPPY;
