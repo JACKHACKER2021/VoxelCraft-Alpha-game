@@ -8,11 +8,11 @@ android {
     ndkVersion = "27.2.12479018"
 
     defaultConfig {
-        applicationId = "cz.voxelcraft"
+        applicationId = "cz.voxelcraft.trainsdev"
         minSdk = 30
         targetSdk = 36
-        versionCode = 29
-        versionName = "2.0.0"
+        versionCode = 32
+        versionName = "2.1.0 McWorld Dev"
         ndk {
             abiFilters += listOf("arm64-v8a", "x86_64")
         }
