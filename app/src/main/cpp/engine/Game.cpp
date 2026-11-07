@@ -12,6 +12,8 @@
 #include "Items.h"
 #include "WorldFiles.h"
 #include "JavaImport.h"
+#include "BedrockImport.h"
+#include "BedrockWorldImport.h"
 #include "Mods.h"
 #include "Achievements.h"
 #include "Commands.h"
@@ -156,6 +158,7 @@ bool Game::onBack() {
         case Screen::WorldList: setScreen(Screen::Title); break;
         case Screen::CreateWorld: setScreen(Screen::WorldList); break;
         case Screen::ConfirmDelete: setScreen(Screen::WorldList); break;
+        case Screen::BedrockMapping: setScreen(Screen::WorldList); break;
         case Screen::Settings:
             saveSettings(settingsPath_, settings_);
             setScreen(settingsReturn_);
@@ -653,6 +656,15 @@ void Game::frame(double time) {
                                             {std::to_string(rep.blocks), std::to_string(rep.items), std::to_string(rep.recipes)})
                                       : tr("Z tohoto souboru nešlo nic převést");
                     toastUntil_ = time + 8;
+                } else if (packId.rfind("bedrock:", 0) == 0) {
+                    // A Bedrock Edition addon: convert blocks, items, recipes, textures.
+                    packId = packId.substr(8);
+                    const std::string dir = packs_.packDir(packId);
+                    BedrockImportReport rep = convertBedrockAddon(dir + "/bedrock", dir);
+                    toast_ = rep.ok() ? trf("Import Bedrock: {0} bloků, {1} předmětů, {2} receptů",
+                                            {std::to_string(rep.blocks), std::to_string(rep.items), std::to_string(rep.recipes)})
+                                      : tr("Z tohoto addonu nešlo nic převést");
+                    toastUntil_ = time + 8;
                 }
                 if (packId.rfind("shaders:", 0) == 0) {
                     // 1.5.5: a shader pack; old ones of other games keep their files for reference.
@@ -731,6 +743,29 @@ void Game::frame(double time) {
                     toast_ = tr(err);
                 }
                 toastUntil_ = time + 5;
+            } else if (id == PromptBedrockWorldImported && !text.empty()) {
+                bedrockImportPath_ = text;
+                bedrockWorldName_ = "Bedrock svět";
+                bedrockMappings_.clear();
+                bedrockMappingScroll_ = 0.0f;
+                bedrockPickerIndex_ = -1;
+                bedrockImporting_ = false;
+
+                BedrockWorldScanResult scan = scanBedrockWorld(text);
+                if (scan.ok) {
+                    if (!scan.name.empty()) bedrockWorldName_ = scan.name;
+                    for (const auto& b : scan.blocks) {
+                        BedrockBlockMapping m;
+                        m.mcName = b.first;
+                        m.count = b.second;
+                        m.vcId = defaultBedrockMapping(b.first);
+                        bedrockMappings_.push_back(m);
+                    }
+                    setScreen(Screen::BedrockMapping);
+                } else {
+                    toast_ = tr(scan.error.empty() ? "Nelze načíst svět Minecraft Bedrock" : scan.error);
+                    toastUntil_ = time + 5;
+                }
             } else if (id == PromptPublicIp && !text.empty()) {
                 std::string address;
                 int port = 0;
@@ -909,6 +944,7 @@ void Game::frame(double time) {
         case Screen::WorldList: worldListScreen(); break;
         case Screen::CreateWorld: createWorldScreen(); break;
         case Screen::EditWorld: editWorldScreen(); break;
+        case Screen::BedrockMapping: bedrockMappingScreen(); break;
         case Screen::Store: storeScreen(); break;
         case Screen::Skins: skinsScreen(); break;
         case Screen::ConfirmDelete: confirmDeleteScreen(); break;
@@ -4668,4 +4704,161 @@ void Game::creativeInventoryScreen() {
     if (!creativeHint_.empty()) ui_.text(gx, hy - 11, creativeHint_, kLabel, 1, false, sideX - gx);
 }
 
+
+void Game::bedrockMappingScreen() {
+    float x, y, w, h;
+    menuWindow(x, y, w, h, false);
+
+    ui_.text(x + 2, y + 2, "Převod světa Minecraft Bedrock", theme::kTitle, 1, false);
+    ui_.text(x + 2, y + 14, bedrockWorldName_ + " · " + std::to_string(bedrockMappings_.size()) + " unikátních bloků", theme::kTextDim, 1, false);
+
+    float listY = y + 28;
+    float listH = h - 56;
+    float rowH = 22;
+
+    // Scrolling
+    float totalH = (float)bedrockMappings_.size() * rowH;
+    float maxScroll = std::max(0.0f, totalH - listH);
+    bedrockMappingScroll_ = std::clamp(bedrockMappingScroll_ - ui_.dragY(x, listY, w, listH), 0.0f, maxScroll);
+
+    // Table rows
+    float cy = listY - bedrockMappingScroll_;
+    for (size_t i = 0; i < bedrockMappings_.size(); ++i) {
+        if (cy + rowH >= listY && cy <= listY + listH) {
+            auto& m = bedrockMappings_[i];
+            ui_.frame(x, cy, w, rowH - 2, theme::kButton, theme::kBorderDark);
+
+            // Left: Minecraft block name
+            std::string label = m.mcName;
+            if (label.rfind("minecraft:", 0) == 0) label = label.substr(10);
+            if (m.count > 0) label += " (" + std::to_string(m.count) + "x)";
+            ui_.text(x + 4, cy + 4, label, theme::kText, 1, false, w * 0.48f);
+
+            // Center arrow
+            ui_.text(x + w * 0.50f, cy + 4, "->", theme::kTextDim, 1, false);
+
+            // Right: VoxelCraft block button
+            std::string vcName = m.vcId == AIR ? "Vzduch (odstranit)" : tr(itemName(m.vcId));
+            float btnW = w * 0.42f;
+            float btnX = x + w - btnW - 4;
+            if (ui_.button(btnX, cy + 1, btnW, rowH - 4, vcName + " ▼")) {
+                bedrockPickerIndex_ = (int)i;
+                bedrockPickerScroll_ = 0.0f;
+            }
+        }
+        cy += rowH;
+    }
+
+    // Bottom action buttons
+    float by = y + h - 24;
+    float bw = (w - 12) / 3;
+    if (ui_.button(x, by, bw, 22, "Výchozí")) {
+        for (auto& m : bedrockMappings_) m.vcId = defaultBedrockMapping(m.mcName);
+    }
+    if (ui_.button(x + bw + 6, by, bw, 22, "Zpět")) {
+        setScreen(Screen::WorldList);
+    }
+    if (ui_.button(x + (bw + 6) * 2, by, bw, 22, "Převést svět", true, true)) {
+        startBedrockConversion();
+    }
+
+    // Modal block picker overlay
+    if (bedrockPickerIndex_ >= 0 && bedrockPickerIndex_ < (int)bedrockMappings_.size()) {
+        ui_.fill(0, 0, ui_.width(), ui_.height(), {0, 0, 0, 0.65f});
+        float pw = std::min(ui_.width() - 20, 280.0f);
+        float ph = std::min(ui_.height() - 20, 220.0f);
+        float px = std::floor((ui_.width() - pw) / 2);
+        float py = std::floor((ui_.height() - ph) / 2);
+        ui_.panel(px, py, pw, ph);
+
+        ui_.text(px + 8, py + 8, "Vyber blok pro náhradu:", theme::kTitle, 1, false);
+        if (ui_.button(px + pw - 22, py + 4, 18, 18, "X")) {
+            bedrockPickerIndex_ = -1;
+            return;
+        }
+
+        // Available blocks
+        static const std::vector<ItemId> kPalette = {
+            AIR, STONE, COBBLESTONE, MOSSY_COBBLESTONE, DIRT, GRASS, PLANKS, SPRUCE_PLANKS,
+            LOG, SPRUCE_LOG, LEAVES, SPRUCE_LEAVES, BRICKS, STONE_BRICKS, DEEPSTONE, DEEPSTONE_BRICKS,
+            PALE_STONE, SAND, GRAVEL, SANDSTONE, GLASS, WOOL, OBSIDIAN, BEDROCK,
+            WATER, LAVA, ICE, SNOW_BLOCK, CLAY, NETHERRACK, NETHER_BRICK,
+            CHEST, CRAFTING_TABLE, FURNACE, TORCH, FENCE, OAK_DOOR, OAK_TRAPDOOR,
+            POWERSTONE_ORE, POWERSTONE_BLOCK, POWER_CABLE, POWER_CABLE_ON, POWERSTONE_LAMP, SWITCH,
+            BARRIER, COMMAND_BLOCK, STRUCTURE_BLOCK, DUSTY_CONCRETE, HARDENED_CONCRETE
+        };
+
+        const int cols = 8;
+        const float slotSize = 22;
+        float gx = px + (pw - cols * slotSize) / 2;
+        float gy = py + 30;
+
+        for (size_t i = 0; i < kPalette.size(); ++i) {
+            ItemId id = kPalette[i];
+            int r = (int)(i / cols), c = (int)(i % cols);
+            float sx = gx + c * slotSize, sy = gy + r * slotSize;
+            if (sy + slotSize > py + ph - 30) break;
+
+            ui_.slotFrame(sx, sy, slotSize, id == bedrockMappings_[bedrockPickerIndex_].vcId);
+            if (id != AIR) ui_.item(sx + 3, sy + 3, slotSize - 6, id);
+            else ui_.textCentered(sx + slotSize / 2, sy + 6, "X", theme::kError);
+
+            if (ui_.tapped(sx, sy, slotSize, slotSize)) {
+                bedrockMappings_[bedrockPickerIndex_].vcId = id;
+                bedrockPickerIndex_ = -1;
+                break;
+            }
+        }
+
+        if (ui_.button(px + pw / 2 - 40, py + ph - 24, 80, 20, "Zavřít")) {
+            bedrockPickerIndex_ = -1;
+        }
+    }
+
+    // Modal conversion progress overlay
+    if (bedrockImporting_) {
+        ui_.fill(0, 0, ui_.width(), ui_.height(), {0, 0, 0, 0.75f});
+        float pw = std::min(ui_.width() - 40, 240.0f);
+        float ph = 80;
+        float px = std::floor((ui_.width() - pw) / 2);
+        float py = std::floor((ui_.height() - ph) / 2);
+        ui_.panel(px, py, pw, ph);
+
+        ui_.textCentered(px + pw / 2, py + 12, "Převádím svět...", theme::kTitle);
+        ui_.textCentered(px + pw / 2, py + 28, bedrockImportStatus_, theme::kTextDim);
+
+        // Progress bar
+        float barX = px + 12, barY = py + 46, barW = pw - 24, barH = 12;
+        ui_.fill(barX, barY, barW, barH, theme::kField);
+        ui_.fill(barX, barY, barW * std::clamp(bedrockImportProgress_, 0.05f, 1.0f), barH, theme::kGreen);
+    }
+}
+
+void Game::startBedrockConversion() {
+    if (bedrockImporting_) return;
+    std::unordered_map<std::string, ItemId> mapping;
+    for (const auto& m : bedrockMappings_) mapping[m.mcName] = m.vcId;
+
+    bedrockImporting_ = true;
+    bedrockImportProgress_ = 0.05f;
+    bedrockImportStatus_ = "Zahajuji převod...";
+
+    std::string outFolder, err;
+    bool ok = convertBedrockWorld(bedrockImportPath_, worldsDir_, mapping, outFolder, err,
+                                 [&](float prog, const std::string& status) {
+                                     bedrockImportProgress_ = prog;
+                                     bedrockImportStatus_ = status;
+                                 });
+
+    bedrockImporting_ = false;
+    if (ok) {
+        worlds_ = listWorlds(worldsDir_);
+        toast_ = trf("Svět '{0}' byl úspěšně převeden!", {bedrockWorldName_});
+        toastUntil_ = now_ + 6;
+        setScreen(Screen::WorldList);
+    } else {
+        toast_ = trf("Chyba při převodu: {0}", {err});
+        toastUntil_ = now_ + 6;
+    }
+}
 }  // namespace vc

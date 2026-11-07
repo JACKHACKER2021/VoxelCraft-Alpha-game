@@ -69,6 +69,8 @@ public class VoxelActivity extends NativeActivity {
     private static final int REQUEST_EXPORT_WORLD = 11;
     /** Request id for "a .vcworld was copied into the cache" (Game::PromptWorldImported). */
     private static final int RESULT_WORLD_IMPORTED = 17;
+    /** Request id for "a .mcworld was copied into the cache" (Game::PromptBedrockWorldImported). */
+    private static final int RESULT_BEDROCK_WORLD_IMPORTED = 23;
     /** The .vcworld the game wrote, waiting for the player to choose where it goes. */
     private String pendingExport;
 
@@ -633,12 +635,32 @@ public class VoxelActivity extends NativeActivity {
         Uri uri = data.getData();
         if (requestCode == REQUEST_IMPORT_WORLD) {
             try {
-                File target = new File(getCacheDir(), "import.vcworld");
+                String name = displayName(uri);
+                boolean isMcWorld = name.toLowerCase(Locale.ROOT).endsWith(".mcworld");
+                File target = new File(getCacheDir(), isMcWorld ? "import.mcworld" : "import.vcworld");
                 try (InputStream in = getContentResolver().openInputStream(uri)) {
                     if (in == null) throw new IOException("cannot open file");
                     Files.copy(in, target.toPath(), StandardCopyOption.REPLACE_EXISTING);
                 }
-                sendText(RESULT_WORLD_IMPORTED, target.getAbsolutePath());  // the game unpacks and checks it
+
+                boolean hasBedrockDb = false;
+                try (ZipFile zip = new ZipFile(target)) {
+                    Enumeration<? extends ZipEntry> entries = zip.entries();
+                    while (entries.hasMoreElements()) {
+                        ZipEntry entry = entries.nextElement();
+                        String ename = entry.getName().replace('\\', '/');
+                        if (ename.startsWith("db/") || ename.contains("/db/") || ename.endsWith("levelname.txt")) {
+                            hasBedrockDb = true;
+                            break;
+                        }
+                    }
+                } catch (Exception ignored) {}
+
+                if (isMcWorld || hasBedrockDb) {
+                    sendText(RESULT_BEDROCK_WORLD_IMPORTED, target.getAbsolutePath());
+                } else {
+                    sendText(RESULT_WORLD_IMPORTED, target.getAbsolutePath());
+                }
             } catch (IOException e) {
                 Toast.makeText(this, str(R.string.pack_error, e.getMessage()), Toast.LENGTH_LONG).show();
             }
@@ -790,13 +812,16 @@ public class VoxelActivity extends NativeActivity {
         }
         try (ZipFile zip = new ZipFile(archive)) {
             String prefix = null;
-            boolean java = false, shaders = false;
+            boolean java = false, shaders = false, bedrock = false;
             for (Enumeration<? extends ZipEntry> e = zip.entries(); e.hasMoreElements(); ) {
                 String name = e.nextElement().getName().replace('\\', '/');
                 // A Java Edition mod (.jar) or datapack / resource pack (.zip).
                 if (name.startsWith("assets/") || name.startsWith("data/") || name.equals("fabric.mod.json")
                         || name.equals("quilt.mod.json") || name.equals("pack.mcmeta") || name.startsWith("META-INF/mods.toml")
                         || name.equals("META-INF/neoforge.mods.toml")) java = true;
+                if (name.endsWith(".block.json") || name.endsWith(".item.json") || name.endsWith(".entity.json")
+                        || name.contains("/blocks/") || name.contains("/items/") || name.contains("/entities/")
+                        || name.contains("BP/") || name.contains("RP/")) bedrock = true;
                 String candidate = null;
                 if (name.endsWith("manifest.json")) candidate = name.substring(0, name.length() - "manifest.json".length());
                 if (candidate == null && name.endsWith("content.json")) candidate = name.substring(0, name.length() - "content.json".length());
@@ -810,6 +835,7 @@ public class VoxelActivity extends NativeActivity {
             }
             String base = slug(displayName(uri).replaceAll("\\.(zip|mcpack|mcaddon|jar)$", ""));
             if (prefix == null && java && !shaders) return installJavaMod(zip, base);
+            if (bedrock && !shaders) return installBedrockMod(zip, base);
             if (prefix == null) throw new IOException(str(R.string.modpack_invalid));
 
             File packs = new File(getFilesDir(), "packs");
@@ -852,9 +878,37 @@ public class VoxelActivity extends NativeActivity {
     /**
      * Unpacks what VoxelCraft can use from a Java Edition mod or datapack into
      * files/packs/<id>/java/: textures, language files, models, block states, recipes,
-     * block loot tables and the mod's metadata. Compiled code is only counted (it never
-     * runs); the game converts the rest (JavaImport.cpp). Returns "java:<id>".
+    /**
+     * Unpacks what VoxelCraft can use from a Bedrock addon (.mcaddon / .mcpack):
+     * behavior pack and resource pack definitions, blocks, items, entities,
+     * recipes, textures and texts. Game converts the rest (BedrockImport.cpp).
+     * Returns "bedrock:<id>".
      */
+    private String installBedrockMod(ZipFile zip, String base) throws IOException {
+        File packs = new File(getFilesDir(), "packs");
+        String id = base;
+        for (int n = 2; new File(packs, id).exists(); n++) id = base + "_" + n;
+        File root = new File(new File(packs, id), "bedrock");
+        int count = 0;
+        for (Enumeration<? extends ZipEntry> e = zip.entries(); e.hasMoreElements() && count < MAX_FILES; ) {
+            ZipEntry entry = e.nextElement();
+            String name = entry.getName().replace('\\', '/');
+            if (entry.isDirectory() || name.contains("..") || name.startsWith("/")) continue;
+            String lower = name.toLowerCase(Locale.ROOT);
+            if (!(lower.endsWith(".json") || lower.endsWith(".png") || lower.endsWith(".tga")
+                    || lower.endsWith(".lang") || lower.endsWith(".material") || lower.endsWith(".txt"))) continue;
+            File target = new File(root, name);
+            File parent = target.getParentFile();
+            if (parent != null && !parent.isDirectory() && !parent.mkdirs()) throw new IOException("mkdir");
+            try (InputStream in = zip.getInputStream(entry)) {
+                copy(in, target);
+            }
+            count++;
+        }
+        if (count == 0) throw new IOException(str(R.string.modpack_invalid));
+        return "bedrock:" + id;
+    }
+
     private String installJavaMod(ZipFile zip, String base) throws IOException {
         File packs = new File(getFilesDir(), "packs");
         String id = base;

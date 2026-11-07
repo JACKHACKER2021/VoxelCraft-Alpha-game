@@ -117,7 +117,8 @@ private:
         Book,                  // 1.5.7: book and quill
         Cutter,                // 1.7.2 build 2: the stonecutter
         Encyclopedia,          // 1.7.2 build 3
-        HowToCraft             // 1.9.0 build 3: every recipe, how and where to make it
+        HowToCraft,            // 1.9.0 build 3: every recipe, how and where to make it
+        BedrockMapping         // Bedrock .mcworld block mapping and conversion
     };
 
     // A slot in any open container, so items can be moved between them.
@@ -133,7 +134,7 @@ private:
                     PromptStructureImported = 9, PromptDevName = 10, PromptDevPassword = 11, PromptMusicEnded = 12,
                     PromptJoinAddress = 13, PromptChat = 14, PromptCode = 15, PromptPublicIp = 16, PromptWorldImported = 17,
                     PromptShaderPackName = 18, PromptWaypoint = 19, PromptBookPage = 20, PromptBookTitle = 21,
-                    PromptBlockText = 22 };  // 1.9.5 build 3: command and structure blocks
+                    PromptBlockText = 22, PromptBedrockWorldImported = 23 };
 
     void setScreen(Screen s);
     Settings playSettings() const;  // settings_ without developer options for normal players
@@ -283,6 +284,21 @@ private:
     PackManager packs_;
     Profile profile_;
     std::string profilePath_, skinsDir_, soundsDir_;
+
+    struct BedrockBlockMapping {
+        std::string mcName;
+        ItemId vcId = AIR;
+        int count = 0;
+    };
+    std::string bedrockImportPath_;
+    std::string bedrockWorldName_;
+    std::vector<BedrockBlockMapping> bedrockMappings_;
+    float bedrockMappingScroll_ = 0.0f;
+    int bedrockPickerIndex_ = -1;
+    float bedrockPickerScroll_ = 0.0f;
+    bool bedrockImporting_ = false;
+    float bedrockImportProgress_ = 0.0f;
+    std::string bedrockImportStatus_;
     std::vector<Skin> skins_;
     int skinAtlasCols_ = 8;
     bool musicStarted_ = false;
