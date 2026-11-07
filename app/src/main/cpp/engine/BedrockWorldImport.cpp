@@ -10,6 +10,8 @@
 #include <vector>
 #include <zlib.h>
 
+#include "BlockShapes.h"
+#include "GenConfig.h"
 #include "Nbt.h"
 #include "Save.h"
 #include "World.h"
@@ -22,6 +24,18 @@ namespace {
 
 uint16_t get16(const uint8_t* p) { return (uint16_t)p[0] | ((uint16_t)p[1] << 8); }
 uint32_t get32(const uint8_t* p) { return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24); }
+
+void put16(std::vector<uint8_t>& b, uint16_t v) {
+    b.push_back((uint8_t)v);
+    b.push_back((uint8_t)(v >> 8));
+}
+
+void put32(std::vector<uint8_t>& b, uint32_t v) {
+    b.push_back((uint8_t)v);
+    b.push_back((uint8_t)(v >> 8));
+    b.push_back((uint8_t)(v >> 16));
+    b.push_back((uint8_t)(v >> 24));
+}
 
 bool inflateRaw(const uint8_t* src, size_t srcLen, std::vector<uint8_t>& dst) {
     z_stream strm{};
@@ -225,7 +239,6 @@ std::vector<std::string> parseSubchunkPalette(const std::vector<uint8_t>& val) {
     for (uint32_t i = 0; i < palLen && p < val.size(); ++i) {
         Nbt root;
         std::string err;
-        // Slice rest of buffer for Nbt parse
         std::vector<uint8_t> rest(val.begin() + (long)p, val.end());
         if (!Nbt::parse(rest, root, err)) break;
 
@@ -237,8 +250,6 @@ std::vector<std::string> parseSubchunkPalette(const std::vector<uint8_t>& val) {
             names.push_back("minecraft:stone");
         }
 
-        // Advance p past this compound (approximate by finding End tag 0x00 or size)
-        // In Bedrock palette, each compound is followed by the next compound (type 0x0a).
         size_t nextComp = p + 1;
         while (nextComp + 2 < val.size()) {
             if (val[nextComp] == 0x0a && val[nextComp + 1] == 0x00 && val[nextComp + 2] == 0x00) break;
@@ -256,6 +267,8 @@ ItemId defaultBedrockMapping(const std::string& name) {
         {"minecraft:air", AIR},
         {"minecraft:cave_air", AIR},
         {"minecraft:barrier", BARRIER},
+        {"minecraft:command_block", COMMAND_BLOCK},
+        {"minecraft:structure_block", STRUCTURE_BLOCK},
         {"minecraft:stone", STONE},
         {"minecraft:granite", HARDENED_STONE},
         {"minecraft:diorite", PALE_STONE},
@@ -271,6 +284,11 @@ ItemId defaultBedrockMapping(const std::string& name) {
         {"minecraft:oak_planks", PLANKS},
         {"minecraft:spruce_planks", SPRUCE_PLANKS},
         {"minecraft:birch_planks", PLANKS},
+        {"minecraft:jungle_planks", PLANKS},
+        {"minecraft:acacia_planks", PLANKS},
+        {"minecraft:dark_oak_planks", SPRUCE_PLANKS},
+        {"minecraft:crimson_planks", CRIMSON_PLANKS},
+        {"minecraft:warped_planks", VOID_PLANKS},
         {"minecraft:bedrock", BEDROCK},
         {"minecraft:water", WATER},
         {"minecraft:flowing_water", WATER},
@@ -321,23 +339,125 @@ ItemId defaultBedrockMapping(const std::string& name) {
         {"minecraft:copper_block", BRONZE_BLOCK},
         {"minecraft:copper_ore", BRONZE_ORE},
         {"minecraft:waxed_exposed_copper", BRONZE_BLOCK},
+
+        // Stairs
+        {"minecraft:oak_stairs", stairsId(shapeMaterialOf(PLANKS), 0, false)},
+        {"minecraft:wooden_stairs", stairsId(shapeMaterialOf(PLANKS), 0, false)},
+        {"minecraft:spruce_stairs", stairsId(shapeMaterialOf(SPRUCE_PLANKS), 0, false)},
+        {"minecraft:birch_stairs", stairsId(shapeMaterialOf(PLANKS), 0, false)},
+        {"minecraft:jungle_stairs", stairsId(shapeMaterialOf(PLANKS), 0, false)},
+        {"minecraft:acacia_stairs", stairsId(shapeMaterialOf(PLANKS), 0, false)},
+        {"minecraft:dark_oak_stairs", stairsId(shapeMaterialOf(SPRUCE_PLANKS), 0, false)},
+        {"minecraft:stone_stairs", stairsId(shapeMaterialOf(STONE), 0, false)},
+        {"minecraft:cobblestone_stairs", stairsId(shapeMaterialOf(COBBLESTONE), 0, false)},
+        {"minecraft:stone_brick_stairs", stairsId(shapeMaterialOf(STONE_BRICKS), 0, false)},
+        {"minecraft:brick_stairs", stairsId(shapeMaterialOf(BRICKS), 0, false)},
+        {"minecraft:sandstone_stairs", stairsId(shapeMaterialOf(SANDSTONE), 0, false)},
+        {"minecraft:nether_brick_stairs", stairsId(shapeMaterialOf(NETHER_BRICK), 0, false)},
+        {"minecraft:deepslate_stairs", stairsId(shapeMaterialOf(DEEPSTONE), 0, false)},
+        {"minecraft:deepslate_brick_stairs", stairsId(shapeMaterialOf(DEEPSTONE_BRICKS), 0, false)},
+        {"minecraft:polished_deepslate_stairs", stairsId(shapeMaterialOf(DEEPSTONE), 0, false)},
+        {"minecraft:crimson_stairs", stairsId(shapeMaterialOf(CRIMSON_PLANKS), 0, false)},
+        {"minecraft:warped_stairs", stairsId(shapeMaterialOf(VOID_PLANKS), 0, false)},
+
+        // Slabs
+        {"minecraft:wooden_slab", slabId(shapeMaterialOf(PLANKS), 0)},
+        {"minecraft:oak_slab", slabId(shapeMaterialOf(PLANKS), 0)},
+        {"minecraft:spruce_slab", slabId(shapeMaterialOf(SPRUCE_PLANKS), 0)},
+        {"minecraft:birch_slab", slabId(shapeMaterialOf(PLANKS), 0)},
+        {"minecraft:jungle_slab", slabId(shapeMaterialOf(PLANKS), 0)},
+        {"minecraft:acacia_slab", slabId(shapeMaterialOf(PLANKS), 0)},
+        {"minecraft:dark_oak_slab", slabId(shapeMaterialOf(SPRUCE_PLANKS), 0)},
+        {"minecraft:stone_slab", slabId(shapeMaterialOf(STONE), 0)},
+        {"minecraft:stone_block_slab", slabId(shapeMaterialOf(STONE), 0)},
+        {"minecraft:stone_block_slab2", slabId(shapeMaterialOf(STONE_BRICKS), 0)},
+        {"minecraft:stone_block_slab3", slabId(shapeMaterialOf(STONE_BRICKS), 0)},
+        {"minecraft:stone_block_slab4", slabId(shapeMaterialOf(STONE_BRICKS), 0)},
+        {"minecraft:cobblestone_slab", slabId(shapeMaterialOf(COBBLESTONE), 0)},
+        {"minecraft:stone_brick_slab", slabId(shapeMaterialOf(STONE_BRICKS), 0)},
+        {"minecraft:brick_slab", slabId(shapeMaterialOf(BRICKS), 0)},
+        {"minecraft:sandstone_slab", slabId(shapeMaterialOf(SANDSTONE), 0)},
+        {"minecraft:nether_brick_slab", slabId(shapeMaterialOf(NETHER_BRICK), 0)},
+        {"minecraft:deepslate_slab", slabId(shapeMaterialOf(DEEPSTONE), 0)},
+        {"minecraft:deepslate_brick_slab", slabId(shapeMaterialOf(DEEPSTONE_BRICKS), 0)},
+        {"minecraft:polished_deepslate_slab", slabId(shapeMaterialOf(DEEPSTONE), 0)},
+        {"minecraft:smooth_stone_slab", slabId(shapeMaterialOf(STONE), 0)},
+        {"minecraft:crimson_slab", slabId(shapeMaterialOf(CRIMSON_PLANKS), 0)},
+        {"minecraft:warped_slab", slabId(shapeMaterialOf(VOID_PLANKS), 0)},
+
+        // Fences and Gates
+        {"minecraft:fence", FENCE},
+        {"minecraft:wooden_fence", FENCE},
+        {"minecraft:oak_fence", FENCE},
+        {"minecraft:spruce_fence", SPRUCE_FENCE},
+        {"minecraft:birch_fence", SPRUCE_FENCE},
+        {"minecraft:jungle_fence", SPRUCE_FENCE},
+        {"minecraft:acacia_fence", SPRUCE_FENCE},
+        {"minecraft:dark_oak_fence", SPRUCE_FENCE},
+        {"minecraft:nether_brick_fence", NETHER_BRICK_FENCE},
+        {"minecraft:crimson_fence", NETHERPERK_FENCE},
+        {"minecraft:warped_fence", VOID_FENCE},
+        {"minecraft:fence_gate", FENCE},
+        {"minecraft:oak_fence_gate", FENCE},
+        {"minecraft:spruce_fence_gate", SPRUCE_FENCE},
+        {"minecraft:birch_fence_gate", SPRUCE_FENCE},
+        {"minecraft:jungle_fence_gate", SPRUCE_FENCE},
+        {"minecraft:acacia_fence_gate", SPRUCE_FENCE},
+        {"minecraft:dark_oak_fence_gate", SPRUCE_FENCE},
+
+        // Doors and Trapdoors
+        {"minecraft:wooden_door", OAK_DOOR},
+        {"minecraft:oak_door", OAK_DOOR},
+        {"minecraft:spruce_door", OAK_DOOR},
+        {"minecraft:birch_door", OAK_DOOR},
+        {"minecraft:jungle_door", OAK_DOOR},
+        {"minecraft:acacia_door", OAK_DOOR},
+        {"minecraft:dark_oak_door", OAK_DOOR},
+        {"minecraft:iron_door", IRON_DOOR},
+        {"minecraft:trapdoor", OAK_TRAPDOOR},
+        {"minecraft:wooden_trapdoor", OAK_TRAPDOOR},
+        {"minecraft:oak_trapdoor", OAK_TRAPDOOR},
+        {"minecraft:iron_trapdoor", OAK_TRAPDOOR},
+        {"minecraft:spruce_trapdoor", OAK_TRAPDOOR},
+        {"minecraft:birch_trapdoor", OAK_TRAPDOOR},
+        {"minecraft:jungle_trapdoor", OAK_TRAPDOOR},
+        {"minecraft:acacia_trapdoor", OAK_TRAPDOOR},
+        {"minecraft:dark_oak_trapdoor", OAK_TRAPDOOR},
+
         // Powerstone (Redstone equivalents)
         {"minecraft:redstone_wire", POWER_CABLE},
         {"minecraft:redstone_block", POWERSTONE_BLOCK},
+        {"minecraft:redstone_torch", TORCH},
+        {"minecraft:unlit_redstone_torch", TORCH},
         {"minecraft:redstone_lamp", POWERSTONE_LAMP},
         {"minecraft:lit_redstone_lamp", POWERSTONE_LAMP_ON},
+        {"minecraft:repeater", POWER_CABLE},
+        {"minecraft:unpowered_repeater", POWER_CABLE},
+        {"minecraft:powered_repeater", POWER_CABLE_ON},
+        {"minecraft:comparator", POWER_CABLE},
+        {"minecraft:unpowered_comparator", POWER_CABLE},
+        {"minecraft:powered_comparator", POWER_CABLE_ON},
         {"minecraft:lever", SWITCH},
         {"minecraft:stone_button", SWITCH},
         {"minecraft:wooden_button", SWITCH},
-        {"minecraft:iron_trapdoor", OAK_TRAPDOOR},
-        {"minecraft:wooden_door", OAK_DOOR},
-        {"minecraft:iron_door", IRON_DOOR},
-        {"minecraft:fence", FENCE},
-        {"minecraft:wooden_fence", FENCE},
+        {"minecraft:stone_pressure_plate", SWITCH},
+        {"minecraft:wooden_pressure_plate", SWITCH},
+        {"minecraft:light_weighted_pressure_plate", SWITCH},
+        {"minecraft:heavy_weighted_pressure_plate", SWITCH},
+        {"minecraft:daylight_detector", POWERSTONE_BLOCK},
+        {"minecraft:daylight_detector_inverted", POWERSTONE_BLOCK},
+        {"minecraft:observer", POWERSTONE_BLOCK},
+        {"minecraft:target", POWERSTONE_BLOCK},
+        {"minecraft:dispenser", POWERSTONE_FURNACE},
+        {"minecraft:dropper", POWERSTONE_FURNACE},
+        {"minecraft:tripwire", POWER_CABLE},
+        {"minecraft:tripwire_hook", POWER_CABLE},
+        {"minecraft:tnt", TNT},
+
         {"minecraft:smooth_stone", HARDENED_CONCRETE},
         {"minecraft:polished_blackstone_bricks", DEEPSTONE_BRICKS},
         {"minecraft:light_gray_terracotta", CLAY},
-        // Rails (power cable / steel / iron)
+        // Rails
         {"minecraft:rail", POWER_CABLE},
         {"minecraft:golden_rail", POWER_CABLE_ON},
         {"minecraft:detector_rail", POWER_CABLE},
@@ -348,8 +468,16 @@ ItemId defaultBedrockMapping(const std::string& name) {
     if (it != kDefs.end()) return it->second;
 
     // Substring heuristics
+    if (name.find("stairs") != std::string::npos) return stairsId(shapeMaterialOf(COBBLESTONE), 0, false);
+    if (name.find("slab") != std::string::npos) return slabId(shapeMaterialOf(STONE), 0);
+    if (name.find("fence_gate") != std::string::npos || name.find("fence") != std::string::npos) return FENCE;
+    if (name.find("door") != std::string::npos && name.find("iron") != std::string::npos) return IRON_DOOR;
+    if (name.find("door") != std::string::npos) return OAK_DOOR;
+    if (name.find("trapdoor") != std::string::npos) return OAK_TRAPDOOR;
+    if (name.find("button") != std::string::npos || name.find("lever") != std::string::npos || name.find("pressure_plate") != std::string::npos) return SWITCH;
+    if (name.find("redstone") != std::string::npos || name.find("wire") != std::string::npos) return POWER_CABLE;
+    if (name.find("lamp") != std::string::npos) return POWERSTONE_LAMP;
     if (name.find("rail") != std::string::npos) return POWER_CABLE;
-    if (name.find("redstone") != std::string::npos) return POWER_CABLE;
     if (name.find("brick") != std::string::npos) return BRICKS;
     if (name.find("wood") != std::string::npos || name.find("planks") != std::string::npos) return PLANKS;
     if (name.find("log") != std::string::npos) return LOG;
@@ -420,36 +548,68 @@ BedrockWorldScanResult scanBedrockWorld(const std::string& mcworldPath) {
 bool convertBedrockWorld(const std::string& mcworldPath,
                         const std::string& worldsDir,
                         const std::unordered_map<std::string, ItemId>& mapping,
+                        bool flatGenerator,
                         std::string& outFolder,
                         std::string& error,
                         std::function<void(float progress, const std::string& status)> onProgress) {
-    if (onProgress) onProgress(0.05f, "Načítám archiv světa...");
+    if (onProgress) onProgress(0.05f, "Načítám .mcworld soubor...");
 
     std::ifstream in(mcworldPath, std::ios::binary);
     if (!in) {
-        error = "Nelze otevřít soubor .mcworld";
+        error = "Nelze otevřít soubor světa";
         return false;
     }
     std::vector<uint8_t> zipData((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
     std::vector<ZipEntry> entries;
     if (!readZipEntries(zipData, entries)) {
-        error = "Neplatný archiv .mcworld";
+        error = "Chybný formát archivu .mcworld";
         return false;
     }
 
-    std::string worldTitle = "Karlín pod Vltavou";
+    // World name from levelname.txt
+    std::string worldTitle = "Imported Bedrock World";
     for (const auto& e : entries) {
-        if (e.name.find("levelname.txt") != std::string::npos) {
-            std::vector<uint8_t> c;
-            if (extractZipFile(e, c) && !c.empty()) {
-                worldTitle.assign((const char*)c.data(), c.size());
-                while (!worldTitle.empty() && (worldTitle.back() == '\r' || worldTitle.back() == '\n'))
+        if (e.name == "levelname.txt" || (e.name.size() > 14 && e.name.rfind("/levelname.txt") == e.name.size() - 14)) {
+            std::vector<uint8_t> content;
+            if (extractZipFile(e, content) && !content.empty()) {
+                worldTitle.assign((const char*)content.data(), content.size());
+                while (!worldTitle.empty() && (worldTitle.back() == '\r' || worldTitle.back() == '\n' || worldTitle.back() == ' '))
                     worldTitle.pop_back();
             }
         }
     }
 
-    if (onProgress) onProgress(0.15f, "Čtu bloky ze světa...");
+    std::string safeName;
+    for (char c : worldTitle) {
+        if (std::isalnum((unsigned char)c) || c == '_' || c == '-') safeName += c;
+        else if (c == ' ') safeName += '_';
+    }
+    if (safeName.empty()) safeName = "bedrock_world";
+
+    std::string targetDir = worldsDir + "/" + safeName;
+    int suffix = 1;
+    while (fs::exists(targetDir)) {
+        targetDir = worldsDir + "/" + safeName + "_" + std::to_string(suffix++);
+    }
+    outFolder = targetDir;
+
+    std::error_code ec;
+    fs::create_directories(outFolder, ec);
+    std::string overworldDir = outFolder + "/overworld";
+    fs::create_directories(overworldDir, ec);
+
+    // Save world_icon.jpeg if present
+    for (const auto& e : entries) {
+        if (e.name == "world_icon.jpeg") {
+            std::vector<uint8_t> iconData;
+            if (extractZipFile(e, iconData)) {
+                std::ofstream of(outFolder + "/world_icon.jpeg", std::ios::binary);
+                of.write((const char*)iconData.data(), (std::streamsize)iconData.size());
+            }
+        }
+    }
+
+    if (onProgress) onProgress(0.12f, "Čtu bloky z LevelDB databáze...");
 
     std::vector<SubchunkRecord> subchunks;
     for (const auto& e : entries) {
@@ -462,20 +622,17 @@ bool convertBedrockWorld(const std::string& mcworldPath,
     }
 
     if (subchunks.empty()) {
-        error = "V archivu nebyly nalezeny žádné subchunky";
+        error = "V databázi světa nebyly nalezeny žádné chunky";
         return false;
     }
+
+    if (onProgress) onProgress(0.20f, "Převádím subchunky na VoxelCraft formát...");
 
     // Group subchunks by (cx, cz)
     std::map<std::pair<int, int>, std::vector<const SubchunkRecord*>> chunkMap;
     for (const auto& sc : subchunks) {
         chunkMap[{sc.cx, sc.cz}].push_back(&sc);
     }
-
-    outFolder = createWorldFolder(worldsDir);
-    std::string overworldDir = outFolder + "/overworld";
-    std::error_code ec;
-    fs::create_directories(overworldDir, ec);
 
     // Group chunks into regions (rx, rz)
     struct RegionBuilder {
@@ -632,6 +789,16 @@ bool convertBedrockWorld(const std::string& mcworldPath,
         rf.write((const char*)out.data(), (std::streamsize)out.size());
     }
 
+    if (onProgress) onProgress(0.96f, "Nastavuji generátor světa...");
+
+    // Save generator configuration (Flat or Overworld)
+    GenConfig cfg = GenConfig::defaults();
+    cfg.flat = flatGenerator;
+    if (flatGenerator) {
+        cfg.flatPreset = 0;
+    }
+    saveGenerator(outFolder, cfg);
+
     if (onProgress) onProgress(0.98f, "Vytvářím level.dat...");
 
     // Write level.dat
@@ -643,6 +810,112 @@ bool convertBedrockWorld(const std::string& mcworldPath,
     lf.write(levelDat.data(), (std::streamsize)levelDat.size());
 
     if (onProgress) onProgress(1.0f, "Dokončeno!");
+    return true;
+}
+
+bool exportBedrockWorld(const std::string& worldFolder, const std::string& outFile, std::string& error) {
+    fs::path root(worldFolder);
+    if (!fs::is_regular_file(root / "level.dat")) {
+        error = "Svět nemá level.dat";
+        return false;
+    }
+
+    // Read world title
+    std::string worldTitle = root.filename().string();
+    std::ifstream lf(root / "level.dat");
+    std::string line;
+    while (std::getline(lf, line)) {
+        if (line.rfind("name=", 0) == 0) {
+            worldTitle = line.substr(5);
+            break;
+        }
+    }
+
+    struct ZipFileItem {
+        std::string name;
+        std::vector<uint8_t> data;
+    };
+    std::vector<ZipFileItem> files;
+
+    // 1. levelname.txt
+    files.push_back({"levelname.txt", std::vector<uint8_t>(worldTitle.begin(), worldTitle.end())});
+
+    // 2. world_behavior_packs.json & world_resource_packs.json
+    std::string emptyJson = "[]\n";
+    files.push_back({"world_behavior_packs.json", std::vector<uint8_t>(emptyJson.begin(), emptyJson.end())});
+    files.push_back({"world_resource_packs.json", std::vector<uint8_t>(emptyJson.begin(), emptyJson.end())});
+
+    // 3. Bedrock level.dat
+    Nbt rootNbt = Nbt::makeCompound();
+    rootNbt.fields["LevelName"] = Nbt::makeString(worldTitle);
+    rootNbt.fields["StorageVersion"] = Nbt::makeInt(9);
+    rootNbt.fields["NetworkVersion"] = Nbt::makeInt(582);
+    rootNbt.fields["GameType"] = Nbt::makeInt(1);
+    rootNbt.fields["Generator"] = Nbt::makeInt(1);
+    std::vector<uint8_t> nbtBytes = rootNbt.write();
+
+    std::vector<uint8_t> levelDatBedrock;
+    uint32_t bVer = 10;
+    uint32_t bSz = (uint32_t)nbtBytes.size();
+    levelDatBedrock.insert(levelDatBedrock.end(), (const uint8_t*)&bVer, ((const uint8_t*)&bVer) + 4);
+    levelDatBedrock.insert(levelDatBedrock.end(), (const uint8_t*)&bSz, ((const uint8_t*)&bSz) + 4);
+    levelDatBedrock.insert(levelDatBedrock.end(), nbtBytes.begin(), nbtBytes.end());
+    files.push_back({"level.dat", std::move(levelDatBedrock)});
+
+    // 4. world_icon.jpeg if exists
+    if (fs::is_regular_file(root / "world_icon.jpeg")) {
+        std::ifstream img(root / "world_icon.jpeg", std::ios::binary);
+        std::vector<uint8_t> imgBytes((std::istreambuf_iterator<char>(img)), std::istreambuf_iterator<char>());
+        if (!imgBytes.empty()) files.push_back({"world_icon.jpeg", std::move(imgBytes)});
+    }
+
+    // 5. db/ minimal manifest
+    std::string currentDb = "MANIFEST-000001\n";
+    files.push_back({"db/CURRENT", std::vector<uint8_t>(currentDb.begin(), currentDb.end())});
+    std::string manifestDb = "\x00\x00\x00\x00\x04\x01\x00\x00\x00";
+    files.push_back({"db/MANIFEST-000001", std::vector<uint8_t>(manifestDb.begin(), manifestDb.end())});
+
+    // Write standard ZIP format (method 0 stored)
+    std::vector<uint8_t> out, central;
+    uint32_t count = 0;
+    for (const auto& item : files) {
+        const std::string& name = item.name;
+        const auto& data = item.data;
+        uint32_t crc = (uint32_t)::crc32(0L, (const Bytef*)data.data(), (uInt)data.size());
+        uint32_t offset = (uint32_t)out.size();
+
+        // Local file header
+        put32(out, 0x04034b50);
+        put16(out, 20); put16(out, 0x0800); put16(out, 0); put16(out, 0); put16(out, 0x21);
+        put32(out, crc); put32(out, (uint32_t)data.size()); put32(out, (uint32_t)data.size());
+        put16(out, (uint16_t)name.size()); put16(out, 0);
+        out.insert(out.end(), name.begin(), name.end());
+        out.insert(out.end(), data.begin(), data.end());
+
+        // Central directory entry
+        put32(central, 0x02014b50);
+        put16(central, 20); put16(central, 20); put16(central, 0x0800); put16(central, 0); put16(central, 0); put16(central, 0x21);
+        put32(central, crc); put32(central, (uint32_t)data.size()); put32(central, (uint32_t)data.size());
+        put16(central, (uint16_t)name.size()); put16(central, 0); put16(central, 0); put16(central, 0); put16(central, 0);
+        put32(central, 0); put32(central, offset);
+        central.insert(central.end(), name.begin(), name.end());
+        ++count;
+    }
+
+    uint32_t centralAt = (uint32_t)out.size();
+    out.insert(out.end(), central.begin(), central.end());
+    put32(out, 0x06054b50);
+    put16(out, 0); put16(out, 0); put16(out, (uint16_t)count); put16(out, (uint16_t)count);
+    put32(out, (uint32_t)central.size()); put32(out, centralAt); put16(out, 0);
+
+    std::error_code ec;
+    fs::create_directories(fs::path(outFile).parent_path(), ec);
+    std::ofstream o(outFile, std::ios::binary);
+    o.write((const char*)out.data(), (std::streamsize)out.size());
+    if (!o) {
+        error = "Soubor nejde zapsat";
+        return false;
+    }
     return true;
 }
 

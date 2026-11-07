@@ -27,8 +27,12 @@ ItemId defaultBedrockMapping(const std::string& mcName);
 bool convertBedrockWorld(const std::string& mcworldPath,
                         const std::string& worldsDir,
                         const std::unordered_map<std::string, ItemId>& mapping,
+                        bool flatGenerator,
                         std::string& outFolder,
                         std::string& error,
                         std::function<void(float progress, const std::string& status)> onProgress = nullptr);
+
+// Exports a VoxelCraft world into a Minecraft Bedrock .mcworld file.
+bool exportBedrockWorld(const std::string& worldFolder, const std::string& outFile, std::string& error);
 
 }  // namespace vc

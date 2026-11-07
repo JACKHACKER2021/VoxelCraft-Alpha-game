@@ -3,6 +3,25 @@
 Vlastní voxelový engine v C++ pro **Android 16** (arm64), inspirovaný starými
 verzemi Pocket Edition. Kód je kompletně náš, nic od Mojangu neobsahuje.
 
+## Novinky ve v2.1.5 – Bedrock Importer & Exporter (McWorld Dev)
+
+- **Kompletní podpora schodů, půlbloků a plotů**: převodník z Minecraft Bedrock (`.mcworld`)
+  nyní mapuje dřevěné i kamenné schody, desky a ploty přímo na nativní tvary VoxelCraftu.
+- **Dveře a poklopy**: dubové i železné dveře a poklopy se z Bedrocku správně převedou
+  včetně interakce a otevírání.
+- **Redstone logika na Powerstone**: červený kámen, rudé lampy, páčky, tlačítka a nášlapné
+  desky se převádí na ekvivalentní součástky sítě Powerstone (napájecí kabely, lampy, vypínače).
+- **Volba generátoru světa**: při převodu `.mcworld` lze zvolit, jaký generátor se použije
+  pro nově generovaný terén kolem importované oblasti – **Plochý (Flat)** nebo **Nekonečný (Overworld)**.
+- **Bedrock Exporter (.mcworld)**: v menu „Upravit svět“ přibylo tlačítko **MCWorld**, které
+  vytvoří a vyexportuje standardní `.mcworld` archiv připravený pro Bedrock Edition a uloží
+  jej do složky Stažené soubory (Downloads/VoxelCraft).
+- **Vyhrazená záložka pro módy a Minecraft v inventáři**: v kreativním inventáři přibylo
+  stálé tlačítko se záložkou **Módy & MC**, kde hráč najde všechny přidané předměty z modpacků
+  i speciální bloky (bariéra, příkazový blok, struktury, powerstone komponenty, schody, desky).
+- **Import Bedrock Addonů s 3D geometrií a skripty**: Bedrock doplňky (`.mcaddon` / `.mcpack`)
+  při importu automaticky zachovávají modely geometrie (`models/`) a skripty (`scripts/`).
+
 ## Novinky ve v1.5.0 – Forgotten Powerstone
 
 Kdysi tu žila civilizace, která svítila a stavěla powerstonem. Pak se při pokusech s portály něco pokazilo.

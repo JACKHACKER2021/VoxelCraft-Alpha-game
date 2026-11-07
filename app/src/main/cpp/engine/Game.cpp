@@ -3679,15 +3679,22 @@ void Game::editWorldScreen() {
     ui_.checkbox(rx + col - 18, oy + 68, editInfo_.allowCommands);
     // 1.4.0: the world as one file to keep or send, and the automatic backups.
     const std::vector<std::string> backups = listBackups(editInfo_.folder, dataDir_ + "/backups");
-    const float hb = (col - 4) / 2;
-    if (ui_.button(rx, oy + 98, hb, 20, "Exportovat svět")) {
+    const float b3 = std::floor((col - 8) / 3);
+    if (ui_.button(rx, oy + 98, b3, 20, "VCWorld")) {
         const std::string file = dataDir_ + "/exports/" + editInfo_.name + ".vcworld";
         std::string err;
         saveLevel(editInfo_, editPlayer_);
         if (exportWorld(editInfo_.folder, file, err) && onExportWorld) onExportWorld(file, editInfo_.name + ".vcworld");
         else if (!err.empty()) toast_ = tr(err), toastUntil_ = now_ + 5;
     }
-    if (ui_.button(rx + hb + 4, oy + 98, hb, 20, trf("Obnovit zálohu ({0})", {std::to_string(backups.size())}), !backups.empty())) {
+    if (ui_.button(rx + b3 + 4, oy + 98, b3, 20, "MCWorld")) {
+        const std::string file = dataDir_ + "/exports/" + editInfo_.name + ".mcworld";
+        std::string err;
+        saveLevel(editInfo_, editPlayer_);
+        if (exportBedrockWorld(editInfo_.folder, file, err) && onExportWorld) onExportWorld(file, editInfo_.name + ".mcworld");
+        else if (!err.empty()) toast_ = tr(err), toastUntil_ = now_ + 5;
+    }
+    if (ui_.button(rx + 2 * (b3 + 4), oy + 98, col - 2 * (b3 + 4), 20, trf("Záloha ({0})", {std::to_string(backups.size())}), !backups.empty())) {
         if (restoreBackup(editInfo_.folder, backups[0], dataDir_ + "/backups") && loadLevel(editInfo_.folder, editInfo_, editPlayer_)) {
             toast_ = tr("Svět je obnovený ze zálohy");
             toastUntil_ = now_ + 5;
@@ -4596,7 +4603,26 @@ void Game::creativeInventoryScreen() {
     std::vector<Tab> tabs;
     for (int c = 0; c < CatCount; ++c) tabs.push_back({creativeCategoryName(c), creativeCategoryIcon(c), &creativeCategoryItems(c)});
     if (!addonItems.empty()) tabs.push_back({"Doplňky", addonItems[0], &addonItems});
-    if (!modItems.empty()) tabs.push_back({"Módy", modItems[0], &modItems});
+    static std::vector<ItemId> mcModItems;
+    mcModItems.clear();
+    for (ItemId mid : modItems) mcModItems.push_back(mid);
+    static const ItemId kMcUtilityIds[] = {
+        (ItemId)COMMAND_BLOCK, (ItemId)BARRIER, (ItemId)STRUCTURE_BLOCK,
+        (ItemId)POWERSTONE_BLOCK, (ItemId)POWER_CABLE, (ItemId)POWER_CABLE_ON,
+        (ItemId)POWERSTONE_LAMP, (ItemId)POWERSTONE_LAMP_ON, (ItemId)SWITCH, (ItemId)POWERSTONE_FURNACE, (ItemId)TNT,
+        (ItemId)OAK_DOOR, (ItemId)IRON_DOOR, (ItemId)OAK_TRAPDOOR,
+        (ItemId)FENCE, (ItemId)SPRUCE_FENCE, (ItemId)NETHER_BRICK_FENCE,
+        (ItemId)stairsId(shapeMaterialOf(PLANKS), 0, false),
+        (ItemId)stairsId(shapeMaterialOf(COBBLESTONE), 0, false),
+        (ItemId)slabId(shapeMaterialOf(PLANKS), 0),
+        (ItemId)slabId(shapeMaterialOf(STONE), 0)
+    };
+    for (ItemId mcId : kMcUtilityIds) {
+        if (std::find(mcModItems.begin(), mcModItems.end(), mcId) == mcModItems.end()) {
+            mcModItems.push_back(mcId);
+        }
+    }
+    tabs.push_back({"Módy & MC", COMMAND_BLOCK, &mcModItems});
     if (creativeTab_ >= (int)tabs.size()) creativeTab_ = 0;
     const float tabX = px + 6, tabY = py + 20;
     for (int t = 0; t < (int)tabs.size(); ++t) {
@@ -4712,6 +4738,12 @@ void Game::bedrockMappingScreen() {
     ui_.text(x + 2, y + 2, "Převod světa Minecraft Bedrock", theme::kTitle, 1, false);
     ui_.text(x + 2, y + 14, bedrockWorldName_ + " · " + std::to_string(bedrockMappings_.size()) + " unikátních bloků", theme::kTextDim, 1, false);
 
+    const float genBtnW = 126.0f;
+    const float genBtnX = x + w - genBtnW - 2;
+    if (ui_.button(genBtnX, y + 2, genBtnW, 18, bedrockFlatGenerator_ ? "Typ: Plochý" : "Typ: Overworld")) {
+        bedrockFlatGenerator_ = !bedrockFlatGenerator_;
+    }
+
     float listY = y + 28;
     float listH = h - 56;
     float rowH = 22;
@@ -4783,8 +4815,18 @@ void Game::bedrockMappingScreen() {
             LOG, SPRUCE_LOG, LEAVES, SPRUCE_LEAVES, BRICKS, STONE_BRICKS, DEEPSTONE, DEEPSTONE_BRICKS,
             PALE_STONE, SAND, GRAVEL, SANDSTONE, GLASS, WOOL, OBSIDIAN, BEDROCK,
             WATER, LAVA, ICE, SNOW_BLOCK, CLAY, NETHERRACK, NETHER_BRICK,
-            CHEST, CRAFTING_TABLE, FURNACE, TORCH, FENCE, OAK_DOOR, OAK_TRAPDOOR,
-            POWERSTONE_ORE, POWERSTONE_BLOCK, POWER_CABLE, POWER_CABLE_ON, POWERSTONE_LAMP, SWITCH,
+            CHEST, CRAFTING_TABLE, FURNACE, TORCH,
+            FENCE, SPRUCE_FENCE, NETHER_BRICK_FENCE,
+            OAK_DOOR, IRON_DOOR, OAK_TRAPDOOR,
+            (ItemId)stairsId(shapeMaterialOf(PLANKS), 0, false),
+            (ItemId)stairsId(shapeMaterialOf(COBBLESTONE), 0, false),
+            (ItemId)stairsId(shapeMaterialOf(STONE_BRICKS), 0, false),
+            (ItemId)slabId(shapeMaterialOf(PLANKS), 0),
+            (ItemId)slabId(shapeMaterialOf(STONE), 0),
+            (ItemId)slabId(shapeMaterialOf(COBBLESTONE), 0),
+            (ItemId)slabId(shapeMaterialOf(STONE_BRICKS), 0),
+            POWERSTONE_ORE, POWERSTONE_BLOCK, POWER_CABLE, POWER_CABLE_ON, POWERSTONE_LAMP, POWERSTONE_LAMP_ON,
+            SWITCH, POWERSTONE_FURNACE, TNT,
             BARRIER, COMMAND_BLOCK, STRUCTURE_BLOCK, DUSTY_CONCRETE, HARDENED_CONCRETE
         };
 
@@ -4844,7 +4886,7 @@ void Game::startBedrockConversion() {
     bedrockImportStatus_ = "Zahajuji převod...";
 
     std::string outFolder, err;
-    bool ok = convertBedrockWorld(bedrockImportPath_, worldsDir_, mapping, outFolder, err,
+    bool ok = convertBedrockWorld(bedrockImportPath_, worldsDir_, mapping, bedrockFlatGenerator_, outFolder, err,
                                  [&](float prog, const std::string& status) {
                                      bedrockImportProgress_ = prog;
                                      bedrockImportStatus_ = status;

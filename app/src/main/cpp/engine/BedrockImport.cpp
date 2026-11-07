@@ -65,6 +65,24 @@ std::map<std::string, std::string> loadLang(const fs::path& p) {
     return m;
 }
 
+void copyDirectoryRecursive(const fs::path& src, const fs::path& dst, int& fileCount) {
+    std::error_code ec;
+    if (!fs::is_directory(src)) return;
+    fs::create_directories(dst, ec);
+    for (const auto& entry : fs::recursive_directory_iterator(src, ec)) {
+        const auto& path = entry.path();
+        auto rel = fs::relative(path, src, ec);
+        auto target = dst / rel;
+        if (entry.is_directory()) {
+            fs::create_directories(target, ec);
+        } else if (entry.is_regular_file()) {
+            fs::create_directories(target.parent_path(), ec);
+            fs::copy_file(path, target, fs::copy_options::overwrite_existing, ec);
+            fileCount++;
+        }
+    }
+}
+
 }  // namespace
 
 bool isBedrockAddon(const std::string& dir) {
@@ -83,6 +101,8 @@ BedrockImportReport convertBedrockAddon(const std::string& bedrockDir, const std
     std::error_code ec;
     fs::create_directories(dst / "textures" / "mod", ec);
     fs::create_directories(dst / "recipes", ec);
+    fs::create_directories(dst / "models", ec);
+    fs::create_directories(dst / "scripts", ec);
 
     // Read manifest
     Json m;
@@ -149,6 +169,18 @@ BedrockImportReport convertBedrockAddon(const std::string& bedrockDir, const std
                 blk.set("name_cs", Json::string(langCs["tile." + ident + ".name"]));
             }
 
+            // Custom geometry or shape support
+            std::string geom;
+            if (mb["components"]["minecraft:geometry"].isString()) {
+                geom = mb["components"]["minecraft:geometry"].str();
+            } else if (mb["components"]["minecraft:geometry"]["identifier"].isString()) {
+                geom = mb["components"]["minecraft:geometry"]["identifier"].str();
+            }
+            if (!geom.empty()) {
+                blk.set("geometry", Json::string(geom));
+                rep.notes.push_back("Geometrie pro blok: " + id + " -> " + geom);
+            }
+
             double hardness = 1.5;
             if (mb["components"]["minecraft:destructible_by_mining"]["seconds_to_destroy"].isNumber()) {
                 hardness = mb["components"]["minecraft:destructible_by_mining"]["seconds_to_destroy"].num();
@@ -213,10 +245,28 @@ BedrockImportReport convertBedrockAddon(const std::string& bedrockDir, const std
         }
     }
 
+    // Preserve 3D geometry models (models/blocks, models/entity, etc.)
+    if (fs::is_directory(src / "models")) {
+        copyDirectoryRecursive(src / "models", dst / "models", rep.models);
+        if (rep.models > 0) {
+            rep.notes.push_back("Zkopírováno " + std::to_string(rep.models) + " 3D modelů geometrie.");
+        }
+    }
+
+    // Preserve scripts (scripts/, scripts/server, scripts/client)
+    if (fs::is_directory(src / "scripts")) {
+        copyDirectoryRecursive(src / "scripts", dst / "scripts", rep.scripts);
+        if (rep.scripts > 0) {
+            rep.notes.push_back("Zachováno " + std::to_string(rep.scripts) + " skriptů addonu.");
+        }
+    }
+
     Json content = Json::object();
     content.set("namespace", Json::string(packNs));
     content.set("blocks", blocksArr);
     content.set("items", itemsArr);
+    if (rep.models > 0) content.set("has_models", Json::fromBool(true));
+    if (rep.scripts > 0) content.set("has_scripts", Json::fromBool(true));
 
     // Write manifest.json
     Json manifest = Json::object();

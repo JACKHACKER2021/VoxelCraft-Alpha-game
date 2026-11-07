@@ -301,6 +301,7 @@ private:
     bool bedrockImporting_ = false;
     float bedrockImportProgress_ = 0.0f;
     std::string bedrockImportStatus_;
+    bool bedrockFlatGenerator_ = false;
     std::vector<Skin> skins_;
     int skinAtlasCols_ = 8;
     bool musicStarted_ = false;
