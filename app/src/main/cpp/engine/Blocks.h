@@ -657,8 +657,11 @@ inline ItemId cropBlock(int stage) {
 }
 inline bool isCrop(ItemId id) { return cropStage(id) >= 0; }
 inline bool isBed(ItemId id) { return id >= BED && id < BED + 8; }
+bool isModShaped(ItemId id);
+
 // Blocks with their own shape (not a full cube): drawn and collided as boxes, see BlockShapes.h.
 inline bool isShaped(ItemId id) {
+    if (id >= kModIdBase) return isModShaped(id);
     return isDoor(id) || isTrapdoor(id) || isChest(id) || isFence(id) || isSkeletonHead(id) || id == CACTUS || isBed(id) || isCable(id) ||
            isSwitch(id) || id == CAKE || id == FARMLAND || isStairs(id) || (isSlab(id) && !isDoubleSlab(id)) ||
            isBalloon(id) || id == PARTY_LANTERN || id == SNOW_LAYER || isTorch(id) || isCarpet(id) || id == CAMPFIRE || id == LEAF_LITTER;

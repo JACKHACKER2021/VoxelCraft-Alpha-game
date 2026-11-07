@@ -11,8 +11,8 @@ android {
         applicationId = "cz.voxelcraft.trainsdev"
         minSdk = 30
         targetSdk = 36
-        versionCode = 33
-        versionName = "2.1.5"
+        versionCode = 34
+        versionName = "2.2.0"
         ndk {
             abiFilters += listOf("arm64-v8a", "x86_64")
         }

@@ -1,4 +1,5 @@
 #include "BlockShapes.h"
+#include "Mods.h"
 
 #include "World.h"
 
@@ -65,6 +66,15 @@ static int torchBoxes(ItemId id, Box out[]) {
 }
 
 int itemBoxes(ItemId id, Box out[kItemBoxes]) {
+    if (id >= kModIdBase) {
+        if (const ModBlock* mb = ModRegistry::get().block(id)) {
+            if (!mb->customBoxes.empty()) {
+                int n = (int)std::min((size_t)kItemBoxes, mb->customBoxes.size());
+                for (int i = 0; i < n; ++i) out[i] = mb->customBoxes[i];
+                return n;
+            }
+        }
+    }
     if (isTorch(id)) return torchBoxes(TORCH, out);
     if (isFence(id)) {
         // Two posts joined by two rails, so a fence looks like a fence in the inventory.
@@ -110,6 +120,15 @@ int itemBoxes(ItemId id, Box out[kItemBoxes]) {
 }
 
 int blockBoxes(const World& world, int x, int y, int z, ItemId id, bool collision, Box out[10]) {
+    if (id >= kModIdBase) {
+        if (const ModBlock* mb = ModRegistry::get().block(id)) {
+            if (!mb->customBoxes.empty()) {
+                int n = (int)std::min((size_t)10, mb->customBoxes.size());
+                for (int i = 0; i < n; ++i) out[i] = mb->customBoxes[i];
+                return n;
+            }
+        }
+    }
     if (isTorch(id)) return collision ? 0 : torchBoxes(id, out);  // nothing to bump into
     if (isDoor(id)) {
         DoorState s = doorState(id);

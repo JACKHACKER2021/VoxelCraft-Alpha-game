@@ -134,6 +134,23 @@ void ModRegistry::load(const std::vector<std::string>& packDirs, const std::stri
             m.transparent = b["transparent"].boolean(false);
             m.light = b["light"].boolean(false);
             m.drop = b["drop"].str("");
+            m.group = b["group"].str("");
+            m.hasInventory = b["has_inventory"].boolean(false);
+            m.inventorySize = (int)b["inventory_size"].num(m.hasInventory ? 27 : 0);
+            m.rideable = b["rideable"].boolean(false);
+            m.respondsToPower = b["power"].boolean(false);
+            if (b["boxes"].isArray()) {
+                const Json& boxes = b["boxes"];
+                for (size_t k = 0; k < boxes.size() && m.customBoxes.size() < 10; ++k) {
+                    const Json& box = boxes[k];
+                    if (box.isArray() && box.size() >= 6) {
+                        m.customBoxes.push_back({
+                            (float)box[0].num(), (float)box[1].num(), (float)box[2].num(),
+                            (float)box[3].num(), (float)box[4].num(), (float)box[5].num()
+                        });
+                    }
+                }
+            }
             const ItemId at = idFor(m.key);
             if (at == AIR) continue;
             entries_.push_back({at, true, blocks_.size()});
@@ -153,6 +170,8 @@ void ModRegistry::load(const std::vector<std::string>& packDirs, const std::stri
             m.tile = texture(it["texture"], T_STICK);
             m.food = std::clamp((int)it["food"].num(0), 0, 20);
             m.stack = std::clamp((int)it["stack"].num(64), 1, 64);
+            m.group = it["group"].str("");
+            m.placesKey = it["places"].str("");
             const ItemId at = idFor(m.key);
             if (at == AIR) continue;
             entries_.push_back({at, false, items_.size()});
@@ -229,6 +248,41 @@ ModRegistry::Summary ModRegistry::summary(const std::string& packDir) const {
 }
 
 // The hooks Blocks.h declares, so its inline helpers know mod blocks.
+
+const char* ModRegistry::group(ItemId id) const {
+    if (const ModBlock* b = block(id)) {
+        if (!b->group.empty()) return b->group.c_str();
+    }
+    if (const ModItem* it = item(id)) {
+        if (!it->group.empty()) return it->group.c_str();
+    }
+    return nullptr;
+}
+
+bool ModRegistry::isShapedBlock(ItemId id) const {
+    const ModBlock* b = block(id);
+    return b && !b->customBoxes.empty();
+}
+
+bool ModRegistry::hasInventory(ItemId id) const {
+    const ModBlock* b = block(id);
+    return b && b->hasInventory;
+}
+
+bool ModRegistry::isRideable(ItemId id) const {
+    const ModBlock* b = block(id);
+    return b && b->rideable;
+}
+
+bool ModRegistry::respondsToPower(ItemId id) const {
+    const ModBlock* b = block(id);
+    return b && b->respondsToPower;
+}
+
+bool isModShaped(ItemId id) {
+    return ModRegistry::get().isShapedBlock(id);
+}
+
 bool modIsBlock(ItemId id) { return ModRegistry::get().block(id) != nullptr; }
 int modTileFor(ItemId id, Face face) {
     if (const ModBlock* b = ModRegistry::get().block(id)) return b->tiles[face];
@@ -248,4 +302,29 @@ int modFood(ItemId id) {
     return i ? i->food : 0;
 }
 
+
+std::vector<std::string> ModRegistry::groups() const {
+    std::vector<std::string> out;
+    for (ItemId id : creative_) {
+        const char* g = group(id);
+        if (g && *g) {
+            std::string s(g);
+            if (std::find(out.begin(), out.end(), s) == out.end()) {
+                out.push_back(s);
+            }
+        }
+    }
+    return out;
+}
+
+std::vector<ItemId> ModRegistry::itemsInGroup(const std::string& grp) const {
+    std::vector<ItemId> out;
+    for (ItemId id : creative_) {
+        const char* g = group(id);
+        if (g && grp == g) {
+            out.push_back(id);
+        }
+    }
+    return out;
+}
 }  // namespace vc

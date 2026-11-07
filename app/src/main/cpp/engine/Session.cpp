@@ -713,6 +713,23 @@ void Session::powerChanged(int x, int y, int z) {
                 if (powered && poweredCommands_.insert(key).second) runCommandBlock(key);
                 if (!powered) poweredCommands_.erase(key);
             }
+    for (int dx = -2; dx <= 2; ++dx)
+        for (int dy = -2; dy <= 2; ++dy)
+            for (int dz = -2; dz <= 2; ++dz) {
+                const int cx = x + dx, cy = y + dy, cz = z + dz;
+                ItemId b = world_->getBlock(cx, cy, cz);
+                if (b >= kModIdBase && ModRegistry::get().respondsToPower(b)) {
+                    bool powered = false;
+                    static const int k6[6][3] = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
+                    for (const auto& o : k6) {
+                        const ItemId n = world_->getBlock(cx + o[0], cy + o[1], cz + o[2]);
+                        powered |= cableOn(n) || switchOn(n) || n == POWERSTONE_BLOCK;
+                    }
+                    if (powered) {
+                        particles_.spawnAmbient(*world_, Vec3(cx + 0.5f, cy + 0.8f, cz + 0.5f), Vec3(0, 0.2f, 0), POWERSTONE_DUST, 0.4f, 0.1f, -0.05f, 0.6f);
+                    }
+                }
+            }
     for (int dx = -1; dx <= 1; ++dx)
         for (int dy = -1; dy <= 1; ++dy)
             for (int dz = -1; dz <= 1; ++dz)
@@ -1481,6 +1498,14 @@ void Session::touchDown(int id, float x, float y, double time) {
             target_ = pick(x, y);
             breakProgress_ = 0;
         }
+        return;
+    }
+    const float btnW = 72, btnH = 20;
+    const float btnX = std::floor(guiW_ / 2 - btnW / 2);
+    const float btnY = l.hotbarY - (survival() ? 44 : 28);
+    if (contextAction_ != ContextActionType::None && in(btnX, btnY, btnW, btnH)) {
+        t->kind = Touch::ContextAction;
+        triggerContextAction();
         return;
     }
     if (in(l.hotbarX, l.hotbarY, l.slot * 9, l.slot)) {
@@ -2382,8 +2407,9 @@ void Session::useItem(const RayHit& hit) {
             sound(Sound::Click);
             return;
         }
-        if (isChest(block) || block == BARREL || block == LOOT_BARREL_CAMP) {  // 1.7.2 build 2: the barrel keeps 27 stacks too
+        if (isChest(block) || block == BARREL || block == LOOT_BARREL_CAMP || (block >= kModIdBase && ModRegistry::get().hasInventory(block))) {
             openChestAt({dimIndex(), hit.x, hit.y, hit.z});
+            wantsChest = true;
             return;
         }
         if (block == CUTTER || block == WOOD_CUTTER) {
@@ -2584,6 +2610,24 @@ void Session::useItem(const RayHit& hit) {
         placeShape(hit, held, x, y, z);
         return;
     }
+    if (held.id >= kModIdBase) {
+        if (const ModItem* mi = ModRegistry::get().item(held.id)) {
+            if (!mi->placesKey.empty()) {
+                ItemId targetBlock = ModRegistry::get().keyToId(mi->placesKey);
+                if (targetBlock != AIR) {
+                    ItemId existing = w.getBlock(x, y, z);
+                    if (existing == AIR || existing == TALL_GRASS || existing == SNOW_LAYER || isLiquid(existing)) {
+                        if (w.setBlock(x, y, z, targetBlock)) {
+                            if (survival()) state_.inventory.removeOne(state_.selectedSlot);
+                            hand_.place();
+                            sound(Sound::Place);
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+    }
     if (!isPlaceable(held.id)) return;
     // Tapping tall grass or a snow layer builds in its place, like in the classic games.
     if (w.getBlock(hit.x, hit.y, hit.z) == TALL_GRASS || w.getBlock(hit.x, hit.y, hit.z) == SNOW_LAYER) {
@@ -2698,7 +2742,7 @@ void Session::breakBlock(const RayHit& hit) {
         int other = doorState(id).upper ? hit.y - 1 : hit.y + 1;
         if (isDoor(w.getBlock(hit.x, other, hit.z))) w.setBlock(hit.x, other, hit.z, AIR);
     }
-    if (isChest(id) || id == BARREL || id == LOOT_BARREL_CAMP) {
+    if (isChest(id) || id == BARREL || id == LOOT_BARREL_CAMP || (id >= kModIdBase && ModRegistry::get().hasInventory(id))) {
         FurnaceKey key{dimIndex(), hit.x, hit.y, hit.z};
         if (id != CHEST && id != BARREL && !chests_.count(key)) {  // an unopened structure chest still spills its loot
             uint32_t seed = info_.seed ^ (uint32_t)(key.x * 73856093) ^ (uint32_t)(key.y * 19349663) ^ (uint32_t)(key.z * 83492791);
@@ -3515,6 +3559,7 @@ void Session::render(Renderer& renderer, Ui& ui, const Settings& settings, bool 
         }
         mapChanged_ = false;
     }
+    updateContextAction();
     if (hud) drawHud(ui);
 }
 
@@ -3886,6 +3931,16 @@ void Session::drawHud(Ui& ui) const {
     ui.hudButton(l.hotbarX + l.slot * 9 + 1, l.hotbarY, l.slot, l.slot, invHeld);
     ui.textCentered(l.hotbarX + l.slot * 9.5f + 1, l.hotbarY + 6, "...", theme::kTextBright);
 
+    if (contextAction_ != ContextActionType::None) {
+        const float btnW = 72, btnH = 20;
+        const float btnX = std::floor(W / 2 - btnW / 2);
+        const float btnY = l.hotbarY - (survival() ? 44 : 28);
+        bool held = false;
+        for (const Touch& t : touches_) held |= t.id >= 0 && t.kind == Touch::ContextAction;
+        ui.hudButton(btnX, btnY, btnW, btnH, held);
+        ui.textCentered(btnX + btnW / 2, btnY + 6, contextLabel_.c_str(), theme::kTextBright);
+    }
+
     // Name of the item just selected, fading out.
     const ItemStack& held = state_.inventory.slots[state_.selectedSlot];
     if (itemNameTimer_ > 0 && !held.empty())
@@ -4061,6 +4116,55 @@ void Session::drawHud(Ui& ui) const {
             ui.fill(2, y - 2, ui.textWidth(line) + 6, 11, {0, 0, 0, 0.55f});
             ui.text(5, y, line, {0.6f, 1, 0.6f, 1});
             y += 11;
+        }
+    }
+}
+
+
+void Session::updateContextAction() {
+    contextAction_ = ContextActionType::None;
+    contextLabel_.clear();
+    contextHit_ = {};
+
+    RayHit hit = pick(guiW_ / 2, guiH_ / 2);
+    if (hit.hit) {
+        ItemId b = world_->getBlock(hit.x, hit.y, hit.z);
+        if (isChest(b) || b == BARREL || b == LOOT_BARREL_CAMP || (b >= kModIdBase && ModRegistry::get().hasInventory(b))) {
+            contextAction_ = ContextActionType::Open;
+            contextLabel_ = tr("Otevřít");
+            contextHit_ = hit;
+            return;
+        }
+        if (b >= kModIdBase && ModRegistry::get().isRideable(b)) {
+            contextAction_ = ContextActionType::Ride;
+            contextLabel_ = tr("Nastoupit");
+            contextHit_ = hit;
+            return;
+        }
+    }
+    int boat = pickBoat(guiW_ / 2, guiH_ / 2);
+    if (boat >= 0 && boat != riding_) {
+        contextAction_ = ContextActionType::Ride;
+        contextLabel_ = tr("Nastoupit");
+        return;
+    }
+}
+
+void Session::triggerContextAction() {
+    if (contextAction_ == ContextActionType::Open && contextHit_.hit) {
+        openChestAt({dimIndex(), contextHit_.x, contextHit_.y, contextHit_.z});
+        wantsChest = true;
+    } else if (contextAction_ == ContextActionType::Ride) {
+        if (contextHit_.hit) {
+            player_.pos = Vec3(contextHit_.x + 0.5f, contextHit_.y + 1.0f, contextHit_.z + 0.5f);
+            player_.vel = {};
+        } else {
+            int boat = pickBoat(guiW_ / 2, guiH_ / 2);
+            if (boat >= 0) {
+                riding_ = boat;
+                player_.flying = false;
+                achieve("boat");
+            }
         }
     }
 }

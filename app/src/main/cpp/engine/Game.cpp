@@ -4596,7 +4596,7 @@ void Game::creativeInventoryScreen() {
                                              FESTIVE_BRICKS, PAINTED_PLANKS, PAINTED_PLANKS + 1, PAINTED_PLANKS + 2, PAINTED_PLANKS + 3,
                                              ANNIV_TOKEN, ANNIV_MEDAL, PARTY_POPPER});
     struct Tab {
-        const char* name;
+        std::string name;
         ItemId icon;
         const std::vector<ItemId>* items;
     };
@@ -4623,6 +4623,17 @@ void Game::creativeInventoryScreen() {
         }
     }
     tabs.push_back({"Módy & MC", COMMAND_BLOCK, &mcModItems});
+
+    static std::vector<std::vector<ItemId>> modGroupBuckets;
+    modGroupBuckets.clear();
+    const auto& grpList = ModRegistry::get().groups();
+    modGroupBuckets.resize(grpList.size());
+    for (size_t gi = 0; gi < grpList.size(); ++gi) {
+        modGroupBuckets[gi] = ModRegistry::get().itemsInGroup(grpList[gi]);
+        if (!modGroupBuckets[gi].empty()) {
+            tabs.push_back({grpList[gi], modGroupBuckets[gi][0], &modGroupBuckets[gi]});
+        }
+    }
     if (creativeTab_ >= (int)tabs.size()) creativeTab_ = 0;
     const float tabX = px + 6, tabY = py + 20;
     for (int t = 0; t < (int)tabs.size(); ++t) {
@@ -4664,7 +4675,7 @@ void Game::creativeInventoryScreen() {
     std::vector<ItemId> items;
     std::vector<bool> folded;
     for (ItemId id : all) {
-        const char* g = creativeTab_ < CatCount ? creativeGroup(id) : nullptr;
+        const char* g = creativeGroup(id);
         if (!creativeGroup_.empty()) {
             if (g && creativeGroup_ == g) items.push_back(id), folded.push_back(false);
             continue;

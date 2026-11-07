@@ -1,4 +1,5 @@
 #include "Items.h"
+#include "Mods.h"
 
 #include <algorithm>
 #include <cstring>
@@ -133,6 +134,7 @@ const std::vector<ItemId>& creativeCategoryItems(int category) {
 }
 
 const char* creativeGroup(ItemId id) {
+    if (id >= kModIdBase) return ModRegistry::get().group(id);
     if (isStainedGlass(id)) return "Barevné sklo";
     if (isStairs(id)) return "Schody";
     if (isSlab(id)) return "Desky";

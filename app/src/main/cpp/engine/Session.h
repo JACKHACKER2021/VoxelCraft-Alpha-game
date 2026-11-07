@@ -225,7 +225,7 @@ public:
 private:
     struct Touch {
         int id = -1;
-        enum Kind { None, DPad, Look, Jump, FlyDown, Hotbar, InventoryButton, Pause, Chat, Map, Sneak, Joystick } kind = None;
+        enum Kind { None, DPad, Look, Jump, FlyDown, Hotbar, InventoryButton, Pause, Chat, Map, Sneak, Joystick, ContextAction } kind = None;
         float startX = 0, startY = 0, x = 0, y = 0, lastX = 0, lastY = 0;
         double startTime = 0, lastBreak = 0;
         bool moved = false;
@@ -473,6 +473,13 @@ private:
     float exhaustion_ = 0, regenTimer_ = 0, starveTimer_ = 0, drownTimer_ = 0;
     float autosaveTimer_ = 0, itemNameTimer_ = 0;
     uint32_t rng_ = 0x12345678;
+
+    enum class ContextActionType { None, Open, Ride };
+    ContextActionType contextAction_ = ContextActionType::None;
+    std::string contextLabel_;
+    RayHit contextHit_;
+    void updateContextAction();
+    void triggerContextAction();
 };
 
 }  // namespace vc

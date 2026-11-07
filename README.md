@@ -3,6 +3,15 @@
 Vlastní voxelový engine v C++ pro **Android 16** (arm64), inspirovaný starými
 verzemi Pocket Edition. Kód je kompletně náš, nic od Mojangu neobsahuje.
 
+## Novinky ve v2.2.0 – Vlakové módy, 3D geometrie a vlastní inventář (Self-Inventory)
+
+- **Plná podpora Bedrock Addonů (BP i RP současně i samostatně)**: importér nyní podporuje jak samostatné BP balíčky, tak kombinované BP + RP archivy i vnořené adresářové struktury.
+- **3D geometrie a Bedrock modely (bones/cubes)**: engine načítá Bedrock geometrické definice (`.geo.json`) a převádí je na prostorové kolizní i vykreslovací boxy (`BlockShapes`). Vlaky, vagóny i nárazníky mají skutečné 3D tvary.
+- **Vlastní inventář vozů (Self-Inventory / Boxcar)**: u nákladních vozů a kontejnerů s komponentou `minecraft:inventory` engine automaticky eviduje 27 úložných slotů.
+- **Kontextové HUD tlačítko akce**: při zaměření na vůz s inventářem se na obrazovce nad hotbarem zobrazí tlačítko **[Otevřít]**; při zaměření na lokomotivu tlačítko **[Nastoupit]**.
+- **Kategorizace a složky v inventáři**: kreativní inventář nově dynamicky generuje záložky pro jednotlivé skupiny z načteného módu (**Lokomotivy**, **Vagóny**, **Koleje**, **Nárazníky**, **Výhybky**, **Návěstidla & Signály**, **Konstrukce a Nástupiště**, **Jízdenky**).
+- **Propojení Powerstone a Redstone**: signál z Powerstone automaticky aktivuje signální a železniční prvky modpacku.
+
 ## Novinky ve v2.1.5 – Bedrock Importer & Exporter (McWorld Dev)
 
 - **Kompletní podpora schodů, půlbloků a plotů**: převodník z Minecraft Bedrock (`.mcworld`)

@@ -3,20 +3,24 @@
 #include <utility>
 #include <vector>
 
+#include "BlockShapes.h"
 #include "Blocks.h"
 #include "Mobs.h"
 
 namespace vc {
 
-// VoxelCraft Mods (1.4.0): blocks, items and mobs from JSON and PNG files in a pack.
+// VoxelCraft Mods (1.4.0, 2.2.0): blocks, items and mobs from JSON and PNG files in a pack.
 //
 // A pack (see Packs.h) may hold content.json:
 //   {"namespace": "mymod",
 //    "blocks": [{"id": "ruby_bricks", "name": "Ruby Bricks", "name_cs": "Rubínové cihly",
 //                "texture": "ruby_bricks.png"  or  "textures": {"top": ..., "side": ..., "bottom": ...},
 //                "hardness": 1.5, "tool": "pickaxe", "transparent": false, "light": false,
-//                "drop": "mymod:ruby_dust"}],
-//    "items":  [{"id": "ruby_apple", "name": "Ruby Apple", "texture": "ruby_apple.png", "food": 6, "stack": 64}],
+//                "drop": "mymod:ruby_dust", "group": "Lokomotivy",
+//                "has_inventory": true, "inventory_size": 27, "rideable": false, "power": true,
+//                "boxes": [[x0, y0, z0, x1, y1, z1], ...]}],
+//    "items":  [{"id": "ruby_apple", "name": "Ruby Apple", "texture": "ruby_apple.png", "food": 6, "stack": 64,
+//                "group": "Vagóny", "places": "mymod:ruby_bricks"}],
 //    "mobs":   [{"id": "ruby_pig", "name": "Ruby Pig", "base": "pig", "texture": "ruby_pig.png",
 //                "face": "ruby_pig_face.png", "health": 12, "spawn": 0.2,
 //                "drops": [{"item": "mymod:ruby_apple", "count": 1}]}]}
@@ -32,12 +36,22 @@ struct ModBlock {
     std::string tool;                // "pickaxe", "axe", "shovel" or ""
     bool transparent = false, light = false;
     std::string drop;                // key of what breaking it gives ("" = itself)
+    std::string group;               // category/group in creative inventory
+    bool hasInventory = false;       // container / self-inventory (e.g. Boxcar)
+    int inventorySize = 0;           // container size (e.g. 27)
+    bool rideable = false;           // can be ridden (e.g. locomotives)
+    bool respondsToPower = false;    // activated by powerstone
+    std::vector<Box> customBoxes;    // custom geometry boxes for 3D rendering and collision
 };
+
 struct ModItem {
     std::string key, name, nameCs;
     int tile = 0;
     int food = 0, stack = 64;
+    std::string group;               // category/group in creative inventory
+    std::string placesKey;           // if placer, key of block/entity placed
 };
+
 struct ModMob {
     std::string key, name, nameCs;
     MobType base = MobType::Pig;
@@ -70,6 +84,15 @@ public:
         int blocks = 0, items = 0, mobs = 0;
     };
     Summary summary(const std::string& packDir) const;
+
+    const char* group(ItemId id) const;
+    std::vector<std::string> groups() const;
+    std::vector<ItemId> itemsInGroup(const std::string& grp) const;
+    bool isShapedBlock(ItemId id) const;
+    bool hasInventory(ItemId id) const;
+    bool isRideable(ItemId id) const;
+    bool respondsToPower(ItemId id) const;
+    ItemId keyToId(const std::string& key) const { return find(key); }
 
 private:
     struct Entry {
