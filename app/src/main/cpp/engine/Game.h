@@ -243,6 +243,8 @@ private:
     float bookScroll_ = 0;
     // 1.9.0 build 3: the "How to craft?" guide.
     void howToCraftScreen();
+    void bedrockMappingScreen();
+    void startBedrockConversion();
     int howCat_ = 0, howPick_ = -1;
     float howScroll_ = 0;
     Screen howBack_ = Screen::Inventory;
