@@ -100,17 +100,24 @@ std::string translateGroup(const std::string& raw, const std::map<std::string, s
     std::string lower = text;
     for (char& c : lower) c = (char)std::tolower((unsigned char)c);
 
-    if (lower.find("locomotive") != std::string::npos || lower.find("engine") != std::string::npos) return "Lokomotivy";
-    if (lower.find("rolling_stock") != std::string::npos || lower.find("car") != std::string::npos) return "Vagóny";
-    if (lower.find("buffer") != std::string::npos) return "Nárazníky";
-    if (lower.find("switch") != std::string::npos) return "Výhybky";
-    if (lower.find("signal") != std::string::npos) return "Návěstidla & Signály";
-    if (lower.find("rail") != std::string::npos || lower.find("track") != std::string::npos) return "Koleje";
-    if (lower.find("trestle") != std::string::npos || lower.find("platform") != std::string::npos ||
-        lower.find("tunnel") != std::string::npos || lower.find("tile") != std::string::npos)
-        return "Konstrukce a Nástupiště";
-    if (lower.find("ticket") != std::string::npos) return "Jízdenky";
-    return text.empty() ? "Vlaky & Doplňky" : text;
+    // Standard Minecraft / Bedrock creative categories & universal mod categories
+    if (lower == "construction" || lower.find("construct") != std::string::npos) return "Stavební bloky";
+    if (lower == "nature" || lower.find("flora") != std::string::npos || lower.find("plant") != std::string::npos) return "Příroda & Rostliny";
+    if (lower == "equipment" || lower.find("tool") != std::string::npos) return "Nástroje & Vybavení";
+    if (lower.find("weapon") != std::string::npos || lower.find("sword") != std::string::npos || lower.find("gun") != std::string::npos) return "Zbraně";
+    if (lower.find("armor") != std::string::npos || lower.find("shield") != std::string::npos) return "Brnění & Ochrana";
+    if (lower == "items" || lower.find("item") != std::string::npos) return "Předměty";
+    if (lower == "decorations" || lower == "decoration" || lower.find("decor") != std::string::npos) return "Dekorace";
+    if (lower.find("furniture") != std::string::npos) return "Nábytek";
+    if (lower.find("food") != std::string::npos || lower.find("crop") != std::string::npos) return "Jídlo & Plodiny";
+    if (lower.find("vehicle") != std::string::npos || lower.find("car") != std::string::npos || lower.find("plane") != std::string::npos || lower.find("boat") != std::string::npos) return "Vozidla & Doprava";
+    if (lower.find("redstone") != std::string::npos || lower.find("power") != std::string::npos || lower.find("electric") != std::string::npos || lower.find("wire") != std::string::npos) return "Mechanika & Energie";
+    if (lower.find("mob") != std::string::npos || lower.find("entity") != std::string::npos || lower.find("creature") != std::string::npos) return "Entity & Bytosti";
+
+    if (text.empty()) return "Vlastní doplňky";
+    // Capitalize first letter for display
+    text[0] = (char)std::toupper((unsigned char)text[0]);
+    return text;
 }
 
 }  // namespace
@@ -365,9 +372,14 @@ BedrockImportReport convertBedrockAddon(const std::string& bedrockDir, const std
                 blk.set("boxes", boxArr);
             }
 
-            // Power / Redstone responsiveness
-            bool power = ident.find("signal") != std::string::npos || ident.find("power") != std::string::npos ||
-                         ident.find("switch") != std::string::npos || ident.find("turn_table") != std::string::npos;
+            // Power / Redstone / interactive responsiveness for any Bedrock block
+            bool power = mb["components"]["minecraft:redstone_conductivity"].isObject() ||
+                         mb["components"]["minecraft:flammable"].isObject() ||
+                         ident.find("power") != std::string::npos || ident.find("redstone") != std::string::npos ||
+                         ident.find("wire") != std::string::npos || ident.find("lamp") != std::string::npos ||
+                         ident.find("light") != std::string::npos || ident.find("lever") != std::string::npos ||
+                         ident.find("button") != std::string::npos || ident.find("sensor") != std::string::npos ||
+                         ident.find("detector") != std::string::npos || ident.find("signal") != std::string::npos;
             if (power) blk.set("power", Json::fromBool(true));
 
             // Hardness

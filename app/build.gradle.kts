@@ -11,8 +11,8 @@ android {
         applicationId = "cz.voxelcraft.trainsdev"
         minSdk = 30
         targetSdk = 36
-        versionCode = 34
-        versionName = "2.2.0"
+        versionCode = 35
+        versionName = "2.3.0"
         ndk {
             abiFilters += listOf("arm64-v8a", "x86_64")
         }
@@ -35,7 +35,7 @@ android {
 
     androidResources {
         // Music is streamed straight from the APK (AssetFileDescriptor), so keep it uncompressed.
-        noCompress += listOf("mp3")
+        noCompress += listOf("mp3", "glb")
     }
 
     compileOptions {

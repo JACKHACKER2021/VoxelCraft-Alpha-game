@@ -7,6 +7,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_library(native_app_glue STATIC
     ${ANDROID_NDK}/sources/android/native_app_glue/android_native_app_glue.c)
 
+# Sub-library: voxelcraft_rails (Rails & Trains modular native library) -> libvoxelcraft_rails.so
+add_subdirectory(voxelcraft_rails)
+
 add_library(voxelcraft SHARED
     main.cpp
     engine/Noise.cpp
@@ -64,6 +67,7 @@ add_library(voxelcraft SHARED
 
 target_include_directories(voxelcraft PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/voxelcraft_rails/src
     ${ANDROID_NDK}/sources/android/native_app_glue)
 target_compile_options(voxelcraft PRIVATE -Wall -Wextra -O2)
 
@@ -73,4 +77,4 @@ target_link_options(voxelcraft PRIVATE
     -u ANativeActivity_onCreate
     -Wl,-z,max-page-size=16384)
 
-target_link_libraries(voxelcraft native_app_glue android EGL GLESv3 log z)
+target_link_libraries(voxelcraft native_app_glue android EGL GLESv3 log z voxelcraft_rails)

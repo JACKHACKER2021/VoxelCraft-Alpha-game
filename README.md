@@ -264,3 +264,14 @@ tests/                testy jádra pro PC
 1. Moby (prasata, zombie; v Netheru pigmeni a ghasti), den a noc
 2. Lepší osvětlení (šíření světla z glowstonu a lávy), tekoucí voda a láva
 3. Načítání světů z původní 1.1.2 (LevelDB)
+
+### Verze 2.3.0 (Trains & Universal Bedrock Addons Edition)
+- **Modulární nativní knihovna `libvoxelcraft_rails.so`**:
+  - Samostatný CMake cíl a sdílená knihovna pro `arm64-v8a` a `x86_64`.
+  - Exportované C-ABI rozhraní (`vc_mod_init`, `vc_mod_shutdown`, `vc_rails_toggle_switch`).
+  - Kompletní trasování kolejí (rovinky, oblouky, stoupání, klesání, nárazníky, výhybky) a fyzika vlaků (`Train`) se soupravami vozů a nastupováním.
+  - 11 GLB 3D modelů kolejí a vozidel v APK assetech (`models/*.glb`).
+- **Univerzální Bedrock Addon importér**:
+  - Zobecnění importéru pro všechny typy Bedrock addonů (nábytek, zbraně, vozidla, nástroje, dekorace, mechanika, entity a vlastní bloky).
+  - Odstraněny jednoúčelové vlakové předpoklady z importéru — generování dynamických kategorií podle definic balíčku.
+
