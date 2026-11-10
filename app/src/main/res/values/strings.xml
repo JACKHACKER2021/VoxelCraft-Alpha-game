@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">VoxelCraft</string>
     <string name="pack_title">Texture pack</string>
     <string name="pack_load">Load a pack (.zip, .mcpack, terrain.png)</string>
     <string name="pack_reset">Restore default textures</string>

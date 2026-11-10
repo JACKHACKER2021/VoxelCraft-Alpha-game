@@ -66,6 +66,11 @@ target_include_directories(voxelcraft PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${ANDROID_NDK}/sources/android/native_app_glue)
 target_compile_options(voxelcraft PRIVATE -Wall -Wextra -O2)
+# 2.1.0: the preview edition (gradle flavor "preview") turns on the next version's features.
+option(VC_PREVIEW "Build the VoxelCraft Preview edition" OFF)
+if(VC_PREVIEW)
+    target_compile_definitions(voxelcraft PRIVATE VC_PREVIEW=1)
+endif()
 
 # Keep ANativeActivity_onCreate from being stripped, and use 16 KB page
 # alignment which Android 15+ devices require.

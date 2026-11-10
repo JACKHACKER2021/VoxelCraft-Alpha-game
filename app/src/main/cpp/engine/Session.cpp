@@ -155,6 +155,8 @@ Session::Session(const WorldInfo& info, const PlayerState& player)
     chests_ = loadChests(info.folder);
     boats_.load(info.folder);
     trains_.load(info.folder);
+    // 2.1.0: trains are a preview feature: on in every preview world, off in the normal edition.
+    info_.expRails = kPreviewEdition && !oldMode();
     mobs_.load(info.folder);
     paperMaps_.load(info.folder);
     loadTimers();

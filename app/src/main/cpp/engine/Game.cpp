@@ -37,7 +37,7 @@ namespace vc {
 namespace vc {
 
 namespace {
-const char* kVersion = "VoxelCraft 2.0.0 build 1";
+const char* kVersion = kPreviewEdition ? "VoxelCraft 2.1.0 Preview build 1" : "VoxelCraft 2.0.0 build 2";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -2099,7 +2099,8 @@ void Game::createWorldScreen() {
         experiment(ey + 36, "2.0: Bouřky", "V dešti udeří blesk a může zapálit oheň.", newWorldExpStorms_);
         experiment(ey + 60, "2.0: Padající hvězdy", "Za jasné noci přeletí po obloze hvězdy.", newWorldExpStars_);
         experiment(ey + 84, "2.0: Chov zvířat", "Nakrm dvě zvířata (pšenice, semínka) a narodí se mládě.", newWorldExpBreeding_);
-        experiment(ey + 108, "2.1: Koleje", "Rovné koleje, zatáčky a výhybky ve složce Speciální bloky.", newWorldExpRails_);
+        // 2.1.0: the rails and trains are in every world of the preview edition, in none of the normal one.
+        if (kPreviewEdition) ui_.text(ex + 12, ey + 111, "2.1 Preview: koleje a vlaky jsou zapnuté v každém světě.", kTextDim, 1, false, ew - 24);
         ui_.text(ex + 6, ey + 136, "Upozornění: experimenty se mohou změnit nebo zmizet.", Color{0.9f, 0.7f, 0.35f, 1}, 1, false, ew - 70);
         if (ui_.button(ex + ew - 66, ey + 140, 60, 16, "Hotovo")) newWorldExpOpen_ = false;
         return;  // the panel covers the screen's other buttons
@@ -2122,7 +2123,7 @@ void Game::createWorldScreen() {
         wi.expStorms = newWorldExpStorms_ && !newWorldOld_;
         wi.expStars = newWorldExpStars_ && !newWorldOld_;
         wi.expBreeding = newWorldExpBreeding_ && !newWorldOld_;
-        wi.expRails = newWorldExpRails_ && !newWorldOld_;
+        wi.expRails = kPreviewEdition && !newWorldOld_;
         // 2.0.0: the chosen packs, kept with the world (only when they differ from the global ones).
         if (newWorldPacks_ != packs_.enabledOrder()) {
             for (const std::string& id : newWorldPacks_) wi.packs += (wi.packs.empty() ? "" : ",") + id;

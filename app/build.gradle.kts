@@ -25,11 +25,39 @@ android {
         }
     }
 
+    // 2.1.0: two editions from one code base. "normal" is the stable game (built by GitHub Actions
+    // into release/), "preview" is the test build with the next version's features (built in chat),
+    // installed beside it as its own app with its own worlds.
+    flavorDimensions += "edition"
+    productFlavors {
+        create("normal") {
+            dimension = "edition"
+            resValue("string", "app_name", "VoxelCraft")
+        }
+        create("preview") {
+            dimension = "edition"
+            applicationIdSuffix = ".preview"
+            versionNameSuffix = "-preview"
+            resValue("string", "app_name", "VoxelCraft Preview")
+            externalNativeBuild { cmake { arguments += listOf("-DVC_PREVIEW=ON") } }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
             // Signed with the debug key so the APK can be sideloaded right away.
             signingConfig = signingConfigs.getByName("debug")
+            // GitHub Actions signs the normal edition with the project key (secrets), see
+            // .github/workflows/release.yml: then every release installs over the one before.
+            System.getenv("VC_KEYSTORE")?.let { path ->
+                signingConfig = signingConfigs.create("project") {
+                    storeFile = file(path)
+                    storePassword = System.getenv("VC_KEYSTORE_PASSWORD")
+                    keyAlias = System.getenv("VC_KEY_ALIAS")
+                    keyPassword = System.getenv("VC_KEY_PASSWORD")
+                }
+            }
         }
     }
 

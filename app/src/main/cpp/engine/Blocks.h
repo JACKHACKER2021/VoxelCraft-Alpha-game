@@ -8,6 +8,13 @@ namespace vc {
 // Block and item ids are 16 bits since 1.4.0 (mods get ids from kFirstModId up).
 using ItemId = uint16_t;
 constexpr int kItemIdLimit = 65000;  // ids are 1..64999; 0 is air
+// 2.1.0: the preview edition (VoxelCraft Preview, built with VC_PREVIEW) has the next version's
+// features on; the normal edition only what is finished.
+#ifdef VC_PREVIEW
+constexpr bool kPreviewEdition = true;
+#else
+constexpr bool kPreviewEdition = false;
+#endif
 constexpr int kModIdBase = 2000;     // blocks and items of VoxelCraft Mods (see Mods.h) start here
 // 2.0.0: the engine's own ids above the mods (the ids under 2000 are all taken): 60000..64999.
 constexpr int kExtIdBase = 60000;
