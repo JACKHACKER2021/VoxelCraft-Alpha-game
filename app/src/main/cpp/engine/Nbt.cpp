@@ -159,6 +159,18 @@ bool Nbt::parse(const std::vector<uint8_t>& data, Nbt& root, std::string& error)
     return true;
 }
 
+bool Nbt::parseAt(const std::vector<uint8_t>& data, size_t& pos, Nbt& root, std::string& error) {
+    Reader r{data, pos, {}};
+    uint8_t type;
+    std::string name;
+    if (!r.read(type) || type != Compound || !r.readString(name) || !r.payload(Compound, root, 0)) {
+        error = r.error.empty() ? "očekávána NBT složka" : r.error;
+        return false;
+    }
+    pos = r.pos;
+    return true;
+}
+
 std::vector<uint8_t> Nbt::write() const {
     Writer w;
     w.put<uint8_t>(Compound);

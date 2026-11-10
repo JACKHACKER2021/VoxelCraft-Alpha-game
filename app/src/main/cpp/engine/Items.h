@@ -59,7 +59,7 @@ extern const int kCreativeTabCount;
 // exactly one), and groups of variants shown behind one button (stained glass, stairs...).
 enum CreativeCategory {
     CatBuilding, CatGlass, CatLighting, CatNature, CatDecoration, CatPowerstone, CatTools, CatArmor, CatMaps,
-    CatMaterials, CatEggs, CatCount
+    CatMaterials, CatEggs, CatSpecial, CatCount  // 2.0.0: special blocks (command, structure...)
 };
 const char* creativeCategoryName(int category);
 ItemId creativeCategoryIcon(int category);

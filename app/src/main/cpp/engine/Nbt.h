@@ -27,6 +27,9 @@ struct Nbt {
 
     // Parses a whole file: one named root tag (normally a compound with an empty name).
     static bool parse(const std::vector<uint8_t>& data, Nbt& root, std::string& error);
+    // 2.0.0: one root compound starting at `pos`; on success `pos` is just past it (Bedrock palettes
+    // are root compounds one after another).
+    static bool parseAt(const std::vector<uint8_t>& data, size_t& pos, Nbt& root, std::string& error);
     // Writes a root compound (for tests and tools).
     std::vector<uint8_t> write() const;
 

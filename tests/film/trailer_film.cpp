@@ -6151,3 +6151,25 @@ SHOT(p03_pa_howto) {
     d.seconds(0.3f);
 }
 SHOT(p04_pa_create) { Director d(out, "p04"); d.idle(4); preAlpha(d); d.game->toolCreateWorldType(0, 0); d.idle(10); d.shot("p04_pa_create"); d.seconds(0.3f); }
+
+// 2.0.0: the special blocks folder in the creative inventory, and the world list's import button.
+SHOT(a20_special) {
+    Director d(out, "a20");
+    d.openWorld("Special", 4242, GameMode::Creative);
+    d.idle(10);
+    d.shot("a20_special");
+    d.tap(Director::kMenuX, Director::kMenuY, 20);
+    d.seconds(0.5f);
+    const char* tx = std::getenv("VC_TAPX");
+    const char* ty = std::getenv("VC_TAPY");
+    if (tx && ty) d.tap((float)std::atof(tx), (float)std::atof(ty), 20);
+    d.seconds(1.0f);
+}
+
+SHOT(a21_import) {
+    Director d(out, "a21");
+    d.shot("a21_import");
+    d.idle(10);
+    d.tap(222, 121, 30);  // Play: Singleplayer
+    d.seconds(1.0f);
+}

@@ -82,6 +82,8 @@ bool keyEnds(ItemId id, const char* tail) {
 }
 
 int categoryOf(ItemId id, int oldTab) {
+    // 2.0.0: the blocks for map makers have their own folder.
+    if (id == COMMAND_BLOCK || id == STRUCTURE_BLOCK || id == BARRIER || id == MOB_SPAWNER || id == WORLD_END) return CatSpecial;
     if (isSpawnEgg(id)) return CatEggs;
     if (isArmor(id) || id == SHIELD) return id == SHIELD ? CatTools : CatArmor;
     if (id == MAP || id == EXPLORER_MAP || id == FORTRESS_COMPASS || id == BOSS_COMPASS || id == WRITABLE_BOOK ||
@@ -109,13 +111,13 @@ int categoryOf(ItemId id, int oldTab) {
 const char* creativeCategoryName(int category) {
     static const char* const names[CatCount] = {"Stavební bloky", "Sklo", "Osvětlení", "Příroda", "Dekorace",
                                                 "Powerstone a mechanismy", "Nástroje a zbraně", "Brnění", "Mapy a zvláštní předměty",
-                                                "Jídlo a suroviny", "Vejce"};
+                                                "Jídlo a suroviny", "Vejce", "Speciální bloky"};
     return category >= 0 && category < CatCount ? names[category] : "";
 }
 
 ItemId creativeCategoryIcon(int category) {
     static const ItemId icons[CatCount] = {STONE_BRICKS, GLASS, TORCH, GRASS, BOOKSHELF, POWERSTONE_LAMP, IRON_PICKAXE,
-                                           (ItemId)(armorItem(2, 1)), MAP, BREAD, EGG_PIG};
+                                           (ItemId)(armorItem(2, 1)), MAP, BREAD, EGG_PIG, COMMAND_BLOCK};
     return category >= 0 && category < CatCount ? icons[category] : AIR;
 }
 

@@ -37,6 +37,7 @@ add_library(voxelcraft SHARED
     engine/Particles.cpp
     engine/Nbt.cpp
     engine/Structure.cpp
+    engine/McWorld.cpp
     engine/Drops.cpp
     engine/FirstPerson.cpp
     engine/Lang.cpp

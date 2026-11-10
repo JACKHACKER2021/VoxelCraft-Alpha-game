@@ -11,6 +11,8 @@
 #include "Crafting.h"
 #include "Items.h"
 #include "WorldFiles.h"
+#include "McWorld.h"
+#include <fstream>
 #include "JavaImport.h"
 #include "Mods.h"
 #include "Achievements.h"
@@ -724,7 +726,25 @@ void Game::frame(double time) {
                 }
             } else if (id == PromptWorldImported && !text.empty()) {
                 std::string folder, err;
-                if (importWorld(text, worldsDir_, folder, err)) {
+                // 2.0.0: a Bedrock .mcworld (its database is in db/) is converted block by block.
+                bool bedrock = false;
+                {
+                    std::ifstream in(text, std::ios::binary);
+                    std::string bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+                    bedrock = bytes.find("db/CURRENT") != std::string::npos || bytes.find(".ldb") != std::string::npos;
+                }
+                McWorldReport rep;
+                if (bedrock) {
+                    if (importMcWorld(text, worldsDir_, folder, rep, err)) {
+                        worlds_ = listWorlds(worldsDir_);
+                        long long replaced = 0;
+                        for (const auto& [n, c] : rep.replaced) replaced += c;
+                        toast_ = trf("Svět Minecraft převeden: {0} chunků, {1} bloků nahrazeno podobnými",
+                                     {std::to_string(rep.chunks), std::to_string(replaced)});
+                    } else {
+                        toast_ = tr(err);
+                    }
+                } else if (importWorld(text, worldsDir_, folder, err)) {
                     worlds_ = listWorlds(worldsDir_);
                     toast_ = tr("Svět byl naimportován");
                 } else {
@@ -1945,6 +1965,7 @@ void Game::worldListScreen() {
             setScreen(Screen::CreateWorld);
         }
         // The Multiplayer tab is at the top; this place now imports a world (.vcworld).
+        // 2.0.0: a short label that fits the button (it takes .vcworld and .mcworld files).
         if (ui_.button(x + w / 2 - bw / 2, by, bw, 22, "Importovat svět", (bool)onImportWorld)) onImportWorld();
     } else {
         // 1.8.0: labels that do not fit are shortened (they used to run over the next button).
