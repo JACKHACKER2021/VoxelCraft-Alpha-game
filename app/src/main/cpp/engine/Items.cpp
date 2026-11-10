@@ -28,7 +28,7 @@ const ItemId kCreativeItems[] = {
     CELESTIAL_PLANKS, CELESTIAL_STONE_BRICKS,
     DUSTY_CONCRETE, HARDENED_CONCRETE, GRAY_PLANKS, STAIRS_EXTRA3, STAIRS_EXTRA3 + 8, STAIRS_EXTRA3 + 16, STAIRS_EXTRA3 + 24,
     STAIRS_EXTRA3 + 32, SLAB_EXTRA3, SLAB_EXTRA3 + 3, SLAB_EXTRA3 + 6, SLAB_EXTRA3 + 9, SLAB_EXTRA3 + 12,
-    CUTTER, WOOD_CUTTER, BARREL, CAMPFIRE, HONEY_BLOCK, STRUCTURE_BLOCK, BARRIER, COMMAND_BLOCK,
+    CUTTER, WOOD_CUTTER, BARREL, CAMPFIRE, HONEY_BLOCK, STRUCTURE_BLOCK, BARRIER, COMMAND_BLOCK, SOUND_BLOCK, RAIL_NS, RAIL_SWITCH, CUSHION, BUFFER_STOP, LOCOMOTIVE, PASSENGER_WAGON, FREIGHT_WAGON,
     CRIMSONIUM_PLANKS, SHATTERED_BRICKS, DARK_SANDSTONE, STAIRS_EXTRA5 + 0, STAIRS_EXTRA5 + 8, STAIRS_EXTRA5 + 16, STAIRS_EXTRA5 + 24, SLAB_EXTRA5 + 0, SLAB_EXTRA5 + 3, SLAB_EXTRA5 + 6, SLAB_EXTRA5 + 9,
     CONCRETE_POWDER + 0, CONCRETE_POWDER + 1, CONCRETE_POWDER + 2, CONCRETE_POWDER + 3, CONCRETE_POWDER + 4, CONCRETE_POWDER + 5, CONCRETE_POWDER + 6, CONCRETE_POWDER + 7, CONCRETE_POWDER + 8, CONCRETE_POWDER + 9, CONCRETE_POWDER + 10, CONCRETE_POWDER + 11, CONCRETE_POWDER + 12, CONCRETE_POWDER + 13, CONCRETE_POWDER + 14, CONCRETE_POWDER + 15,
     CONCRETE + 0, CONCRETE + 1, CONCRETE + 2, CONCRETE + 3, CONCRETE + 4, CONCRETE + 5, CONCRETE + 6, CONCRETE + 7, CONCRETE + 8, CONCRETE + 9, CONCRETE + 10, CONCRETE + 11, CONCRETE + 12, CONCRETE + 13, CONCRETE + 14, CONCRETE + 15,
@@ -68,9 +68,9 @@ const ItemId kCreativeItems[] = {
     OLD_DOCUMENT + 7, ANCIENT_COIN, POWERSTONE_RELIC, POTTERY_SHARD, EGG_HUSKING, EGG_HOGMAN, HARDIUM, CELESTIUM, HONEY_BALL,
 };
 const int kCreativeItemCount = sizeof(kCreativeItems) / sizeof(kCreativeItems[0]);
-static_assert(sizeof(kCreativeItems) / sizeof(kCreativeItems[0]) == 237 + 85 + 48 + 26 + 71, "the creative tabs cover the whole catalog");
+static_assert(sizeof(kCreativeItems) / sizeof(kCreativeItems[0]) == 245 + 85 + 48 + 26 + 71, "the creative tabs cover the whole catalog");
 const CreativeTab kCreativeTabs[] = {
-    {"Stavební", 0, 237}, {"Příroda", 237, 85}, {"Nástroje", 322, 48}, {"Brnění", 370, 26}, {"Suroviny", 396, 71},
+    {"Stavební", 0, 245}, {"Příroda", 245, 85}, {"Nástroje", 330, 48}, {"Brnění", 378, 26}, {"Suroviny", 404, 71},
 };
 const int kCreativeTabCount = sizeof(kCreativeTabs) / sizeof(kCreativeTabs[0]);
 
@@ -84,6 +84,9 @@ bool keyEnds(ItemId id, const char* tail) {
 int categoryOf(ItemId id, int oldTab) {
     // 2.0.0: the blocks for map makers have their own folder.
     if (id == COMMAND_BLOCK || id == STRUCTURE_BLOCK || id == BARRIER || id == MOB_SPAWNER || id == WORLD_END) return CatSpecial;
+    if (id == SOUND_BLOCK) return CatPowerstone;
+    if (isRail(id) || isBufferStop(id) || id == LOCOMOTIVE || id == PASSENGER_WAGON || id == FREIGHT_WAGON) return CatSpecial;  // 2.1.0 preview, shown only with the experiment
+    if (id == CUSHION) return CatDecoration;
     if (isSpawnEgg(id)) return CatEggs;
     if (isArmor(id) || id == SHIELD) return id == SHIELD ? CatTools : CatArmor;
     if (id == MAP || id == EXPLORER_MAP || id == FORTRESS_COMPASS || id == BOSS_COMPASS || id == WRITABLE_BOOK ||
@@ -230,7 +233,7 @@ const KeyEntry kKeys[] = {
     {NETHER_BRICK_FENCE, "nether_brick_fence"}, {POWERSTONE_FENCE, "powerstone_fence"},
     {BRUSHER, "brusher"}, {FORTRESS_COMPASS, "fortress_compass"}, {ANCIENT_COIN, "ancient_coin"},
     {POWERSTONE_RELIC, "powerstone_relic"}, {POTTERY_SHARD, "pottery_shard"}, {EGG_HUSKING, "husking_spawn_egg"}, {VOID_BRICK_EYE, "void_brick_eye"}, {CRIMSON_STONE, "crimson_stone"},
-    {TORCH, "torch"}, {CRIMSON_PLANKS, "crimson_planks"}, {CRIMSON_LOG, "crimson_log"}, {SHIELD, "shield"}, {EXPLORER_MAP, "explorer_map"}, {WRITABLE_BOOK, "writable_book"}, {DEEPSTONE, "deepstone"}, {HARDIUM_ORE, "hardium_ore"}, {MOSSY_DEEPSTONE, "mossy_deepstone"}, {MOSS_BLOCK, "moss_block"}, {FUNGAL_DEEPSTONE, "fungal_deepstone"}, {DEEPSTONE_BRICKS, "deepstone_bricks"}, {CRACKED_DEEPSTONE_BRICKS, "cracked_deepstone_bricks"}, {MOSSY_DEEPSTONE_BRICKS, "mossy_deepstone_bricks"}, {ROTTEN_PLANKS, "rotten_planks"}, {VINES, "vines"}, {HARDIUM, "hardium"}, {HARDIUM_PICKAXE, "hardium_pickaxe"}, {HARDIUM_SWORD, "hardium_sword"}, {HARDIUM_AXE, "hardium_axe"}, {HARDIUM_SHOVEL, "hardium_shovel"}, {HARDIUM_ARMOR, "hardium_helmet"}, {HARDIUM_ARMOR + 1, "hardium_chestplate"}, {HARDIUM_ARMOR + 2, "hardium_leggings"}, {HARDIUM_ARMOR + 3, "hardium_boots"}, {MOB_SPAWNER, "spawner"}, {SOULED_GRASS, "souled_grass"}, {SOULED_DIRT, "souled_dirt"}, {SOULED_STONE, "souled_stone"}, {CELESTIAL_FRAME, "celestial_portal_frame"}, {CELESTIAL_FRAME_FULL, "celestial_portal_frame_filled"}, {CELESTIAL_PORTAL, "celestial_portal"}, {CRIMSON_HEAD, "crimson_head"}, {CELESTIAL_COMPASS, "celestial_compass"}, {CELESTIAL_LOG, "celestial_log"}, {CELESTIAL_PLANKS, "celestial_planks"}, {CELESTIAL_STONE_BRICKS, "celestial_stone_bricks"}, {CELESTIAL_LEAVES, "celestial_leaves"}, {CELESTIAL_GRASS, "celestial_grass"}, {CELESTIAL_DIRT, "celestial_dirt"}, {CELESTIAL_STONE, "celestial_stone"}, {DUSTY_CONCRETE, "dusty_concrete"}, {HARDENED_CONCRETE, "hardened_concrete"}, {GRAY_LOG, "gray_log"}, {GRAY_PLANKS, "gray_planks"}, {RED_LEAVES, "red_leaves"}, {ORANGE_LEAVES, "orange_leaves"}, {YELLOW_LEAVES, "yellow_leaves"}, {CUTTER, "stonecutter"}, {CRIMSONIUM_LOG, "crimsonium_log"}, {CRIMSONIUM_PLANKS, "crimsonium_planks"}, {CRIMSONIUM_LEAVES, "crimsonium_leaves"}, {SHATTERED_STONE, "shattered_stone"}, {SHATTERED_BRICKS, "shattered_bricks"}, {VOID_SHARD_BLOCK, "void_shard_block"}, {DARK_SAND, "dark_sand"}, {DARK_SANDSTONE, "dark_sandstone"}, {SHARD_CLUSTER, "shard_cluster"}, {CRIMSONIUM_ORE, "crimsonium_ore"}, {VOID_SHARD, "void_shard"}, {CRIMSONIUM, "crimsonium"}, {LOOT_CHEST_SHRINE, "shrine_chest"}, {LOOT_CHEST_CHAMBER, "chamber_chest"}, {LOOT_BARREL_CAMP, "camp_barrel"}, {WOOD_CUTTER, "wood_cutter"}, {GRAY_SAPLING, "gray_sapling"}, {CELESTIAL_SAPLING, "celestial_sapling"}, {BARREL, "barrel"}, {WRITTEN_BOOK, "written_book"}, {PALE_STONE, "pale_stone"}, {SKY_STONE, "sky_stone"}, {CELESTIUM_ORE, "celestium_ore"}, {PALE_CRYSTAL, "pale_crystal"}, {FIRE, "fire"}, {CAMPFIRE, "campfire"}, {LEAF_LITTER, "leaf_litter"}, {CELESTIUM, "celestium"}, {CELESTIUM_PICKAXE, "celestium_pickaxe"}, {CELESTIUM_SWORD, "celestium_sword"}, {CELESTIUM_AXE, "celestium_axe"}, {CELESTIUM_SHOVEL, "celestium_shovel"}, {CELESTIUM_CHESTPLATE, "celestium_chestplate"}, {CELESTIAL_WINGS, "celestial_wings"}, {HONEY_BALL, "honey_ball"}, {HONEY_BLOCK, "honey_block"}, {STRUCTURE_BLOCK, "structure_block"}, {BARRIER, "barrier"}, {COMMAND_BLOCK, "command_block"},
+    {TORCH, "torch"}, {CRIMSON_PLANKS, "crimson_planks"}, {CRIMSON_LOG, "crimson_log"}, {SHIELD, "shield"}, {EXPLORER_MAP, "explorer_map"}, {WRITABLE_BOOK, "writable_book"}, {DEEPSTONE, "deepstone"}, {HARDIUM_ORE, "hardium_ore"}, {MOSSY_DEEPSTONE, "mossy_deepstone"}, {MOSS_BLOCK, "moss_block"}, {FUNGAL_DEEPSTONE, "fungal_deepstone"}, {DEEPSTONE_BRICKS, "deepstone_bricks"}, {CRACKED_DEEPSTONE_BRICKS, "cracked_deepstone_bricks"}, {MOSSY_DEEPSTONE_BRICKS, "mossy_deepstone_bricks"}, {ROTTEN_PLANKS, "rotten_planks"}, {VINES, "vines"}, {HARDIUM, "hardium"}, {HARDIUM_PICKAXE, "hardium_pickaxe"}, {HARDIUM_SWORD, "hardium_sword"}, {HARDIUM_AXE, "hardium_axe"}, {HARDIUM_SHOVEL, "hardium_shovel"}, {HARDIUM_ARMOR, "hardium_helmet"}, {HARDIUM_ARMOR + 1, "hardium_chestplate"}, {HARDIUM_ARMOR + 2, "hardium_leggings"}, {HARDIUM_ARMOR + 3, "hardium_boots"}, {MOB_SPAWNER, "spawner"}, {SOULED_GRASS, "souled_grass"}, {SOULED_DIRT, "souled_dirt"}, {SOULED_STONE, "souled_stone"}, {CELESTIAL_FRAME, "celestial_portal_frame"}, {CELESTIAL_FRAME_FULL, "celestial_portal_frame_filled"}, {CELESTIAL_PORTAL, "celestial_portal"}, {CRIMSON_HEAD, "crimson_head"}, {CELESTIAL_COMPASS, "celestial_compass"}, {CELESTIAL_LOG, "celestial_log"}, {CELESTIAL_PLANKS, "celestial_planks"}, {CELESTIAL_STONE_BRICKS, "celestial_stone_bricks"}, {CELESTIAL_LEAVES, "celestial_leaves"}, {CELESTIAL_GRASS, "celestial_grass"}, {CELESTIAL_DIRT, "celestial_dirt"}, {CELESTIAL_STONE, "celestial_stone"}, {DUSTY_CONCRETE, "dusty_concrete"}, {HARDENED_CONCRETE, "hardened_concrete"}, {GRAY_LOG, "gray_log"}, {GRAY_PLANKS, "gray_planks"}, {RED_LEAVES, "red_leaves"}, {ORANGE_LEAVES, "orange_leaves"}, {YELLOW_LEAVES, "yellow_leaves"}, {CUTTER, "stonecutter"}, {CRIMSONIUM_LOG, "crimsonium_log"}, {CRIMSONIUM_PLANKS, "crimsonium_planks"}, {CRIMSONIUM_LEAVES, "crimsonium_leaves"}, {SHATTERED_STONE, "shattered_stone"}, {SHATTERED_BRICKS, "shattered_bricks"}, {VOID_SHARD_BLOCK, "void_shard_block"}, {DARK_SAND, "dark_sand"}, {DARK_SANDSTONE, "dark_sandstone"}, {SHARD_CLUSTER, "shard_cluster"}, {CRIMSONIUM_ORE, "crimsonium_ore"}, {VOID_SHARD, "void_shard"}, {CRIMSONIUM, "crimsonium"}, {LOOT_CHEST_SHRINE, "shrine_chest"}, {LOOT_CHEST_CHAMBER, "chamber_chest"}, {LOOT_BARREL_CAMP, "camp_barrel"}, {WOOD_CUTTER, "wood_cutter"}, {GRAY_SAPLING, "gray_sapling"}, {CELESTIAL_SAPLING, "celestial_sapling"}, {BARREL, "barrel"}, {WRITTEN_BOOK, "written_book"}, {PALE_STONE, "pale_stone"}, {SKY_STONE, "sky_stone"}, {CELESTIUM_ORE, "celestium_ore"}, {PALE_CRYSTAL, "pale_crystal"}, {FIRE, "fire"}, {CAMPFIRE, "campfire"}, {LEAF_LITTER, "leaf_litter"}, {CELESTIUM, "celestium"}, {CELESTIUM_PICKAXE, "celestium_pickaxe"}, {CELESTIUM_SWORD, "celestium_sword"}, {CELESTIUM_AXE, "celestium_axe"}, {CELESTIUM_SHOVEL, "celestium_shovel"}, {CELESTIUM_CHESTPLATE, "celestium_chestplate"}, {CELESTIAL_WINGS, "celestial_wings"}, {HONEY_BALL, "honey_ball"}, {HONEY_BLOCK, "honey_block"}, {STRUCTURE_BLOCK, "structure_block"}, {BARRIER, "barrier"}, {COMMAND_BLOCK, "command_block"}, {SOUND_BLOCK, "sound_block"}, {RAIL_NS, "rail"}, {RAIL_EW, "rail_ew"}, {RAIL_CURVE, "rail_curve"}, {RAIL_CURVE + 1, "rail_curve_es"}, {RAIL_CURVE + 2, "rail_curve_sw"}, {RAIL_CURVE + 3, "rail_curve_wn"}, {RAIL_SWITCH, "rail_switch"}, {CUSHION, "cushion"}, {BUFFER_STOP, "buffer_stop"}, {LOCOMOTIVE, "locomotive"}, {PASSENGER_WAGON, "passenger_wagon"}, {FREIGHT_WAGON, "freight_wagon"},
     {EGG_HOGMAN, "hogman_spawn_egg"}, {POWERSTONE_FURNACE, "powerstone_furnace"}, {POWERSTONE_FURNACE_ON, "lit_powerstone_furnace"},
     {CEILING_CABLE, "ceiling_power_cable"}, {CEILING_CABLE_ON, "lit_ceiling_power_cable"},
 };
@@ -257,7 +260,7 @@ const char* const kDocumentKeys[kDocumentPages] = {"old_document_1", "old_docume
 const char* const kDocumentNames[kDocumentPages] = {"Starý dokument I", "Starý dokument II", "Starý dokument III", "Starý dokument IV", "Starý dokument V", "Starý dokument VI", "Starý dokument VII", "Starý dokument VIII"};
 
 const char* itemKey(ItemId id) {
-    if (id >= kModIdBase) {
+    if (isModId(id)) {
         const char* k = ModRegistry::get().key(id);
         return k ? k : "air";
     }
@@ -342,7 +345,14 @@ ItemId itemFromKey(const std::string& key) {
 }
 
 const char* itemName(ItemId id) {
-    if (id >= kModIdBase) {
+    if (isRailSwitch(id)) return "Výhybka";
+    if (isBufferStop(id)) return "Zarážka";
+    if (id == CUSHION) return "Sedák";
+    if (id == LOCOMOTIVE) return "Lokomotiva";
+    if (id == PASSENGER_WAGON) return "Osobní vagon";
+    if (id == FREIGHT_WAGON) return "Nákladní vagon";
+    if (isRail(id)) return "Kolej";
+    if (isModId(id)) {
         const char* n = ModRegistry::get().name(id);
         return n ? n : "";
     }
@@ -448,6 +458,9 @@ const char* itemName(ItemId id) {
         case STRUCTURE_BLOCK: return "Blok struktur";
         case BARRIER: return "Bariéra";
         case COMMAND_BLOCK: return "Příkazový blok";
+        case SOUND_BLOCK: return "Zvukový blok";
+        case RAIL_NS: case RAIL_EW: return "Kolej";
+        case RAIL_SWITCH: return "Výhybka";
         case MOB_SPAWNER: return "Líheň příšer";
         case SOULED_GRASS: return "Duševní tráva";
         case SOULED_DIRT: return "Duševní hlína";
@@ -748,7 +761,7 @@ float armorReduction(const ItemStack armor[4]) {
 }
 
 int maxStack(ItemId id) {
-    if (const ModItem* m = id >= kModIdBase ? ModRegistry::get().item(id) : nullptr) return m->stack;
+    if (const ModItem* m = isModId(id) ? ModRegistry::get().item(id) : nullptr) return m->stack;
     if (id == WATER_BUCKET || id == LAVA_BUCKET || id == BOSS_COMPASS || id == CAKE || id == MILK_BUCKET || id == MAP || id == ANNIV_MEDAL ||
         id == FORTRESS_COMPASS || id == EXPLORER_MAP || id == WRITABLE_BOOK || id == WRITTEN_BOOK || id == CELESTIAL_COMPASS)
         return 1;
@@ -760,7 +773,7 @@ int maxStack(ItemId id) {
 namespace {
 
 float hardness(ItemId id) {
-    if (const ModBlock* m = id >= kModIdBase ? ModRegistry::get().block(id) : nullptr) return m->hardness;
+    if (const ModBlock* m = isModId(id) ? ModRegistry::get().block(id) : nullptr) return m->hardness;
     switch (id) {
         case BEDROCK: case WATER: case LAVA: case PORTAL: case VOID_PORTAL: case AIR: case WORLD_END: return -1;
         case TNT: case NUKE_TNT: case POWER_CABLE: case POWER_CABLE_ON: case SWITCH: case SWITCH_ON: return 0.0f;
@@ -877,7 +890,7 @@ float hardness(ItemId id) {
 // Which tool speeds a block up, and the tier needed to get a drop at all.
 ToolKind preferredTool(ItemId id, int& requiredTier) {
     requiredTier = 0;
-    if (const ModBlock* m = id >= kModIdBase ? ModRegistry::get().block(id) : nullptr) {
+    if (const ModBlock* m = isModId(id) ? ModRegistry::get().block(id) : nullptr) {
         if (m->tool == "pickaxe") {
             requiredTier = 1;
             return ToolKind::Pickaxe;
@@ -993,8 +1006,11 @@ float breakTime(ItemId block, ItemId tool) {
 }
 
 ItemId dropFor(ItemId block, float roll, ItemId tool) {
+    if (isRailSwitch(block)) return RAIL_SWITCH;  // 2.1.0 preview: every shape drops the plain item
+    if (isBufferStop(block)) return BUFFER_STOP;
+    if (isRail(block)) return RAIL_NS;
     if (!canHarvest(block, tool)) return AIR;
-    if (const ModBlock* m = block >= kModIdBase ? ModRegistry::get().block(block) : nullptr)
+    if (const ModBlock* m = isModId(block) ? ModRegistry::get().block(block) : nullptr)
         return m->drop.empty() ? block : itemFromKey(m->drop);
     switch (block) {
         case GRASS: return DIRT;

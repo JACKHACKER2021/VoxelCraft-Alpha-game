@@ -43,7 +43,8 @@ ItemId doorId(ItemId base, DoorState s) { return (ItemId)(base + (s.facing & 3) 
 bool fenceConnects(ItemId n) { return isFence(n) || isOpaque(n); }
 
 bool cableConnects(ItemId n) {
-    return isCable(n) || isSwitch(n) || isLamp(n) || isTnt(n) || n == POWERSTONE_BLOCK || (isDoor(n) && n >= IRON_DOOR) || isPowerstoneFurnace(n);
+    return isCable(n) || isSwitch(n) || isLamp(n) || isTnt(n) || n == POWERSTONE_BLOCK || (isDoor(n) && n >= IRON_DOOR) || isPowerstoneFurnace(n) ||
+           n == SOUND_BLOCK || n == COMMAND_BLOCK;
 }
 
 // 1.5.7: a torch is a thin stick; on a wall it leans against the block it hangs on.
@@ -88,6 +89,10 @@ int itemBoxes(ItemId id, Box out[kItemBoxes]) {
     }
     if (id == PARTY_LANTERN) {
         out[0] = {3 / 16.0f, 0, 3 / 16.0f, 13 / 16.0f, 13 / 16.0f, 13 / 16.0f};
+        return 1;
+    }
+    if (id == CUSHION) {  // 2.0.0: the cushion as it lies on the floor
+        out[0] = {1 / 16.0f, 0, 1 / 16.0f, 15 / 16.0f, 6 / 16.0f, 15 / 16.0f};
         return 1;
     }
     if (id == CAMPFIRE) {
@@ -152,12 +157,32 @@ int blockBoxes(const World& world, int x, int y, int z, ItemId id, bool collisio
         if (!up && !down && !minus && !plus) up = down = true;  // alone: a straight piece up the wall
         if ((up || down) && !minus && !plus) up = down = true;
         if ((minus || plus) && !up && !down) minus = plus = true;
+        // 2.0.0: a floor wire beside it (along the wall) or in front of it: the wall wire runs down
+        // to the floor and meets it there, so the two are one wire instead of two separate pieces.
+        const ItemId nMinus = world.getBlock(x - tx, y, z - tz), nPlus = world.getBlock(x + tx, y, z + tz);
+        const bool floorMinus = nMinus == POWER_CABLE || nMinus == POWER_CABLE_ON;
+        const bool floorPlus = nPlus == POWER_CABLE || nPlus == POWER_CABLE_ON;
+        const int fx = side == 1 ? -1 : side == 3 ? 1 : 0, fz = side == 0 ? 1 : side == 2 ? -1 : 0;
+        const ItemId nFront = world.getBlock(x + fx, y, z + fz);
+        const bool floorFront = nFront == POWER_CABLE || nFront == POWER_CABLE_ON;
+        // The same with a ceiling wire: the wall wire runs up to the ceiling to meet it.
+        const bool ceilMinus = isCeilingCable(nMinus), ceilPlus = isCeilingCable(nPlus), ceilFront = isCeilingCable(nFront);
+        if ((floorMinus || ceilMinus) && !up && !down) minus = true;
+        if ((floorPlus || ceilPlus) && !up && !down) plus = true;
         int count = 0;
+        const float f = 1 / 16.0f;
         out[count++] = box(lo, hi, lo, hi);
-        if (up) out[count++] = box(lo, hi, hi, 1);
-        if (down) out[count++] = box(lo, hi, 0, lo);
-        if (minus) out[count++] = box(0, lo, lo, hi);
-        if (plus) out[count++] = box(hi, 1, lo, hi);
+        if (up || ceilMinus || ceilPlus || ceilFront) out[count++] = box(lo, hi, hi, 1);
+        if (down || floorMinus || floorPlus || floorFront) out[count++] = box(lo, hi, 0, lo);
+        if (minus) out[count++] = floorMinus ? box(0, hi, 0, f) : ceilMinus ? box(0, hi, 1 - f, 1) : box(0, lo, lo, hi);
+        if (plus) out[count++] = floorPlus ? box(lo, 1, 0, f) : ceilPlus ? box(lo, 1, 1 - f, 1) : box(hi, 1, lo, hi);
+        // A flat strip on the floor (or the ceiling) from the wall to the cell's front edge.
+        auto strip = [&](float y0, float y1) {
+            if (side == 0 || side == 2) out[count++] = {lo, y0, 0, hi, y1, 1};
+            else out[count++] = {0, y0, lo, 1, y1, hi};
+        };
+        if (floorFront) strip(0, f);
+        if (ceilFront && count < 10) strip(1 - f, 1);
         return count;
     }
     if (isCeilingCable(id)) {
@@ -178,6 +203,16 @@ int blockBoxes(const World& world, int x, int y, int z, ItemId id, bool collisio
         if (w) out[count++] = {0, t, lo, lo, 1, hi};
         if (e) out[count++] = {hi, t, lo, 1, 1, hi};
         if (count == 1) out[count++] = {4 / 16.0f, t, lo, 12 / 16.0f, 1, hi};
+        // 2.0.0: a wall cable just below: the wire bends down the wall to meet it.
+        const ItemId below = world.getBlock(x, y - 1, z);
+        if (isWallCable(below) && count < 9) {
+            const int side = wallSide(below);
+            const float d = 1 / 16.0f;
+            if (side == 0) out[count++] = {lo, 0, 0, hi, 1, d}, out[count++] = {lo, t, 0, hi, 1, lo};
+            else if (side == 1) out[count++] = {1 - d, 0, lo, 1, 1, hi}, out[count++] = {hi, t, lo, 1, 1, hi};
+            else if (side == 2) out[count++] = {lo, 0, 1 - d, hi, 1, 1}, out[count++] = {lo, t, hi, hi, 1, 1};
+            else out[count++] = {0, 0, lo, d, 1, hi}, out[count++] = {0, t, lo, lo, 1, hi};
+        }
         return count;
     }
     if (isCable(id)) {
@@ -225,6 +260,34 @@ int blockBoxes(const World& world, int x, int y, int z, ItemId id, bool collisio
     }
     if (id == SNOW_LAYER) {
         out[0] = {0, 0, 0, 1, collision ? 0.01f : 2 / 16.0f, 1};
+        return 1;
+    }
+    if (id == CUSHION) {  // 2.0.0: a soft cushion to sit on
+        out[0] = {1 / 16.0f, 0, 1 / 16.0f, 15 / 16.0f, 6 / 16.0f, 15 / 16.0f};
+        return 1;
+    }
+    if (isBufferStop(id)) {
+        // 2.0.0: a rail piece with a frame and a bumper plate at the end the track runs into
+        // (facing 0: the plate on the north edge, then clockwise).
+        if (collision) {
+            out[0] = {0, 0, 0, 1, 14 / 16.0f, 1};
+            return 1;
+        }
+        const int f = id - BUFFER_STOP;
+        auto rot = [&](Box b) {  // turns a box made for facing 0 (north) about the middle
+            for (int i = 0; i < f; ++i) b = Box{1 - b.z1, b.y0, b.x0, 1 - b.z0, b.y1, b.x1};
+            return b;
+        };
+        int count = 0;
+        out[count++] = {0, 0, 0, 1, 1 / 16.0f, 1};                       // the track bed
+        out[count++] = rot({2 / 16.0f, 1 / 16.0f, 2 / 16.0f, 4 / 16.0f, 12 / 16.0f, 4 / 16.0f});   // two posts
+        out[count++] = rot({12 / 16.0f, 1 / 16.0f, 2 / 16.0f, 14 / 16.0f, 12 / 16.0f, 4 / 16.0f});
+        out[count++] = rot({1 / 16.0f, 7 / 16.0f, 0, 15 / 16.0f, 12 / 16.0f, 2 / 16.0f});   // the bumper plate
+        out[count++] = rot({3 / 16.0f, 2 / 16.0f, 4 / 16.0f, 13 / 16.0f, 4 / 16.0f, 12 / 16.0f});  // a brace back along the track
+        return count;
+    }
+    if (isRail(id)) {  // 2.1.0 preview: a flat track on the ground
+        out[0] = {0, 0, 0, 1, collision ? 0.01f : 1 / 16.0f, 1};
         return 1;
     }
     if (isCarpet(id) || id == LEAF_LITTER) {

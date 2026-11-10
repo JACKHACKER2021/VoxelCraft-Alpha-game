@@ -9,6 +9,9 @@ namespace vc {
 using ItemId = uint16_t;
 constexpr int kItemIdLimit = 65000;  // ids are 1..64999; 0 is air
 constexpr int kModIdBase = 2000;     // blocks and items of VoxelCraft Mods (see Mods.h) start here
+// 2.0.0: the engine's own ids above the mods (the ids under 2000 are all taken): 60000..64999.
+constexpr int kExtIdBase = 60000;
+inline bool isModId(int id) { return id >= kModIdBase && id < kExtIdBase; }
 
 enum BlockId : uint16_t {
     AIR = 0,
@@ -233,6 +236,20 @@ enum BlockId : uint16_t {
     HONEY_BLOCK = 1583,       // sticky: slows you down, no fall damage on it
     STRUCTURE_BLOCK = 1584,   // saves and loads a box of blocks as a structure
     BARRIER = 1585,           // an invisible wall (seen only with a barrier in hand)
+    // 2.0.0: plays a sound when tapped or when powerstone powers it (tap to pick the sound).
+    SOUND_BLOCK = 1587,
+    // 2.1.0 preview (experiment): rails. 1588 north-south, 1589 east-west, 1590..1593 curves
+    // (north-east, east-south, south-west, west-north), switches 1594..1599 and 1647..1648.
+    RAIL_NS = 1588,
+    RAIL_EW = 1589,
+    RAIL_CURVE = 1590,
+    // (1594..1599 stay free.) In the engine's own range above the mods (kExtIdBase):
+    RAIL_SWITCH = 60000,      // 60000..60007: four facings, straight or turned
+    CUSHION = 60008,          // 2.0.0: a cushion to sit on
+    BUFFER_STOP = 60009,      // 60009..60012: the end of a track, by facing
+    LOCOMOTIVE = 60013,       // 2.1.0 preview: put on a rail, they make a train (items, not blocks)
+    PASSENGER_WAGON = 60014,
+    FREIGHT_WAGON = 60015,
     COMMAND_BLOCK = 1586,     // runs its command when powerstone powers it  // 1.7.2 build 3: a barrel of the Overworld camps, filled the first time it opens
     EGG_HUSKING = 1307,
     // Blocks of the forgotten civilization, the wasteland and the fortress.
@@ -493,6 +510,13 @@ inline ItemId slabId(int material, int half) {  // 0 bottom, 1 top, 2 double
 }
 inline bool isStainedGlass(ItemId id) { return id >= STAINED_GLASS && id < STAINED_GLASS + 16; }
 inline bool isDripstoneSpike(ItemId id) { return id == DRIPSTONE_UP || id == DRIPSTONE_DOWN; }
+// 2.1.0 preview rails. A switch: facing 0-3 (the way its straight track runs, 0 = north-south with
+// the branch to the east, then turned clockwise), state 0 straight, 1 turned onto the branch.
+inline ItemId railSwitchId(int facing, int state) { return (ItemId)(RAIL_SWITCH + (facing & 3) * 2 + (state & 1)); }
+inline int railSwitchIndex(ItemId id) { return id >= RAIL_SWITCH && id < RAIL_SWITCH + 8 ? id - RAIL_SWITCH : -1; }
+inline bool isRailSwitch(ItemId id) { return railSwitchIndex(id) >= 0; }
+inline bool isBufferStop(ItemId id) { return id >= BUFFER_STOP && id < BUFFER_STOP + 4; }
+inline bool isRail(ItemId id) { return id == RAIL_NS || id == RAIL_EW || (id >= RAIL_CURVE && id < RAIL_CURVE + 4) || isRailSwitch(id); }
 // Blocks with ids from 1000 up (everything else up there is an item).
 inline bool isBalloon(ItemId id) { return id >= BALLOON && id < BALLOON + 3; }
 inline bool isPaintedPlanks(ItemId id) { return id >= PAINTED_PLANKS && id < PAINTED_PLANKS + 4; }
@@ -506,9 +530,10 @@ bool modIsTransparent(ItemId id);
 bool modIsEmissive(ItemId id);
 int modFood(ItemId id);
 inline bool isNewBlock(ItemId id) {
-    if (id >= kModIdBase) return modIsBlock(id);
+    if (id >= RAIL_SWITCH && id < BUFFER_STOP + 4) return true;  // 2.0.0: the engine's own range
+    if (isModId(id)) return modIsBlock(id);
     return isStairs(id) || isSlab(id) || (id >= TAR && id <= SNOW_LAYER) || isStainedGlass(id) || (id >= WALL_CABLE && id < WALL_CABLE + 8) || (id >= WALL_SWITCH && id < WALL_SWITCH + 8) ||
-           (id >= ANNIV_LOGO && id <= PAINTED_PLANKS + 3) || (id >= POWERSTONE_BRICKS && id <= COMMAND_BLOCK && id != 1518 && id != 1519) ||
+           (id >= ANNIV_LOGO && id <= PAINTED_PLANKS + 3) || (id >= POWERSTONE_BRICKS && id <= COMMAND_BLOCK && id != 1518 && id != 1519) || (id >= SOUND_BLOCK && id <= RAIL_CURVE + 3) || (id >= RAIL_SWITCH && id < BUFFER_STOP + 4) ||
            (id >= CONCRETE_POWDER && id <= LOOT_CHEST_CHAMBER);
 }
 // The full block a stair or slab is cut from (its texture, hardness and tool).
@@ -606,6 +631,10 @@ enum Tile : uint16_t {
     T_LEAF_LITTER,  // 1.9.5
     T_CELESTIAL_WINGS, T_WINGS_PLATE,
     T_HONEY_BLOCK, T_HONEY_BLOCK_TOP, T_HONEY_BALL, T_STRUCTURE_BLOCK, T_BARRIER, T_COMMAND_BLOCK, T_COMMAND_BLOCK_SIDE,  // 1.9.5 build 3
+    T_SOUND_BLOCK, T_SOUND_BLOCK_TOP, T_RAIL_NS, T_RAIL_EW, T_RAIL_CURVE0, T_RAIL_CURVE1, T_RAIL_CURVE2, T_RAIL_CURVE3,
+    T_RAIL_SWITCH0, T_RAIL_SWITCH1, T_RAIL_SWITCH2, T_RAIL_SWITCH3, T_RAIL_SWITCH4, T_RAIL_SWITCH5, T_RAIL_SWITCH6, T_RAIL_SWITCH7,  // 2.0.0
+    T_CUSHION_TOP, T_CUSHION_SIDE, T_BUFFER_STOP, T_BUFFER_PLATE,
+    T_TRAIN_PALETTE, T_LOCOMOTIVE_ITEM, T_PASSENGER_WAGON_ITEM, T_FREIGHT_WAGON_ITEM,
     T_CELESTLING_BODY, T_CELESTLING_FACE, T_STALKER_BODY, T_STALKER_FACE, T_DRIFTER_BODY, T_DRIFTER_FACE, T_DRIFTER_WING,
     T_COUNT
 };
@@ -661,7 +690,7 @@ inline bool isBed(ItemId id) { return id >= BED && id < BED + 8; }
 inline bool isShaped(ItemId id) {
     return isDoor(id) || isTrapdoor(id) || isChest(id) || isFence(id) || isSkeletonHead(id) || id == CACTUS || isBed(id) || isCable(id) ||
            isSwitch(id) || id == CAKE || id == FARMLAND || isStairs(id) || (isSlab(id) && !isDoubleSlab(id)) ||
-           isBalloon(id) || id == PARTY_LANTERN || id == SNOW_LAYER || isTorch(id) || isCarpet(id) || id == CAMPFIRE || id == LEAF_LITTER;
+           isBalloon(id) || id == PARTY_LANTERN || id == SNOW_LAYER || isTorch(id) || isCarpet(id) || id == CAMPFIRE || id == LEAF_LITTER || isRail(id) || id == CUSHION || isBufferStop(id);
 }
 inline bool isLeaves(ItemId id) { return id == LEAVES || id == SPRUCE_LEAVES || id == VOID_LEAVES || id == NETHERPERK_CAP || id == CELESTIAL_LEAVES ||
                                          (id >= RED_LEAVES && id <= YELLOW_LEAVES) || id == CRIMSONIUM_LEAVES; }
@@ -681,13 +710,13 @@ inline bool isTargetable(ItemId id) { return isSolid(id) || isPlant(id); }
 inline bool isOpaque(ItemId id) {
     return isSolid(id) && !isLeaves(id) && id != GLASS && id != POWERSTONE_GLASS && !isShaped(id) && !isStainedGlass(id) && id != BARRIER &&
            id != HONEY_BLOCK &&
-           !(id >= kModIdBase && modIsTransparent(id));
+           !(isModId(id) && modIsTransparent(id));
 }
 // Rendered at full brightness regardless of shading.
 inline bool isEmissive(ItemId id) {
     return id == LAVA || isPortal(id) || id == LIT_FURNACE || id == EYE_LOG || id == POWERSTONE_LIGHT ||
            id == POWERSTONE_LAMP_ON || id == NETHERPERK_CAP || cableOn(id) || id == POWERSTONE_BLOCK ||
-           id == PARTY_LANTERN || id == ANNIV_LOGO || id == VOID_BRICK_EYE || isTorch(id) || id == FUNGAL_DEEPSTONE || id == VOID_SHARD_BLOCK || id == SHARD_CLUSTER || id == FIRE || id == CAMPFIRE || id == PALE_CRYSTAL || (id >= kModIdBase && modIsEmissive(id));
+           id == PARTY_LANTERN || id == ANNIV_LOGO || id == VOID_BRICK_EYE || isTorch(id) || id == FUNGAL_DEEPSTONE || id == VOID_SHARD_BLOCK || id == SHARD_CLUSTER || id == FIRE || id == CAMPFIRE || id == PALE_CRYSTAL || (isModId(id) && modIsEmissive(id));
 }
 inline bool isFurnace(ItemId id) { return id == FURNACE || id == LIT_FURNACE || id == POWERSTONE_FURNACE || id == POWERSTONE_FURNACE_ON; }
 inline bool isPowerstoneFurnace(ItemId id) { return id == POWERSTONE_FURNACE || id == POWERSTONE_FURNACE_ON; }
@@ -705,7 +734,7 @@ inline int lightLevel(ItemId id) {
         case POWER_CABLE_ON: return 6;
         default:
             if (cableOn(id)) return 6;
-            return id >= kModIdBase && modIsEmissive(id) ? 14 : 0;
+            return isModId(id) && modIsEmissive(id) ? 14 : 0;
     }
 }
 // Wool colour 0 (white) to 15 (black), or -1 for other blocks.
@@ -718,7 +747,7 @@ inline bool isArmor(ItemId id) {
 inline bool isTranslucent(ItemId id) { return id == WATER || isPortal(id) || isStainedGlass(id) || id == HONEY_BLOCK; }  // 1.7.0: ice is solid (no see-through grid)
 inline bool isFood(ItemId id) {
     return id == APPLE || (id >= RAW_PORK && id <= COOKED_MUTTON) || id == CANDY_CANE || id == BREAD || id == HONEY_BALL ||
-           (id >= RAW_CHICKEN && id <= STEAK) || id == MILK_BUCKET || (id >= kModIdBase && modFood(id) > 0);
+           (id >= RAW_CHICKEN && id <= STEAK) || id == MILK_BUCKET || (isModId(id) && modFood(id) > 0);
 }
 // Old saves (chunk format VCC1) still hold the Nether blocks removed in 1.2.0, whose ids 1.3.0 reuses.
 inline ItemId upgradeLegacyBlock(ItemId id) {
@@ -879,6 +908,13 @@ inline int tileFor(ItemId id, Face face) {
             if (id >= CONCRETE_POWDER && id < CONCRETE_POWDER + 16) return T_CONCRETE_POWDER + (id - CONCRETE_POWDER);
             if (isColorConcrete(id)) return T_CONCRETE + (id - CONCRETE);
             if (isDye(id)) return T_DYE + (id - DYE);
+            if (id >= RAIL_CURVE && id < RAIL_CURVE + 4) return T_RAIL_CURVE0 + (id - RAIL_CURVE);
+            if (isRailSwitch(id)) return T_RAIL_SWITCH0 + railSwitchIndex(id);
+            if (id == CUSHION) return face == F_TOP ? T_CUSHION_TOP : T_CUSHION_SIDE;
+            if (id == LOCOMOTIVE) return T_LOCOMOTIVE_ITEM;
+            if (id == PASSENGER_WAGON) return T_PASSENGER_WAGON_ITEM;
+            if (id == FREIGHT_WAGON) return T_FREIGHT_WAGON_ITEM;
+            if (isBufferStop(id)) return face == F_TOP || face == F_BOTTOM ? T_BUFFER_STOP : T_BUFFER_PLATE;
             switch (id) {
                 case CRIMSONIUM_LOG: return face == F_TOP || face == F_BOTTOM ? T_CRIMSONIUM_LOG_TOP : T_CRIMSONIUM_LOG_SIDE;
                 case CRIMSONIUM_PLANKS: return T_CRIMSONIUM_PLANKS;
@@ -902,6 +938,9 @@ inline int tileFor(ItemId id, Face face) {
                 case STRUCTURE_BLOCK: return T_STRUCTURE_BLOCK;
                 case BARRIER: return T_BARRIER;
                 case COMMAND_BLOCK: return face == F_TOP || face == F_BOTTOM ? T_COMMAND_BLOCK_SIDE : T_COMMAND_BLOCK;
+                case SOUND_BLOCK: return face == F_TOP ? T_SOUND_BLOCK_TOP : T_SOUND_BLOCK;
+                case RAIL_NS: return T_RAIL_NS;
+                case RAIL_EW: return T_RAIL_EW;
                 case FIRE: return T_FIRE;
                 case CAMPFIRE: return face == F_TOP ? T_CAMPFIRE_TOP : face == F_BOTTOM ? T_LOG_TOP : T_CAMPFIRE_SIDE;
                 case CELESTIUM: return T_CELESTIUM;
@@ -913,7 +952,7 @@ inline int tileFor(ItemId id, Face face) {
                 case CELESTIAL_WINGS: return T_CELESTIAL_WINGS;
                 default: break;
             }
-            if (id >= kModIdBase) return modTileFor(id, face);
+            if (isModId(id)) return modTileFor(id, face);
             if (isStairs(id) || isSlab(id)) return tileFor(shapeMaterial(id), face);
             if (isStainedGlass(id)) return T_STAINED_GLASS + (id - STAINED_GLASS);
             if (isBalloon(id)) return T_BALLOON + (id - BALLOON);

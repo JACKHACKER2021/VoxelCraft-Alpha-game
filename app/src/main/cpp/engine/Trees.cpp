@@ -112,7 +112,8 @@ bool leafSupported(const World& w, int x, int y, int z) {
 // ---------------------------------------------------------------- powerstone
 
 bool isPowerBlock(ItemId id) {
-    return isCable(id) || isSwitch(id) || isLamp(id) || id == POWERSTONE_BLOCK || isTnt(id) || (isDoor(id) && id >= IRON_DOOR);
+    return isCable(id) || isSwitch(id) || isLamp(id) || id == POWERSTONE_BLOCK || isTnt(id) || (isDoor(id) && id >= IRON_DOOR) ||
+           id == SOUND_BLOCK || id == COMMAND_BLOCK;
 }
 
 namespace {

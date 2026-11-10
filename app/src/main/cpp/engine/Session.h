@@ -8,6 +8,7 @@
 
 #include "Audio.h"
 #include "Boats.h"
+#include "Trains.h"
 #include "Mobs.h"
 #include "Trees.h"
 #include "Drops.h"
@@ -199,7 +200,12 @@ public:
     const std::vector<Arrow>& arrows() const { return arrows_; }
     float bowCharge() const { return bowCharge_; }
     void shootArrow(const Vec3& dir, float power);
-    bool riding() const { return riding_ >= 0; }
+    bool riding() const { return riding_ >= 0 || seated_ || trainSeatTrain_ >= 0; }
+    TrainSystem& trains() { return trains_; }  // 2.1.0 preview
+    void setRailsExperiment(bool on) { info_.expRails = on; }  // for the film tool
+    // 2.0.0: sitting on a cushion (tap it; the jump button stands up).
+    bool seated_ = false;
+    int seatX_ = 0, seatY_ = 0, seatZ_ = 0;
     void exitBoat();
     const Minimap& minimap() const { return minimap_; }
     const PaperMaps& paperMaps() const { return paperMaps_; }
@@ -303,6 +309,18 @@ private:
     void achieve(const char* id) const { if (survival() && onAchievement) onAchievement(id); }
     void checkAchievements();
     BoatSystem boats_;
+    // 2.1.0 preview: trains. Where the player sits in one (-1: not in a train); seat 0 of a
+    // locomotive is the driver's seat.
+    TrainSystem trains_;
+    int trainSeatTrain_ = -1, trainSeatCar_ = 0, trainSeat_ = 0;
+    struct TrainButtons {
+        float x = 0, y = 0, w = 0, h = 0, gap = 0;
+        int count = 0;
+        const char* labels[5] = {};
+    };
+    TrainButtons trainButtons() const;
+    bool trainButtonTap(float x, float y);
+    void leaveTrain();
     MobSystem mobs_;
     // 1.2.0: lit TNT, growing saplings, leaves about to fall.
     struct PrimedTnt {
@@ -364,6 +382,10 @@ public:
     FurnaceKey blockEditorKey;
     std::string blockText(const FurnaceKey& key) const;
     std::string setBlockText(const FurnaceKey& key, const std::string& text);  // returns a message
+    // 2.0.0: the sound block: which sound it plays (kept with the block texts).
+    static constexpr int kSoundBlockSounds = 10;
+    static const char* soundBlockName(int i);
+    void playSoundBlock(const FurnaceKey& key);
     void powerChangedAt(int x, int y, int z) { powerChanged(x, y, z); }  // tests
 private:
 public:

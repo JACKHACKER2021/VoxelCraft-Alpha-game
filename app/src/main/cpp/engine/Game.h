@@ -346,7 +346,7 @@ private:
     int newWorldFlatPreset_ = 0;  // 1.9.0 the look of a flat world
     bool newWorldBounded_ = false;  // 1.9.5 build 2: the classic bounded world
     int newWorldBoundSize_ = 0, newWorldSeedPreset_ = 0;
-    bool newWorldExpStorms_ = false, newWorldExpStars_ = false, newWorldExpBreeding_ = false;  // 1.9.0 build 3
+    bool newWorldExpStorms_ = false, newWorldExpStars_ = false, newWorldExpBreeding_ = false, newWorldExpRails_ = false;  // 1.9.0 build 3; 2.0.0 rails
     bool newWorldFlat_ = false, newWorldCoords_ = false, newWorldKeepInventory_ = false, newWorldCommands_ = false;
     bool newWorldExpLiquids_ = false, newWorldExpMaps_ = false, newWorldExpOpen_ = false;  // 1.5.1 Experimental Features
     int settingsTab_ = 0;

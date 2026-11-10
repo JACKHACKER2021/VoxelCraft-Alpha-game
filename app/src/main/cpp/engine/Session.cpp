@@ -154,6 +154,7 @@ Session::Session(const WorldInfo& info, const PlayerState& player)
     drops_.load(info.folder);
     chests_ = loadChests(info.folder);
     boats_.load(info.folder);
+    trains_.load(info.folder);
     mobs_.load(info.folder);
     paperMaps_.load(info.folder);
     loadTimers();
@@ -228,6 +229,7 @@ void Session::save() {
     drops_.save(info_.folder);
     saveChests(info_.folder, chests_);
     boats_.save(info_.folder);
+    trains_.save(info_.folder);
     mobs_.save(info_.folder);
     paperMaps_.save(info_.folder);
     saveTimers();
@@ -694,6 +696,22 @@ void Session::scheduleLeafDecay(int x, int y, int z) {
             }
 }
 
+namespace {
+const Sound kSoundBlockList[] = {Sound::Click, Sound::Coin, Sound::Door, Sound::Chest, Sound::Glass, Sound::Splash,
+                                 Sound::Thunder, Sound::Explode, Sound::Grunt, Sound::Confirm};
+const char* const kSoundBlockNames[] = {"Cvaknutí", "Mince", "Dveře", "Truhla", "Sklo", "Šplouchnutí", "Hrom", "Výbuch", "Zabručení", "Zvonek"};
+}  // namespace
+
+const char* Session::soundBlockName(int i) { return kSoundBlockNames[((i % kSoundBlockSounds) + kSoundBlockSounds) % kSoundBlockSounds]; }
+
+void Session::playSoundBlock(const FurnaceKey& key) {
+    const int i = std::atoi(blockText(key).c_str());
+    sound(kSoundBlockList[((i % kSoundBlockSounds) + kSoundBlockSounds) % kSoundBlockSounds]);
+    // A little note rises from the block.
+    for (int i = 0; i < 3; ++i)
+        particles_.spawnAmbient(*world_, Vec3(key.x + 0.3f + 0.2f * i, key.y + 1.1f, key.z + 0.5f), Vec3(0, 1.2f, 0), SOUND_BLOCK, 0.8f, 0.18f, 0, 1.2f);
+}
+
 void Session::powerChanged(int x, int y, int z) {
     std::vector<std::array<int, 3>> ignite;
     updatePower(*world_, x, y, z, ignite);
@@ -702,7 +720,8 @@ void Session::powerChanged(int x, int y, int z) {
         for (int dy = -2; dy <= 2; ++dy)
             for (int dz = -2; dz <= 2; ++dz) {
                 const int cx = x + dx, cy = y + dy, cz = z + dz;
-                if (world_->getBlock(cx, cy, cz) != COMMAND_BLOCK) continue;
+                const ItemId here = world_->getBlock(cx, cy, cz);
+                if (here != COMMAND_BLOCK && here != SOUND_BLOCK) continue;
                 bool powered = false;
                 static const int k6[6][3] = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
                 for (const auto& o : k6) {
@@ -710,7 +729,10 @@ void Session::powerChanged(int x, int y, int z) {
                     powered |= cableOn(n) || switchOn(n) || n == POWERSTONE_BLOCK;
                 }
                 const FurnaceKey key{dimIndex(), cx, cy, cz};
-                if (powered && poweredCommands_.insert(key).second) runCommandBlock(key);
+                if (powered && poweredCommands_.insert(key).second) {
+                    if (here == SOUND_BLOCK) playSoundBlock(key);  // 2.0.0
+                    else runCommandBlock(key);
+                }
                 if (!powered) poweredCommands_.erase(key);
             }
     for (int dx = -1; dx <= 1; ++dx)
@@ -1483,7 +1505,9 @@ void Session::touchDown(int id, float x, float y, double time) {
         }
         return;
     }
-    if (in(l.hotbarX, l.hotbarY, l.slot * 9, l.slot)) {
+    if (trainButtonTap(x, y)) {
+        t->kind = Touch::None;  // 2.1.0 preview: get in, throttle, brake, get out
+    } else if (in(l.hotbarX, l.hotbarY, l.slot * 9, l.slot)) {
         t->kind = Touch::Hotbar;
         selectSlot((int)((x - l.hotbarX) / l.slot));
     } else if (paperShown_ && in(guiW_ / 2 - std::min(guiH_ * 0.62f, 170.0f) / 2, 26, std::min(guiH_ * 0.62f, 170.0f),
@@ -1506,7 +1530,12 @@ void Session::touchDown(int id, float x, float y, double time) {
         t->kind = Touch::Map;
     } else if (in(l.jumpX, l.jumpY, l.buttonSize, l.buttonSize)) {
         t->kind = Touch::Jump;
-        if (riding_ >= 0) {
+        if (trainSeatTrain_ >= 0) {
+            leaveTrain();
+        } else if (seated_) {
+            seated_ = false;  // stand up from the cushion
+            player_.pos.y = seatY_ + 6 / 16.0f + 0.05f;
+        } else if (riding_ >= 0) {
             exitBoat();  // the jump button gets out of the boat
         } else if (!survival() || settings_.devFly) {
             if (time - lastJumpTap_ < kDoubleTap) {
@@ -1570,7 +1599,25 @@ void Session::touchUp(int id, float x, float y, double time) {
                 int boat = pickBoat(x, y), mob = pickMob(x, y);
                 ItemStack& heldNow = state_.inventory.slots[state_.selectedSlot];
                 const bool powerstone = heldNow.id == POWERSTONE_DUST || heldNow.id == POWERSTONE_CHIP || heldNow.id == POWERSTONE_BLOCK;
-                if (mob >= 0 && mobs_.mobs()[mob].type == MobType::Villager) {
+                // 2.1.0 preview: a tap on a car takes it off the track (back into the inventory in survival).
+                int trainCar = -1;
+                if (heldNow.id != LOCOMOTIVE && heldNow.id != PASSENGER_WAGON && heldNow.id != FREIGHT_WAGON && trainSeatTrain_ < 0) {
+                    float dist;
+                    trainCar = trains_.pick(dimIndex(), camera_.eye(), rayThroughScreen(x, y), Player::kReach + cameraDistance_, dist);
+                    if (trainCar >= 0) {
+                        const RayHit block = pick(x, y);
+                        if (block.hit && (Vec3(block.x + 0.5f, block.y + 0.5f, block.z + 0.5f) - camera_.eye()).length() < dist) trainCar = -1;
+                    }
+                }
+                if (trainCar >= 0) {
+                    const int ti = trainCar / 64, ci = trainCar % 64;
+                    const CarKind kind = trains_.trains()[(size_t)ti].cars[(size_t)ci].kind;
+                    trains_.removeCar(ti, ci);
+                    if (survival())
+                        giveItem({kind == CarKind::Locomotive ? LOCOMOTIVE : kind == CarKind::Passenger ? PASSENGER_WAGON : FREIGHT_WAGON, 1, 0});
+                    hand_.use();
+                    sound(Sound::DoorIron);
+                } else if (mob >= 0 && mobs_.mobs()[mob].type == MobType::Villager) {
                     wantsTrade = mob;  // villagers trade instead of being hit
                 } else if (mob >= 0 && mobs_.mobs()[mob].type == MobType::Hogman && powerstone && mobs_.mobs()[mob].barter <= 0) {
                     // 1.5.7: a hog man takes powerstone, calms down and pays for it after a look.
@@ -1627,6 +1674,20 @@ void Session::touchUp(int id, float x, float y, double time) {
                         if (survival()) state_.inventory.removeOne(state_.selectedSlot);
                         hand_.place();
                         sound(Sound::Place);
+                    }
+                } else if (const ItemId held = state_.inventory.slots[state_.selectedSlot].id;
+                           held == LOCOMOTIVE || held == PASSENGER_WAGON || held == FREIGHT_WAGON) {
+                    // 2.1.0 preview: a car goes on the rail the player taps.
+                    const RayHit h = pick(x, y);
+                    const Vec3 f = player_.forward();
+                    const int look = std::fabs(f.x) > std::fabs(f.z) ? (f.x > 0 ? 1 : 3) : (f.z > 0 ? 2 : 0);
+                    const CarKind kind = held == LOCOMOTIVE ? CarKind::Locomotive : held == PASSENGER_WAGON ? CarKind::Passenger : CarKind::Freight;
+                    if (h.hit && isRail(world_->getBlock(h.x, h.y, h.z)) && trains_.place(*world_, dimIndex(), kind, h.x, h.y, h.z, look)) {
+                        if (survival()) state_.inventory.removeOne(state_.selectedSlot);
+                        hand_.place();
+                        sound(Sound::DoorIron);
+                    } else if (onMessage) {
+                        onMessage(tr("Vlak se dává na kolej (za poslední vagon, nebo na volnou kolej)."));
                     }
                 } else {
                     useItem(pick(x, y));
@@ -2433,6 +2494,33 @@ void Session::useItem(const RayHit& hit) {
             sleepInBed(hit.x, hit.y, hit.z);
             return;
         }
+        if (block == CUSHION && !player_.sneaking) {
+            // 2.0.0: sit down on the cushion.
+            seated_ = true;
+            seatX_ = hit.x, seatY_ = hit.y, seatZ_ = hit.z;
+            player_.flying = false;
+            player_.vel = {};
+            hand_.use();
+            return;
+        }
+        if (block == SOUND_BLOCK) {
+            // 2.0.0: a tap picks the next sound and plays it; powerstone plays the chosen one.
+            const FurnaceKey key{dimIndex(), hit.x, hit.y, hit.z};
+            const int next = (std::atoi(blockText(key).c_str()) + 1) % kSoundBlockSounds;
+            blockTexts_[key] = std::to_string(next);
+            playSoundBlock(key);
+            if (onMessage) onMessage(trf("Zvukový blok: {0}", {tr(soundBlockName(next))}));
+            hand_.use();
+            return;
+        }
+        if (isRailSwitch(block)) {
+            // 2.1.0 preview: a tap throws the switch.
+            const int k = railSwitchIndex(block);
+            w.setBlock(hit.x, hit.y, hit.z, railSwitchId(k / 2, 1 - k % 2));
+            hand_.use();
+            sound(Sound::Click);
+            return;
+        }
         if (isSwitch(block)) {
             w.setBlock(hit.x, hit.y, hit.z, toggledSwitch(block));
             powerChanged(hit.x, hit.y, hit.z);
@@ -2492,7 +2580,7 @@ void Session::useItem(const RayHit& hit) {
     if (isFood(held.id)) {
         // Hunger points and saturation like the classic foods.
         float food = 4, saturation = 2.4f;
-        if (held.id >= kModIdBase) food = (float)modFood(held.id), saturation = food * 0.6f;
+        if (isModId(held.id)) food = (float)modFood(held.id), saturation = food * 0.6f;
         if (held.id == RAW_PORK) food = 3, saturation = 1.8f;
         if (held.id == COOKED_PORK) food = 8, saturation = 12.8f;
         if (held.id == RAW_MUTTON) food = 2, saturation = 1.2f;
@@ -2621,6 +2709,34 @@ void Session::useItem(const RayHit& hit) {
         place = (ItemId)((held.id == POWER_CABLE ? WALL_CABLE : WALL_SWITCH) + side);
     }
     if (held.id == POWER_CABLE && hit.ny < 0) place = CEILING_CABLE;  // 1.5.7: under a ceiling
+    if (isBufferStop(held.id)) {
+        // The plate faces the way the player looks: the track runs towards it.
+        const Vec3 f = player_.forward();
+        const int look = std::fabs(f.x) > std::fabs(f.z) ? (f.x > 0 ? 1 : 3) : (f.z > 0 ? 2 : 0);
+        place = (ItemId)(BUFFER_STOP + look);
+    }
+    if (isRail(held.id)) {
+        // 2.1.0 preview: rails need ground, and take their shape from the rails around them.
+        if (!isSolid(w.getBlock(x, y - 1, z)) || isRail(w.getBlock(x, y - 1, z))) return;
+        const Vec3 f = player_.forward();
+        const int look = std::fabs(f.x) > std::fabs(f.z) ? (f.x > 0 ? 1 : 3) : (f.z > 0 ? 2 : 0);  // 0 north, 1 east...
+        if (isRailSwitch(held.id)) {
+            place = railSwitchId(look, 0);
+        } else {
+            const bool n = isRail(w.getBlock(x, y, z - 1)), so = isRail(w.getBlock(x, y, z + 1));
+            const bool e = isRail(w.getBlock(x + 1, y, z)), we = isRail(w.getBlock(x - 1, y, z));
+            if ((n || so) && (e || we)) {
+                // A curve: north-east, east-south, south-west or west-north.
+                place = (ItemId)(RAIL_CURVE + (n && e ? 0 : so && e ? 1 : so && we ? 2 : 3));
+            } else if (e || we) {
+                place = RAIL_EW;
+            } else if (n || so) {
+                place = RAIL_NS;
+            } else {
+                place = (look == 1 || look == 3) ? RAIL_EW : RAIL_NS;
+            }
+        }
+    }
     if (!w.setBlock(x, y, z, place)) return;
     // A sapling grows into a tree after 20 seconds (5 with the fast growth experiment).
     if (isSapling(held.id)) saplings_.push_back({dimIndex(), x, y, z, settings_.expFastGrowth ? 5.0f : 20.0f});
@@ -3150,7 +3266,29 @@ void Session::update(float dt, double time, float guiW, float guiH, const Settin
     int pcz = floorDiv((int)std::floor(player_.pos.z), kChunkSize);
     bool jumped = false;
     // Only simulate the player once the ground below exists.
-    if (riding_ >= 0) {
+    // 2.1.0 preview: the trains move; a player standing in one rides along, a seated one sits still in it.
+    trains_.update(*world_, dimIndex(), dt, player_.pos, player_.yaw, trainSeatTrain_ >= 0);
+    if (trainSeatTrain_ >= 0 && (trainSeatTrain_ >= (int)trains_.trains().size() ||
+                                 trainSeatCar_ >= (int)trains_.trains()[(size_t)trainSeatTrain_].cars.size()))
+        trainSeatTrain_ = -1;
+    if (seated_ && world_->getBlock(seatX_, seatY_, seatZ_) != CUSHION) seated_ = false;  // the cushion is gone
+    if (trainSeatTrain_ >= 0) {
+        const TrainCar& car = trains_.trains()[(size_t)trainSeatTrain_].cars[(size_t)trainSeatCar_];
+        boats_.update(*world_, dimIndex(), dt, -1, 0, 0, 0);
+        player_.pos = trains_.seatPos(car, trainSeat_);
+        player_.vel = {};
+        player_.fallDistance = 0;
+        player_.onGround = true;
+        player_.walked = 0;
+    } else if (seated_) {
+        // On a cushion: the player sits still on it and can only look around.
+        boats_.update(*world_, dimIndex(), dt, -1, 0, 0, 0);
+        player_.pos = Vec3(seatX_ + 0.5f, seatY_ + 0.1f, seatZ_ + 0.5f);
+        player_.vel = {};
+        player_.fallDistance = 0;
+        player_.onGround = true;
+        player_.walked = 0;
+    } else if (riding_ >= 0) {
         // In a boat: the D-pad rows the boat and the player sits in it.
         boats_.update(*world_, dimIndex(), dt, riding_, moveZ, moveX, player_.yaw);
         const Boat& b = boats_.boats()[riding_];
@@ -3165,6 +3303,11 @@ void Session::update(float dt, double time, float guiW, float guiH, const Settin
         if (world_->getChunk(pcx, pcz)) {
             jumped = jump && player_.onGround && !player_.flying;
             player_.update(*world_, dt, moveX, moveZ, jump, descend);
+            // 2.1.0 preview: the cars are solid; walk in by their doors, stand on their floors.
+            if (!player_.flying && trains_.collide(dimIndex(), player_.pos, player_.vel)) {
+                player_.onGround = true;
+                player_.fallDistance = 0;
+            }
         }
     }
     if (!survival() && player_.pos.y < -20) {
@@ -3478,6 +3621,7 @@ void Session::render(Renderer& renderer, Ui& ui, const Settings& settings, bool 
     if (!fireballVerts_.empty()) renderer.drawParticles(fireballVerts_);
     if (!mobVerts_.empty()) renderer.drawParticles(mobVerts_);
     boats_.buildVertices(dimIndex(), boatVerts_);
+    trains_.buildVertices(dimIndex(), boatVerts_);  // 2.1.0 preview: the trains go with the boats
     if (!boatVerts_.empty()) renderer.drawParticles(boatVerts_);
     drops_.buildVertices(dimIndex(), clock_, dropVerts_);
     if (!dropVerts_.empty()) renderer.drawParticles(dropVerts_);
@@ -3523,7 +3667,7 @@ PlayerPose Session::pose() const {
     pose.feet = player_.pos;
     pose.yaw = player_.yaw;
     pose.headPitch = player_.pitch;
-    pose.swing = riding_ >= 0 ? 0 : swing_;
+    pose.swing = riding_ >= 0 || seated_ ? 0 : swing_;
     // The same strokes as the first-person hand, with what is really held and worn.
     pose.attack = hand_.swingProgress();
     pose.place = hand_.placeProgress();
@@ -3532,7 +3676,7 @@ PlayerPose Session::pose() const {
     // 1.5.7: only a shield or a torch shows in the off hand.
     if (state_.offhand.id == SHIELD || state_.offhand.id == TORCH) pose.offhand = state_.offhand.id;
     pose.sneaking = player_.sneaking && !player_.flying && riding_ < 0;
-    pose.riding = riding_ >= 0;
+    pose.riding = riding_ >= 0 || seated_ || trainSeatTrain_ >= 0;
     if (pose.riding) pose.feet.y -= 0.45f;  // sitting in the boat
     return pose;
 }
@@ -3704,7 +3848,99 @@ void Session::drawOldHud(Ui& ui) const {
     ui.fill(guiW_ / 2, guiH_ / 2 - 4, 1, 9, {1, 1, 1, 0.8f});
 }
 
+Session::TrainButtons Session::trainButtons() const {
+    TrainButtons b;
+    if (dead_ || trains_.trains().empty()) return b;  // trains exist only in worlds with the rails experiment
+    b.w = 66, b.h = 20, b.gap = 4;
+    b.x = guiW_ - b.w - 8;
+    b.y = std::max(guiH_ * 0.30f, 84.0f);  // below the minimap
+    if (trainSeatTrain_ >= 0) {
+        const bool driver = trainSeatCar_ == 0 && trainSeat_ == 0 &&
+                            trains_.trains()[(size_t)trainSeatTrain_].cars[0].kind == CarKind::Locomotive;
+        if (driver) {
+            b.labels[b.count++] = "Plyn +";
+            b.labels[b.count++] = "Plyn -";
+            b.labels[b.count++] = "Brzda";
+        }
+        b.labels[b.count++] = "Vystoupit";
+    } else {
+        int tr, car;
+        if (trains_.nearest(dimIndex(), player_.pos, 6.5f, tr, car)) b.labels[b.count++] = "Nastoupit";
+    }
+    return b;
+}
+
+bool Session::trainButtonTap(float x, float y) {
+    const TrainButtons b = trainButtons();
+    for (int i = 0; i < b.count; ++i) {
+        const float by = b.y + i * (b.h + b.gap);
+        if (x < b.x || x >= b.x + b.w || y < by || y >= by + b.h) continue;
+        const std::string what = b.labels[i];
+        if (what == "Nastoupit") {
+            // The driver's seat if the nearest car is a locomotive, else a free passenger seat.
+            int tr, car;
+            if (!trains_.nearest(dimIndex(), player_.pos, 6.5f, tr, car)) return true;
+            const TrainCar& c = trains_.trains()[(size_t)tr].cars[(size_t)car];
+            if (trains_.seatCount(c.kind) == 0) {
+                // A goods wagon has no seats: climb up onto the load instead.
+                player_.pos = c.pos + Vec3(0, 1.6f * TrainSystem::kScale, 0);
+                return true;
+            }
+            trainSeatTrain_ = tr, trainSeatCar_ = car;
+            trainSeat_ = (int)(hash3((int)clock_, tr, car, 7) % (unsigned)trains_.seatCount(c.kind));
+            if (c.kind == CarKind::Locomotive) trainSeat_ = 0;
+            player_.flying = false;
+            seated_ = false;
+            sound(Sound::Door);
+        } else if (what == "Vystoupit") {
+            leaveTrain();
+        } else if (trainSeatTrain_ >= 0) {
+            Train& t = trains_.trains()[(size_t)trainSeatTrain_];
+            if (what == "Plyn +") t.throttle = std::min(1.0f, t.throttle + 0.25f), t.brake = false;
+            if (what == "Plyn -") t.throttle = std::max(-0.5f, t.throttle - 0.25f), t.brake = false;
+            if (what == "Brzda") t.brake = !t.brake, t.throttle = 0;
+            sound(Sound::Click);
+        }
+        return true;
+    }
+    return false;
+}
+
+void Session::leaveTrain() {
+    if (trainSeatTrain_ < 0) return;
+    const TrainCar& c = trains_.trains()[(size_t)trainSeatTrain_].cars[(size_t)trainSeatCar_];
+    trainSeatTrain_ = -1;
+    // Out by the door, beside the car on whatever is free.
+    const float cs = std::cos(c.yaw), sn = std::sin(c.yaw);
+    for (float side : {1.0f, -1.0f}) {
+        const float lx = side * 1.6f * TrainSystem::kScale * 0.62f;
+        Vec3 p = c.pos + Vec3(lx * cs, 0.2f, lx * sn);
+        if (!player_.collides(*world_, p)) {
+            player_.pos = p;
+            return;
+        }
+    }
+    player_.pos = c.pos + Vec3(0, 2.4f * TrainSystem::kScale, 0);  // on the roof, if both sides are blocked
+}
+
 void Session::drawHud(Ui& ui) const {
+    {
+        // 2.1.0 preview: the train buttons on the right, with the speed while driving.
+        const TrainButtons b = trainButtons();
+        for (int i = 0; i < b.count; ++i) {
+            const float by = b.y + i * (b.h + b.gap);
+            const bool on = std::string(b.labels[i]) == "Brzda" && trainSeatTrain_ >= 0 && trains_.trains()[(size_t)trainSeatTrain_].brake;
+            ui.hudButton(b.x, by, b.w, b.h, on);
+            ui.textCentered(b.x + b.w / 2, by + 6, b.labels[i], Color{1, 1, 1, 1});
+        }
+        if (trainSeatTrain_ >= 0 && b.count > 1) {
+            const Train& t = trains_.trains()[(size_t)trainSeatTrain_];
+            ui.textCentered(b.x + b.w / 2 - 20, b.y + b.count * (b.h + b.gap) + 2,
+                            trf("{0} km/h  ·  plyn {1} %", {std::to_string((int)std::lround(std::fabs(t.speed) * 3.6f)),
+                                                            std::to_string((int)std::lround(t.throttle * 100))}),
+                            Color{1, 1, 0.8f, 1});
+        }
+    }
     if (oldMode()) {
         drawOldHud(ui);
         return;

@@ -1033,9 +1033,9 @@ void Game::presentsScreen(float dt) {
     ui_.textCentered(W / 2, y, "VOXELSOFTWORKS PRESENTS", faded(dim, 0.0f), 1);
     y += 14;
     const float big = ui_.textWidth("VOXELCRAFT 1.8.0", 3) < W - 20 && H >= 260 ? 3 : 2;
-    ui_.textCentered(W / 2, y, "VOXELCRAFT 1.9.0", faded(gold, 0.2f), big);
+    ui_.textCentered(W / 2, y, "VOXELCRAFT 2.0.0", faded(gold, 0.2f), big);
     y += 10 * big + 4;
-    ui_.textCentered(W / 2, y, "Celestial Reach & Seasons", faded(white, 0.5f), 1);
+    ui_.textCentered(W / 2, y, "The Whole Story", faded(white, 0.5f), 1);
     y += 14;
     if (season != Season::None) {
         // The event that is on right now, in a coloured band.
@@ -1054,18 +1054,16 @@ void Game::presentsScreen(float dt) {
     }
     y += 4;
     static const char* const kNew[] = {
-        "Nebeská říše: nízká gravitace, bílý a modrý kámen, krystaly, nebeská prasata a ovce",
-        "Celestium: ruda, čtyři nástroje a kyrys, který tlumí pády",
-        "Oheň ze zapalovače, táborák a padající listí",
-        "Tekoucí voda a láva ve všech světech, se svažující se hladinou",
-        "Jak vyrobit? Všechny recepty, pec i řezačky; každé dřevo jako dubové",
-        "Sezóny podle data, plynulý pád bloků, vzhledy plochého světa",
+        "Balíčky pro každý svět zvlášť, přímo ve Vytvořit svět",
+        "Pre-Alpha: starý vzhled 0.3 pro všechny bloky",
+        "Zvuky podle bloku, zvukový blok a spínač na zeď",
+        "Import světů z Minecraft Bedrock (.mcworld)",
+        "Složka Speciální bloky, nové logo a 17minutový příběh",
     };
     static const char* const kNext[] = {
-        "VoxelCraft 2.0.0",
-        "Vyzkoušej ji v experimentech: bouřky, padající hvězdy, chov zvířat",
-        "Noví tvorové Nebeské říše",
-        "Příběhové video a hladší písmo",
+        "VoxelCraft 2.1.0",
+        "Vyzkoušej v experimentech: koleje, zatáčky a výhybky",
+        "Vlaky a kolejová doprava",
     };
     // Long lines wrap at word boundaries (they used to be cut off). On a small screen the two lists
     // sit side by side.
@@ -1091,10 +1089,10 @@ void Game::presentsScreen(float dt) {
     };
     const float room = H - 18 - y;
     float colW = std::min(W - 20, 520.0f);
-    const bool twoColumns = listHeight(kNew, 6, colW) + 5 + listHeight(kNext, 4, colW) > room;
+    const bool twoColumns = listHeight(kNew, 5, colW) + 5 + listHeight(kNext, 3, colW) > room;
     if (twoColumns) colW = std::floor((std::min(W - 12, 760.0f) - 10) / 2);
     // Still too tall (a small screen): only the name of each point, the part before the colon.
-    const bool shortLines = twoColumns && std::max(listHeight(kNew, 6, colW), listHeight(kNext, 4, colW)) > room;
+    const bool shortLines = twoColumns && std::max(listHeight(kNew, 5, colW), listHeight(kNext, 3, colW)) > room;
     const float x = std::floor(W / 2 - (twoColumns ? colW + 5 : colW / 2));
     auto drawList = [&](float lx, float ly, const char* title, const char* prefix, const char* const* items, int n, Color c, float start) {
         ui_.text(lx, ly, title, faded(gold, start), 1, false);
@@ -1110,9 +1108,9 @@ void Game::presentsScreen(float dt) {
         }
         return ly;
     };
-    const float afterNew = drawList(x, y, "CO JE V TÉTO VERZI", "+ ", kNew, 6, white, 0.9f);
-    if (twoColumns) drawList(x + colW + 10, y, "PLÁNY DÁL", "> ", kNext, 4, dim, 2.0f);
-    else drawList(x, afterNew + 5, "PLÁNY DÁL", "> ", kNext, 4, dim, 2.0f);
+    const float afterNew = drawList(x, y, "CO JE V TÉTO VERZI", "+ ", kNew, 5, white, 0.9f);
+    if (twoColumns) drawList(x + colW + 10, y, "PLÁNY DÁL", "> ", kNext, 3, dim, 2.0f);
+    else drawList(x, afterNew + 5, "PLÁNY DÁL", "> ", kNext, 3, dim, 2.0f);
     if (t > 3.0f) ui_.textCentered(W / 2, H - 14, "Klepni pro pokračování", faded(green, 3.0f), 1);
     if (t > 0.8f && ui_.tapped(0, 0, W, H)) presentsDone_ = true;
 }
@@ -1961,7 +1959,7 @@ void Game::worldListScreen() {
             newWorldBounded_ = false, newWorldBoundSize_ = 0, newWorldSeedPreset_ = 0, worldPicker_ = -1;
             newWorldPacks_ = packs_.enabledOrder(), newWorldPacksOpen_ = false;
             newWorldOld_ = newWorldFlat_ = newWorldCoords_ = newWorldKeepInventory_ = newWorldCommands_ = newWorldExpLiquids_ = newWorldExpMaps_ = newWorldExpOpen_ = false;
-            newWorldExpStorms_ = newWorldExpStars_ = newWorldExpBreeding_ = false;
+            newWorldExpStorms_ = newWorldExpStars_ = newWorldExpBreeding_ = newWorldExpRails_ = false;
             setScreen(Screen::CreateWorld);
         }
         // The Multiplayer tab is at the top; this place now imports a world (.vcworld).
@@ -2081,12 +2079,12 @@ void Game::createWorldScreen() {
         return;
     }
     // 1.5.1: Experimental Features, for everyone, saved with the world.
-    const int expCount = newWorldExpStorms_ + newWorldExpStars_ + newWorldExpBreeding_;
+    const int expCount = newWorldExpStorms_ + newWorldExpStars_ + newWorldExpBreeding_ + newWorldExpRails_;
     if (!newWorldOld_ && ui_.button(x, cy + 128, col, 18, expCount ? trf("Experimentální funkce ({0})", {std::to_string(expCount)}) : tr("Experimentální funkce")))
         newWorldExpOpen_ = !newWorldExpOpen_;
     if (newWorldExpOpen_) {
         const float ex = x + 8, ey = y + 24, ew = w - 16;
-        ui_.frame(ex, ey, ew, 136, kPanel, kSeparator);
+        ui_.frame(ex, ey, ew, 160, kPanel, kSeparator);
         ui_.text(ex + 6, ey + 6, "Experimentální funkce", kTitle, 1, false);
         ui_.text(ex + 6, ey + 18, "Rozpracovaný obsah dalších verzí. Platí jen pro tento svět a po vytvoření je nelze změnit.",
                  kTextDim, 1, false, ew - 12);
@@ -2101,8 +2099,9 @@ void Game::createWorldScreen() {
         experiment(ey + 36, "2.0: Bouřky", "V dešti udeří blesk a může zapálit oheň.", newWorldExpStorms_);
         experiment(ey + 60, "2.0: Padající hvězdy", "Za jasné noci přeletí po obloze hvězdy.", newWorldExpStars_);
         experiment(ey + 84, "2.0: Chov zvířat", "Nakrm dvě zvířata (pšenice, semínka) a narodí se mládě.", newWorldExpBreeding_);
-        ui_.text(ex + 6, ey + 112, "Upozornění: experimenty se mohou změnit nebo zmizet.", Color{0.9f, 0.7f, 0.35f, 1}, 1, false, ew - 70);
-        if (ui_.button(ex + ew - 66, ey + 116, 60, 16, "Hotovo")) newWorldExpOpen_ = false;
+        experiment(ey + 108, "2.1: Koleje", "Rovné koleje, zatáčky a výhybky ve složce Speciální bloky.", newWorldExpRails_);
+        ui_.text(ex + 6, ey + 136, "Upozornění: experimenty se mohou změnit nebo zmizet.", Color{0.9f, 0.7f, 0.35f, 1}, 1, false, ew - 70);
+        if (ui_.button(ex + ew - 66, ey + 140, 60, 16, "Hotovo")) newWorldExpOpen_ = false;
         return;  // the panel covers the screen's other buttons
     }
 
@@ -2123,6 +2122,7 @@ void Game::createWorldScreen() {
         wi.expStorms = newWorldExpStorms_ && !newWorldOld_;
         wi.expStars = newWorldExpStars_ && !newWorldOld_;
         wi.expBreeding = newWorldExpBreeding_ && !newWorldOld_;
+        wi.expRails = newWorldExpRails_ && !newWorldOld_;
         // 2.0.0: the chosen packs, kept with the world (only when they differ from the global ones).
         if (newWorldPacks_ != packs_.enabledOrder()) {
             for (const std::string& id : newWorldPacks_) wi.packs += (wi.packs.empty() ? "" : ",") + id;
@@ -4579,7 +4579,14 @@ void Game::creativeInventoryScreen() {
         const std::vector<ItemId>* items;
     };
     std::vector<Tab> tabs;
-    for (int c = 0; c < CatCount; ++c) tabs.push_back({creativeCategoryName(c), creativeCategoryIcon(c), &creativeCategoryItems(c)});
+    // 2.0.0: the rails of the 2.1.0 preview show up only in worlds with that experiment.
+    static std::vector<ItemId> special;
+    special.clear();
+    for (ItemId id : creativeCategoryItems(CatSpecial))
+        if (!(isRail(id) || isBufferStop(id) || id == LOCOMOTIVE || id == PASSENGER_WAGON || id == FREIGHT_WAGON) || session_->info().expRails)
+            special.push_back(id);
+    for (int c = 0; c < CatCount; ++c)
+        tabs.push_back({creativeCategoryName(c), creativeCategoryIcon(c), c == CatSpecial ? &special : &creativeCategoryItems(c)});
     if (!addonItems.empty()) tabs.push_back({"Doplňky", addonItems[0], &addonItems});
     if (!modItems.empty()) tabs.push_back({"Módy", modItems[0], &modItems});
     if (creativeTab_ >= (int)tabs.size()) creativeTab_ = 0;

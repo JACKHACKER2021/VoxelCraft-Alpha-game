@@ -10,6 +10,11 @@
 
 namespace vc {
 
+namespace {
+#include "TrainPalette.inc"
+}  // namespace
+
+
 #include "CaveTextures.inc"
 #include "StoneTexture.inc"
 
@@ -1842,6 +1847,119 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
                 if (ring || slash) a.put(T_BARRIER, px, py, Rgb{225, 40, 40});
                 else a.clear(T_BARRIER, px, py);
             }
+        // 2.0.0: the sound block (dark wood with a speaker grille) and the 2.1.0 preview rails.
+        for (int py = 0; py < 16; ++py)
+            for (int px = 0; px < 16; ++px) {
+                const int n = (int)(hash3(px, py, 1587, 5) % 12) - 6;
+                const Rgb wood = Rgb{96, 62, 40}.plus(n);
+                const bool frame = px == 0 || py == 0 || px == 15 || py == 15;
+                const bool grille = px >= 3 && px <= 12 && py >= 3 && py <= 12 && (px + py) % 2 == 0;
+                a.put(T_SOUND_BLOCK, px, py, frame ? Rgb{60, 38, 24} : grille ? Rgb{30, 24, 22} : wood);
+                const int dx = px * 2 - 15, dy = py * 2 - 15, r2 = dx * dx + dy * dy;
+                a.put(T_SOUND_BLOCK_TOP, px, py, frame ? Rgb{60, 38, 24} : r2 < 40 ? Rgb{40, 220, 210} : r2 < 120 ? Rgb{28, 28, 34} : wood);
+            }
+        {
+            // Rails: two steel rails on wooden sleepers, on a see-through background. `on(x, y)` says
+            // where a track of the given shape runs; tracks are drawn for the north-south case and turned.
+            auto clearAll = [&](int tile) {
+                for (int py = 0; py < 16; ++py)
+                    for (int px = 0; px < 16; ++px) a.clear(tile, px, py);
+            };
+            auto turn = [](int q, int& x, int& y) {  // quarter turns clockwise of a 16x16 pixel
+                for (int i = 0; i < (q & 3); ++i) {
+                    const int t = x;
+                    x = 15 - y;
+                    y = t;
+                }
+            };
+            // A straight track (along y) or a curve from the north edge to the east edge.
+            auto drawTrack = [&](int tile, bool curve, int q, Rgb rail) {
+                for (int py = 0; py < 16; ++py)
+                    for (int px = 0; px < 16; ++px) {
+                        float d;  // distance across the track from its middle line, in pixels
+                        float along;
+                        if (!curve) {
+                            d = px + 0.5f - 8;
+                            along = py + 0.5f;
+                        } else {
+                            const float cx = px + 0.5f - 16, cy = py + 0.5f;  // the centre of the arc: the north-east corner
+                            d = std::sqrt(cx * cx + cy * cy) - 8;
+                            along = std::atan2(cy, -cx) * 10;
+                        }
+                        int x = px, y = py;
+                        turn(q, x, y);
+                        const float ad = std::fabs(d);
+                        if (ad >= 3.5f && ad < 5.0f) a.put(tile, x, y, rail);
+                        else if (ad < 6.5f && (int)std::floor(along) % 4 == 0) a.put(tile, x, y, Rgb{110, 76, 44});
+                    }
+            };
+            const Rgb steel{172, 176, 186}, dull{110, 112, 120};
+            clearAll(T_RAIL_NS);
+            drawTrack(T_RAIL_NS, false, 0, steel);
+            clearAll(T_RAIL_EW);
+            drawTrack(T_RAIL_EW, false, 1, steel);
+            for (int c = 0; c < 4; ++c) {
+                clearAll(T_RAIL_CURVE0 + c);
+                drawTrack(T_RAIL_CURVE0 + c, true, c, steel);
+            }
+            // A switch: the straight track and the branch (a curve from the south edge to the east),
+            // the way the train will go bright, the other dull.
+            for (int f = 0; f < 4; ++f)
+                for (int st = 0; st < 2; ++st) {
+                    const int tile = T_RAIL_SWITCH0 + f * 2 + st;
+                    clearAll(tile);
+                    drawTrack(tile, true, f + 1, st ? steel : dull);   // the branch: east edge to south edge
+                    drawTrack(tile, false, f, st ? dull : steel);      // the straight track
+                }
+        }
+        // 2.0.0: a red cushion with a gold button, and the buffer stop (dark steel, a red and white plate).
+        for (int py = 0; py < 16; ++py)
+            for (int px = 0; px < 16; ++px) {
+                const int n = (int)(hash3(px, py, 1649, 6) % 10) - 5;
+                const int dx = px * 2 - 15, dy = py * 2 - 15, r2 = dx * dx + dy * dy;
+                const bool seam = px == 0 || py == 0 || px == 15 || py == 15;
+                const bool fold = std::abs(dx) == std::abs(dy) && r2 > 20 && r2 < 160;
+                a.put(T_CUSHION_TOP, px, py, seam ? Rgb{120, 20, 30} : r2 < 10 ? Rgb{230, 190, 70} : fold ? Rgb{160, 30, 42} : Rgb{196, 44, 56}.plus(n));
+                a.put(T_CUSHION_SIDE, px, py, seam || py % 5 == 0 ? Rgb{130, 24, 34} : Rgb{184, 40, 52}.plus(n));
+                a.put(T_BUFFER_STOP, px, py, (px + py) % 7 == 0 ? Rgb{70, 72, 80} : Rgb{52, 54, 62}.plus(n));
+                const bool stripe = ((px + py) / 3) % 2 == 0;
+                a.put(T_BUFFER_PLATE, px, py, seam ? Rgb{40, 40, 46} : stripe ? Rgb{210, 40, 40} : Rgb{235, 235, 235});
+            }
+        // 2.1.0 preview: the colours of the train models (4 x 4 cells), and their item icons.
+        for (int py = 0; py < 16; ++py)
+            for (int px = 0; px < 16; ++px) {
+                const int ci = (py / 4) * 4 + px / 4;
+                if (ci < kTrainPaletteSize && kTrainPalette[ci][3] >= 128)
+                    a.put(T_TRAIN_PALETTE, px, py, Rgb{kTrainPalette[ci][0], kTrainPalette[ci][1], kTrainPalette[ci][2]});
+                else
+                    a.clear(T_TRAIN_PALETTE, px, py);  // glass: see-through windows
+            }
+        {
+            // Side views: a body on wheels; the locomotive red with a cab and a chimney.
+            auto icon = [&](int tile, Rgb body, Rgb top, bool engine) {
+                for (int py = 0; py < 16; ++py)
+                    for (int px = 0; px < 16; ++px) {
+                        const bool wheel = py >= 11 && py <= 13 && (px == 3 || px == 4 || px == 11 || px == 12);
+                        const bool frame = py == 10 && px >= 1 && px <= 14;
+                        const bool bodyPx = py >= 4 && py <= 9 && px >= 1 && px <= 14;
+                        const bool window = !engine && py >= 5 && py <= 6 && (px % 3 == 2) && px > 1 && px < 14;
+                        const bool roof = py == 3 && px >= 1 && px <= 14 && (!engine || px <= 6);
+                        const bool chimney = engine && px >= 10 && px <= 11 && py >= 1 && py <= 3;
+                        const bool boiler = engine && py >= 4 && py <= 9 && px >= 7;
+                        if (wheel) a.put(tile, px, py, Rgb{30, 30, 34});
+                        else if (frame) a.put(tile, px, py, Rgb{60, 62, 70});
+                        else if (window) a.put(tile, px, py, Rgb{150, 200, 230});
+                        else if (chimney) a.put(tile, px, py, Rgb{40, 40, 44});
+                        else if (roof) a.put(tile, px, py, top);
+                        else if (boiler) a.put(tile, px, py, py == 4 || py == 9 ? Rgb{40, 40, 44} : Rgb{70, 72, 80});
+                        else if (bodyPx) a.put(tile, px, py, body);
+                        else a.clear(tile, px, py);
+                    }
+            };
+            icon(T_LOCOMOTIVE_ITEM, Rgb{180, 40, 36}, Rgb{100, 104, 112}, true);
+            icon(T_PASSENGER_WAGON_ITEM, Rgb{34, 72, 140}, Rgb{100, 104, 112}, false);
+            icon(T_FREIGHT_WAGON_ITEM, Rgb{120, 84, 50}, Rgb{120, 84, 50}, false);
+        }
         // 1.9.5 the creatures of the Celestial Reach.
         for (int py = 0; py < 16; ++py)
             for (int px = 0; px < 16; ++px) {
@@ -2912,7 +3030,9 @@ void applyLegacyTiles(std::vector<uint8_t>& rgba, int size) {
                          T_LOG_SIDE, T_LOG_TOP, T_LEAVES, T_GLASS, T_BRICKS, T_LAVA, T_OBSIDIAN, T_NETHERRACK, T_PORTAL,
                          T_NETHER_BRICK, T_COAL_ORE, T_IRON_ORE})
             handMade[tile] = true;
-        for (int id = 1; id < kModIdBase && id < kItemIdLimit; ++id) {
+        for (int id = 1; id < kItemIdLimit; ++id) {
+            if (isModId(id)) continue;
+            if (id > BUFFER_STOP + 4 && id >= kExtIdBase) break;
             if (!isPlaceable((ItemId)id)) continue;
             for (int f = 0; f < 6; ++f) {
                 const int tile = tileFor((ItemId)id, (Face)f);

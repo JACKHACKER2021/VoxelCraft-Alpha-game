@@ -3,6 +3,44 @@
 Vlastní voxelový engine v C++ pro **Android 16** (arm64), inspirovaný starými
 verzemi Pocket Edition. Kód je kompletně náš, nic od Mojangu neobsahuje.
 
+## Nejnovější: v2.0.0 „The Whole Story“ + preview 2.1.0 (vlaky)
+
+Stáhnout: [release/](release/) (všechna APK od 1.0.0 po 2.0.0) nebo [docs/download](docs/download/).
+Celý příběh projektu ve 17minutovém videu je ve hře (Credits → Trailers) a na webu.
+
+### 2.0.0
+- **Balíčky pro každý svět:** modpacky se dají zapnout zvlášť pro jeden svět přímo v *Vytvořit svět*.
+- **Pre-Alpha vzhled pro všechno:** balíček Pre-Alpha dává starý vzhled 0.3 menu i texturám všech bloků,
+  i z Celestial Reach, Cornerstone a Crimson Void (listí, kmeny, prkna, kameny, cihly, trávy, rudy podle starých šablon).
+- **Zvuky podle bloku:** kroky, kopání (i každý úder) a pokládání znějí podle materiálu, bez změny výšky tónu;
+  nahrávky se načítají na pozadí (hra se už nezasekne při načítání).
+- **Zvukový blok:** klepnutím vybereš jeden z 10 zvuků, powerstone ho přehraje.
+- **Powerstone kabely** na zemi, zdi a stropě se spojí do jednoho drátu; spínač jde dát i na zeď.
+- **Sedák (cushion):** sedni si (animace sezení), vstaneš skokem.
+- **Import světů z Minecraft Bedrock (.mcworld):** vlastní čtečka LevelDB, převod blok po bloku
+  (deepslate → hlubinný kámen, redstone → powerstone, měď → bronz…), schody a desky si drží směr,
+  ploché světy zůstanou ploché.
+- **Složka Speciální bloky** v kreativu (příkazový blok, structure block, bariéra, spawner, konec světa).
+- Nové logo, úvodní obrazovka 2.0.0 a 17minutový příběh projektu (0.1 → 2.0.0).
+
+### Preview 2.1.0 (experiment „2.1: Koleje“ při vytváření světa)
+- Rovné koleje, zatáčky (samy podle sousedů), výhybky (přepnutí klepnutím) a zarážky.
+- **Vlaky:** lokomotiva, osobní a nákladní vagon (vlastní modely), dost velké, aby se do nich dalo vejít,
+  pevné (podlaha, stěny, střecha, dveře). Tlačítka *Nastoupit*, *Plyn +*, *Plyn −* (couvání), *Brzda*, *Vystoupit*.
+  Vagony se samy připojí za poslední vůz, vlak zastaví na zarážce, klepnutím vůz odebereš.
+
+## Starší verze (1.5.1 – 1.9.5)
+- **1.9.5:** počasí 2.0 (vítr, bouřky s hromy), teplota, Nebeský chrám a boss Sky Guardian, křídla na plachtění,
+  zvuky z Minetest Game podle materiálu, ohraničený klasický svět, presety seedu, výběr světa s obrázky,
+  med z dýňových slizů, structure block, bariéra a příkazový blok.
+- **1.9.0 – Celestial Reach & Seasons:** nová Nebeská říše s nízkou gravitací, celestium, oheň a táborák,
+  tekoucí voda a láva ve všech světech, sezóny podle data (podzim, Vánoce, Silvestr), průvodce „Jak vyrobit?“.
+- **1.8.0 – Concrete & Old World:** Starý svět s generací 0.1–0.3, balíček Pre-Alpha, beton, Strakatý les.
+- **1.7.x – The Celestial Reach:** první verze plovoucích ostrovů a nové menu.
+- **1.6.0 – Caves and Tunes:** hlubinný kámen, hardium, velké jeskyně, jezera lávy a dehtu, hudba v jeskyních.
+- **1.5.x:** shadery (Classic/Enhanced), pochodně, štít, padající písek, tekoucí voda, mapa světa, chat,
+  psací kniha, titulky a galerie trailerů, šetřič baterie, Crimson Desert, experimenty pro každý svět.
+
 ## Novinky ve v1.5.0 – Forgotten Powerstone
 
 Kdysi tu žila civilizace, která svítila a stavěla powerstonem. Pak se při pokusech s portály něco pokazilo.
@@ -233,6 +271,6 @@ tests/                testy jádra pro PC
 ```
 
 ## Plán
-1. Moby (prasata, zombie; v Netheru pigmeni a ghasti), den a noc
-2. Lepší osvětlení (šíření světla z glowstonu a lávy), tekoucí voda a láva
-3. Načítání světů z původní 1.1.2 (LevelDB)
+1. **2.1.0 – vlaky:** koleje do kopce, nádraží, nakládání nákladu, vlaky ve multiplayeru
+2. Dveře a natočení kmenů při importu .mcworld
+3. Další bossové a struktury v Nebeské říši

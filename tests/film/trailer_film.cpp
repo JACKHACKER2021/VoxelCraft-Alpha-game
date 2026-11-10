@@ -6173,3 +6173,207 @@ SHOT(a21_import) {
     d.tap(222, 121, 30);  // Play: Singleplayer
     d.seconds(1.0f);
 }
+
+// ---- 2.0.0 fixes: five-second clips ----------------------------------------------------------
+
+// A wire on the floor, up a wall and along the ceiling: one wire now, switched on by a switch on the wall.
+SHOT(b01_wires) {
+    Director d(out, "b01");
+    d.openWorld("Wires", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z) - 4, y = feetY(w, x, z);
+    // The wall (north) and a ceiling over the wire.
+    for (int dx = -3; dx <= 5; ++dx) {
+        for (int dy = 0; dy <= 3; ++dy) w.setBlock(x + dx, y + dy, z - 1, STONE_BRICKS);
+        w.setBlock(x + dx, y + 3, z, STONE_BRICKS);
+    }
+    w.setBlock(x, y, z + 2, POWER_CABLE);
+    w.setBlock(x, y, z + 1, POWER_CABLE);           // floor wire in front of the wall
+    w.setBlock(x, y, z, WALL_CABLE + 0);            // ... meets the wall wire
+    w.setBlock(x, y + 1, z, WALL_CABLE + 0);
+    w.setBlock(x, y + 2, z, WALL_CABLE + 0);
+    w.setBlock(x + 1, y + 2, z, CEILING_CABLE);     // ... runs onto the ceiling
+    w.setBlock(x + 2, y + 2, z, CEILING_CABLE);
+    w.setBlock(x + 3, y + 2, z, POWERSTONE_LAMP);
+    w.setBlock(x - 1, y, z, WALL_CABLE + 0);        // along the wall to a floor wire
+    w.setBlock(x - 2, y, z, POWER_CABLE);
+    w.setBlock(x - 2, y, z + 1, POWER_CABLE);
+    w.setBlock(x - 2, y, z + 2, POWERSTONE_LAMP);
+    w.setBlock(x + 1, y + 1, z, WALL_SWITCH + 0);   // a switch on the wall
+    {
+        std::vector<std::array<int, 3>> ignite;
+        updatePower(w, x, y, z, ignite);
+    }
+    p.pos = Vec3(x + 0.5f, (float)y, z + 5.5f);
+    d.idle(10);
+    d.lookNow(Vec3(x + 0.5f, y + 1.2f, z + 0.2f));
+    d.shot("b01_wires");
+    d.seconds(1.5f);
+    d.use(Vec3(x + 1.5f, y + 1.5f, z + 0.15f));    // switch on
+    d.seconds(3.0f);
+}
+
+// The sound block: a tap picks the next sound; a switch plays it.
+SHOT(b02_sound) {
+    Director d(out, "b02");
+    d.openWorld("Sound", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z) - 3, y = feetY(w, x, z);
+    w.setBlock(x, y, z, SOUND_BLOCK);
+    w.setBlock(x + 1, y, z, POWER_CABLE);
+    w.setBlock(x + 2, y, z, SWITCH);
+    p.pos = Vec3(x + 1.0f, (float)y, z + 3.5f);
+    d.idle(10);
+    d.lookNow(Vec3(x + 1.0f, y + 0.5f, z + 0.5f));
+    d.shot("b02_sound");
+    for (int i = 0; i < 3; ++i) {
+        d.use(Vec3(x + 0.5f, y + 0.98f, z + 0.5f));
+        d.seconds(0.8f);
+    }
+    d.use(Vec3(x + 2.5f, y + 0.12f, z + 0.5f));   // the switch powers it
+    d.seconds(2.0f);
+}
+
+// 2.1.0 preview: rails, a curve and a switch thrown both ways.
+SHOT(b03_rails) {
+    Director d(out, "b03");
+    d.openWorld("Rails", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z) - 2, y = feetY(w, x, z);
+    for (int k = 0; k < 5; ++k) w.setBlock(x, y, z - k, RAIL_NS);
+    w.setBlock(x, y, z - 5, railSwitchId(0, 0));
+    for (int k = 6; k < 9; ++k) w.setBlock(x, y, z - k, RAIL_NS);
+    w.setBlock(x + 1, y, z - 5, RAIL_EW);   // the branch
+    w.setBlock(x + 2, y, z - 5, RAIL_CURVE + 3);
+    w.setBlock(x + 2, y, z - 6, RAIL_NS);
+    w.setBlock(x + 2, y, z - 7, RAIL_NS);
+    p.pos = Vec3(x + 1.5f, (float)y + 2, z + 2.5f);
+    p.flying = true;
+    d.idle(10);
+    d.lookNow(Vec3(x + 1.0f, (float)y, z - 4.5f));
+    d.shot("b03_rails");
+    d.seconds(1.5f);
+    d.use(Vec3(x + 0.5f, y + 0.05f, z - 4.5f));   // throw the switch
+    d.seconds(1.5f);
+    d.use(Vec3(x + 0.5f, y + 0.05f, z - 4.5f));   // and back
+    d.seconds(1.5f);
+}
+
+// 2.0.0: sitting down on a cushion (seen from the front), and a buffer stop at the end of a track.
+SHOT(b05_cushion) {
+    Director d(out, "b05");
+    d.openWorld("Cushion", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z) - 2, y = feetY(w, x, z);
+    w.setBlock(x, y, z, CUSHION);
+    w.setBlock(x + 1, y, z, CUSHION);
+    w.setBlock(x - 1, y, z, CUSHION);
+    for (int dx = -1; dx <= 1; ++dx) w.setBlock(x + dx, y, z - 1, PLANKS);
+    p.pos = Vec3(x + 0.5f, (float)y, z + 2.5f);
+    d.idle(10);
+    d.lookNow(Vec3(x + 0.5f, y + 0.3f, z + 0.5f));
+    d.shot("b05_cushion");
+    d.seconds(1.0f);
+    d.use(Vec3(x + 0.5f, y + 0.37f, z + 0.5f));   // sit down
+    d.settings().cameraMode = 2;                    // from the front
+    p.yaw = 3.14159f;
+    p.pitch = -0.25f;
+    d.seconds(3.0f, [&](float k) { p.yaw = 3.14159f + 0.6f * std::sin(k * 3.14159f); });
+    d.settings().cameraMode = 0;
+}
+
+SHOT(b06_buffer) {
+    Director d(out, "b06");
+    d.openWorld("Buffer", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z) - 2, y = feetY(w, x, z);
+    for (int k = 0; k < 4; ++k) w.setBlock(x, y, z - k, RAIL_NS);
+    w.setBlock(x, y, z - 4, BUFFER_STOP + 0);
+    p.pos = Vec3(x + 2.5f, (float)y + 1.5f, z + 1.5f);
+    p.flying = true;
+    d.idle(10);
+    d.lookNow(Vec3(x + 0.5f, y + 0.4f, z - 3.5f));
+    d.shot("b06_buffer");
+    d.seconds(5.0f, [&](float k) { p.pos = Vec3(x + 2.5f - 4 * k, (float)y + 1.5f, z + 1.5f - 1.5f * k); d.lookNow(Vec3(x + 0.5f, y + 0.4f, z - 3.5f)); });
+}
+
+// 2.1.0 preview: a train on a track with a curve and a buffer stop: get in, throttle up, brake.
+static void trainTrack(World& w, int x, int y, int z) {
+    for (int k = 0; k < 40; ++k) w.setBlock(x, y, z - k, RAIL_NS);
+    w.setBlock(x, y, z - 40, RAIL_CURVE + 1);   // east-south: the line turns east
+    for (int k = 1; k < 24; ++k) w.setBlock(x + k, y, z - 40, RAIL_EW);
+    w.setBlock(x + 24, y, z - 40, BUFFER_STOP + 1);
+    for (int k = -2; k < 4; ++k) w.setBlock(x, y, z + k + 1, k == 3 ? BUFFER_STOP + 2 : RAIL_NS);
+}
+
+SHOT(b07_train) {
+    Director d(out, "b07");
+    d.openWorld("Train", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z) - 4, y = feetY(w, x, z);
+    trainTrack(w, x, y, z);
+    s.trains().place(w, s.dimIndex(), CarKind::Locomotive, x, y, z - 14, 0);
+    s.trains().place(w, s.dimIndex(), CarKind::Passenger, x, y, z - 7, 0);
+    s.trains().place(w, s.dimIndex(), CarKind::Freight, x, y, z, 0);
+    p.pos = Vec3(x + 6.5f, (float)y, z - 8.5f);
+    d.idle(10);
+    d.lookNow(Vec3(x + 0.5f, y + 2.0f, z - 8.5f));
+    d.shot("b07_train");
+    d.seconds(2.0f, [&](float k) { p.pos = Vec3(x + 6.5f - 2 * k, (float)y, z - 8.5f - 6 * k); d.lookNow(Vec3(x + 0.5f, y + 2.0f, z - 10.5f)); });
+    d.tap(559, 94, 10);   // Nastoupit
+    d.tap(559, 94, 4);    // Plyn +
+    d.tap(559, 94, 4);    // Plyn +
+    d.tap(559, 94, 4);    // Plyn +
+    d.seconds(7.0f);
+    d.tap(559, 142, 6);   // Brzda
+    d.seconds(3.0f);
+}
+
+// Walking into the passenger wagon by its side door.
+SHOT(b08_inside) {
+    Director d(out, "b08");
+    d.openWorld("Inside", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z) - 4, y = feetY(w, x, z);
+    trainTrack(w, x, y, z);
+    s.trains().place(w, s.dimIndex(), CarKind::Locomotive, x, y, z - 14, 0);
+    s.trains().place(w, s.dimIndex(), CarKind::Passenger, x, y, z - 7, 0);
+    const TrainCar& car = s.trains().trains()[0].cars[1];
+    p.pos = Vec3(car.pos.x + 4.5f, (float)y, car.pos.z);
+    p.flying = false;
+    d.idle(10);
+    d.lookNow(car.pos + Vec3(0, 1.6f, 0));
+    d.shot("b08_inside");
+    // Walk west through the door, into the car.
+    d.seconds(4.0f, [&](float k) { p.pos.x = car.pos.x + 4.5f - 4.2f * k; d.lookNow(Vec3(car.pos.x - 4, p.pos.y + 1.5f, car.pos.z)); });
+    d.seconds(2.0f, [&](float k) { p.yaw += 0.02f; });
+}
+
+// The Special blocks folder with the rails experiment on, and the Decoration folder (the cushion).
+SHOT(b09_inventory) {
+    Director d(out, "b09");
+    d.openWorld("Inventory", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    d.s().setRailsExperiment(true);
+    d.idle(10);
+    d.shot("b09_inventory");
+    d.tap(Director::kMenuX, Director::kMenuY, 20);
+    d.seconds(1.0f);
+    d.tap(188, 151, 30);   // Special blocks
+    d.seconds(1.0f);
+    d.tap(163, 105, 30);   // Decoration
+    d.seconds(1.0f);
+}

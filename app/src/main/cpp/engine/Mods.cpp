@@ -79,7 +79,7 @@ void ModRegistry::load(const std::vector<std::string>& packDirs, const std::stri
         std::string key;
         int id;
         while (in >> key >> id)
-            if (id >= kModIdBase && id < kItemIdLimit) ids_.emplace_back(key, (ItemId)id);
+            if (isModId(id)) ids_.emplace_back(key, (ItemId)id);
     }
     auto warn = [&](const std::string& w) {
         if (warnings) warnings->push_back(w);

@@ -48,6 +48,7 @@ add_library(voxelcraft SHARED
     engine/Loot.cpp
     engine/WorldStructures.cpp
     engine/Boats.cpp
+    engine/Trains.cpp
     engine/Achievements.cpp
     engine/Net.cpp
     engine/Multiplayer.cpp

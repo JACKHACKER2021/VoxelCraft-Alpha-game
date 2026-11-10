@@ -134,6 +134,47 @@ bez jakýchkoli assetů nebo kódu od Mojangu.
 - Nether přejmenován na dimenzi úhelného kamene; pevnosti s popraskanými a zdobenými cihlami.
 - Nová kůra stromů, kapradí, 8 úspěchů; oprava textury hořícího TNT a šípů.
 
+## 1.5.1 – opravy a experimenty
+- Pustina, Grasser, Husking a zapomenuté vesnice přesunuty do dimenze úhelného kamene; nová kůra stromů, modely krumpáče a sekery.
+- Crimson Desert předělaný; experimentální funkce pro každý svět (Ore Redesign).
+
+## 1.5.5 – Shadery
+- Grafika Classic a Enhanced, shader packy (vytvořit/importovat), nastavení videa.
+
+## 1.5.7 / 1.5.9
+- Pochodně, štít a druhá ruka, padající písek a štěrk, tekoucí voda a láva (experiment), mapy průzkumníka.
+- Větší pevnost, powerstonová pec, velká mapa světa, chat, psací kniha, titulky s galerií trailerů, šetřič baterie.
+- Kategorie kreativního inventáře, důlní šachty a strážní věže v Karmínové prázdnotě, zničené vesnice.
+
+## 1.6.0 – Caves and Tunes
+- Hlubinný kámen, hardium, velké jeskyně s otvory, jezera lávy a dehtu, mechové jeskyně, hudba v jeskyních.
+
+## 1.7.0 – 1.7.2 – The Celestial Reach
+- První verze plovoucích ostrovů, nové hlavní menu, opravy.
+
+## 1.8.0 – Concrete & Old World
+- Starý svět (generace 0.1–0.3 se starým vzhledem a zvuky), balíček Pre-Alpha, beton, Strakatý les.
+
+## 1.9.0 – Celestial Reach & Seasons
+- Nová Nebeská říše s nízkou gravitací, celestium (nástroje, kyrys), nebeská prasata a ovce.
+- Oheň ze zapalovače a táborák, padající listí, tekoucí voda a láva všude, plynulý pád bloků.
+- Sezóny podle data, 6 vzhledů plochého světa, průvodce „Jak vyrobit?“, experimenty 2.0 (bouřky, hvězdy, chov).
+
+## 1.9.5
+- Počasí 2.0, teplota, Celestling, Reach Stalker, Sky Drifter, Nebeský chrám se Sky Guardianem, křídla.
+- Zvuky Minetest Game podle materiálu a stylu, ohraničený svět, presety seedu, výběr světa s obrázky,
+  21 struktur v encyklopedii, med, structure block, bariéra, příkazový blok.
+
+## 2.0.0 – The Whole Story
+- Balíčky pro každý svět, Pre-Alpha vzhled pro všechny bloky, zvuky podle bloku, nové logo.
+- Zvukový blok, spojené kabely na zemi/zdi/stropě, spínač na zeď, sedák se sezením.
+- Import světů z Minecraft Bedrock (.mcworld), složka Speciální bloky, 17minutový příběh projektu.
+- Vlastní rozsah ID (60000+) pro nové bloky, aby se nekryly s deskami.
+
+## Preview 2.1.0 – Koleje a vlaky (experiment)
+- Koleje, zatáčky, výhybky, zarážky; lokomotiva, osobní a nákladní vagon (vlastní modely, dá se do nich vejít).
+- Nastoupit, plyn, brzda, couvání; vagony se připojují samy; klepnutím vůz odebereš.
+
 ## Nápady, na které se dá navázat
 - Další věci do doplňků (vánoční bloky, halloweenské dýně s obličeji, narozeninové balónky).
 - Nové struktury v Netheru, další bossové, zbraně na dálku (luk).

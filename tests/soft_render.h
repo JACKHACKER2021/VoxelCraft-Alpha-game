@@ -45,7 +45,8 @@ inline float sunVisibleAt(float x, float y, float z) {
     for (int i = 0; i < 160; ++i) {
         if (iy >= kChunkHeight || iy < 0) return 1;
         const ItemId b = gShadowWorld->getBlock(ix, iy, iz);
-        if (b != AIR && !isLiquid(b) && !isPlant(b)) return std::min(1.0f, std::max(0.0f, (edge - 0.8f) / 0.2f));
+        const bool flat = isRail(b) || isCable(b) || isCarpet(b) || isSwitch(b) || b == SNOW_LAYER || b == LEAF_LITTER;
+        if (b != AIR && !isLiquid(b) && !isPlant(b) && !flat) return std::min(1.0f, std::max(0.0f, (edge - 0.8f) / 0.2f));
         if (tx < ty && tx < tz) ix += sx, tx += ddx;
         else if (ty < tz) iy += sy, ty += ddy;
         else iz += sz, tz += ddz;
