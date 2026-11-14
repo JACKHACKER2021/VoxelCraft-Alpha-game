@@ -554,6 +554,30 @@ const char* kUpdate190 = R"({
   ]
 })";
 
+// 2.1.0 preview: the railway (only in the preview edition). Rails are steel and spruce logs.
+const char* kUpdate210 = R"({
+  "recipes": [
+    {"type": "shaped", "pattern": ["S.S", "SLS", "S.S"], "key": {"S": "steel_ingot", "L": "spruce_log"}, "result": "rail", "count": 16},
+    {"type": "shaped", "pattern": ["..R", ".RC", "RCC"], "key": {"R": "rail", "C": "cobblestone"}, "result": "rail_slope", "count": 3},
+    {"type": "shaped", "pattern": ["R.R", ".W.", "R.."], "key": {"R": "rail", "W": "switch"}, "result": "rail_switch"},
+    {"type": "shaped", "pattern": ["SSS", "S.S", "RRR"], "key": {"S": "steel_ingot", "R": "rail"}, "result": "buffer_stop"},
+    {"type": "shaped", "pattern": ["CCC", "CRC", "CPC"], "key": {"C": "cobblestone", "R": "rail", "P": "powerstone_dust"}, "result": "turntable"},
+    {"type": "shaped", "pattern": ["SPS", "PRP", "SPS"], "key": {"S": "steel_ingot", "P": "powerstone_dust", "R": "rail"}, "result": "train_booster", "count": 2},
+    {"type": "shaped", "pattern": ["SIS", "IPI", "SSS"], "key": {"S": "steel_ingot", "I": "iron_ingot", "P": "powerstone_dust"}, "result": "chime_maker"},
+    {"type": "shaped", "pattern": ["SSS", "IPI", "SSS"], "key": {"S": "steel_ingot", "I": "iron_ingot", "P": "powerstone_dust"}, "result": "horn_maker"},
+    {"type": "shaped", "pattern": ["W.W", "LSL", ".S."], "key": {"W": "white_wool", "L": "powerstone_lamp", "S": "steel_ingot"}, "result": "crossing_signal"},
+    {"type": "shaped", "pattern": ["L..", "SRW", "S.."], "key": {"L": "powerstone_lamp", "S": "steel_ingot", "R": "red_wool", "W": "white_wool"}, "result": "crossing_gate"},
+    {"type": "shaped", "pattern": ["S.S", "BFB", "BBB"], "key": {"S": "steel_ingot", "B": "steel_block", "F": "furnace"}, "result": "locomotive"},
+    {"type": "shaped", "pattern": ["GGG", "PPP", "SSS"], "key": {"G": "glass", "P": "planks", "S": "steel_ingot"}, "result": "passenger_wagon"},
+    {"type": "shaped", "pattern": ["P.P", "PCP", "SSS"], "key": {"P": "planks", "C": "chest", "S": "steel_ingot"}, "result": "freight_wagon"},
+    {"type": "shaped", "pattern": ["BB", "BB"], "key": {"B": "bronze_block"}, "result": "cut_bronze", "count": 4},
+    {"type": "shaped", "pattern": ["C", "C"], "key": {"C": "cut_bronze"}, "result": "chiseled_bronze"},
+    {"type": "shaped", "pattern": [".B.", "B.B", ".B."], "key": {"B": "bronze_block"}, "result": "bronze_grate", "count": 4},
+    {"type": "shaped", "pattern": [".B.", "BTB", ".P."], "key": {"B": "bronze_block", "T": "torch", "P": "powerstone_dust"}, "result": "bronze_bulb", "count": 4},
+    {"type": "shaped", "pattern": ["SBS", "IFI", "SRS"], "key": {"S": "steel_ingot", "B": "steel_block", "I": "iron_ingot", "F": "furnace", "R": "rail"}, "result": "drill_car"}
+  ]
+})";
+
 const char* kUpdate180 = R"({
   // VoxelCraft 1.8.0 Concrete & Old World: concrete (dusty from sand and gravel, hardened in the
   // furnace), the gray wood of the Dappled Forest, and stairs and slabs of the new materials.
@@ -781,6 +805,7 @@ const std::vector<std::pair<std::string, std::string>>& defaultPackFiles() {
         {"recipes/update_1_8_0.json", kUpdate180},
         {"recipes/update_1_7_2.json", kUpdate172},
         {"recipes/update_1_9_0.json", kUpdate190},
+        {"recipes/update_2_1_0.json", kUpdate210},
     };
     return files;
 }

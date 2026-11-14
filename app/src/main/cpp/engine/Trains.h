@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include <string>
 #include <vector>
 
@@ -14,7 +15,7 @@ namespace vc {
 // the originals so people fit inside: the cars are solid (floor, walls, roof) and have a door in
 // each side, so players can walk in. The driver sits in the locomotive and drives with the throttle
 // and the brake.
-enum class CarKind { Locomotive = 0, Passenger = 1, Freight = 2 };
+enum class CarKind { Locomotive = 0, Passenger = 1, Freight = 2, Drill = 3 };  // build 5: the drill car
 
 // A place on the track: a rail cell, the side the train came in by and the side it leaves by
 // (0 north, 1 east, 2 south, 3 west), and how far through the cell it is (0..1).
@@ -22,6 +23,7 @@ struct RailPos {
     int x = 0, y = 0, z = 0;
     int in = 2, out = 0;
     float t = 0.5f;
+    int slopeHigh = -1;  // on a slope rail: the side it rises towards, else -1
 };
 
 struct TrainCar {
@@ -29,6 +31,7 @@ struct TrainCar {
     RailPos at;      // the middle of the car
     Vec3 pos;        // world position of the middle at rail-head level (updated from `at`)
     float yaw = 0;   // the model's front (+z) points along the travel direction
+    float pitch = 0; // build 5: nose up (+) or down on slopes, from the track under both ends
 };
 
 struct Train {
@@ -37,6 +40,8 @@ struct Train {
     float speed = 0;     // blocks per second, negative backwards
     float throttle = 0;  // -1..1: the speed the driver asks for (a fraction of kMaxSpeed)
     bool brake = false;
+    float drillTimer = 0;  // build 5: time until the drill cuts the next block of tunnel
+    float boosted = 0;   // seconds the extra speed of a booster lasts
 };
 
 class TrainSystem {
@@ -63,6 +68,9 @@ public:
     void removeCar(int train, int car);  // just that car (the train ends when it was the last one)
     void buildVertices(int dim, std::vector<Vertex>& out) const;
 
+    // Build 5: where a train with a drill car in front wants the next piece of tunnel: the rail cell
+    // the track ends in and the side it leaves by (x, y, z, side). Session cuts it and lays the rail.
+    std::vector<std::array<int, 4>>& drillRequests() { return drillRequests_; }
     std::vector<Train>& trains() { return trains_; }
     const std::vector<Train>& trains() const { return trains_; }
     bool save(const std::string& folder) const;
@@ -77,7 +85,9 @@ public:
 
 private:
     std::vector<Train> trains_;
+    std::vector<std::array<int, 4>> drillRequests_;
     void refresh(TrainCar& car) const;
+    void pose(const World& world, TrainCar& car) const;  // build 5: tilt and height from both ends
 };
 
 }  // namespace vc

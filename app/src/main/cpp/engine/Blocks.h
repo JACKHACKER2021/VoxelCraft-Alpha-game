@@ -257,6 +257,20 @@ enum BlockId : uint16_t {
     LOCOMOTIVE = 60013,       // 2.1.0 preview: put on a rail, they make a train (items, not blocks)
     PASSENGER_WAGON = 60014,
     FREIGHT_WAGON = 60015,
+    RAIL_SLOPE = 60016,       // 60016..60019: a rail up a slope, rising towards side 0 north, 1 east...
+    // 2.1.0 preview build 3: railway blocks.
+    TRAIN_BOOSTER = 60020,    // under a rail: a train running over it speeds up
+    CHIME_MAKER = 60021,      // beside the track: rings a crossing bell when a train passes
+    HORN_MAKER = 60022,       // beside the track: sounds the train's horn when it passes
+    CROSSING_SIGNAL = 60023,  // 60023..60034: facing * 3 + (0 dark, 1 left lamp, 2 right lamp): flashes near a train
+    CROSSING_GATE = 60035,    // 60035..60042: facing * 2 + (0 open, 1 closed): comes down near a train
+    TURNTABLE = 60043,        // 60043 north-south, 60044 east-west: a tap turns the track
+    DRILL_CAR = 60045,        // build 5: a car with a drill: bores a tunnel and lays the track ahead (an item)
+    // 2.1.0 preview build 6: the Bronze Update.
+    CUT_BRONZE = 60046,       // bronze cut into four plates
+    CHISELED_BRONZE = 60047,  // a bronze plate with a pattern pressed in
+    BRONZE_GRATE = 60048,     // a see-through bronze lattice
+    BRONZE_BULB = 60049,      // 60049..60052: + 1 lit, + 2 powered; each new pulse of power switches it on or off
     COMMAND_BLOCK = 1586,     // runs its command when powerstone powers it  // 1.7.2 build 3: a barrel of the Overworld camps, filled the first time it opens
     EGG_HUSKING = 1307,
     // Blocks of the forgotten civilization, the wasteland and the fortress.
@@ -523,7 +537,12 @@ inline ItemId railSwitchId(int facing, int state) { return (ItemId)(RAIL_SWITCH 
 inline int railSwitchIndex(ItemId id) { return id >= RAIL_SWITCH && id < RAIL_SWITCH + 8 ? id - RAIL_SWITCH : -1; }
 inline bool isRailSwitch(ItemId id) { return railSwitchIndex(id) >= 0; }
 inline bool isBufferStop(ItemId id) { return id >= BUFFER_STOP && id < BUFFER_STOP + 4; }
-inline bool isRail(ItemId id) { return id == RAIL_NS || id == RAIL_EW || (id >= RAIL_CURVE && id < RAIL_CURVE + 4) || isRailSwitch(id); }
+inline bool isRailSlope(ItemId id) { return id >= RAIL_SLOPE && id < RAIL_SLOPE + 4; }
+inline bool isCrossingSignal(ItemId id) { return id >= CROSSING_SIGNAL && id < CROSSING_SIGNAL + 12; }
+inline bool isCrossingGate(ItemId id) { return id >= CROSSING_GATE && id < CROSSING_GATE + 8; }
+inline bool isTurntable(ItemId id) { return id == TURNTABLE || id == TURNTABLE + 1; }
+constexpr int kExtLastBlock = BRONZE_BULB + 3;
+inline bool isRail(ItemId id) { return isRailSlope(id) || isTurntable(id) || id == RAIL_NS || id == RAIL_EW || (id >= RAIL_CURVE && id < RAIL_CURVE + 4) || isRailSwitch(id); }
 // Blocks with ids from 1000 up (everything else up there is an item).
 inline bool isBalloon(ItemId id) { return id >= BALLOON && id < BALLOON + 3; }
 inline bool isPaintedPlanks(ItemId id) { return id >= PAINTED_PLANKS && id < PAINTED_PLANKS + 4; }
@@ -537,10 +556,10 @@ bool modIsTransparent(ItemId id);
 bool modIsEmissive(ItemId id);
 int modFood(ItemId id);
 inline bool isNewBlock(ItemId id) {
-    if (id >= RAIL_SWITCH && id < BUFFER_STOP + 4) return true;  // 2.0.0: the engine's own range
+    if (id >= kExtIdBase && id <= kExtLastBlock && !(id >= LOCOMOTIVE && id <= FREIGHT_WAGON) && id != DRILL_CAR) return true;  // the engine's own range
     if (isModId(id)) return modIsBlock(id);
     return isStairs(id) || isSlab(id) || (id >= TAR && id <= SNOW_LAYER) || isStainedGlass(id) || (id >= WALL_CABLE && id < WALL_CABLE + 8) || (id >= WALL_SWITCH && id < WALL_SWITCH + 8) ||
-           (id >= ANNIV_LOGO && id <= PAINTED_PLANKS + 3) || (id >= POWERSTONE_BRICKS && id <= COMMAND_BLOCK && id != 1518 && id != 1519) || (id >= SOUND_BLOCK && id <= RAIL_CURVE + 3) || (id >= RAIL_SWITCH && id < BUFFER_STOP + 4) ||
+           (id >= ANNIV_LOGO && id <= PAINTED_PLANKS + 3) || (id >= POWERSTONE_BRICKS && id <= COMMAND_BLOCK && id != 1518 && id != 1519) || (id >= SOUND_BLOCK && id <= RAIL_CURVE + 3) || (id >= RAIL_SWITCH && id < BUFFER_STOP + 4) || isRailSlope(id) ||
            (id >= CONCRETE_POWDER && id <= LOOT_CHEST_CHAMBER);
 }
 // The full block a stair or slab is cut from (its texture, hardness and tool).
@@ -642,7 +661,12 @@ enum Tile : uint16_t {
     T_RAIL_SWITCH0, T_RAIL_SWITCH1, T_RAIL_SWITCH2, T_RAIL_SWITCH3, T_RAIL_SWITCH4, T_RAIL_SWITCH5, T_RAIL_SWITCH6, T_RAIL_SWITCH7,  // 2.0.0
     T_CUSHION_TOP, T_CUSHION_SIDE, T_BUFFER_STOP, T_BUFFER_PLATE,
     T_TRAIN_PALETTE, T_LOCOMOTIVE_ITEM, T_PASSENGER_WAGON_ITEM, T_FREIGHT_WAGON_ITEM,
+    T_BOOSTER_TOP, T_BOOSTER_SIDE, T_CHIME_MAKER, T_HORN_MAKER, T_SIGNAL_LAMP_ON, T_SIGNAL_LAMP_OFF, T_SIGNAL_BOARD,
+    T_TURNTABLE, T_CROSSING_ICON, T_GATE_ICON,  // 2.1.0 preview build 3
     T_CELESTLING_BODY, T_CELESTLING_FACE, T_STALKER_BODY, T_STALKER_FACE, T_DRIFTER_BODY, T_DRIFTER_FACE, T_DRIFTER_WING,
+    T_TRAIN_TEX, T_TRAIN_TEX_LAST = T_TRAIN_TEX + 13,  // 2.1.0 preview build 4: a pixel-art tile per train colour
+    T_DRILL_CAR_ITEM,  // build 5
+    T_CUT_BRONZE, T_CHISELED_BRONZE, T_BRONZE_GRATE, T_BRONZE_BULB, T_BRONZE_BULB_ON,  // build 6: the Bronze Update
     T_COUNT
 };
 static_assert(T_COUNT <= kAtlasCols * kAtlasCols, "the atlas has room for every tile");
@@ -678,6 +702,8 @@ inline ItemId toggledSwitch(ItemId id) {
 // Which wall a wall cable or switch hangs on (0 north, 1 east, 2 south, 3 west).
 inline int wallSide(ItemId id) { return isWallCable(id) ? (id - WALL_CABLE) % 4 : isWallSwitch(id) ? (id - WALL_SWITCH) % 4 : -1; }
 inline bool isLamp(ItemId id) { return id == POWERSTONE_LAMP || id == POWERSTONE_LAMP_ON; }
+inline bool isBronzeBulb(ItemId id) { return id >= BRONZE_BULB && id <= BRONZE_BULB + 3; }
+inline bool bronzeBulbLit(ItemId id) { return isBronzeBulb(id) && ((id - BRONZE_BULB) & 1); }
 inline bool isTnt(ItemId id) { return id == TNT || id == NUKE_TNT; }
 inline bool isSword(ItemId id) { return (id >= WOOD_SWORD && id <= RUBY_SWORD) || id == HARDIUM_SWORD || id == CELESTIUM_SWORD; }
 inline bool isSpawnEgg(ItemId id) {
@@ -697,7 +723,7 @@ inline bool isBed(ItemId id) { return id >= BED && id < BED + 8; }
 inline bool isShaped(ItemId id) {
     return isDoor(id) || isTrapdoor(id) || isChest(id) || isFence(id) || isSkeletonHead(id) || id == CACTUS || isBed(id) || isCable(id) ||
            isSwitch(id) || id == CAKE || id == FARMLAND || isStairs(id) || (isSlab(id) && !isDoubleSlab(id)) ||
-           isBalloon(id) || id == PARTY_LANTERN || id == SNOW_LAYER || isTorch(id) || isCarpet(id) || id == CAMPFIRE || id == LEAF_LITTER || isRail(id) || id == CUSHION || isBufferStop(id);
+           isBalloon(id) || id == PARTY_LANTERN || id == SNOW_LAYER || isTorch(id) || isCarpet(id) || id == CAMPFIRE || id == LEAF_LITTER || isRail(id) || id == CUSHION || isBufferStop(id) || isCrossingSignal(id) || isCrossingGate(id);
 }
 inline bool isLeaves(ItemId id) { return id == LEAVES || id == SPRUCE_LEAVES || id == VOID_LEAVES || id == NETHERPERK_CAP || id == CELESTIAL_LEAVES ||
                                          (id >= RED_LEAVES && id <= YELLOW_LEAVES) || id == CRIMSONIUM_LEAVES; }
@@ -715,14 +741,14 @@ inline bool isSolid(ItemId id) { return id != AIR && !isLiquid(id) && !isPortal(
 inline bool isTargetable(ItemId id) { return isSolid(id) || isPlant(id); }
 // Opaque blocks fully hide the faces of their neighbours.
 inline bool isOpaque(ItemId id) {
-    return isSolid(id) && !isLeaves(id) && id != GLASS && id != POWERSTONE_GLASS && !isShaped(id) && !isStainedGlass(id) && id != BARRIER &&
+    return isSolid(id) && !isLeaves(id) && id != GLASS && id != POWERSTONE_GLASS && id != BRONZE_GRATE && !isShaped(id) && !isStainedGlass(id) && id != BARRIER &&
            id != HONEY_BLOCK &&
            !(isModId(id) && modIsTransparent(id));
 }
 // Rendered at full brightness regardless of shading.
 inline bool isEmissive(ItemId id) {
     return id == LAVA || isPortal(id) || id == LIT_FURNACE || id == EYE_LOG || id == POWERSTONE_LIGHT ||
-           id == POWERSTONE_LAMP_ON || id == NETHERPERK_CAP || cableOn(id) || id == POWERSTONE_BLOCK ||
+           id == POWERSTONE_LAMP_ON || bronzeBulbLit(id) || id == NETHERPERK_CAP || cableOn(id) || id == POWERSTONE_BLOCK ||
            id == PARTY_LANTERN || id == ANNIV_LOGO || id == VOID_BRICK_EYE || isTorch(id) || id == FUNGAL_DEEPSTONE || id == VOID_SHARD_BLOCK || id == SHARD_CLUSTER || id == FIRE || id == CAMPFIRE || id == PALE_CRYSTAL || (isModId(id) && modIsEmissive(id));
 }
 inline bool isFurnace(ItemId id) { return id == FURNACE || id == LIT_FURNACE || id == POWERSTONE_FURNACE || id == POWERSTONE_FURNACE_ON; }
@@ -730,7 +756,7 @@ inline bool isPowerstoneFurnace(ItemId id) { return id == POWERSTONE_FURNACE || 
 // How far a block lights up its surroundings (0..15), day and night.
 inline int lightLevel(ItemId id) {
     switch (id) {
-        case POWERSTONE_LAMP_ON: case POWERSTONE_LIGHT: case PARTY_LANTERN: case FIRE: case CAMPFIRE: return 15;
+        case POWERSTONE_LAMP_ON: case POWERSTONE_LIGHT: case PARTY_LANTERN: case FIRE: case CAMPFIRE: case BRONZE_BULB + 1: case BRONZE_BULB + 3: return 15;
         case PALE_CRYSTAL: return 11;
         case LAVA: return 14;
         case TORCH: case TORCH_WALL: case TORCH_WALL + 1: case TORCH_WALL + 2: case TORCH_WALL + 3: return 14;
@@ -916,11 +942,23 @@ inline int tileFor(ItemId id, Face face) {
             if (isColorConcrete(id)) return T_CONCRETE + (id - CONCRETE);
             if (isDye(id)) return T_DYE + (id - DYE);
             if (id >= RAIL_CURVE && id < RAIL_CURVE + 4) return T_RAIL_CURVE0 + (id - RAIL_CURVE);
+            if (isRailSlope(id)) return (id - RAIL_SLOPE) % 2 ? T_RAIL_EW : T_RAIL_NS;
             if (isRailSwitch(id)) return T_RAIL_SWITCH0 + railSwitchIndex(id);
             if (id == CUSHION) return face == F_TOP ? T_CUSHION_TOP : T_CUSHION_SIDE;
+            if (id == TRAIN_BOOSTER) return face == F_TOP ? T_BOOSTER_TOP : T_BOOSTER_SIDE;
+            if (id == CHIME_MAKER) return T_CHIME_MAKER;
+            if (id == HORN_MAKER) return T_HORN_MAKER;
+            if (isCrossingSignal(id)) return T_CROSSING_ICON;
+            if (isCrossingGate(id)) return T_GATE_ICON;
+            if (isTurntable(id)) return T_TURNTABLE;
             if (id == LOCOMOTIVE) return T_LOCOMOTIVE_ITEM;
             if (id == PASSENGER_WAGON) return T_PASSENGER_WAGON_ITEM;
             if (id == FREIGHT_WAGON) return T_FREIGHT_WAGON_ITEM;
+            if (id == DRILL_CAR) return T_DRILL_CAR_ITEM;
+            if (id == CUT_BRONZE) return T_CUT_BRONZE;
+            if (id == CHISELED_BRONZE) return T_CHISELED_BRONZE;
+            if (id == BRONZE_GRATE) return T_BRONZE_GRATE;
+            if (isBronzeBulb(id)) return bronzeBulbLit(id) ? T_BRONZE_BULB_ON : T_BRONZE_BULB;
             if (isBufferStop(id)) return face == F_TOP || face == F_BOTTOM ? T_BUFFER_STOP : T_BUFFER_PLATE;
             switch (id) {
                 case CRIMSONIUM_LOG: return face == F_TOP || face == F_BOTTOM ? T_CRIMSONIUM_LOG_TOP : T_CRIMSONIUM_LOG_SIDE;

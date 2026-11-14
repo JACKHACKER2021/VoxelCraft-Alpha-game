@@ -12,7 +12,7 @@ namespace {
 
 constexpr int kRate = 22050;
 constexpr float kTau = 6.2831853f;
-const char* kVersionTag = "synth-v6";  // 1.6.0: sounds only, the generated music is gone
+const char* kVersionTag = "synth-v7";  // 1.6.0: sounds only, the generated music is gone
 
 std::vector<uint8_t> toWav(const std::vector<float>& samples) {
     std::vector<uint8_t> out;
@@ -93,6 +93,8 @@ const char* soundName(Sound s) {
         case Sound::Thunder: return "thunder";
         case Sound::Page: return "page";
         case Sound::Confirm: return "confirm";
+        case Sound::TrainHorn: return "train_horn";
+        case Sound::CrossingChime: return "crossing_chime";
         case Sound::StepSand: return "step_sand";
         case Sound::StepGravel: return "step_gravel";
         case Sound::StepStone: return "step_stone";
@@ -157,6 +159,17 @@ std::vector<uint8_t> synthesizeSound(Sound s) {
             tone(o, 0, 0.2f, 600, 300, 0.2f, 14);
             break;
         case Sound::Grunt: tone(o, 0, 0.3f, 160, 110, 0.5f, 8); break;
+        case Sound::TrainHorn:
+            // Two notes together, a minor third apart, held and then let go: a train's horn.
+            for (float f : {233.0f, 277.0f, 466.0f}) tone(o, 0, 1.3f, f, f * 0.985f, f > 400 ? 0.12f : 0.3f, 1.2f);
+            break;
+        case Sound::CrossingChime:
+            // A level-crossing bell: four quick strikes of a bright bell.
+            for (int k = 0; k < 4; ++k) {
+                tone(o, k * kRate / 4, 0.35f, 1480, 1480, 0.3f, 9);
+                tone(o, k * kRate / 4, 0.35f, 2220, 2220, 0.12f, 12);
+            }
+            break;
         default: break;
     }
     return toWav(o);

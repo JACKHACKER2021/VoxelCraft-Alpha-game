@@ -79,6 +79,15 @@ public:
     // Platform hooks, all called on the game thread.
     std::function<void()> onTexturePackButton;
     std::function<void(int requestId, const std::string& title, const std::string& initial)> onTextPrompt;
+    // Build 6: typing in the game. beginTyping shows the game's own input bar and asks the platform
+    // for the keyboard; the platform sends the live text (onTypingText, any thread) and the final
+    // text through onTextResult.
+    void beginTyping(int requestId, const std::string& title, const std::string& initial, bool password);
+    void onTypingText(const std::string& text);
+    bool typing() const { return typingId_.load() >= 0; }
+    void openNews() { newsOpen_ = true; }  // films and tests
+    std::function<void(int requestId, const std::string& initial, bool password)> onShowKeyboard;
+    std::function<void()> onHideKeyboard;
     std::function<void(int requestId, const std::string& title, const std::string& text)> onEditText;  // multi-line
     std::function<void()> onImportPack;
     std::function<void(int ms)> onVibrate;
@@ -425,6 +434,13 @@ private:
     std::atomic<bool> textureReload_{false}, packsReload_{false};
     std::mutex textMutex_;
     std::vector<std::pair<int, std::string>> textResults_;
+    // Build 6: the in-game input bar.
+    std::atomic<int> typingId_{-1};
+    std::string typingTitle_, typingLive_;
+    bool typingPassword_ = false;
+    void typingBar();
+    bool newsOpen_ = false;  // build 6: the "What's new in 2.1.0" table on the title screen
+    void newsPanel();
 };
 
 }  // namespace vc

@@ -613,7 +613,7 @@ static int testJsonAndPacks() {
     std::vector<std::string> warn;
     GenConfig round = GenConfig::fromJson(def.toJson(), &warn);
     CHECK(warn.empty() && round.biomes.size() == 8 && round.biomes[2].surface == def.biomes[2].surface);
-    CHECK(RecipeBook::defaults().shaped.size() == 12 + 35 + 6 + 2 + 16 + 6 + 24 + 16 + 3 + 10 + 12 + 5 + 3 + 8 + 7 + 1 + 10 + 33 + 16 + 11 + 7 && RecipeBook::defaults().shapeless.size() == 2 + 4 + 1 + 1 + 6 + 1 + 1 + 3 + 1 + 3 + 3 + 1 + 2 + 49 + 1 + 1);  // 1.8.0: concrete, gray planks, 10 stairs and slabs  // 1.5.7: + book and quill; 1.6.0: + 3: torch, shield, lamp; crimson planks  // 1.5.1: no planks from Eye Logs
+    CHECK(RecipeBook::defaults().shaped.size() == 12 + 35 + 6 + 2 + 16 + 6 + 24 + 16 + 3 + 10 + 12 + 5 + 3 + 8 + 7 + 1 + 10 + 33 + 16 + 11 + 7 + 18 && RecipeBook::defaults().shapeless.size() == 2 + 4 + 1 + 1 + 6 + 1 + 1 + 3 + 1 + 3 + 3 + 1 + 2 + 49 + 1 + 1);  // 1.8.0: concrete, gray planks, 10 stairs and slabs  // 1.5.7: + book and quill; 1.6.0: + 3: torch, shield, lamp; crimson planks  // 1.5.1: no planks from Eye Logs
 
     // Biomes really show up in the world: deserts are sandy, forests have trees.
     World w(1234, Dimension::Overworld);
@@ -634,7 +634,7 @@ static int testJsonAndPacks() {
     auto list = pm.list();
     CHECK(list.size() == 2 && list[0].builtin && list[0].enabled && list[0].name == "VoxelCraft Default" &&
           list[1].name == "Pre-Alpha Style" && !list[1].enabled && list[1].style == "pre_alpha");
-    CHECK(pm.files("default").size() == 26 && pm.files("default")[0] == "manifest.json");
+    CHECK(pm.files("default").size() == 27 && pm.files("default")[0] == "manifest.json");
     warn.clear();
     GenConfig cfg = pm.buildConfig(&warn);
     CHECK(warn.empty() && cfg.biomes.size() == 8);
@@ -2747,7 +2747,7 @@ static int testUpdate12() {
         // 1.8.0: then "VoxelSoftworks presents" the version; a tap goes on to the menu.
         log.clear();
         game.frame(t += 1 / 30.0);
-        CHECK(drawn("VOXELSOFTWORKS PRESENTS") && drawn("VOXELCRAFT 2.0.0") && !drawn("Play"));
+        CHECK(drawn("VOXELSOFTWORKS PRESENTS") && drawn("VOXELCRAFT 2.1.0") && !drawn("Play"));
         for (int i = 0; i < 30; ++i) game.frame(t += 1 / 30.0);
         game.onTouch(0, TouchAction::Down, 1200, 540, t);
         game.onTouch(0, TouchAction::Up, 1200, 540, t);

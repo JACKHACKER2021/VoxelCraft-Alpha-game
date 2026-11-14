@@ -37,7 +37,7 @@ namespace vc {
 namespace vc {
 
 namespace {
-const char* kVersion = kPreviewEdition ? "VoxelCraft 2.1.0 Preview build 1" : "VoxelCraft 2.0.0 build 2";
+const char* kVersion = kPreviewEdition ? "VoxelCraft 2.2.0 Preview build 1" : "VoxelCraft 2.1.0";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -132,7 +132,7 @@ void Game::applyGuiScale() {
 
 void Game::onTouch(int id, TouchAction action, float x, float y, double time) {
     float gx = x / guiScale_, gy = y / guiScale_;
-    if (screen_ == Screen::Playing && session_) {
+    if (screen_ == Screen::Playing && session_ && !typing()) {  // build 6: while typing, the input bar takes the taps
         if (action == TouchAction::Down) session_->touchDown(id, gx, gy, time);
         else if (action == TouchAction::Move) session_->touchMove(id, gx, gy);
         else session_->touchUp(id, gx, gy, time);
@@ -153,6 +153,11 @@ void Game::onAppPause() {
 }
 
 bool Game::onBack() {
+    if (typing()) {  // build 6: back closes the input bar without sending
+        typingId_ = -1;
+        if (onHideKeyboard) onHideKeyboard();
+        return true;
+    }
     switch (screen_) {
         case Screen::Title: return false;
         case Screen::WorldList: setScreen(Screen::Title); break;
@@ -203,6 +208,64 @@ bool Game::onBack() {
         case Screen::Death: break;
     }
     return true;
+}
+
+void Game::beginTyping(int requestId, const std::string& title, const std::string& initial, bool password) {
+    {
+        std::lock_guard<std::mutex> lock(textMutex_);
+        typingLive_ = initial;
+    }
+    typingTitle_ = title, typingPassword_ = password;
+    typingId_ = requestId;
+    if (onShowKeyboard) onShowKeyboard(requestId, initial, password);
+}
+
+void Game::onTypingText(const std::string& text) {
+    std::lock_guard<std::mutex> lock(textMutex_);
+    typingLive_ = text;
+}
+
+// Build 6: the input bar at the top of the screen, above the keyboard: the title, the text with a
+// blinking cursor, OK and Cancel. A tap on the text brings the keyboard back if it was closed.
+void Game::typingBar() {
+    std::string text;
+    {
+        std::lock_guard<std::mutex> lock(textMutex_);
+        text = typingLive_;
+    }
+    if (typingPassword_) text = std::string(text.size(), '*');
+    const float W = ui_.width();
+    ui_.fill(0, 0, W, ui_.height(), Color{0, 0, 0, 0.35f});
+    const float x = 10, y = 6, w = W - 20, h = 46;
+    ui_.roundPanel(x, y, w, h);
+    ui_.text(x + 8, y + 5, typingTitle_, theme::kTextBright, 1, false, w - 16);
+    const float bw = 56, fx = x + 8, fy = y + 20, fw = w - 16 - 2 * (bw + 6), fh = 18;
+    ui_.fill(fx, fy, fw, fh, Color{0.96f, 0.96f, 0.94f, 1});
+    ui_.fill(fx, fy + fh - 1, fw, 1, theme::kGold);
+    // Show the end of a long text, the part being typed.
+    std::string shown = text;
+    while (!shown.empty() && ui_.textWidth(shown) > fw - 10) {
+        size_t cut = 1;
+        while (cut < shown.size() && (static_cast<unsigned char>(shown[cut]) & 0xC0) == 0x80) ++cut;
+        shown.erase(0, cut);
+    }
+    const float tw = ui_.text(fx + 4, fy + 5, shown, Color{0.08f, 0.08f, 0.1f, 1}, 1, false);
+    if (std::fmod(now_, 1.0) < 0.55) ui_.fill(fx + 4 + tw + 1, fy + 3, 1, fh - 6, Color{0.1f, 0.1f, 0.12f, 1});
+    if (ui_.tapped(fx, fy, fw, fh) && onShowKeyboard) onShowKeyboard(typingId_, text, typingPassword_);
+    const int id = typingId_;
+    if (ui_.button(fx + fw + 6, fy, bw, fh, "OK", true, true)) {
+        std::string live;
+        {
+            std::lock_guard<std::mutex> lock(textMutex_);
+            live = typingLive_;
+        }
+        typingId_ = -1;
+        if (onHideKeyboard) onHideKeyboard();
+        onTextResult(id, live);
+    } else if (ui_.button(fx + fw + 6 + bw + 6, fy, bw, fh, "Zrušit")) {
+        typingId_ = -1;
+        if (onHideKeyboard) onHideKeyboard();
+    }
 }
 
 void Game::onTextResult(int requestId, const std::string& text) {
@@ -641,6 +704,7 @@ void Game::frame(double time) {
             results.swap(textResults_);
         }
         for (auto& [id, text] : results) {
+            if (id == typingId_) typingId_ = -1;  // build 6: the keyboard's Done sent it
             if (id == PromptWorldName) newWorldName_ = text.substr(0, 40);
             else if (id == PromptSeed) newWorldSeed_ = text.substr(0, 40);
             else if (id == PromptJson) editorApply(text, true);
@@ -924,6 +988,8 @@ void Game::frame(double time) {
         ui_.endFrame();
         return;
     }
+    const bool typingNow = typing();
+    if (typingNow) ui_.holdTaps(true);  // build 6: the screen under the input bar takes no taps
     switch (screen_) {
         case Screen::Title: titleScreen(); break;
         case Screen::WorldList: worldListScreen(); break;
@@ -960,6 +1026,10 @@ void Game::frame(double time) {
         case Screen::Encyclopedia: encyclopediaScreen(); break;
         case Screen::HowToCraft: howToCraftScreen(); break;
         case Screen::Playing: break;
+    }
+    if (typingNow) {
+        ui_.holdTaps(false);
+        typingBar();
     }
 
     if (splash) splashScreen(dt);  // fading out over the title
@@ -1033,9 +1103,9 @@ void Game::presentsScreen(float dt) {
     ui_.textCentered(W / 2, y, "VOXELSOFTWORKS PRESENTS", faded(dim, 0.0f), 1);
     y += 14;
     const float big = ui_.textWidth("VOXELCRAFT 1.8.0", 3) < W - 20 && H >= 260 ? 3 : 2;
-    ui_.textCentered(W / 2, y, "VOXELCRAFT 2.0.0", faded(gold, 0.2f), big);
+    ui_.textCentered(W / 2, y, "VOXELCRAFT 2.1.0", faded(gold, 0.2f), big);
     y += 10 * big + 4;
-    ui_.textCentered(W / 2, y, "The Whole Story", faded(white, 0.5f), 1);
+    ui_.textCentered(W / 2, y, "Trains & Bronze", faded(white, 0.5f), 1);
     y += 14;
     if (season != Season::None) {
         // The event that is on right now, in a coloured band.
@@ -1054,17 +1124,20 @@ void Game::presentsScreen(float dt) {
     }
     y += 4;
     static const char* const kNew[] = {
-        "Balíčky pro každý svět zvlášť, přímo ve Vytvořit svět",
-        "Pre-Alpha: starý vzhled 0.3 pro všechny bloky",
-        "Zvuky podle bloku, zvukový blok a spínač na zeď",
-        "Import světů z Minecraft Bedrock (.mcworld)",
-        "Složka Speciální bloky, nové logo a 17minutový příběh",
+        "Vlaky: lokomotiva, vagony, vrtací vůz, plyn a brzda",
+        "3D koleje, oblouky, výhybky, svahy a točna",
+        "Přejezd: výstražník, závora, zvonek a houkačka",
+        "Bronzový update: řezaný a zdobený bronz, mřížka, žárovka",
+        "Psaní přímo ve hře, bez okna Androidu",
     };
     static const char* const kNext[] = {
-        "VoxelCraft 2.1.0",
-        "Vyzkoušej v experimentech: koleje, zatáčky a výhybky",
-        "Vlaky a kolejová doprava",
+        "Lepší animace hráče",
+        "Rozhlas, který odpovídá na text",
+        "Padající listí, teplo a chlad",
+        "Stárnoucí bronz a voskování",
+        "Export světa do Minecraft Bedrock",
     };
+    const int kNextCount = (int)(sizeof(kNext) / sizeof(kNext[0]));
     // Long lines wrap at word boundaries (they used to be cut off). On a small screen the two lists
     // sit side by side.
     auto wrap = [&](const std::string& prefix, const char* source, float width) {
@@ -1089,10 +1162,10 @@ void Game::presentsScreen(float dt) {
     };
     const float room = H - 18 - y;
     float colW = std::min(W - 20, 520.0f);
-    const bool twoColumns = listHeight(kNew, 5, colW) + 5 + listHeight(kNext, 3, colW) > room;
+    const bool twoColumns = listHeight(kNew, 5, colW) + 5 + listHeight(kNext, kNextCount, colW) > room;
     if (twoColumns) colW = std::floor((std::min(W - 12, 760.0f) - 10) / 2);
     // Still too tall (a small screen): only the name of each point, the part before the colon.
-    const bool shortLines = twoColumns && std::max(listHeight(kNew, 5, colW), listHeight(kNext, 3, colW)) > room;
+    const bool shortLines = twoColumns && std::max(listHeight(kNew, 5, colW), listHeight(kNext, kNextCount, colW)) > room;
     const float x = std::floor(W / 2 - (twoColumns ? colW + 5 : colW / 2));
     auto drawList = [&](float lx, float ly, const char* title, const char* prefix, const char* const* items, int n, Color c, float start) {
         ui_.text(lx, ly, title, faded(gold, start), 1, false);
@@ -1109,8 +1182,8 @@ void Game::presentsScreen(float dt) {
         return ly;
     };
     const float afterNew = drawList(x, y, "CO JE V TÉTO VERZI", "+ ", kNew, 5, white, 0.9f);
-    if (twoColumns) drawList(x + colW + 10, y, "PLÁNY DÁL", "> ", kNext, 3, dim, 2.0f);
-    else drawList(x, afterNew + 5, "PLÁNY DÁL", "> ", kNext, 3, dim, 2.0f);
+    if (twoColumns) drawList(x + colW + 10, y, "PŘIPRAVUJEME VE 2.2.0", "> ", kNext, kNextCount, dim, 2.0f);
+    else drawList(x, afterNew + 5, "PŘIPRAVUJEME VE 2.2.0", "> ", kNext, kNextCount, dim, 2.0f);
     if (t > 3.0f) ui_.textCentered(W / 2, H - 14, "Klepni pro pokračování", faded(green, 3.0f), 1);
     if (t > 0.8f && ui_.tapped(0, 0, W, H)) presentsDone_ = true;
 }
@@ -1566,6 +1639,12 @@ void Game::titleScreen() {
         ui_.frame((W - tw) / 2, ty, tw, 16, kGreen, kGreenBorder);
         ui_.textCentered(W / 2, ty + 4, toast_, kTextBright);
     }
+    // Build 6: what 2.1.0 brings, from a button under the menu.
+    {
+        const float nw = 150, ny = py + 4 * (bh + gap) + 18 + (now_ < toastUntil_ && !toast_.empty() ? 20 : 0);
+        if (ny + 20 < H - 12 && ui_.menuButton((W - nw) / 2, ny, nw, 20, "Novinky 2.1.0", St::Primary, Font::Star)) newsOpen_ = true;
+    }
+    if (newsOpen_) newsPanel();
     ui_.text(3, H - 10, kVersion, kText);
     std::string note = "VoxelSoftworks";
     ui_.text(W - ui_.textWidth(note) - 3, H - 10, note, kAccent);
@@ -1574,6 +1653,48 @@ void Game::titleScreen() {
         creditsStart_ = now_;
         setScreen(Screen::Credits);
     }
+}
+
+void Game::newsPanel() {
+    const float W = ui_.width(), H = ui_.height();
+    ui_.fill(0, 0, W, H, Color{0, 0, 0, 0.55f});
+    const float pw = std::min(420.0f, W - 20), ph = std::min(260.0f, H - 20), px = (W - pw) / 2, py = (H - ph) / 2;
+    ui_.roundPanel(px, py, pw, ph);
+    const Color gold{1.0f, 0.82f, 0.43f, 1};
+    ui_.textCentered(W / 2, py + 8, "Co je nového ve VoxelCraftu 2.1.0", gold);
+    struct Row { const char* head; const char* text; };
+    static const Row rows[] = {
+        {"Vlaky", "Lokomotiva, osobní a nákladní vagon, nastupování, plyn, brzda, jízda dozadu"},
+        {"Koleje", "3D koleje ze smrku a oceli, oblouky, výhybky, svahy, zarážedla, točna"},
+        {"Přejezd", "Výstražník s blikáním, závora, zvonek a houkačka"},
+        {"Vrtací vůz", "Razí tunel a pokládá za sebou kolej"},
+        {"Booster", "Blok pod kolejí, který vlak zrychlí"},
+        {"Vzhled vlaků", "Pixel-art textury, kostičkaté díly, kouř z komína, náklon na svahu"},
+        {"Bronz", "Řezaný a zdobený bronz, bronzová mřížka, bronzová žárovka"},
+        {"Psaní", "Chat a texty se píšou přímo ve hře, bez okna Androidu"},
+        {"Recepty", "Recepty na koleje, vagony a bronzové bloky"},
+    };
+    float y = py + 24;
+    const float tw = pw - 114;
+    for (const Row& r : rows) {
+        ui_.text(px + 10, y, r.head, kTextBright, 1, false, 90);
+        // Wrap the description onto as many lines as it needs.
+        std::string line, word;
+        std::istringstream words(tr(r.text));
+        while (words >> word) {
+            const std::string next = line.empty() ? word : line + " " + word;
+            if (!line.empty() && ui_.textWidth(next) > tw) {
+                ui_.text(px + 104, y, line, kText, 1, false);
+                y += 10, line = word;
+            } else {
+                line = next;
+            }
+        }
+        if (!line.empty()) ui_.text(px + 104, y, line, kText, 1, false);
+        y += 13;
+        if (y > py + ph - 34) break;
+    }
+    if (ui_.button(W / 2 - 40, py + ph - 26, 80, 20, "Zavřít", true, true)) newsOpen_ = false;
 }
 
 void Game::creditsScreen() {
@@ -2100,7 +2221,6 @@ void Game::createWorldScreen() {
         experiment(ey + 60, "2.0: Padající hvězdy", "Za jasné noci přeletí po obloze hvězdy.", newWorldExpStars_);
         experiment(ey + 84, "2.0: Chov zvířat", "Nakrm dvě zvířata (pšenice, semínka) a narodí se mládě.", newWorldExpBreeding_);
         // 2.1.0: the rails and trains are in every world of the preview edition, in none of the normal one.
-        if (kPreviewEdition) ui_.text(ex + 12, ey + 111, "2.1 Preview: koleje a vlaky jsou zapnuté v každém světě.", kTextDim, 1, false, ew - 24);
         ui_.text(ex + 6, ey + 136, "Upozornění: experimenty se mohou změnit nebo zmizet.", Color{0.9f, 0.7f, 0.35f, 1}, 1, false, ew - 70);
         if (ui_.button(ex + ew - 66, ey + 140, 60, 16, "Hotovo")) newWorldExpOpen_ = false;
         return;  // the panel covers the screen's other buttons
@@ -2123,7 +2243,7 @@ void Game::createWorldScreen() {
         wi.expStorms = newWorldExpStorms_ && !newWorldOld_;
         wi.expStars = newWorldExpStars_ && !newWorldOld_;
         wi.expBreeding = newWorldExpBreeding_ && !newWorldOld_;
-        wi.expRails = kPreviewEdition && !newWorldOld_;
+        wi.expRails = !newWorldOld_;  // 2.1.0: rails and trains are part of the game
         // 2.0.0: the chosen packs, kept with the world (only when they differ from the global ones).
         if (newWorldPacks_ != packs_.enabledOrder()) {
             for (const std::string& id : newWorldPacks_) wi.packs += (wi.packs.empty() ? "" : ",") + id;
@@ -4584,7 +4704,7 @@ void Game::creativeInventoryScreen() {
     static std::vector<ItemId> special;
     special.clear();
     for (ItemId id : creativeCategoryItems(CatSpecial))
-        if (!(isRail(id) || isBufferStop(id) || id == LOCOMOTIVE || id == PASSENGER_WAGON || id == FREIGHT_WAGON) || session_->info().expRails)
+        if (!(isRail(id) || isBufferStop(id) || isCrossingSignal(id) || isCrossingGate(id) || id == TRAIN_BOOSTER || id == CHIME_MAKER || id == HORN_MAKER || id == LOCOMOTIVE || id == PASSENGER_WAGON || id == FREIGHT_WAGON || id == DRILL_CAR) || session_->info().expRails)
             special.push_back(id);
     for (int c = 0; c < CatCount; ++c)
         tabs.push_back({creativeCategoryName(c), creativeCategoryIcon(c), c == CatSpecial ? &special : &creativeCategoryItems(c)});

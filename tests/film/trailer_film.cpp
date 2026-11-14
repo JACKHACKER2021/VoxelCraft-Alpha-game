@@ -6377,3 +6377,177 @@ SHOT(b09_inventory) {
     d.tap(163, 105, 30);   // Decoration
     d.seconds(1.0f);
 }
+
+// 2.1.0 preview: the new 3D track: straight, a curve, a switch, a slope up onto a hill, a buffer stop.
+SHOT(b10_rails3d) {
+    Director d(out, "b10");
+    d.openWorld("Rails3D", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z) - 3, y = feetY(w, x, z);
+    for (int k = 0; k < 6; ++k) w.setBlock(x, y, z - k, RAIL_NS);
+    w.setBlock(x, y, z - 6, railSwitchId(0, 1));
+    w.setBlock(x + 1, y, z - 6, RAIL_EW);
+    w.setBlock(x + 2, y, z - 6, RAIL_CURVE + 3);
+    for (int k = 7; k < 9; ++k) w.setBlock(x + 2, y, z - k, RAIL_NS);
+    // A hill: the track climbs it on two slope rails.
+    for (int k = 9; k < 15; ++k)
+        for (int dx = 1; dx <= 3; ++dx) {
+            const int h = std::min(2, k - 9);
+            for (int hy = 0; hy < h; ++hy) w.setBlock(x + dx, y + hy, z - k, STONE_BRICKS);
+        }
+    w.setBlock(x + 2, y, z - 9, RAIL_SLOPE + 0);
+    w.setBlock(x + 2, y + 1, z - 10, RAIL_SLOPE + 0);
+    for (int k = 11; k < 14; ++k) w.setBlock(x + 2, y + 2, z - k, RAIL_NS);
+    w.setBlock(x + 2, y + 2, z - 14, BUFFER_STOP + 0);
+    for (int k = 7; k < 10; ++k) w.setBlock(x, y, z - k, RAIL_NS);
+    p.pos = Vec3(x - 2.5f, (float)y + 2.2f, z + 2.5f);
+    p.flying = true;
+    d.idle(10);
+    d.lookNow(Vec3(x + 1.0f, (float)y, z - 5.0f));
+    d.shot("b10_rails3d");
+    d.seconds(0.5f);
+    p.pos = Vec3(x + 5.5f, (float)y + 3.5f, z - 7.5f);
+    d.lookNow(Vec3(x + 2.0f, (float)y + 1, z - 11.0f));
+    d.seconds(0.5f);
+    p.pos = Vec3(x + 1.5f, (float)y + 1.2f, z - 3.0f);
+    d.lookNow(Vec3(x + 0.5f, (float)y, z - 6.0f));
+    d.seconds(0.5f);
+}
+
+// Build 3: a level crossing (signals, gates, chime), a booster and a turntable, the train smoking.
+SHOT(b11_crossing) {
+    Director d(out, "b11");
+    d.openWorld("Crossing", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z) - 4, y = feetY(w, x, z);
+    for (int k = -30; k <= 4; ++k) w.setBlock(x, y, z + k, RAIL_NS);
+    w.setBlock(x, y, z - 31, TURNTABLE);
+    w.setBlock(x, y, z - 32, BUFFER_STOP + 0);
+    w.setBlock(x, y - 1, z - 2, TRAIN_BOOSTER);
+    w.setBlock(x, y - 1, z - 3, TRAIN_BOOSTER);
+    w.setBlock(x - 2, y, z - 20, CROSSING_SIGNAL + 1 * 3);
+    w.setBlock(x + 2, y, z - 18, CROSSING_SIGNAL + 3 * 3);
+    w.setBlock(x - 1, y, z - 18, CROSSING_GATE + 1 * 2);
+    w.setBlock(x + 1, y, z - 20, CROSSING_GATE + 3 * 2);
+    w.setBlock(x - 2, y - 1, z - 19, CHIME_MAKER);
+    s.trains().place(w, s.dimIndex(), CarKind::Locomotive, x, y, z - 7, 0);
+    s.trains().place(w, s.dimIndex(), CarKind::Passenger, x, y, z, 0);
+    s.trains().trains()[0].throttle = 0.5f;
+    p.pos = Vec3(x + 7.5f, (float)y + 3, z - 19.5f);
+    p.flying = true;
+    d.idle(10);
+    d.lookNow(Vec3(x + 0.5f, y + 1.0f, z - 16.0f));
+    d.shot("b11_crossing");
+    d.seconds(5.0f, [&](float) { d.lookNow(Vec3(x + 0.5f, y + 1.0f, z - 16.0f)); });
+}
+
+// Build 5 checks: the cars up close, and on a slope.
+SHOT(b12_close) {
+    Director d(out, "b12");
+    d.openWorld("Close", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z) - 4, y = feetY(w, x, z);
+    for (int k = -20; k <= 4; ++k) w.setBlock(x, y, z + k, RAIL_NS);
+    for (int k = 1; k <= 3; ++k) {
+        for (int hy = 0; hy < k; ++hy)
+            for (int dx = -1; dx <= 1; ++dx) w.setBlock(x + dx, y + hy, z - 20 - k, STONE);
+        w.setBlock(x, y + k - 1, z - 20 - k, RAIL_SLOPE + 0);
+    }
+    for (int k = 24; k <= 34; ++k) {
+        for (int hy = 0; hy < 3; ++hy)
+            for (int dx = -1; dx <= 1; ++dx) w.setBlock(x + dx, y + hy, z - k, STONE);
+        w.setBlock(x, y + 3, z - k, RAIL_NS);
+    }
+    s.trains().place(w, s.dimIndex(), CarKind::Locomotive, x, y, z - 10, 0);
+    s.trains().place(w, s.dimIndex(), CarKind::Passenger, x, y, z - 3, 0);
+    s.trains().place(w, s.dimIndex(), CarKind::Freight, x, y, z + 4, 0);
+    p.pos = Vec3(x + 4.5f, (float)y + 1, z - 3.5f);
+    p.flying = true;
+    d.idle(10);
+    d.lookNow(Vec3(x + 0.5f, y + 1.5f, z - 4.5f));
+    d.shot("b12_close");
+    d.seconds(0.4f);
+    p.pos = Vec3(x + 4.5f, (float)y + 2, z + 6.5f);
+    d.lookNow(Vec3(x + 0.5f, y + 1.0f, z + 3.0f));
+    d.seconds(0.4f);
+    p.pos = Vec3(x - 3.5f, (float)y + 4, z - 9.5f);
+    d.lookNow(Vec3(x + 0.5f, y + 1.5f, z - 11.0f));
+    d.seconds(0.4f);
+    s.trains().trains()[0].throttle = 0.6f;
+    d.seconds(6.0f, [&](float) { p.pos = Vec3(x + 6.5f, (float)y + 4, z - 22.5f); d.lookNow(s.trains().trains()[0].cars[0].pos + Vec3(0, 1, 0)); });
+}
+
+// Build 5: the drill car bores a tunnel through a hill and lays the track as it goes.
+SHOT(b13_drill) {
+    Director d(out, "b13");
+    d.openWorld("Drill", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z) - 4, y = feetY(w, x, z);
+    for (int k = -18; k <= 4; ++k) w.setBlock(x, y, z + k, RAIL_NS);
+    for (int k = 22; k <= 60; ++k)
+        for (int dx = -6; dx <= 6; ++dx)
+            for (int hy = 0; hy < 9 - std::abs(dx) / 2; ++hy) w.setBlock(x + dx, y + hy, z - k, (dx + hy + k) % 9 == 0 ? IRON_ORE : STONE);
+    s.trains().place(w, s.dimIndex(), CarKind::Drill, x, y, z - 12, 0);
+    s.trains().place(w, s.dimIndex(), CarKind::Locomotive, x, y, z - 5, 0);
+    s.trains().trains()[0].throttle = 0.5f;
+    p.pos = Vec3(x + 7.5f, (float)y + 5, z - 18.5f);
+    p.flying = true;
+    d.idle(10);
+    d.lookNow(Vec3(x + 0.5f, y + 1.5f, z - 18.0f));
+    d.shot("b13_drill");
+    d.seconds(9.0f, [&](float) {
+        const Vec3 c = s.trains().trains()[0].cars[0].pos;
+        p.pos = Vec3(c.x + 6.0f, c.y + 6.0f, c.z + 9.0f);
+        d.lookNow(c + Vec3(0, 1, -2));
+    });
+}
+
+// Build 6: the Bronze Update blocks, the fixed wagon door, and typing in the game.
+SHOT(b14_bronze) {
+    Director d(out, "b14");
+    d.openWorld("Bronze", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z) - 5, y = feetY(w, x, z);
+    const ItemId row[] = {BRONZE_BLOCK, CUT_BRONZE, CHISELED_BRONZE, BRONZE_GRATE, BRONZE_BULB + 1, BRONZE_BULB};
+    for (int k = 0; k < 6; ++k)
+        for (int h = 0; h < 3; ++h) w.setBlock(x - 3 + k, y + h, z, h == 1 && k == 3 ? BRONZE_GRATE : row[k]);
+    w.setBlock(x - 3 + 3, y + 1, z + 1, TORCH);
+    s.setTimeOfDay(14000);
+    p.pos = Vec3(x + 0.5f, (float)y + 1, z + 4.5f);
+    d.idle(10);
+    d.lookNow(Vec3(x + 0.5f, y + 1.5f, z + 0.5f));
+    d.shot("b14_bronze");
+    d.seconds(0.6f);
+    // The passenger wagon's door from outside, by day.
+    s.setTimeOfDay(6000);
+    const int tz = z + 14;
+    for (int k = -8; k <= 8; ++k) w.setBlock(x + 8, y, tz + k, RAIL_NS);
+    s.trains().place(w, s.dimIndex(), CarKind::Passenger, x + 8, y, tz, 0);
+    p.pos = Vec3(x + 11.5f, (float)y + 0.5f, tz + 0.5f);
+    d.lookNow(Vec3(x + 8.5f, y + 1.6f, tz + 0.5f));
+    d.seconds(0.6f);
+    // Typing: the game's own input bar, no Android dialog.
+    d.game->beginTyping(14, "Chat (příkazy začínají /)", "", false);
+    d.game->onTypingText("Ahoj, tohle píšu přímo ve hře");
+    d.seconds(0.6f);
+}
+
+// Build 6: the title screen's "What's new in 2.1.0" table.
+SHOT(b15_news) {
+    Director d(out, "b15");
+    d.idle(24);
+    d.shot("b15_news");
+    d.seconds(0.5f);
+    d.game->openNews();
+    d.seconds(0.5f);
+}

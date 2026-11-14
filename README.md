@@ -7,13 +7,13 @@
 **Kostičková hra pro Android s vlastním enginem v C++**
 *Hoppy_Hopsy21 · VoxelSoftworks · vytvořeno společně s Claude*
 
-![Verze](https://img.shields.io/badge/verze-2.0.0-2ea44f?style=for-the-badge)
-![Preview](https://img.shields.io/badge/preview-2.1.0%20vlaky-orange?style=for-the-badge)
+![Verze](https://img.shields.io/badge/verze-2.1.0-2ea44f?style=for-the-badge)
+![Preview](https://img.shields.io/badge/preview-2.2.0-orange?style=for-the-badge)
 ![Android](https://img.shields.io/badge/Android-arm64-3DDC84?style=for-the-badge&logo=android&logoColor=white)
 ![C++](https://img.shields.io/badge/C%2B%2B-17-00599C?style=for-the-badge&logo=cplusplus&logoColor=white)
 ![OpenGL ES](https://img.shields.io/badge/OpenGL%20ES-3.0-5586A4?style=for-the-badge&logo=opengl&logoColor=white)
 
-[⬇️ Stáhnout APK 2.0.0](docs/download/VoxelCraft-2.0.0.apk) · [📦 Všechny verze](release/) · [🎬 Trailer (17 min)](trailers/t12_2.0.0.mp4) · [📜 Historie](docs/HISTORIE.md)
+[⬇️ Stáhnout APK 2.1.0](release/VoxelCraft-2.1.0.apk) · [📦 Všechny verze](release/) · [🎬 Trailer (17 min)](trailers/t12_2.0.0.mp4) · [📜 Historie](docs/HISTORIE.md)
 
 </div>
 
@@ -23,29 +23,29 @@
 
 ---
 
-## 🆕 v2.0.0 „The Whole Story“
+## 🆕 v2.1.0 „Trains & Bronze“
 
 | | Novinka | Co umí |
 |:-:|---|---|
-| 📦 | **Balíčky pro každý svět** | modpacky zapneš zvlášť pro jeden svět přímo ve *Vytvořit svět* |
-| 🕹️ | **Pre-Alpha vzhled** | starý vzhled 0.3 pro menu i textury všech bloků, i z nových dimenzí |
-| 🔊 | **Zvuky podle bloku** | kroky, kopání i pokládání znějí podle materiálu; nahrávky se načítají na pozadí |
-| 🎵 | **Zvukový blok** | klepnutím vybereš 1 z 10 zvuků, powerstone ho přehraje |
-| ⚡ | **Kabely** | drát na zemi, zdi a stropě je jeden souvislý drát; spínač i na zeď |
-| 🪑 | **Sedák** | sedni si (animace sezení), vstaneš skokem |
-| 🌍 | **Import `.mcworld`** | světy z Minecraft Bedrock převedené blok po bloku (vlastní čtečka LevelDB) |
-| 🧰 | **Speciální bloky** | vlastní složka v kreativu: příkazový blok, structure block, bariéra… |
-| 🎬 | **Příběh projektu** | nové logo, úvodní obrazovka 2.0.0 a 17minutový trailer 0.1 → 2.0.0 |
-
-## 🚂 Preview 2.1.0 – koleje a vlaky
+| 🚂 | **Vlaky** | lokomotiva, osobní a nákladní vagon – pevné, s dveřmi, dá se do nich vejít; `Nastoupit` · `Plyn ±` · `Brzda` · couvání |
+| 🛤️ | **3D koleje** | ze smrkových pražců a ocelových kolejnic; oblouky, výhybky, svahy, zarážedla, točna |
+| 🚦 | **Přejezd** | výstražník s blikajícími světly, závora, zvonek a houkačka u trati |
+| ⛏️ | **Vrtací vůz** | vlak s vrtákem vpředu razí tunel a pokládá za sebou kolej |
+| ⚡ | **Booster** | blok pod kolejí, který vlak zrychlí |
+| 🎨 | **Vzhled vlaků** | pixel-art textury, kostičkaté díly, kouř z komína, náklon na svahu |
+| 🟫 | **Bronzový update** | řezaný a zdobený bronz, bronzová mřížka, bronzová žárovka (přepíná se powerstonem) |
+| ⌨️ | **Psaní ve hře** | chat a všechny texty se píšou ve hře, bez okna Androidu |
+| 📋 | **Novinky v menu** | úvodní obrazovka a tlačítko *Novinky 2.1.0* |
 
 > [!TIP]
-> Zapni experiment **„2.1: Koleje“** při vytváření světa. Vše najdeš ve složce **Speciální bloky**.
+> Koleje se vyrábějí z **ocelových ingotů a smrkových kmenů**. Vlaky a koleje najdeš ve složce **Speciální bloky**.
 
-- 🛤️ **Koleje:** rovné, zatáčky (samy podle sousedů), výhybky (přepnutí klepnutím) a zarážky
-- 🚃 **Vlaky:** lokomotiva, osobní a nákladní vagon – velké, pevné, s dveřmi, dá se do nich vejít
-- 🎮 **Ovládání:** `Nastoupit` · `Plyn +` · `Plyn −` (couvání) · `Brzda` · `Vystoupit`
-- 🔗 Vagony se samy připojí za poslední vůz, vlak zastaví na zarážce, klepnutím vůz odebereš
+## 🔮 Připravujeme ve 2.2.0 (Preview)
+- 🧍 lepší animace hráče
+- 📻 rozhlas, který odpovídá na text
+- 🍂 padající listí, teplo a chlad
+- 🟫 stárnoucí bronz a voskování
+- 🌍 export světa do Minecraft Bedrock
 
 ### Import světa z Minecraftu – jak se bloky převedou
 

@@ -23,6 +23,12 @@ int carBoxes(CarKind kind, CarBox out[16]) {
     int n = 0;
     const float w = 0.72f, t = 0.08f, len = 2.0f;
     out[n++] = {-w, 0.2f, -len, w, 0.52f, len};  // the floor (and the frame under it)
+    if (kind == CarKind::Drill) {
+        // Build 5: the machine house fills the car; the drill sticks out in front.
+        out[n++] = {-w, 0.52f, -1.9f, w, 1.95f, 1.95f};
+        out[n++] = {-0.72f, 0.34f, 1.95f, 0.72f, 1.78f, 3.15f};
+        return n;
+    }
     if (kind == CarKind::Freight) {
         // Low walls all round and the load in the middle: climb on top of it.
         out[n++] = {-w, 0.52f, -len, -w + t, 1.36f, len};
@@ -58,6 +64,16 @@ Vec3 sideMid(int side) { return Vec3(0.5f + kDx[side] * 0.5f, 0, 0.5f + kDz[side
 }  // namespace
 
 bool TrainSystem::railSides(ItemId id, int& a, int& b) {
+    if (isTurntable(id)) {
+        a = id == TURNTABLE ? 0 : 1;
+        b = a + 2;
+        return true;
+    }
+    if (isRailSlope(id)) {  // up the slope towards side d, down towards the opposite side
+        a = id - RAIL_SLOPE;
+        b = (a + 2) & 3;
+        return true;
+    }
     if (id == RAIL_NS) return a = 0, b = 2, true;
     if (id == RAIL_EW) return a = 1, b = 3, true;
     if (id >= RAIL_CURVE && id < RAIL_CURVE + 4) {
@@ -114,7 +130,14 @@ Vec3 TrainSystem::pointOn(const RailPos& p, Vec3* tangent) {
         const float l = std::sqrt(tan.x * tan.x + tan.z * tan.z);
         *tangent = l > 0 ? Vec3(tan.x / l, 0, tan.z / l) : Vec3(0, 0, -1);
     }
-    return Vec3(p.x + local.x, p.y + 1 / 16.0f, p.z + local.z);
+    // On a slope the rail rises from 0 at the low side to 1 at the high side (`slopeHigh`).
+    float rise = 0;
+    if (p.slopeHigh >= 0) rise = p.out == p.slopeHigh ? p.t : 1 - p.t;
+    if (tangent && p.slopeHigh >= 0) {
+        const float up = p.out == p.slopeHigh ? 1.0f : -1.0f;
+        *tangent = Vec3(tangent->x, up, tangent->z) * 0.7071f;
+    }
+    return Vec3(p.x + local.x, p.y + 1 / 16.0f + rise, p.z + local.z);
 }
 
 bool TrainSystem::advance(const World& world, RailPos& p, float dist, float& moved) {
@@ -122,7 +145,7 @@ bool TrainSystem::advance(const World& world, RailPos& p, float dist, float& mov
     for (int guard = 0; guard < 4096 && dist > 1e-5f; ++guard) {
         const ItemId here = world.getBlock(p.x, p.y, p.z);
         const bool curve = ((p.in + 2) & 3) != p.out;
-        const float len = curve ? kHalfPi * 0.5f : 1.0f;
+        const float len = curve ? kHalfPi * 0.5f : p.slopeHigh >= 0 ? 1.4142f : 1.0f;
         const float end = isBufferStop(here) ? 0.5f : 1.0f;  // a buffer stop: the middle is the end
         const float left = (end - p.t) * len;
         if (dist <= left) {
@@ -136,15 +159,23 @@ bool TrainSystem::advance(const World& world, RailPos& p, float dist, float& mov
             p.t = end;
             return false;
         }
-        // Into the next cell, if a rail there takes us.
+        // Into the next cell, if a rail there takes us: one block up after climbing a slope, or
+        // one block down onto a slope that falls away from us.
         const int nx = p.x + kDx[p.out], nz = p.z + kDz[p.out], nin = (p.out + 2) & 3;
-        const ItemId next = world.getBlock(nx, p.y, nz);
+        int ny = p.y + (p.slopeHigh >= 0 && p.out == p.slopeHigh ? 1 : 0);
+        ItemId next = world.getBlock(nx, ny, nz);
         int nout;
-        if (!(isRail(next) || isBufferStop(next)) || !nextSide(next, nin, nout)) {
+        bool ok = (isRail(next) || isBufferStop(next)) && nextSide(next, nin, nout);
+        if (!ok) {
+            const ItemId below = world.getBlock(nx, ny - 1, nz);
+            if (isRailSlope(below) && below - RAIL_SLOPE == nin && nextSide(below, nin, nout)) ok = true, next = below, --ny;
+        }
+        if (!ok) {
             p.t = 1;
             return false;
         }
-        p.x = nx, p.z = nz, p.in = nin, p.out = nout, p.t = 0;
+        p.x = nx, p.y = ny, p.z = nz, p.in = nin, p.out = nout, p.t = 0;
+        p.slopeHigh = isRailSlope(next) ? next - RAIL_SLOPE : -1;
     }
     return true;
 }
@@ -153,6 +184,28 @@ void TrainSystem::refresh(TrainCar& car) const {
     Vec3 tan;
     car.pos = pointOn(car.at, &tan);
     car.yaw = std::atan2(-tan.x, tan.z);  // the models' front is +z
+}
+
+void TrainSystem::pose(const World& world, TrainCar& car) const {
+    // The ends of the car lie on the track 2 blocks ahead and behind the middle: the car tilts to
+    // the line between them and sits at their average height, so it climbs a slope smoothly
+    // instead of standing level and cutting into the hill.
+    constexpr float kHalf = 2.0f;
+    RailPos front = car.at, back = car.at;
+    float moved = 0;
+    advance(world, front, kHalf, moved);
+    const float fm = moved;
+    flip(back);
+    advance(world, back, kHalf, moved);
+    const float bm = moved;
+    const Vec3 f = pointOn(front), b = pointOn(back);
+    const float horiz = std::sqrt((f.x - b.x) * (f.x - b.x) + (f.z - b.z) * (f.z - b.z));
+    if (fm + bm < 0.5f || horiz < 0.2f) {
+        car.pitch = 0;
+        return;
+    }
+    car.pitch = std::atan2(f.y - b.y, horiz);
+    car.pos.y = (f.y * bm + b.y * fm) / (fm + bm);  // the height at the middle between both ends
 }
 
 bool TrainSystem::place(const World& world, int dim, CarKind kind, int x, int y, int z, int look) {
@@ -172,6 +225,7 @@ bool TrainSystem::place(const World& world, int dim, CarKind kind, int x, int y,
         if (!advance(world, car.at, kPitch, moved)) return false;
         flip(car.at);
         refresh(car);
+        pose(world, car);
         tr.cars.push_back(car);
         return true;
     }
@@ -189,12 +243,14 @@ bool TrainSystem::place(const World& world, int dim, CarKind kind, int x, int y,
         at.out = f;
         if (look == at.in) flip(at);
     }
+    at.slopeHigh = isRailSlope(here) ? here - RAIL_SLOPE : -1;
     Train tr;
     tr.dim = dim;
     TrainCar car;
     car.kind = kind;
     car.at = at;
     refresh(car);
+    pose(world, car);
     tr.cars.push_back(car);
     trains_.push_back(tr);
     return true;
@@ -203,16 +259,28 @@ bool TrainSystem::place(const World& world, int dim, CarKind kind, int x, int y,
 void TrainSystem::update(const World& world, int dim, float dt, Vec3& playerPos, float& playerYaw, bool playerSeated) {
     for (Train& tr : trains_) {
         if (tr.dim != dim || tr.cars.empty()) continue;
-        const bool hasEngine = tr.cars.front().kind == CarKind::Locomotive;
+        // Build 5: the locomotive may be anywhere in the train (behind a drill car that leads).
+        bool hasEngine = false;
+        for (const TrainCar& c : tr.cars) hasEngine = hasEngine || c.kind == CarKind::Locomotive;
         const float target = hasEngine ? tr.throttle * kMaxSpeed : 0;
         if (tr.brake) {
             const float s = std::max(0.0f, std::fabs(tr.speed) - kBrake * dt);
             tr.speed = tr.speed < 0 ? -s : s;
         } else if (tr.speed < target) {
             tr.speed = std::min(target, tr.speed + kAccel * dt);
-        } else if (tr.speed > target) {
+        } else if (tr.speed > target && tr.boosted <= 0) {
             tr.speed = std::max(target, tr.speed - kAccel * dt);
         }
+        // Build 3: a booster under the rail pushes a moving train on, up to half again its top speed.
+        if (std::fabs(tr.speed) > 0.1f) {
+            const TrainCar& c0 = tr.cars.front();
+            if (world.getBlock(c0.at.x, c0.at.y - 1, c0.at.z) == TRAIN_BOOSTER) {
+                const float top = kMaxSpeed * 1.5f, s2 = std::min(top, std::fabs(tr.speed) + 8.0f * dt);
+                tr.speed = tr.speed < 0 ? -s2 : s2;
+                tr.boosted = 3.0f;
+            }
+        }
+        if (tr.boosted > 0) tr.boosted -= dt;
         if (std::fabs(tr.speed) < 1e-4f) continue;
         // The player standing in or on a car rides along: remember where in the car they are.
         int carried = -1;
@@ -235,8 +303,16 @@ void TrainSystem::update(const World& world, int dim, float dt, Vec3& playerPos,
         const float want = std::fabs(tr.speed) * dt;
         TrainCar& lead = fwd ? tr.cars.front() : tr.cars.back();
         if (!fwd) flip(lead.at);
+        // Build 3: the car's nose must stay over the track, so look half a car further ahead: the
+        // train stops with its end at the buffer stop instead of running past it into the air.
+        const float half = 2.25f * kScale;
+        RailPos probe = lead.at;
+        float ahead;
+        advance(world, probe, half + want, ahead);
+        const float allowed = std::max(0.0f, std::min(want, ahead - half));
         float moved;
-        const bool ok = advance(world, lead.at, want, moved);
+        advance(world, lead.at, allowed, moved);
+        const bool ok = allowed >= want - 1e-4f;
         if (!fwd) flip(lead.at);
         for (TrainCar& c : tr.cars) {
             if (&c == &lead) continue;
@@ -245,8 +321,19 @@ void TrainSystem::update(const World& world, int dim, float dt, Vec3& playerPos,
             advance(world, c.at, moved, m2);
             if (!fwd) flip(c.at);
         }
-        if (!ok) tr.speed = 0, tr.throttle = 0;  // the end of the track: the train stops
-        for (TrainCar& c : tr.cars) refresh(c);
+        // Build 5: a drill car in front does not stop at the end of the track: it asks for the
+        // next piece of tunnel (Session cuts it and lays a rail) and crawls on slowly meanwhile.
+        const bool drilling = fwd && !ok && tr.cars.front().kind == CarKind::Drill && !isBufferStop(world.getBlock(probe.x, probe.y, probe.z));
+        if (drilling) {
+            tr.speed = std::min(tr.speed, 2.0f);
+            if ((tr.drillTimer -= dt) <= 0) {
+                tr.drillTimer = 0.35f;
+                drillRequests_.push_back({probe.x, probe.y, probe.z, probe.out});
+            }
+        } else if (!ok) {
+            tr.speed = 0, tr.throttle = 0;  // the end of the track: the train stops
+        }
+        for (TrainCar& c : tr.cars) refresh(c), pose(world, c);
         if (carried >= 0) {
             const TrainCar& c = tr.cars[(size_t)carried];
             const float cs = std::cos(c.yaw), sn = std::sin(c.yaw);
@@ -382,21 +469,23 @@ void TrainSystem::removeCar(int train, int car) {
 }
 
 void TrainSystem::buildVertices(int dim, std::vector<Vertex>& out) const {
-    const int tile = T_TRAIN_PALETTE;
-    const float u0 = (tile % kAtlasCols) * kTile, v0 = (tile / kAtlasCols) * kTile;
     for (const Train& tr : trains_) {
         if (tr.dim != dim) continue;
         for (const TrainCar& c : tr.cars) {
-            const int16_t* data = c.kind == CarKind::Locomotive ? kTrain_locomotive : c.kind == CarKind::Passenger ? kTrain_passenger : kTrain_freight;
-            const size_t count = (c.kind == CarKind::Locomotive ? sizeof(kTrain_locomotive) : c.kind == CarKind::Passenger ? sizeof(kTrain_passenger) : sizeof(kTrain_freight)) /
-                                 sizeof(int16_t) / 5;
+            const int16_t* data = c.kind == CarKind::Locomotive ? kTrain_locomotive : c.kind == CarKind::Passenger ? kTrain_passenger : c.kind == CarKind::Drill ? kTrain_drill : kTrain_freight;
+            const size_t count = (c.kind == CarKind::Locomotive ? sizeof(kTrain_locomotive) : c.kind == CarKind::Passenger ? sizeof(kTrain_passenger) : c.kind == CarKind::Drill ? sizeof(kTrain_drill) : sizeof(kTrain_freight)) /
+                                 sizeof(int16_t) / 7;
             const float cs = std::cos(c.yaw), sn = std::sin(c.yaw), k = kScale / 2048.0f;
+            const float pc = std::cos(c.pitch), ps = std::sin(c.pitch);
             for (size_t i = 0; i < count; ++i) {
-                const int16_t* v = data + i * 5;
-                const float lx = v[0] * k, ly = v[1] * k, lz = v[2] * k;
+                const int16_t* v = data + i * 7;
+                const float lx = v[0] * k, ly0 = v[1] * k, lz0 = v[2] * k;
+                const float ly = ly0 * pc + lz0 * ps, lz = lz0 * pc - ly0 * ps;  // build 5: tilted on slopes
                 const int ci = v[3];
-                // The colour: the middle of its cell in the palette tile (4 x 4 cells).
-                const float u = u0 + ((ci % 4) * 4 + 2) / 16.0f * kTile, vv = v0 + ((ci / 4) * 4 + 2) / 16.0f * kTile;
+                // Build 4: each colour has its own pixel-art tile; u, v are inside it (half a pixel in from the edges).
+                const int tile = T_TRAIN_TEX + std::min(ci, 13);
+                const float u = ((tile % kAtlasCols) + (0.5f + v[5] / 255.0f * 15.0f) / 16.0f) * kTile;
+                const float vv = ((tile / kAtlasCols) + (0.5f + v[6] / 255.0f * 15.0f) / 16.0f) * kTile;
                 out.push_back({c.pos.x + lx * cs - lz * sn, c.pos.y + ly, c.pos.z + lx * sn + lz * cs, u, vv, v[4] / 255.0f});
             }
         }
@@ -408,7 +497,7 @@ bool TrainSystem::save(const std::string& folder) const {
     for (const Train& tr : trains_) {
         o << "train " << tr.dim << ' ' << tr.cars.size() << '\n';
         for (const TrainCar& c : tr.cars)
-            o << "car " << (int)c.kind << ' ' << c.at.x << ' ' << c.at.y << ' ' << c.at.z << ' ' << c.at.in << ' ' << c.at.out << ' ' << c.at.t << '\n';
+            o << "car " << (int)c.kind << ' ' << c.at.x << ' ' << c.at.y << ' ' << c.at.z << ' ' << c.at.in << ' ' << c.at.out << ' ' << c.at.t << ' ' << c.at.slopeHigh << '\n';
     }
     std::ofstream out(folder + "/trains.dat", std::ios::trunc);
     out << o.str();
@@ -428,7 +517,9 @@ void TrainSystem::load(const std::string& folder) {
                 TrainCar c;
                 int kind = 0;
                 in >> kind >> c.at.x >> c.at.y >> c.at.z >> c.at.in >> c.at.out >> c.at.t;
-                c.kind = (CarKind)std::max(0, std::min(kind, 2));
+                // 2.1.0: the slope is saved after the rest (older files end the line here).
+                if (in.peek() == ' ') in >> c.at.slopeHigh;
+                c.kind = (CarKind)std::max(0, std::min(kind, 3));
                 c.at.in &= 3, c.at.out &= 3;
                 refresh(c);
                 tr.cars.push_back(c);

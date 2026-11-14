@@ -1,3 +1,5 @@
+#include <set>
+#include <tuple>
 #include "Session.h"
 
 #include <filesystem>
@@ -156,7 +158,7 @@ Session::Session(const WorldInfo& info, const PlayerState& player)
     boats_.load(info.folder);
     trains_.load(info.folder);
     // 2.1.0: trains are a preview feature: on in every preview world, off in the normal edition.
-    info_.expRails = kPreviewEdition && !oldMode();
+    info_.expRails = !oldMode();  // 2.1.0: rails and trains in every new-style world
     mobs_.load(info.folder);
     paperMaps_.load(info.folder);
     loadTimers();
@@ -1603,7 +1605,7 @@ void Session::touchUp(int id, float x, float y, double time) {
                 const bool powerstone = heldNow.id == POWERSTONE_DUST || heldNow.id == POWERSTONE_CHIP || heldNow.id == POWERSTONE_BLOCK;
                 // 2.1.0 preview: a tap on a car takes it off the track (back into the inventory in survival).
                 int trainCar = -1;
-                if (heldNow.id != LOCOMOTIVE && heldNow.id != PASSENGER_WAGON && heldNow.id != FREIGHT_WAGON && trainSeatTrain_ < 0) {
+                if (heldNow.id != LOCOMOTIVE && heldNow.id != PASSENGER_WAGON && heldNow.id != FREIGHT_WAGON && heldNow.id != DRILL_CAR && trainSeatTrain_ < 0) {
                     float dist;
                     trainCar = trains_.pick(dimIndex(), camera_.eye(), rayThroughScreen(x, y), Player::kReach + cameraDistance_, dist);
                     if (trainCar >= 0) {
@@ -1616,7 +1618,7 @@ void Session::touchUp(int id, float x, float y, double time) {
                     const CarKind kind = trains_.trains()[(size_t)ti].cars[(size_t)ci].kind;
                     trains_.removeCar(ti, ci);
                     if (survival())
-                        giveItem({kind == CarKind::Locomotive ? LOCOMOTIVE : kind == CarKind::Passenger ? PASSENGER_WAGON : FREIGHT_WAGON, 1, 0});
+                        giveItem({kind == CarKind::Locomotive ? LOCOMOTIVE : kind == CarKind::Passenger ? PASSENGER_WAGON : kind == CarKind::Drill ? DRILL_CAR : FREIGHT_WAGON, 1, 0});
                     hand_.use();
                     sound(Sound::DoorIron);
                 } else if (mob >= 0 && mobs_.mobs()[mob].type == MobType::Villager) {
@@ -1678,12 +1680,12 @@ void Session::touchUp(int id, float x, float y, double time) {
                         sound(Sound::Place);
                     }
                 } else if (const ItemId held = state_.inventory.slots[state_.selectedSlot].id;
-                           held == LOCOMOTIVE || held == PASSENGER_WAGON || held == FREIGHT_WAGON) {
+                           held == LOCOMOTIVE || held == PASSENGER_WAGON || held == FREIGHT_WAGON || held == DRILL_CAR) {
                     // 2.1.0 preview: a car goes on the rail the player taps.
                     const RayHit h = pick(x, y);
                     const Vec3 f = player_.forward();
                     const int look = std::fabs(f.x) > std::fabs(f.z) ? (f.x > 0 ? 1 : 3) : (f.z > 0 ? 2 : 0);
-                    const CarKind kind = held == LOCOMOTIVE ? CarKind::Locomotive : held == PASSENGER_WAGON ? CarKind::Passenger : CarKind::Freight;
+                    const CarKind kind = held == LOCOMOTIVE ? CarKind::Locomotive : held == PASSENGER_WAGON ? CarKind::Passenger : held == DRILL_CAR ? CarKind::Drill : CarKind::Freight;
                     if (h.hit && isRail(world_->getBlock(h.x, h.y, h.z)) && trains_.place(*world_, dimIndex(), kind, h.x, h.y, h.z, look)) {
                         if (survival()) state_.inventory.removeOne(state_.selectedSlot);
                         hand_.place();
@@ -2515,6 +2517,13 @@ void Session::useItem(const RayHit& hit) {
             hand_.use();
             return;
         }
+        if (isTurntable(block)) {
+            // Build 3: a tap turns the turntable's track a quarter turn.
+            w.setBlock(hit.x, hit.y, hit.z, block == TURNTABLE ? (ItemId)(TURNTABLE + 1) : TURNTABLE);
+            hand_.use();
+            sound(Sound::DoorIron);
+            return;
+        }
         if (isRailSwitch(block)) {
             // 2.1.0 preview: a tap throws the switch.
             const int k = railSwitchIndex(block);
@@ -2711,6 +2720,13 @@ void Session::useItem(const RayHit& hit) {
         place = (ItemId)((held.id == POWER_CABLE ? WALL_CABLE : WALL_SWITCH) + side);
     }
     if (held.id == POWER_CABLE && hit.ny < 0) place = CEILING_CABLE;  // 1.5.7: under a ceiling
+    if (isCrossingSignal(held.id) || isCrossingGate(held.id)) {
+        // Build 3: the boards and the lamps face the player.
+        const Vec3 f = player_.forward();
+        const int look = std::fabs(f.x) > std::fabs(f.z) ? (f.x > 0 ? 1 : 3) : (f.z > 0 ? 2 : 0);
+        const int facing = (look + 2) & 3;
+        place = isCrossingSignal(held.id) ? (ItemId)(CROSSING_SIGNAL + facing * 3) : (ItemId)(CROSSING_GATE + facing * 2);
+    }
     if (isBufferStop(held.id)) {
         // The plate faces the way the player looks: the track runs towards it.
         const Vec3 f = player_.forward();
@@ -2722,7 +2738,11 @@ void Session::useItem(const RayHit& hit) {
         if (!isSolid(w.getBlock(x, y - 1, z)) || isRail(w.getBlock(x, y - 1, z))) return;
         const Vec3 f = player_.forward();
         const int look = std::fabs(f.x) > std::fabs(f.z) ? (f.x > 0 ? 1 : 3) : (f.z > 0 ? 2 : 0);  // 0 north, 1 east...
-        if (isRailSwitch(held.id)) {
+        if (isTurntable(held.id)) {
+            place = (ItemId)(TURNTABLE + (look & 1));
+        } else if (isRailSlope(held.id)) {
+            place = (ItemId)(RAIL_SLOPE + look);  // rising the way the player looks
+        } else if (isRailSwitch(held.id)) {
             place = railSwitchId(look, 0);
         } else {
             const bool n = isRail(w.getBlock(x, y, z - 1)), so = isRail(w.getBlock(x, y, z + 1));
@@ -3270,6 +3290,104 @@ void Session::update(float dt, double time, float guiW, float guiH, const Settin
     // Only simulate the player once the ground below exists.
     // 2.1.0 preview: the trains move; a player standing in one rides along, a seated one sits still in it.
     trains_.update(*world_, dimIndex(), dt, player_.pos, player_.yaw, trainSeatTrain_ >= 0);
+    // Build 5: the drill car bores the tunnel: the next cell past the end of the track is cut
+    // 3 wide and 4 high, a floor goes under it where there is none, and a straight rail goes on it.
+    for (const auto& r : trains_.drillRequests()) {
+        static constexpr int dx[4] = {0, 1, 0, -1}, dz[4] = {-1, 0, 1, 0};
+        World& w = *world_;
+        const int side = r[3] & 3, nx = r[0] + dx[side], ny = r[1], nz = r[2] + dz[side];
+        const int px = dz[side] != 0 ? 1 : 0, pz = dx[side] != 0 ? 1 : 0;  // across the track
+        bool cut = false;
+        for (int k = -1; k <= 1; ++k)
+            for (int h = 0; h < 4; ++h) {
+                const int bx = nx + px * k, by = ny + h, bz = nz + pz * k;
+                const ItemId b = w.getBlock(bx, by, bz);
+                if (b == AIR || b == BEDROCK || isRail(b) || isBufferStop(b) || by >= kChunkHeight) continue;
+                if (b == WATER || b == LAVA) {
+                    w.setBlock(bx, by, bz, h == 0 && k == 0 ? COBBLESTONE : b);
+                    continue;
+                }
+                if (cut == false || fireRandom() < 0.3f) particles_.spawnBurst(w, bx, by, bz, b);
+                w.setBlock(bx, by, bz, AIR);
+                cut = true;
+            }
+        if (w.getBlock(nx, ny, nz) == BEDROCK) continue;
+        const ItemId floor = w.getBlock(nx, ny - 1, nz);
+        if (floor == AIR || floor == WATER || floor == LAVA) w.setBlock(nx, ny - 1, nz, COBBLESTONE);
+        w.setBlock(nx, ny, nz, side == 0 || side == 2 ? RAIL_NS : RAIL_EW);
+        if (cut) sound(Sound::Dig);
+    }
+    trains_.drillRequests().clear();
+    // Build 3: crossing signals flash and gates come down while a train is near; chime and horn
+    // makers sound as a train goes by.
+    railwayTimer_ -= dt;
+    if (railwayTimer_ <= 0) {
+        railwayTimer_ = 0.25f;
+        railwayFlash_ = !railwayFlash_;
+        World& w = *world_;
+        std::set<std::tuple<int, int, int>> near;
+        for (const Train& t : trains_.trains()) {
+            if (t.dim != dimIndex()) continue;
+            for (const TrainCar& c : t.cars) {
+                const int cx = (int)std::floor(c.pos.x), cy = (int)std::floor(c.pos.y), cz = (int)std::floor(c.pos.z);
+                for (int dx = -10; dx <= 10; ++dx)
+                    for (int dz = -10; dz <= 10; ++dz)
+                        for (int dy = -2; dy <= 3; ++dy) {
+                            const ItemId b = w.getBlock(cx + dx, cy + dy, cz + dz);
+                            if (isCrossingSignal(b) || isCrossingGate(b)) near.insert({cx + dx, cy + dy, cz + dz});
+                            if ((b == CHIME_MAKER || b == HORN_MAKER) && std::abs(dx) <= 2 && std::abs(dz) <= 2) {
+                                const FurnaceKey key{dimIndex(), cx + dx, cy + dy, cz + dz};
+                                auto it = railwaySounds_.find(key);
+                                if (it == railwaySounds_.end() || clock_ - it->second > 4.0) {
+                                    railwaySounds_[key] = clock_;
+                                    sound(b == CHIME_MAKER ? Sound::CrossingChime : Sound::TrainHorn);
+                                }
+                            }
+                        }
+            }
+        }
+        for (const auto& [x, y, z] : near) {
+            const ItemId b = w.getBlock(x, y, z);
+            if (isCrossingSignal(b)) {
+                const int f = (b - CROSSING_SIGNAL) / 3;
+                w.setBlock(x, y, z, (ItemId)(CROSSING_SIGNAL + f * 3 + (railwayFlash_ ? 1 : 2)));
+            } else {
+                const int f = (b - CROSSING_GATE) / 2;
+                w.setBlock(x, y, z, (ItemId)(CROSSING_GATE + f * 2 + 1));
+            }
+        }
+        // Those no train is near any more go dark and open again.
+        for (const auto& p : railwayActive_)
+            if (!near.count(p)) {
+                const auto& [x, y, z] = p;
+                const ItemId b = w.getBlock(x, y, z);
+                if (isCrossingSignal(b)) w.setBlock(x, y, z, (ItemId)(CROSSING_SIGNAL + (b - CROSSING_SIGNAL) / 3 * 3));
+                else if (isCrossingGate(b)) w.setBlock(x, y, z, (ItemId)(CROSSING_GATE + (b - CROSSING_GATE) / 2 * 2));
+            }
+        railwayActive_ = near;
+    }
+    // Build 3: smoke from the locomotive's chimney, thicker the harder it pulls.
+    smokeTimer_ -= dt;
+    if (smokeTimer_ <= 0) {
+        smokeTimer_ = 0.12f;
+        for (const Train& t : trains_.trains()) {
+            if (t.dim != dimIndex()) continue;
+            for (const TrainCar& c : t.cars) {  // build 5: every locomotive smokes, wherever it is in the train
+            if (c.kind != CarKind::Locomotive) continue;
+            const Vec3 d = c.pos - player_.pos;
+            if (d.x * d.x + d.z * d.z > 64 * 64) continue;
+            const float cs = std::cos(c.yaw), sn = std::sin(c.yaw);
+            const float lz = 0.95f * TrainSystem::kScale;  // the chimney, on the boiler in front of the cab
+            const Vec3 top = c.pos + Vec3(-lz * sn, 2.55f * TrainSystem::kScale, lz * cs);
+            const int puffs = 1 + (int)(std::fabs(t.throttle) * 2);
+            for (int k = 0; k < puffs; ++k) {
+                const Vec3 drift(-std::fabs(t.speed) * 0.25f * -sn * 0 + (hash3((int)(clock_ * 50), k, 1, 9) % 100 - 50) / 200.0f, 1.4f,
+                                 (hash3((int)(clock_ * 50), k, 2, 9) % 100 - 50) / 200.0f);
+                particles_.spawnAmbient(*world_, top, drift, GRAVEL, 2.2f, 0.32f, -0.35f, 1.0f);
+            }
+            }
+        }
+    }
     if (trainSeatTrain_ >= 0 && (trainSeatTrain_ >= (int)trains_.trains().size() ||
                                  trainSeatCar_ >= (int)trains_.trains()[(size_t)trainSeatTrain_].cars.size()))
         trainSeatTrain_ = -1;
@@ -3857,8 +3975,8 @@ Session::TrainButtons Session::trainButtons() const {
     b.x = guiW_ - b.w - 8;
     b.y = std::max(guiH_ * 0.30f, 84.0f);  // below the minimap
     if (trainSeatTrain_ >= 0) {
-        const bool driver = trainSeatCar_ == 0 && trainSeat_ == 0 &&
-                            trains_.trains()[(size_t)trainSeatTrain_].cars[0].kind == CarKind::Locomotive;
+        const bool driver = trainSeat_ == 0 &&
+                            trains_.trains()[(size_t)trainSeatTrain_].cars[(size_t)trainSeatCar_].kind == CarKind::Locomotive;
         if (driver) {
             b.labels[b.count++] = "Plyn +";
             b.labels[b.count++] = "Plyn -";

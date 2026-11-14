@@ -5,12 +5,81 @@
 
 #include "BlockShapes.h"
 #include "Blocks.h"
+#include "Trains.h"
+#include <cmath>
 
 namespace vc {
 
 namespace {
 
 constexpr float kTile = kTileUv;
+
+// 2.1.0 preview: rails as real 3D track: wooden sleepers across the track and two steel rails on top,
+// following the track's centre line (straight, a smooth quarter circle round a curve, or up a slope).
+struct RailPath {
+    int in, out, slope;  // slope: the side it rises towards, -1 flat
+};
+Vec3 railPoint(const RailPath& r, float t, Vec3& tan) {
+    RailPos p;
+    p.in = r.in, p.out = r.out, p.t = t, p.slopeHigh = r.slope;
+    const Vec3 v = TrainSystem::pointOn(p, &tan);  // cell (0, 0, 0); the rail head at 1/16
+    tan = Vec3(tan.x, 0, tan.z);
+    const float l = std::sqrt(tan.x * tan.x + tan.z * tan.z);
+    if (l > 0) tan = tan * (1 / l);
+    return Vec3(v.x, v.y - 1 / 16.0f, v.z);
+}
+void orientedBox(std::vector<Vertex>& out, Vec3 a, Vec3 b, float halfW, float y0, float y1, int tile, float light, float glow) {
+    // A box from a to b (its centre line on the ground), halfW to each side, from y0 to y1 above it.
+    Vec3 d = b - a;
+    Vec3 side(-d.z, 0, d.x);
+    const float sl = std::sqrt(side.x * side.x + side.z * side.z);
+    if (sl < 1e-5f) return;
+    side = side * (halfW / sl);
+    const Vec3 c[8] = {a - side + Vec3(0, y0, 0), a + side + Vec3(0, y0, 0), b + side + Vec3(0, y0, 0), b - side + Vec3(0, y0, 0),
+                       a - side + Vec3(0, y1, 0), a + side + Vec3(0, y1, 0), b + side + Vec3(0, y1, 0), b - side + Vec3(0, y1, 0)};
+    static const int faces[6][4] = {{4, 5, 6, 7}, {3, 2, 1, 0}, {0, 1, 5, 4}, {2, 3, 7, 6}, {1, 2, 6, 5}, {3, 0, 4, 7}};
+    static const float shade[6] = {1.0f, 0.5f, 0.8f, 0.8f, 0.65f, 0.65f};
+    const float tu = (tile % kAtlasCols) * kTileUv, tv = (tile / kAtlasCols) * kTileUv;
+    static const float uv[4][2] = {{0.2f, 0.8f}, {0.8f, 0.8f}, {0.8f, 0.2f}, {0.2f, 0.2f}};
+    for (int f = 0; f < 6; ++f) {
+        Vertex q[4];
+        for (int k = 0; k < 4; ++k) {
+            const Vec3& p = c[faces[f][k]];
+            q[k] = {p.x, p.y, p.z, tu + uv[k][0] * kTileUv, tv + uv[k][1] * kTileUv, light * shade[f], glow * shade[f]};
+        }
+        out.insert(out.end(), {q[0], q[1], q[2], q[0], q[2], q[3]});
+    }
+}
+float kDxF(int side) { static const float d[4] = {0, 1, 0, -1}; return d[side & 3]; }
+float kDzF(int side) { static const float d[4] = {-1, 0, 1, 0}; return d[side & 3]; }
+void meshRail(std::vector<Vertex>& out, const RailPath& r, int wx, int y, int wz, float light, float glow, bool dull) {
+    const bool curve = ((r.in + 2) & 3) != r.out;
+    const int segments = curve ? 8 : 1;
+    const Vec3 base((float)wx, (float)y, (float)wz);
+    const int sleeperTile = tileFor(SPRUCE_LOG, F_NORTH), railTile = tileFor(dull ? STONE : STEEL_BLOCK, F_TOP);
+    // Sleepers: four per block along the track, across it.
+    const int sleepers = curve ? 3 : 4;
+    for (int i = 0; i < sleepers; ++i) {
+        Vec3 tan;
+        const float t = (i + 0.5f) / sleepers;
+        const Vec3 m = railPoint(r, t, tan);
+        const Vec3 half = tan * 0.09f;
+        orientedBox(out, base + m - half, base + m + half, 0.56f, 0.0f, 0.07f, sleeperTile, light * 0.9f, glow);
+    }
+    // Two rails, 0.44 to each side of the centre line, in short straight pieces round a curve.
+    for (float sideOff : {-0.44f, 0.44f}) {
+        Vec3 tan0;
+        Vec3 p0 = railPoint(r, 0, tan0);
+        p0 = p0 + Vec3(-tan0.z, 0, tan0.x) * sideOff;
+        for (int sgm = 1; sgm <= segments; ++sgm) {
+            Vec3 tan1;
+            Vec3 p1 = railPoint(r, (float)sgm / segments, tan1);
+            p1 = p1 + Vec3(-tan1.z, 0, tan1.x) * sideOff;
+            orientedBox(out, base + p0, base + p1, 0.045f, 0.07f, 0.17f, railTile, light, glow);
+            p0 = p1;
+        }
+    }
+}
 
 struct FaceDef {
     int dx, dy, dz;
@@ -200,6 +269,65 @@ void buildChunkMesh(const World& world, const Chunk& chunk, ChunkMesh& out) {
                 int wx = baseX + x, wz = baseZ + z;
                 auto& dst = isTranslucent(id) ? out.translucent : out.opaque;
 
+                if (isCrossingSignal(id) || isCrossingGate(id)) {
+                    // 2.1.0 preview build 3: a level-crossing signal (post, crossed boards, two lamps) or
+                    // a crossing gate (post, lamp, striped arm: up when open, across the road when closed).
+                    const float light = nether ? 0.75f : sky.at(x, y, z), glowHere = glow.at(x, y, z);
+                    const bool signal = isCrossingSignal(id);
+                    const int k = signal ? id - CROSSING_SIGNAL : id - CROSSING_GATE;
+                    const int f = signal ? k / 3 : k / 2, st = signal ? k % 3 : k % 2;
+                    const Vec3 mid((float)wx + 0.5f, (float)y, (float)wz + 0.5f);
+                    const Vec3 fw(kDxF(f), 0, kDzF(f)), sd(kDxF(f + 1), 0, kDzF(f + 1));
+                    const int postTile = tileFor(STEEL_BLOCK, F_TOP), dark = tileFor(OBSIDIAN, F_TOP);
+                    orientedBox(out.opaque, mid - sd * 0.3f, mid + sd * 0.3f, 0.3f, 0, 0.08f, dark, light, glowHere);  // base plate
+                    orientedBox(out.opaque, mid - sd * 0.06f, mid + sd * 0.06f, 0.06f, 0.08f, signal ? 2.45f : 1.55f, postTile, light, glowHere);
+                    if (signal) {
+                        // The crossed boards, built from short pieces along the two diagonals.
+                        for (int arm = 0; arm < 2; ++arm)
+                            for (int i = 0; i < 9; ++i) {
+                                const float u = -0.48f + i * 0.12f, h = 1.75f + (arm ? 0.48f - u : u + 0.48f) * 0.7f;
+                                const Vec3 c = mid + sd * u + fw * 0.08f;
+                                orientedBox(out.opaque, c - sd * 0.065f, c + sd * 0.065f, 0.025f, h - 0.06f, h + 0.06f, T_SIGNAL_BOARD, light, glowHere);
+                            }
+                        // The lamps, one each side; lit ones glow (they take turns while a train is near).
+                        for (int side = 0; side < 2; ++side) {
+                            const bool lit = (st == 1 && side == 0) || (st == 2 && side == 1);
+                            const Vec3 c = mid + sd * (side ? 0.3f : -0.3f) + fw * 0.1f;
+                            orientedBox(out.opaque, mid + fw * 0.1f, c, 0.03f, 1.33f, 1.37f, dark, light, glowHere);  // the bracket
+                            orientedBox(out.opaque, c - sd * 0.11f, c + sd * 0.11f, 0.07f, 1.22f, 1.48f, lit ? T_SIGNAL_LAMP_ON : T_SIGNAL_LAMP_OFF,
+                                        lit ? 1.0f : light, lit ? 1.0f : glowHere);
+                        }
+                    } else {
+                        const bool closed = st == 1;
+                        const Vec3 lampAt = mid + fw * 0.08f;
+                        orientedBox(out.opaque, lampAt - sd * 0.08f, lampAt + sd * 0.08f, 0.05f, 1.3f, 1.48f, closed ? T_SIGNAL_LAMP_ON : T_SIGNAL_LAMP_OFF,
+                                    closed ? 1.0f : light, closed ? 1.0f : glowHere);
+                        const int armTile = T_BUFFER_PLATE;
+                        if (closed) orientedBox(out.opaque, mid + sd * 0.07f, mid + sd * 3.4f, 0.05f, 1.05f, 1.17f, armTile, light, glowHere);
+                        else orientedBox(out.opaque, mid + sd * 0.07f, mid + sd * 0.19f, 0.05f, 1.05f, 4.2f, armTile, light, glowHere);
+                    }
+                    continue;
+                }
+                if (isRail(id)) {
+                    // 2.1.0 preview: 3D track (see meshRail).
+                    const float light = nether ? 0.75f : sky.at(x, y, z), glowHere = glow.at(x, y, z);
+                    if (isTurntable(id))
+                        orientedBox(out.opaque, Vec3((float)wx, (float)y, wz + 0.5f), Vec3(wx + 1.0f, (float)y, wz + 0.5f), 0.5f, 0, 0.05f, T_TURNTABLE, light, glowHere);
+                    int a, b2;
+                    if (TrainSystem::railSides(id, a, b2)) {
+                        meshRail(out.opaque, {a, b2, isRailSlope(id) ? id - RAIL_SLOPE : -1}, wx, y, wz, light, glowHere, false);
+                    } else if (isRailSwitch(id)) {
+                        const int k = railSwitchIndex(id), f = k / 2, st = k % 2;
+                        meshRail(out.opaque, {f, (f + 2) & 3, -1}, wx, y, wz, light, glowHere, st == 1);         // straight
+                        meshRail(out.opaque, {(f + 1) & 3, (f + 2) & 3, -1}, wx, y, wz, light, glowHere, st == 0);  // the branch
+                        // The lever beside the points, leaning the way the switch is set.
+                        const Vec3 at((float)wx + 0.5f + kDxF(f + 3) * 0.62f, (float)y, (float)wz + 0.5f + kDzF(f + 3) * 0.62f);
+                        orientedBox(out.opaque, at - Vec3(0.06f, 0, 0), at + Vec3(0.06f, 0, 0), 0.06f, 0, 0.12f, tileFor(STONE, F_TOP), light, glowHere);
+                        const Vec3 tip = at + Vec3(kDxF(st ? f + 1 : f) * 0.12f, 0, kDzF(st ? f + 1 : f) * 0.12f);
+                        orientedBox(out.opaque, at, tip, 0.02f, 0.12f, 0.42f, tileFor(POWERSTONE_BLOCK, F_TOP), light, glowHere);
+                    }
+                    continue;
+                }
                 if (isShaped(id)) {
                     // Doors, trapdoors, fences, chests, cactus: a few textured boxes.
                     Box boxes[10];

@@ -143,7 +143,14 @@ void onCmd(android_app* android, int32_t cmd) {
 int32_t onInput(android_app* android, AInputEvent* event) {
     App& app = *static_cast<App*>(android->userData);
     if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_KEY) {
-        if (AKeyEvent_getKeyCode(event) != AKEYCODE_BACK) return 0;
+        // Build 6: Delete and Enter from the keyboard while typing in the game go to the text field.
+        const int32_t code = AKeyEvent_getKeyCode(event);
+        if ((code == AKEYCODE_DEL || code == AKEYCODE_ENTER) && app.game && app.game->typing()) {
+            if (AKeyEvent_getAction(event) == AKEY_EVENT_ACTION_DOWN)
+                callActivity(android, "typerKey", "(I)V", [code](JNIEnv* env, jobject obj, jmethodID m) { env->CallVoidMethod(obj, m, (jint)code); });
+            return 1;
+        }
+        if (code != AKEYCODE_BACK) return 0;
         if (AKeyEvent_getAction(event) == AKEY_EVENT_ACTION_UP) ++g_backRequests;
         return 1;
     }
@@ -178,8 +185,20 @@ void android_main(android_app* android) {
     App app;
     app.game = std::make_unique<vc::Game>(android->activity->internalDataPath);
     app.game->onTexturePackButton = [android] { showTexturePackMenu(android); };
-    app.game->onTextPrompt = [android](int id, const std::string& title, const std::string& initial) {
-        promptText(android, id, title, initial);
+    // Build 6: one-line texts are typed in the game (Game draws the input bar), not in a dialog.
+    vc::Game* gamePtr = app.game.get();
+    app.game->onTextPrompt = [gamePtr](int id, const std::string& title, const std::string& initial) {
+        gamePtr->beginTyping(id, title, initial, false);
+    };
+    app.game->onShowKeyboard = [android](int id, const std::string& initial, bool password) {
+        callActivity(android, "showKeyboard", "(ILjava/lang/String;Z)V", [&](JNIEnv* env, jobject obj, jmethodID m) {
+            jstring i = toJavaString(env, initial);
+            env->CallVoidMethod(obj, m, (jint)id, i, (jboolean)password);
+            env->DeleteLocalRef(i);
+        });
+    };
+    app.game->onHideKeyboard = [android] {
+        callActivity(android, "hideKeyboard", "()V", [](JNIEnv* env, jobject obj, jmethodID m) { env->CallVoidMethod(obj, m); });
     };
     app.game->onEditText = [android](int id, const std::string& title, const std::string& text) {
         promptText(android, id, title, text, "editText");
@@ -231,9 +250,7 @@ void android_main(android_app* android) {
         callActivity(android, "setLanActive", "(Z)V",
                      [&](JNIEnv* env, jobject obj, jmethodID m) { env->CallVoidMethod(obj, m, (jboolean)active); });
     };
-    app.game->onPasswordPrompt = [android](int id, const std::string& title) {
-        promptText(android, id, title, "", "promptPassword");
-    };
+    app.game->onPasswordPrompt = [gamePtr](int id, const std::string& title) { gamePtr->beginTyping(id, title, "", true); };
     app.game->onImportStructure = [android] {
         callActivity(android, "importStructure", "()V", [](JNIEnv* env, jobject obj, jmethodID m) { env->CallVoidMethod(obj, m); });
     };
@@ -299,6 +316,15 @@ extern "C" JNIEXPORT void JNICALL Java_cz_voxelcraft_VoxelActivity_nativeTextRes
     std::string text((size_t)n, '\0');
     env->GetByteArrayRegion(utf8, 0, n, reinterpret_cast<jbyte*>(text.data()));
     game->onTextResult(id, text);
+}
+
+extern "C" JNIEXPORT void JNICALL Java_cz_voxelcraft_VoxelActivity_nativeTyping(JNIEnv* env, jclass, jbyteArray utf8) {
+    vc::Game* game = g_game.load();
+    if (!game || !utf8) return;
+    jsize n = env->GetArrayLength(utf8);
+    std::string text((size_t)n, '\0');
+    env->GetByteArrayRegion(utf8, 0, n, reinterpret_cast<jbyte*>(text.data()));
+    game->onTypingText(text);
 }
 
 extern "C" JNIEXPORT void JNICALL Java_cz_voxelcraft_VoxelActivity_nativeBack(JNIEnv*, jobject) { ++g_backRequests; }

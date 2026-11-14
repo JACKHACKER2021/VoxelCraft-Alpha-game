@@ -14,6 +14,7 @@ enum class Sound {
     // 1.9.5 (Minetest Game sounds): every surface and material its own.
     StepSand, StepGravel, StepStone, StepSnow, StepIce, DigDirt, DigGravel, DigLeaves, DigIce,
     PlaceStone, ToolBreak, FlintSteel, Extinguish, DoorIron, Fire, LavaCool,
+    TrainHorn, CrossingChime,  // 2.1.0 preview: synthesized (our own), for the horn and chime makers
     Count
 };
 // The synthesized sound a kind falls back to (the Old World keeps the sounds of 0.1-0.3).

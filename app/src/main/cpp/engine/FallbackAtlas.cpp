@@ -1934,6 +1934,48 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
                 else
                     a.clear(T_TRAIN_PALETTE, px, py);  // glass: see-through windows
             }
+        // Build 4: pixel-art tiles for the train models, one per palette colour: painted panels with
+        // seams and rivets, wooden planks, metal, glass with a frame and a glint.
+        for (int ci = 0; ci < 14; ++ci) {
+            const int tile = T_TRAIN_TEX + ci;
+            const bool have = ci < kTrainPaletteSize;
+            const int r = have ? kTrainPalette[ci][0] : 128, g = have ? kTrainPalette[ci][1] : 128, bl = have ? kTrainPalette[ci][2] : 128;
+            const bool glass = have && kTrainPalette[ci][3] < 128;
+            const bool wood = r > g && g > bl && r < 150 && r - bl > 40;            // browns
+            const bool metal = std::abs(r - g) < 20 && std::abs(g - bl) < 20;       // greys and black
+            auto shade = [&](int d) { return Rgb{(uint8_t)std::max(0, std::min(255, r + d)), (uint8_t)std::max(0, std::min(255, g + d)), (uint8_t)std::max(0, std::min(255, bl + d))}; };
+            for (int py = 0; py < 16; ++py)
+                for (int px = 0; px < 16; ++px) {
+                    const uint32_t h = (uint32_t)(px * 73856093u ^ py * 19349663u ^ (uint32_t)ci * 83492791u);
+                    const int nz = (int)((h >> 7) % 9) - 4;
+                    if (glass) {
+                        // Build 5: no frame (it drew a grid over big windows), one short glint.
+                        const bool glint = (px + py == 10 || px + py == 12) && px > 3 && px < 8;
+                        if (glint) a.put(tile, px, py, Rgb{220, 240, 250});
+                        else a.clear(tile, px, py);
+                        continue;
+                    }
+                    Rgb c;
+                    if (wood) {
+                        const bool gap = py % 4 == 3;
+                        const bool end = (px + (py / 4) * 5) % 16 == 0;
+                        const bool grain = ((h >> 3) % 7) == 0;
+                        c = gap || end ? shade(-34) : grain ? shade(-14) : shade(nz * 2 + (py % 4 == 0 ? 8 : 0));
+                    } else if (metal) {
+                        const bool rivet = (px == 2 || px == 13) && (py == 2 || py == 13);
+                        const bool seam = py == 0 || px == 0;
+                        const bool brushed = ((px * 3 + py) % 5) == 0;
+                        c = rivet ? shade(36) : seam ? shade(-26) : shade(nz * 2 + (brushed ? 6 : 0));
+                    } else {
+                        // Painted steel panel: a dark seam on the edges, a light top edge, rivets along the seam.
+                        const bool seam = px == 0 || py == 15;
+                        const bool light = py == 0 || px == 15;
+                        const bool rivet = (py == 2 || py == 13) && px % 4 == 2;
+                        c = seam ? shade(-40) : rivet ? shade(30) : light ? shade(18) : shade(nz * 2);
+                    }
+                    a.put(tile, px, py, c);
+                }
+        }
         {
             // Side views: a body on wheels; the locomotive red with a cab and a chimney.
             auto icon = [&](int tile, Rgb body, Rgb top, bool engine) {
@@ -1959,7 +2001,82 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
             icon(T_LOCOMOTIVE_ITEM, Rgb{180, 40, 36}, Rgb{100, 104, 112}, true);
             icon(T_PASSENGER_WAGON_ITEM, Rgb{34, 72, 140}, Rgb{100, 104, 112}, false);
             icon(T_FREIGHT_WAGON_ITEM, Rgb{120, 84, 50}, Rgb{120, 84, 50}, false);
+            // Build 5: the drill car: a yellow machine on a frame with a stepped grey drill in front.
+            icon(T_DRILL_CAR_ITEM, Rgb{230, 180, 30}, Rgb{60, 62, 68}, false);
+            for (int py = 4; py < 12; ++py)
+                for (int px = 12; px < 16; ++px) {
+                    const int r = 4 - (px - 12);  // narrower towards the tip
+                    if (std::abs(py - 8) <= r) a.put(T_DRILL_CAR_ITEM, px, py, (px + py) % 2 ? Rgb{70, 72, 78} : Rgb{150, 154, 160});
+                }
         }
+        // 2.1.0 preview build 6: the Bronze Update (our own pixel art, in the bronze block's colour).
+        for (int py = 0; py < 16; ++py)
+            for (int px = 0; px < 16; ++px) {
+                const int n = (int)(hash3(px, py, 61, 3) % 10) - 5;
+                const Rgb b = kBronze;
+                // Cut: four plates, each with a light top-left and dark bottom-right edge.
+                const int qx = px % 8, qy = py % 8;
+                const float cut = qx == 0 || qy == 0 ? 1.25f : qx == 7 || qy == 7 ? 0.62f : 1.0f;
+                a.put(T_CUT_BRONZE, px, py, b.scaled(cut).plus(n));
+                // Chiseled: a frame and a pressed diamond in the middle.
+                const int dx = std::abs(px * 2 - 15), dy = std::abs(py * 2 - 15);
+                const bool frame = px <= 1 || py <= 1 || px >= 14 || py >= 14;
+                const bool diamond = dx + dy >= 10 && dx + dy <= 13;
+                const float ch = frame ? (px == 0 || py == 0 ? 1.25f : 0.7f) : diamond ? 0.68f : dx + dy < 10 ? 1.12f : 0.95f;
+                a.put(T_CHISELED_BRONZE, px, py, b.scaled(ch).plus(n));
+                // Grate: bars every 4 pixels with see-through holes between them.
+                const bool bar = px % 4 == 0 || py % 4 == 0 || px == 15 || py == 15;
+                if (bar) a.put(T_BRONZE_GRATE, px, py, b.scaled(px % 4 == 0 && py % 4 == 0 ? 1.2f : 0.92f).plus(n));
+                else a.clear(T_BRONZE_GRATE, px, py);
+                // Bulb: a bronze cage round a glass bulb, dark when off and bright when lit.
+                const bool cage = frame || px == 7 || px == 8 || py == 7 || py == 8;
+                const int r2 = (px * 2 - 15) * (px * 2 - 15) + (py * 2 - 15) * (py * 2 - 15);
+                const Rgb off = r2 < 60 ? Rgb{96, 70, 48} : Rgb{70, 52, 38};
+                const Rgb on = r2 < 30 ? Rgb{255, 250, 220} : r2 < 90 ? Rgb{255, 214, 120} : Rgb{240, 170, 70};
+                a.put(T_BRONZE_BULB, px, py, cage ? b.scaled(0.9f).plus(n) : off.plus(n));
+                a.put(T_BRONZE_BULB_ON, px, py, cage ? b.scaled(1.05f).plus(n) : on.plus(n / 2));
+            }
+        // 2.1.0 preview build 3: railway blocks (our own pixel art).
+        for (int py = 0; py < 16; ++py)
+            for (int px = 0; px < 16; ++px) {
+                const int n = (int)(hash3(px, py, 60020, 7) % 10) - 5;
+                const bool rim = px == 0 || py == 0 || px == 15 || py == 15;
+                const bool rim2 = px <= 1 || py <= 1 || px >= 14 || py >= 14;
+                const Rgb steel = Rgb{70, 74, 84}.plus(n), dark{36, 38, 44};
+                // Booster: a steel plate with glowing powerstone chevrons pointing along the track.
+                const int cx = std::abs(px * 2 - 15);
+                const bool chevron = ((py + cx / 2) % 6) < 2 && cx < 11 && !rim2;
+                a.put(T_BOOSTER_TOP, px, py, rim2 ? dark : chevron ? Rgb{255, 70, 50} : steel);
+                a.put(T_BOOSTER_SIDE, px, py, rim2 ? dark : (py == 7 || py == 8) && px > 2 && px < 13 ? Rgb{220, 50, 40} : steel);
+                // Chime maker: a brass bell on a dark panel. Horn maker: twin horns.
+                const int dx = px * 2 - 15, dy = py * 2 - 13;
+                const bool bell = dy > -8 && dy < 8 && std::abs(dx) < 4 + (dy + 8) / 3;
+                a.put(T_CHIME_MAKER, px, py, rim ? dark : bell ? Rgb{226, 182, 70}.plus(n) : py == 13 && px > 5 && px < 10 ? Rgb{200, 160, 60} : Rgb{48, 50, 58}.plus(n));
+                const bool horn1 = py >= 4 && py <= 7 && px >= 2 + (7 - py) && px <= 13, horn2 = py >= 9 && py <= 12 && px >= 2 + (py - 9) && px <= 13;
+                a.put(T_HORN_MAKER, px, py, rim ? dark : horn1 || horn2 ? Rgb{190, 196, 206}.plus(n) : Rgb{48, 50, 58}.plus(n));
+                // Signal lamps: lit red with a bright middle, or dark red.
+                const int r2 = dx * dx + (py * 2 - 15) * (py * 2 - 15);
+                a.put(T_SIGNAL_LAMP_ON, px, py, r2 < 30 ? Rgb{255, 220, 180} : r2 < 120 ? Rgb{255, 60, 40} : Rgb{40, 30, 30});
+                a.put(T_SIGNAL_LAMP_OFF, px, py, r2 < 120 ? Rgb{90, 24, 20} : Rgb{40, 30, 30});
+                // The crossing board: white with a red edge.
+                a.put(T_SIGNAL_BOARD, px, py, rim2 ? Rgb{200, 30, 30} : Rgb{235, 235, 235}.plus(n / 2));
+                // Turntable: a stone ring round the pit.
+                const int rr = dx * dx + (py * 2 - 15) * (py * 2 - 15);
+                a.put(T_TURNTABLE, px, py, rr > 200 ? Rgb{120, 120, 124}.plus(n) : rr > 160 ? Rgb{60, 60, 64} : Rgb{96, 78, 52}.plus(n));
+                // Item icons: the crossing sign with its lamps, and the gate.
+                const bool cross = (std::abs(px - py) <= 1 || std::abs(px + py - 15) <= 1) && py < 9 && px > 1 && px < 14;
+                const bool post = px >= 7 && px <= 8 && py >= 3;
+                const bool lamp = py >= 9 && py <= 11 && (px <= 4 || px >= 11) && px >= 2 && px <= 13;
+                if (cross) a.put(T_CROSSING_ICON, px, py, (px + py) % 4 < 2 ? Rgb{235, 235, 235} : Rgb{200, 30, 30});
+                else if (lamp) a.put(T_CROSSING_ICON, px, py, Rgb{255, 60, 40});
+                else if (post) a.put(T_CROSSING_ICON, px, py, Rgb{60, 62, 70});
+                else a.clear(T_CROSSING_ICON, px, py);
+                const bool gpost = px >= 2 && px <= 4 && py >= 4;
+                const bool arm = py >= 5 && py <= 6 && px > 4;
+                if (gpost) a.put(T_GATE_ICON, px, py, py == 5 ? Rgb{255, 60, 40} : Rgb{60, 62, 70});
+                else if (arm) a.put(T_GATE_ICON, px, py, (px / 2) % 2 ? Rgb{235, 235, 235} : Rgb{200, 30, 30});
+                else a.clear(T_GATE_ICON, px, py);
+            }
         // 1.9.5 the creatures of the Celestial Reach.
         for (int py = 0; py < 16; ++py)
             for (int px = 0; px < 16; ++px) {

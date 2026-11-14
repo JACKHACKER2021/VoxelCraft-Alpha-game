@@ -171,9 +171,12 @@ bez jakýchkoli assetů nebo kódu od Mojangu.
 - Import světů z Minecraft Bedrock (.mcworld), složka Speciální bloky, 17minutový příběh projektu.
 - Vlastní rozsah ID (60000+) pro nové bloky, aby se nekryly s deskami.
 
-## Preview 2.1.0 – Koleje a vlaky (experiment)
-- Koleje, zatáčky, výhybky, zarážky; lokomotiva, osobní a nákladní vagon (vlastní modely, dá se do nich vejít).
-- Nastoupit, plyn, brzda, couvání; vagony se připojují samy; klepnutím vůz odebereš.
+## 2.1.0 – Trains & Bronze
+- Vlaky (lokomotiva, osobní a nákladní vagon, vrtací vůz), 3D koleje, oblouky, výhybky, svahy, zarážedla, točna.
+- Přejezd (výstražník, závora, zvonek, houkačka), booster; pixel-art textury vlaků, kouř, náklon na svahu.
+- Bronzový update: řezaný a zdobený bronz, mřížka, žárovka. Recepty na koleje (ocel + smrk) a vagony.
+- Psaní přímo ve hře bez okna Androidu; novinky na úvodní obrazovce a v menu.
+- Preview buildy 1–6 prošly testováním v chatu, než šlo vše do hlavní verze.
 
 ## Nápady, na které se dá navázat
 - Další věci do doplňků (vánoční bloky, halloweenské dýně s obličeji, narozeninové balónky).

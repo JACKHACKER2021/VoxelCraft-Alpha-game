@@ -113,7 +113,7 @@ bool leafSupported(const World& w, int x, int y, int z) {
 
 bool isPowerBlock(ItemId id) {
     return isCable(id) || isSwitch(id) || isLamp(id) || id == POWERSTONE_BLOCK || isTnt(id) || (isDoor(id) && id >= IRON_DOOR) ||
-           id == SOUND_BLOCK || id == COMMAND_BLOCK;
+           id == SOUND_BLOCK || id == COMMAND_BLOCK || isBronzeBulb(id);
 }
 
 namespace {
@@ -133,6 +133,14 @@ void applyConsumer(World& w, int x, int y, int z, std::vector<std::array<int, 3>
     bool on = poweredBy(w, x, y, z);
     if (isLamp(b)) {
         ItemId want = on ? POWERSTONE_LAMP_ON : POWERSTONE_LAMP;
+        if (b != want) w.setBlock(x, y, z, want);
+    } else if (isBronzeBulb(b)) {
+        // Build 6: the bronze bulb switches over each time power comes (not while it stays).
+        const int s = b - BRONZE_BULB;
+        const bool was = (s & 2) != 0;
+        int lit = s & 1;
+        if (on && !was) lit ^= 1;
+        const ItemId want = (ItemId)(BRONZE_BULB + lit + (on ? 2 : 0));
         if (b != want) w.setBlock(x, y, z, want);
     } else if (isTnt(b) && on) {
         ignite.push_back({x, y, z});
@@ -171,7 +179,7 @@ void updatePower(World& w, int x, int y, int z, std::vector<std::array<int, 3>>&
                 ItemId b = w.getBlock(n[0], n[1], n[2]);
                 if (isSource(b)) powered = true;
                 if (isCable(b) && done.insert(n).second) net.push_back(n);
-                if (isLamp(b) || isTnt(b) || (isDoor(b) && b >= IRON_DOOR)) consumers.push_back(n);
+                if (isLamp(b) || isBronzeBulb(b) || isTnt(b) || (isDoor(b) && b >= IRON_DOOR)) consumers.push_back(n);
             }
         }
         for (auto& c : net) {

@@ -44,7 +44,7 @@ bool fenceConnects(ItemId n) { return isFence(n) || isOpaque(n); }
 
 bool cableConnects(ItemId n) {
     return isCable(n) || isSwitch(n) || isLamp(n) || isTnt(n) || n == POWERSTONE_BLOCK || (isDoor(n) && n >= IRON_DOOR) || isPowerstoneFurnace(n) ||
-           n == SOUND_BLOCK || n == COMMAND_BLOCK;
+           n == SOUND_BLOCK || n == COMMAND_BLOCK || isBronzeBulb(n);
 }
 
 // 1.5.7: a torch is a thin stick; on a wall it leans against the block it hangs on.
@@ -285,6 +285,10 @@ int blockBoxes(const World& world, int x, int y, int z, ItemId id, bool collisio
         out[count++] = rot({1 / 16.0f, 7 / 16.0f, 0, 15 / 16.0f, 12 / 16.0f, 2 / 16.0f});   // the bumper plate
         out[count++] = rot({3 / 16.0f, 2 / 16.0f, 4 / 16.0f, 13 / 16.0f, 4 / 16.0f, 12 / 16.0f});  // a brace back along the track
         return count;
+    }
+    if (isCrossingSignal(id) || isCrossingGate(id)) {  // build 3: you bump into the post
+        out[0] = {0.4f, 0, 0.4f, 0.6f, 1, 0.6f};
+        return 1;
     }
     if (isRail(id)) {  // 2.1.0 preview: a flat track on the ground
         out[0] = {0, 0, 0, 1, collision ? 0.01f : 1 / 16.0f, 1};

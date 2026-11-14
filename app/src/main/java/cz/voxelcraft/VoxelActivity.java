@@ -24,6 +24,11 @@ import android.view.Gravity;
 import android.text.InputType;
 import android.view.WindowManager.LayoutParams;
 import android.widget.EditText;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
+import android.view.KeyEvent;
 import android.window.OnBackInvokedDispatcher;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
@@ -189,6 +194,80 @@ public class VoxelActivity extends NativeActivity {
         android.content.res.Configuration config = new android.content.res.Configuration(getResources().getConfiguration());
         config.setLocale(new Locale(code));
         langContext = createConfigurationContext(config);
+    }
+
+    // ---- 2.1.0 preview build 6: typing inside the game. An invisible one-pixel text field holds
+    // the keyboard's text; the game draws the input bar itself (no Android dialog, and the
+    // keyboard never takes the whole screen in landscape).
+    private static native void nativeTyping(byte[] utf8);
+    private EditText typer;
+    private int typerId = -1;
+
+    @SuppressWarnings("unused")
+    public void showKeyboard(int requestId, String initial, boolean password) {
+        runOnUiThread(() -> {
+            if (typer == null) {
+                typer = new EditText(this);
+                typer.setAlpha(0f);
+                typer.setBackground(null);
+                typer.setSingleLine(true);
+                typer.addTextChangedListener(new TextWatcher() {
+                    @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
+                    @Override public void onTextChanged(CharSequence s, int a, int b, int c) {}
+                    @Override public void afterTextChanged(Editable s) {
+                        nativeTyping(s.toString().getBytes(StandardCharsets.UTF_8));
+                    }
+                });
+                typer.setOnEditorActionListener((v, action, event) -> {
+                    finishTyping(true);
+                    return true;
+                });
+                addContentView(typer, new android.view.ViewGroup.LayoutParams(1, 1));
+            }
+            typerId = requestId;
+            typer.setInputType(password ? InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD
+                                        : InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+            typer.setImeOptions(EditorInfo.IME_ACTION_DONE | EditorInfo.IME_FLAG_NO_EXTRACT_UI | EditorInfo.IME_FLAG_NO_FULLSCREEN);
+            typer.setText(initial);
+            typer.setSelection(typer.getText().length());
+            typer.setVisibility(android.view.View.VISIBLE);
+            typer.setFocusableInTouchMode(true);
+            typer.requestFocus();
+            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+            if (imm != null) {
+                imm.restartInput(typer);
+                imm.showSoftInput(typer, InputMethodManager.SHOW_FORCED);
+            }
+        });
+    }
+
+    @SuppressWarnings("unused")
+    public void hideKeyboard() {
+        runOnUiThread(() -> finishTyping(false));
+    }
+
+    /** Keys the keyboard sends as key events (some send Delete and Enter so): the game passes them on. */
+    @SuppressWarnings("unused")
+    public void typerKey(int keyCode) {
+        runOnUiThread(() -> {
+            if (typer == null || typerId < 0) return;
+            if (keyCode == KeyEvent.KEYCODE_ENTER) {
+                finishTyping(true);
+            } else if (keyCode == KeyEvent.KEYCODE_DEL) {
+                Editable e = typer.getText();
+                int end = typer.getSelectionEnd();
+                if (end > 0) e.delete(end - 1, end);
+            }
+        });
+    }
+
+    private void finishTyping(boolean send) {
+        if (typer == null) return;
+        if (send && typerId >= 0) sendText(typerId, typer.getText().toString());
+        typerId = -1;
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (imm != null) imm.hideSoftInputFromWindow(typer.getWindowToken(), 0);
+        typer.clearFocus();
     }
 
     /** Called from native code: a masked one-line input (developer password). */

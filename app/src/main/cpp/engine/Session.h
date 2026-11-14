@@ -313,6 +313,11 @@ private:
     // locomotive is the driver's seat.
     TrainSystem trains_;
     int trainSeatTrain_ = -1, trainSeatCar_ = 0, trainSeat_ = 0;
+    float smokeTimer_ = 0;
+    float railwayTimer_ = 0;
+    bool railwayFlash_ = false;
+    std::set<std::tuple<int, int, int>> railwayActive_;  // signals and gates a train is near
+    std::map<FurnaceKey, double> railwaySounds_;         // when each chime or horn maker last sounded
     struct TrainButtons {
         float x = 0, y = 0, w = 0, h = 0, gap = 0;
         int count = 0;

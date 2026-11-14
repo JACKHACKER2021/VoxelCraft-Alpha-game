@@ -89,7 +89,7 @@ void Ui::tile(float x, float y, float size, int t, Color c) {
 void Ui::item(float x, float y, float size, ItemId id) {
     if (id == AIR) return;
     if (isItemOnly(id) || isLiquid(id) || isPlant(id) || isLeaves(id) || id == GLASS || id == POWERSTONE_GLASS || isDoor(id) || isTorch(id) ||
-        isRail(id) || isBufferStop(id)) {  // a torch is a flat icon; 2.0.0: rails and buffer stops too
+        isRail(id) || isBufferStop(id) || isCrossingSignal(id) || isCrossingGate(id)) {  // a torch is a flat icon; 2.0.0: rails and buffer stops too
         // Flat icon, like items and see-through blocks in the original inventory.
         float pad = size * 0.1f;
         tile(x + pad, y + pad, size - 2 * pad, tileFor(id, F_SOUTH));
