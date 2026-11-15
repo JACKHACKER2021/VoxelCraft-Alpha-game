@@ -132,8 +132,9 @@ def doors(m, door_centres):
             gz0, gz1 = lo + 0.07, hi - 0.07
             if gz1 - gz0 > 0.05:
                 m.mirror_x(MAT["glass"], (xi - 0.004, 1.00, gz0), (xo + 0.004, 1.62, gz1))
-        # door frame above the opening
+        # door frame above the opening, then the body wall up to the roof
         m.mirror_x(MAT["frame"], (xi, y1, c - DOOR_HALF), (xo, y1 + 0.06, c + DOOR_HALF))
+        m.mirror_x(MAT["body"], (HALF_W - WALL, y1 + 0.06, c - DOOR_HALF), (HALF_W, ROOF_Y, c + DOOR_HALF))
 
 
 def shell(m):
