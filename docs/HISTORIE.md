@@ -178,6 +178,15 @@ bez jakýchkoli assetů nebo kódu od Mojangu.
 - Psaní přímo ve hře bez okna Androidu; novinky na úvodní obrazovce a v menu.
 - Preview buildy 1–6 prošly testováním v chatu, než šlo vše do hlavní verze.
 
+## 2.2.0 – Cornerstone and Frost
+- Tři biomy dimenze Cornerstone (Pozlacený lom, Prizmatické pobřeží, Zarostlý monolit) a remaster jejích textur.
+- Mráz: praskající led, ledové cihly, sněhová vločka, suchý sníh; teplo od pecí, lamp a jantaru.
+- Hlubší Overworld: chunky vysoké 192 bloků, vrstvy hlubinného kamene a propastné skály; staré světy se posunou.
+- Koleje v 8 směrech, oblouky po 45°, mírné stoupání, automatické tvarování kolejí.
+- Rozhlas s hlasem (eSpeak NG), stárnoucí a voskovaný bronz, bronzové dveře, schody a desky, polštář na posteli.
+- Zelené menu, panorama všech světů, nová tlačítka HUD, písmo Tiny Caps, barvy a styly textu, příkazy /say /age /wax /locate.
+- Preview buildy 1–12 prošly testováním v chatu, než šlo vše do hlavní verze.
+
 ## Nápady, na které se dá navázat
 - Další věci do doplňků (vánoční bloky, halloweenské dýně s obličeji, narozeninové balónky).
 - Nové struktury v Netheru, další bossové, zbraně na dálku (luk).

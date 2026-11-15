@@ -1,4 +1,6 @@
+#include <cstring>
 #include "World.h"
+#include "BlockShapes.h"
 
 #include <zlib.h>
 
@@ -28,7 +30,10 @@ void Chunk::recalcHeightmap() {
 
 World::World(uint32_t seed, Dimension dim, const GenConfig& config)
     : seed_(seed), dim_(dim), config_(config), terrain_(seed), detail_(seed * 31 + 7), caves_(seed * 17 + 3),
-      temperature_(seed * 7 + 11), humidity_(seed * 13 + 5) {}
+      temperature_(seed * 7 + 11), humidity_(seed * 13 + 5) {
+    deep_ = kFeatures220 && dim == Dimension::Overworld && config.generation >= 4 && !config.oldWorld && !config.flat && config.boundedChunks <= 0 &&
+            !config.biomes.empty();
+}
 
 Chunk* World::getChunk(int cx, int cz) const {
     auto it = chunks_.find(key(cx, cz));
@@ -80,7 +85,7 @@ World::Column World::column(int x, int z) const {
         // The height formula of VoxelCraft 0.1-0.3, unchanged (see generateOldWorld).
         const float continent = terrain_.fbm2(x / 256.0f, z / 256.0f, 4);
         const float hills = detail_.fbm2(x / 64.0f, z / 64.0f, 4);
-        col.height = std::clamp((int)(64 + continent * 28 + hills * 10 * (0.5f + std::max(0.0f, continent))), 4, kChunkHeight - 10);
+        col.height = std::clamp((int)(64 + continent * 28 + hills * 10 * (0.5f + std::max(0.0f, continent))), 4, kGenHeight - 10);
         col.biome = config_.biomes.empty() ? nullptr : &config_.biomes.front();
         return col;
     }
@@ -112,11 +117,11 @@ World::Column World::column(int x, int z) const {
     col.temperature = t;
     float continent = terrain_.fbm2(x / 256.0f, z / 256.0f, 4);
     float hills = detail_.fbm2(x / 64.0f, z / 64.0f, 4);
-    col.height = std::clamp((int)(base + continent * 10 + hills * variation), 4, kChunkHeight - 10);
+    col.height = std::clamp((int)(base + continent * 10 + hills * variation), 4, kGenHeight - 10);
     return col;
 }
 
-int World::surfaceHeight(int x, int z) const { return column(x, z).height; }
+int World::surfaceHeight(int x, int z) const { return column(x, z).height + yShift(); }
 
 const BiomeDef* World::biomeAt(int x, int z) const {
     return dim_ == Dimension::Overworld && !config_.biomes.empty() ? column(x, z).biome : nullptr;
@@ -173,7 +178,7 @@ void World::generateBounded(Chunk& c) {
                 continue;
             }
             if (!insideBounds(wx, wz)) continue;
-            const int h = std::min(column(wx, wz).height, kChunkHeight - 20);
+            const int h = std::min(column(wx, wz).height, kGenHeight - 20);
             const bool shore = h <= kSea + 1;
             const bool gravelPatch = detail_.perlin2(wx / 11.0f + 40, wz / 11.0f - 70) > 0.45f;
             for (int y = 0; y <= std::max(h, kSea); ++y) {
@@ -199,7 +204,7 @@ void World::generateBounded(Chunk& c) {
         for (int z = 2; z <= 13; ++z) {
             const int wx = cx * kChunkSize + x, wz = cz * kChunkSize + z;
             if (!insideBounds(wx - 3, wz - 3) || !insideBounds(wx + 3, wz + 3)) continue;
-            const int h = std::min(column(wx, wz).height, kChunkHeight - 20);
+            const int h = std::min(column(wx, wz).height, kGenHeight - 20);
             const uint32_t r = hash3(wx, 1, wz, seed_ ^ 0x0A4Eu);
             if (c.get(x, h, z) != GRASS) continue;
             if (r % 100 >= 6) {
@@ -227,7 +232,7 @@ void World::generateOldWorld(Chunk& c) {
             const int wx = cx * kChunkSize + x, wz = cz * kChunkSize + z;
             const int h = column(wx, wz).height;
             const bool beach = h <= kOldSeaLevel + 1;
-            for (int y = 0; y < kChunkHeight; ++y) {
+            for (int y = 0; y < kGenHeight; ++y) {
                 ItemId id = AIR;
                 if (y == 0 || (y < 4 && (hash3(wx, y, wz, seed_) & 1))) id = BEDROCK;
                 else if (y < h - 3) id = STONE;
@@ -255,7 +260,7 @@ void World::generateOldWorld(Chunk& c) {
                 if (r % 100 < (forest > 0.2f ? 4u : 1u) && c.get(x, h, z) == GRASS) {
                     // The old oak: a 4-6 block trunk and a crown with ragged corners.
                     const int y = h + 1, trunk = 4 + (int)((r >> 8) % 3);
-                    if (y + trunk + 2 >= kChunkHeight) continue;
+                    if (y + trunk + 2 >= kGenHeight) continue;
                     c.set(x, y - 1, z, DIRT);
                     for (int dy = trunk - 2; dy <= trunk + 1; ++dy) {
                         const int rr = dy >= trunk ? 1 : 2;
@@ -284,11 +289,11 @@ void World::generateOldNether(Chunk& c) {
         for (int z = 0; z < kChunkSize; ++z) {
             const int wx = c.cx * kChunkSize + x, wz = c.cz * kChunkSize + z;
             const float soul = detail_.perlin2(wx / 20.0f, wz / 20.0f);
-            for (int y = 0; y < kChunkHeight; ++y) {
+            for (int y = 0; y < kGenHeight; ++y) {
                 ItemId id;
                 const uint32_t h = hash3(wx, y, wz, seed_ ^ 0xBEEFu);
-                if (y == 0 || y == kChunkHeight - 1 || (y < 5 && (int)(h & 3) < 4 - y) ||
-                    (y > kChunkHeight - 6 && (int)(h & 3) < y - (kChunkHeight - 6)))
+                if (y == 0 || y == kGenHeight - 1 || (y < 5 && (int)(h & 3) < 4 - y) ||
+                    (y > kGenHeight - 6 && (int)(h & 3) < y - (kGenHeight - 6)))
                     id = BEDROCK;
                 else {
                     const float n = caves_.perlin3(wx / 32.0f, y / 20.0f, wz / 32.0f) + 0.5f * terrain_.perlin3(wx / 12.0f, y / 10.0f, wz / 12.0f);
@@ -298,7 +303,7 @@ void World::generateOldNether(Chunk& c) {
                 }
                 c.set(x, y, z, id);
             }
-            for (int y = kOldLavaLevel + 1; y < kChunkHeight - 2; ++y) {
+            for (int y = kOldLavaLevel + 1; y < kGenHeight - 2; ++y) {
                 if (c.get(x, y, z) != NETHERRACK || c.get(x, y + 1, z) != AIR) continue;
                 if (soul > 0.25f) {
                     c.set(x, y, z, upgradeLegacyBlock(88));
@@ -311,7 +316,7 @@ void World::generateOldNether(Chunk& c) {
     const uint32_t r = hash3(c.cx, 0, c.cz, seed_ ^ 0x6105u);
     for (int i = 0; i < (int)(r % 3); ++i) {
         const int x = 3 + (int)((r >> (4 + i * 6)) % 10), z = 3 + (int)((r >> (7 + i * 6)) % 10);
-        int y = kChunkHeight - 8;
+        int y = kGenHeight - 8;
         while (y > 40 && !(c.get(x, y, z) == AIR && isSolid(c.get(x, y + 1, z)))) --y;
         if (y <= 40) continue;
         for (int k = 0; k < 40; ++k) {
@@ -361,7 +366,7 @@ void World::generateOverworld(Chunk& c) {
                     steep = std::max(steep, std::abs(column(wx + dx, wz + dz).height - h));
                 if (steep >= 3) top = under = b.peakBlock;
             }
-            for (int y = 0; y < kChunkHeight; ++y) {
+            for (int y = 0; y < kGenHeight; ++y) {
                 ItemId id = AIR;
                 if (y == 0) id = WORLD_END;
                 else if (y < 4 && (hash3(wx, y, wz, seed_) & 1)) id = BEDROCK;
@@ -369,9 +374,15 @@ void World::generateOverworld(Chunk& c) {
                 else if (y < h) id = under;
                 else if (y == h) id = top;
                 else if (y <= sea) id = ((b.freeze || col.temperature < 0.12f) && y == sea) ? (ItemId)ICE : (ItemId)WATER;
+                // 2.2.0: patches of thin ice on frozen water, which give way under you.
+                if (kFeatures220 && id == ICE && detail_.perlin2(wx / 9.0f + 77, wz / 9.0f - 31) > 0.25f) id = THIN_ICE;
                 // High mountains: hardened stone above the peak height, snow on the very top.
                 if (b.peakBlock && y > b.peakHeight && y <= h && id != BEDROCK) id = b.peakBlock;
                 if (y == h && h > b.snowHeight) id = SNOW_BLOCK;
+                // 2.2.0: drifts of dried snow on snowy ground, two blocks deep.
+                if (kFeatures220 && (y == h || y == h - 1) && (id == SNOW_BLOCK || (b.freeze && y == h && id == top && top != ICE)) &&
+                    detail_.perlin2(wx / 14.0f - 220, wz / 14.0f + 90) > 0.42f)
+                    id = DRIED_SNOW;
                 // 1.6.0 (generation 4): the deep layer of deepstone, with a wavy top. 1.7.0: about 40
                 // blocks thick, so the deep caves have room.
                 const bool gen4 = config_.generation >= 4;
@@ -443,7 +454,7 @@ void World::generateOverworld(Chunk& c) {
                 }
             }
             // Cacti on sand, 1 to 3 blocks tall, with air around them like in the desert of the classic game.
-            if (!tree && b.cactusDensity > 0 && c.get(x, h, z) == SAND && h + 4 < kChunkHeight && x >= 1 && x <= 14 &&
+            if (!tree && b.cactusDensity > 0 && c.get(x, h, z) == SAND && h + 4 < kGenHeight && x >= 1 && x <= 14 &&
                 z >= 1 && z <= 14) {
                 uint32_t r = hash3(wx, 3, wz, seed_ ^ 0xCAC7u);
                 bool clear = c.get(x + 1, h + 1, z) == AIR && c.get(x - 1, h + 1, z) == AIR && c.get(x, h + 1, z + 1) == AIR &&
@@ -456,13 +467,13 @@ void World::generateOverworld(Chunk& c) {
             }
             // Cold lands lie under a thin cover of snow.
             const bool cold = b.freeze || cols[x][z].temperature < 0.12f;
-            if (!tree && cold && h + 1 < kChunkHeight && isOpaque(c.get(x, h, z)) && c.get(x, h + 1, z) == AIR) {
+            if (!tree && cold && h + 1 < kGenHeight && isOpaque(c.get(x, h, z)) && c.get(x, h + 1, z) == AIR) {
                 c.set(x, h + 1, z, SNOW_LAYER);
                 continue;
             }
             // Tall grass and flowers grow on grass with air above (not under leaves of this column's tree).
             const ItemId ground = c.get(x, h, z);
-            if (!tree && h + 1 < kChunkHeight && ground == GRASS && c.get(x, h + 1, z) == AIR) {
+            if (!tree && h + 1 < kGenHeight && ground == GRASS && c.get(x, h + 1, z) == AIR) {
                 uint32_t r = hash3(wx, 1, wz, seed_ ^ 0x9A55u) % 100000;
                 // Flowers grow in patches: a slow noise decides where they bloom.
                 float patch = detail_.perlin2(wx / 18.0f + 300, wz / 18.0f) > 0.1f ? 3.0f : 0.3f;
@@ -513,6 +524,241 @@ void World::generateOverworld(Chunk& c) {
         placeOres(c, hardium, 0x4A2Du);
     }
     stampStructures(c);
+    if (deep_) deepenOverworld(c);
+}
+
+// 2.2.0 "Cornerstone and Frost": the deeper Overworld. The generators build the world 128 blocks high;
+// here every column is lifted by kDeepShift and the room below is filled with the deep layers.
+void World::liftColumns(Chunk& c) const {
+    for (int x = 0; x < kChunkSize; ++x)
+        for (int z = 0; z < kChunkSize; ++z) {
+            ItemId* col = &c.blocks[Chunk::index(x, 0, z)];
+            std::memmove(col + kDeepShift, col, sizeof(ItemId) * (kChunkHeight - kDeepShift));
+            std::fill(col, col + kDeepShift, (ItemId)AIR);
+            // The old floor (the world's end and bedrock) becomes deepstone: the world goes on below it.
+            for (int y = kDeepShift; y < kDeepShift + 5; ++y)
+                if (col[y] == BEDROCK || col[y] == WORLD_END) col[y] = DEEPSTONE;
+        }
+}
+
+void World::deepenOverworld(Chunk& c) {
+    liftColumns(c);
+    const int cx = c.cx, cz = c.cz;
+    for (int x = 0; x < kChunkSize; ++x)
+        for (int z = 0; z < kChunkSize; ++z) {
+            const int wx = cx * kChunkSize + x, wz = cz * kChunkSize + z;
+            // Layers: deepstone above, then a wavy border to abyssal rock, with thin bands of each in the other.
+            const int border = 24 + (int)(detail_.perlin2(wx / 31.0f - 17, wz / 31.0f + 5) * 6);
+            const int band1 = 40 + (int)(detail_.perlin2(wx / 19.0f + 60, wz / 19.0f) * 3);
+            const int band2 = 12 + (int)(detail_.perlin2(wx / 17.0f, wz / 17.0f - 80) * 3);
+            for (int y = 0; y < kDeepShift; ++y) {
+                ItemId id = y < border ? (ItemId)ABYSSAL_ROCK : (ItemId)DEEPSTONE;
+                if (y == band1 || y == band1 + 1) id = ABYSSAL_ROCK;
+                if (y == band2) id = DEEPSTONE;
+                if (y < 4 && (hash3(wx, y, wz, seed_ ^ 0xDEE9u) % 3) < (uint32_t)(4 - y)) id = BEDROCK;
+                if (y == 0) id = WORLD_END;  // the very bottom, as before
+                c.set(x, y, z, id);
+            }
+            // Caves: winding tunnels everywhere and great halls in the abyssal rock; lava fills the lowest floors.
+            for (int y = 4; y < kDeepShift + 14; ++y) {
+                const ItemId here = c.get(x, y, z);
+                if (here != DEEPSTONE && here != ABYSSAL_ROCK && here != STONE) continue;
+                const float t1 = caves_.perlin3(wx / 28.0f, y / 16.0f, wz / 28.0f);
+                const float t2 = caves_.perlin3(wx / 28.0f + 300, y / 16.0f, wz / 28.0f - 200);
+                const bool tunnel = std::fabs(t1) < 0.075f && std::fabs(t2) < 0.12f;
+                const float hall = caves_.perlin3(wx / 45.0f - 500, y / 22.0f, wz / 45.0f + 700) - std::fabs(y - 20) / 60.0f;
+                const bool cavern = y < kDeepShift - 4 && hall > 0.17f;
+                if (tunnel || cavern) c.set(x, y, z, y <= 9 ? (ItemId)LAVA : (ItemId)AIR);
+            }
+        }
+    // Cave walls: obsidian where lava meets rock, moss and glowing fungus on cavern floors.
+    for (int x = 0; x < kChunkSize; ++x)
+        for (int z = 0; z < kChunkSize; ++z) {
+            const int wx = cx * kChunkSize + x, wz = cz * kChunkSize + z;
+            for (int y = 5; y < kDeepShift; ++y) {
+                const ItemId here = c.get(x, y, z);
+                if (here != DEEPSTONE && here != ABYSSAL_ROCK) continue;
+                const ItemId above = c.get(x, y + 1, z);
+                if (above == LAVA || (y > 0 && c.get(x, y - 1, z) == LAVA)) {
+                    if (hash3(wx, y, wz, seed_ ^ 0x0B5Du) % 3 == 0) c.set(x, y, z, OBSIDIAN);
+                } else if (above == AIR && y > 10) {
+                    const uint32_t r = hash3(wx, y, wz, seed_ ^ 0xF00Du) % 100;
+                    if (r < 14) c.set(x, y, z, MOSSY_DEEPSTONE);
+                    else if (r < 18) c.set(x, y, z, FUNGAL_DEEPSTONE);
+                }
+            }
+        }
+    // Ores of the deep: hardium in both layers, rubies and steel mostly in the abyssal rock.
+    OreDef ore;
+    ore.block = HARDIUM_ORE, ore.veins = 4, ore.size = 5, ore.minY = 4, ore.maxY = kDeepShift - 2;
+    placeOres(c, ore, 0xD31Au);
+    ore.block = RUBY_ORE, ore.veins = 1, ore.size = 3, ore.minY = 4, ore.maxY = 30;
+    placeOres(c, ore, 0xD31Bu);
+    ore.block = STEEL_ORE, ore.veins = 1, ore.size = 4, ore.minY = 4, ore.maxY = kDeepShift - 2;
+    placeOres(c, ore, 0xD31Cu);
+    if (kPreviewEdition) stampBronzeHalls(c);  // 2.3.0 preview
+}
+
+// 2.3.0: the Bronze Halls, a big dungeon in the deep layers: 25 halls of bronze in a 5 x 5 grid joined by
+// corridors, every kind of bronze (plain, cut, chiseled, grate) in every age (shiny, tarnished, rusty, the
+// rust thicker the farther from the middle), bulbs in the ceilings, lava glowing under grate floors,
+// spawners in the corner halls and chests of bronze loot; the treasury in the middle. A shaft with vines
+// leads down from a small bronze marker on the surface. One in most regions of 400 x 400 blocks.
+namespace {
+constexpr int kHallRegion = 400, kHallCell = 21, kHallRoom = 15, kHallGrid = 5, kHallSize = kHallCell * (kHallGrid - 1) + kHallRoom;
+constexpr int kHallFloor = 14, kHallHeight = 10;
+}
+
+bool World::bronzeHallsIn(int rx, int rz, int& ox, int& oz) const {
+    const uint32_t h = hash3(rx, 777, rz, seed_ ^ 0xB80Eu);
+    if (h % 100 >= 70) return false;  // most regions have one
+    ox = rx * kHallRegion + 40 + (int)((h >> 8) % (kHallRegion - kHallSize - 80));
+    oz = rz * kHallRegion + 40 + (int)((h >> 18) % (kHallRegion - kHallSize - 80));
+    return true;
+}
+
+ItemId World::bronzeHallsBlock(int lx, int ly, int lz, uint32_t seed) const {
+    // lx, lz in 0..kHallSize-1, ly in 0..kHallHeight-1 (0 floor, top ceiling). solid rock where nothing is built.
+    constexpr int R = kHallRoom, C = kHallCell, M = R / 2, last = kHallGrid - 1;
+    auto inRoom = [](int v) { return v % C < R; };
+    auto mid = [](int v) { return std::abs(v % C - M) <= 1; };  // where corridors join a hall, 3 wide
+    const int ri = lx / C, rj = lz / C;
+    const bool room = inRoom(lx) && inRoom(lz);
+    const bool corrX = !inRoom(lx) && inRoom(lz) && mid(lz);
+    const bool corrZ = inRoom(lx) && !inRoom(lz) && mid(lx);
+    const uint32_t r = hash3(lx, ly, lz, seed);
+    // The rust grows thicker the farther a hall lies from the treasury in the middle.
+    const int dist = std::abs(ri - kHallGrid / 2) + std::abs(rj - kHallGrid / 2);
+    auto aged = [&](int base) {
+        const int roll = (int)(r % 100);
+        const int stage = roll < 5 + dist * 12 ? 2 : roll < 30 + dist * 12 ? 1 : 0;
+        return bronzeVariant(base, stage, roll % 29 == 0);
+    };
+    const int top = kHallHeight - 1;
+    if (room) {
+        const int x = lx % C, z = lz % C;
+        const bool treasury = ri == kHallGrid / 2 && rj == kHallGrid / 2;
+        const bool cornerHall = (ri == 0 || ri == last) && (rj == 0 || rj == last);
+        const bool guardHall = !treasury && !cornerHall && (ri + rj) % 2 == 1;  // spawners every other hall
+        const bool edgeX = x == 0 || x == R - 1, edgeZ = z == 0 || z == R - 1;
+        const bool openingSide = (x == 0 && ri > 0) || (x == R - 1 && ri < last) || (z == 0 && rj > 0) || (z == R - 1 && rj < last);
+        const bool doorway = ((edgeX && mid(lz)) || (edgeZ && mid(lx))) && openingSide && ly >= 1 && ly <= 4;
+        if (edgeX && edgeZ) return ly == 4 || ly == 7 ? (ItemId)(BRONZE_BULB + 1) : aged(2);  // corner pillars with lamps
+        if (edgeX || edgeZ) {
+            const int along = edgeX ? z : x;
+            const int face = edgeX ? (x == 0 ? 1 : 3) : (z == 0 ? 2 : 0);
+            if (doorway) {
+                // An arch 3 wide and 4 high: stair corners, a chiseled keystone; open bronze doors in the middle.
+                if (ly == 4) return along == M ? aged(2) : stairsId(42, face, true);
+                if (along == M && ly <= 2 && !treasury) return doorId(BRONZE_DOOR, {face, true, ly == 2});
+                return AIR;
+            }
+            // Walls in bands: chiseled skirting, cut bronze, grate windows over lit bulbs, a chiseled frieze.
+            if (ly == 1 || ly == 6) return aged(2);
+            if (ly == 3 && along % 4 == 2) return aged(3);
+            if (ly == 2 && along % 4 == 2) return (ItemId)(BRONZE_BULB + 1);
+            return aged(along % 2 ? 1 : 0);
+        }
+        if (ly == top) {
+            // A coffered ceiling: cut bronze beams, plain panels, a bulb in every bay, a big grate skylight.
+            if (std::abs(x - M) <= 1 && std::abs(z - M) <= 1) return aged(3);
+            if (x % 4 == 2 && z % 4 == 2) return (ItemId)(BRONZE_BULB + 1);
+            return (x % 4 == 0 || z % 4 == 0) ? aged(1) : aged(0);
+        }
+        if (ly == top - 1 && (x == 1 || x == R - 2 || z == 1 || z == R - 2)) return slabId(42, 1);  // a cornice
+        if (ly == 0) {
+            if (treasury) {
+                const int d = std::max(std::abs(x - M), std::abs(z - M));
+                if (d == 4) return aged(3);  // a ring of grates over lava round the dais
+                return d % 2 ? bronzeVariant(2, 0, true) : bronzeVariant(0, 0, true);  // polished rings
+            }
+            if (x == M || z == M) return aged(2);  // a chiseled cross
+            if (guardHall && std::abs(x - M) == 3 && std::abs(z - M) == 3) return aged(3);  // lava vents
+            return (x / 2 + z / 2) % 2 ? aged(0) : aged(1);
+        }
+        if (treasury) {
+            // The dais: two tiers of stairs up to a chiseled top, four chests, lamp posts at the corners.
+            const int dx = std::abs(x - M), dz = std::abs(z - M), d = std::max(dx, dz);
+            if (d <= 3) {
+                if (ly == 1) return d == 3 ? (dx == dz ? aged(2) : stairsId(41, dx == 3 ? (x < M ? 1 : 3) : (z < M ? 2 : 0), false)) : aged(2);
+                if (ly == 2 && d <= 2) {
+                    if (d == 2) return dx == dz ? aged(2) : stairsId(41, dx == 2 ? (x < M ? 1 : 3) : (z < M ? 2 : 0), false);
+                    return dx + dz == 1 ? (ItemId)LOOT_CHEST_BRONZE : aged(2);
+                }
+                if (ly == 3 && dx == 0 && dz == 0) return slabId(41, 0);
+                if (ly >= 2 && ly <= 4 && dx == 3 && dz == 3) return ly == 4 ? (ItemId)(BRONZE_BULB + 1) : aged(2);
+            }
+            // Columns round the room.
+            if ((x == 2 || x == R - 3) && (z == 2 || z == R - 3)) return aged(2);
+            return AIR;
+        }
+        // The other halls: a ring of pillars, benches along the walls, spawners or chests.
+        if ((x == 4 || x == R - 5) && (z == 4 || z == R - 5)) return ly == top - 1 ? slabId(42, 1) : ly == 4 ? (ItemId)(BRONZE_BULB + 1) : aged(2);
+        if (ly == 1 && (x == 1 || x == R - 2) && z >= 2 && z <= R - 3 && !mid(lz)) return stairsId(41, x == 1 ? 3 : 1, false);
+        if (ly == 1 && (z == 1 || z == R - 2) && x >= 2 && x <= R - 3 && !mid(lx)) return stairsId(41, z == 1 ? 0 : 2, false);
+        if (guardHall || cornerHall) {
+            if (ly == 1 && x == M && z == M) return MOB_SPAWNER;
+            if (ly == 1 && cornerHall && ((x == 2 && z == 2) || (x == R - 3 && z == R - 3))) return LOOT_CHEST_BRONZE;
+            return AIR;
+        }
+        if (ly == 1 && x == M && z == M) return (r >> 8) % 3 ? (ItemId)LOOT_CHEST_BRONZE : (ItemId)AIR;
+        if (ly == 1 && std::abs(x - M) + std::abs(z - M) == 1) return slabId(41, 0);
+        return AIR;
+    }
+    if (corrX || corrZ) {
+        const int across = corrX ? lz % C : lx % C;
+        if (ly == 0) return across == M ? aged(3) : aged(1);   // a grate down the middle over the lava
+        if (ly == 5) return across == M ? (ItemId)(BRONZE_BULB + 1) : aged(1);
+        if (ly == 4) return across == M ? (ItemId)AIR : stairsId(42, corrX ? (across < M ? 2 : 0) : (across < M ? 1 : 3), true);
+        if (ly > 5) return ABYSSAL_ROCK;
+        return AIR;
+    }
+    const bool corrWall = (!inRoom(lx) && inRoom(lz) && std::abs(lz % C - M) == 2) || (inRoom(lx) && !inRoom(lz) && std::abs(lx % C - M) == 2);
+    if (corrWall) return ly <= 5 ? aged(ly == 1 ? 2 : 1) : (ItemId)ABYSSAL_ROCK;
+    return ABYSSAL_ROCK;
+}
+
+void World::stampBronzeHalls(Chunk& c) {
+    const int x0 = c.cx * kChunkSize, z0 = c.cz * kChunkSize;
+    for (int rx = floorDiv(x0, kHallRegion) - 1; rx <= floorDiv(x0 + 15, kHallRegion); ++rx)
+        for (int rz = floorDiv(z0, kHallRegion) - 1; rz <= floorDiv(z0 + 15, kHallRegion); ++rz) {
+            int ox, oz;
+            if (!bronzeHallsIn(rx, rz, ox, oz)) continue;
+            if (ox + kHallSize + 6 < x0 || ox - 6 > x0 + 15 || oz + kHallSize + 4 < z0 || oz - 4 > z0 + 15) continue;
+            const uint32_t seed = hash3(rx, 31, rz, seed_ ^ 0xB80Fu);
+            for (int x = 0; x < kChunkSize; ++x)
+                for (int z = 0; z < kChunkSize; ++z) {
+                    const int lx = x0 + x - ox, lz = z0 + z - oz;
+                    if (lx >= -2 && lz >= -2 && lx < kHallSize + 2 && lz < kHallSize + 2)
+                        for (int y = kHallFloor - 3; y <= kHallFloor + kHallHeight + 1; ++y) c.set(x, y, z, ABYSSAL_ROCK);  // a solid shell
+                    if (lx >= 0 && lz >= 0 && lx < kHallSize && lz < kHallSize) {
+                        for (int ly = 0; ly < kHallHeight; ++ly) {
+                            c.set(x, kHallFloor + ly, z, bronzeHallsBlock(lx, ly, lz, seed));
+                        }
+                        // Lava two below the grates.
+                        if (bronzeAgingBase(c.get(x, kHallFloor, z)) == 3) {
+                            c.set(x, kHallFloor - 1, z, LAVA);
+                            c.set(x, kHallFloor - 2, z, ABYSSAL_ROCK);
+                        }
+                    }
+                    // The shaft: north-west of the grid, 2 x 2, from the first hall up to the surface, vines on its wall.
+                    const int sx = lx - 2, sz = lz - 2;
+                    if (sx >= 0 && sx < 4 && sz >= 0 && sz < 4) {
+                        int top = kGenHeight + kDeepShift - 1;
+                        while (top > kHallFloor && (c.get(x, top, z) == AIR || isLeaves(c.get(x, top, z)) || isPlant(c.get(x, top, z)))) --top;
+                        const bool wall = sx == 0 || sz == 0 || sx == 3 || sz == 3;
+                        for (int y = kHallFloor + kHallHeight - 1; y <= top + 1; ++y) {
+                            if (!wall) c.set(x, y, z, sx == 1 && y <= top ? (ItemId)VINES : (ItemId)AIR);
+                            else if (y <= top) c.set(x, y, z, bronzeVariant(1, y % 3 == 0 ? 2 : 1, false));
+                        }
+                        // The marker: a ring of cut bronze round the shaft and chiseled corners.
+                        if (wall) {
+                            c.set(x, top + 1, z, (sx == 0 || sx == 3) && (sz == 0 || sz == 3) ? (ItemId)CHISELED_BRONZE : (ItemId)CUT_BRONZE);
+                            if ((sx == 0 || sx == 3) && (sz == 0 || sz == 3)) c.set(x, top + 2, z, (ItemId)(BRONZE_BULB + 1));
+                        }
+                    }
+                }
+        }
 }
 
 void World::decorateCaves(Chunk& c, const Column cols[kChunkSize][kChunkSize]) {
@@ -531,7 +777,7 @@ void World::decorateCaves(Chunk& c, const Column cols[kChunkSize][kChunkSize]) {
             const float pocket = detail_.perlin2(wx / 5.0f - 260.0f, wz / 5.0f + 610.0f);
             const float lake = detail_.perlin2(wx / 26.0f + 140.0f, wz / 26.0f - 75.0f);
             const bool tarPools = detail_.perlin2(wx / 150.0f + 33.0f, wz / 150.0f) > 0.2f;
-            for (int y = 6; y < top && y < kChunkHeight - 2; ++y) {
+            for (int y = 6; y < top && y < kGenHeight - 2; ++y) {
                 if (c.get(x, y, z) != AIR) continue;
                 const uint32_t r = hash3(wx, y, wz, seed_ ^ 0xCA7Eu) % 1000;
                 const ItemId below = c.get(x, y - 1, z), above = c.get(x, y + 1, z);
@@ -612,7 +858,8 @@ bool World::nearestMineshaft(int x, int z, int& outX, int& outY, int& outZ) {
                 const long d = (long)(ox - x) * (ox - x) + (long)(oz - z) * (oz - z);
                 if (best < 0 || d < best) best = d, outX = ox, outY = oy, outZ = oz;
             }
-        return best >= 0;
+        if (best >= 0) outY += yShift();
+    return best >= 0;
     }
     if (dim_ != Dimension::Overworld || !config_.overworld.structures) return false;
     const int region = 288, maxSize = 97;
@@ -639,6 +886,7 @@ bool World::nearestMineshaft(int x, int z, int& outX, int& outY, int& outZ) {
             const long d = (long)(it->second[1] - x) * (it->second[1] - x) + (long)(it->second[3] - z) * (it->second[3] - z);
             if (best < 0 || d < best) best = d, outX = it->second[1], outY = it->second[2], outZ = it->second[3];
         }
+    if (best >= 0) outY += yShift();
     return best >= 0;
 }
 
@@ -731,7 +979,7 @@ void World::stampStructures(Chunk& c) {
                 // Copy the part inside this chunk.
                 for (int y = 0; y < s.sy; ++y) {
                     const int wy = oy + y;
-                    if (wy < 1 || wy >= kChunkHeight) continue;
+                    if (wy < 1 || wy >= kGenHeight) continue;
                     for (int z = std::max(0, z0 - oz); z < s.sz && oz + z <= z1; ++z)
                         for (int x = std::max(0, x0 - ox); x < s.sx && ox + x <= x1; ++x) {
                             ItemId id = s.at(x, y, z);
@@ -769,7 +1017,7 @@ void World::placeOres(Chunk& c, const OreDef& ore, uint32_t salt) {
         for (int i = 0; i < ore.size; ++i) {
             // 1.6.0: the ores reach into the deepstone too; hardium is found only there.
             const ItemId here = c.get(x, y, z);
-            if (ore.block == HARDIUM_ORE ? here == DEEPSTONE : (here == STONE || here == DEEPSTONE)) c.set(x, y, z, ore.block);
+            if (ore.block == HARDIUM_ORE ? (here == DEEPSTONE || here == ABYSSAL_ROCK) : (here == STONE || here == DEEPSTONE || here == ABYSSAL_ROCK)) c.set(x, y, z, ore.block);
             uint32_t step = hash3(v, i, c.cx ^ c.cz, seed_ ^ salt ^ h);
             switch (step % 6) {
                 case 0: x = std::min(x + 1, kChunkSize - 1); break;
@@ -791,14 +1039,14 @@ void World::generateNether(Chunk& c) {
         for (int z = 0; z < kChunkSize; ++z) {
             int wx = c.cx * kChunkSize + x, wz = c.cz * kChunkSize + z;
             float soul = detail_.perlin2(wx / 20.0f, wz / 20.0f);
-            for (int y = 0; y < kChunkHeight; ++y) {
+            for (int y = 0; y < kGenHeight; ++y) {
                 ItemId id;
                 uint32_t h = hash3(wx, y, wz, seed_ ^ 0xBEEFu);
                 if (y == 0) {
                     id = WORLD_END;
                 } else if (y < 5 && (int)(h & 3) < 4 - y) {
                     id = BEDROCK;
-                } else if (y == kChunkHeight - 1 || (y > kChunkHeight - 6 && (int)(h & 3) < y - (kChunkHeight - 6))) {
+                } else if (y == kGenHeight - 1 || (y > kGenHeight - 6 && (int)(h & 3) < y - (kGenHeight - 6))) {
                     id = nd.ceiling;
                 } else {
                     // Big open caverns: 3D noise, denser towards the floor and the ceiling.
@@ -813,15 +1061,92 @@ void World::generateNether(Chunk& c) {
             // Floor blocks in open areas, a little gravel near the lava shore.
             const bool meadow = nd.fill == NETHERRACK && netherGrassAt(wx, wz);
             const bool wasteland = nd.fill == NETHERRACK && wastelandAt(wx, wz);
-            for (int y = nd.lavaLevel + 1; y < kChunkHeight - 2; ++y) {
+            const int cb = cornerBiomeAt(wx, wz);  // 2.2.0 preview
+            if (cb == 1) {
+                // Gilded Quarry: the rock in worked bands with carved rows, and rich veins of ore.
+                for (int y = 6; y < kGenHeight - 6; ++y) {
+                    if (c.get(x, y, z) != nd.fill) continue;
+                    const uint32_t q = hash3(wx, y, wz, seed_ ^ 0x6A11u);
+                    if (y % 7 == 0) c.set(x, y, z, CARVED_CORNERSTONE);
+                    else if (q % 70 == 0) c.set(x, y, z, BRONZE_ORE);
+                    else if (q % 90 == 1) c.set(x, y, z, POWERSTONE_ORE);
+                    else if (q % 240 == 2) c.set(x, y, z, RUBY_ORE);
+                }
+            } else if (cb == 2) {
+                // Prismatide Coast: the lava sea turns into shallow brine lagoons over siltstone.
+                for (int y = 1; y <= nd.lavaLevel; ++y) {
+                    const ItemId b = c.get(x, y, z);
+                    if (b == nd.liquid) c.set(x, y, z, y >= nd.lavaLevel - 1 ? (ItemId)AETHER_BRINE : (ItemId)SILTSTONE);
+                    else if (b == nd.fill && y > nd.lavaLevel - 6) c.set(x, y, z, SILTSTONE);
+                }
+                const uint32_t q = hash3(wx, 991, wz, seed_ ^ 0xC0A5u);
+                if (q % 160 == 0 && c.get(x, nd.lavaLevel, z) == AETHER_BRINE) {
+                    // A hexagonal crystal pillar rising out of the lagoon.
+                    const int tall = 3 + (int)((q >> 9) % 6);
+                    for (int k = 0; k <= tall && nd.lavaLevel + k < kGenHeight - 4; ++k)
+                        if (c.get(x, nd.lavaLevel + k, z) == AIR || c.get(x, nd.lavaLevel + k, z) == AETHER_BRINE) c.set(x, nd.lavaLevel + k, z, PRISMATIDE_PILLAR);
+                }
+            }
+            for (int y = nd.lavaLevel + 1; y < kGenHeight - 2; ++y) {
                 if (c.get(x, y, z) != nd.fill || c.get(x, y + 1, z) != AIR) continue;
+                if (cb != 0) {
+                    const uint32_t r = hash3(wx, y, wz, seed_ ^ 0x22B1u);
+                    const bool room = c.get(x, y + 2, z) == AIR;
+                    if (cb == 1) {
+                        // Gilded Quarry: terraces cut in steps of four blocks; gilded cobble paths and
+                        // carved plazas in whole patches (not block by block), bare cornerstone between.
+                        int top = y;
+                        const int step = (y / 4) * 4 + 3;
+                        if (step > y && step < kGenHeight - 4) {
+                            bool clear = true;
+                            for (int k = y + 1; k <= step + 2 && clear; ++k) clear = c.get(x, k, z) == AIR;
+                            if (clear) {
+                                for (int k = y + 1; k <= step; ++k) c.set(x, k, z, nd.fill);
+                                top = step;
+                            }
+                        }
+                        const float paths = detail_.perlin2(wx / 11.0f + 300, wz / 11.0f - 120);
+                        const float plaza = detail_.perlin2(wx / 17.0f - 510, wz / 17.0f + 77);
+                        const ItemId ground = std::fabs(paths) < 0.09f ? (ItemId)GILDED_COBBLE : plaza > 0.32f ? (ItemId)CARVED_CORNERSTONE : (ItemId)NETHERRACK;
+                        c.set(x, top, z, ground);
+                        if (top + 2 >= kGenHeight || c.get(x, top + 1, z) != AIR || c.get(x, top + 2, z) != AIR) continue;
+                        if (ground == NETHERRACK && r % 7 == 0) c.set(x, top + 1, z, COPPER_MOSS);  // moss grows on the bare rock
+                        else if (ground == CARVED_CORNERSTONE && (wx % 6 == 0) && (wz % 6 == 0)) {
+                            // Amber lamps stand on the plazas in a regular grid.
+                            c.set(x, top + 1, z, CARVED_CORNERSTONE);
+                            c.set(x, top + 2, z, AMBER_RESIN);
+                        }
+                        y = top;
+                    } else if (cb == 2) {
+                        // Prismatide Coast: salt along the lagoons, siltstone further up; reeds and pads.
+                        const bool shore = y <= nd.lavaLevel + 3;
+                        c.set(x, y, z, shore ? (ItemId)LUMINOUS_SALT : r % 9 == 0 ? (ItemId)LUMINOUS_SALT : (ItemId)SILTSTONE);
+                        if (!room) continue;
+                        if (shore && r % 5 == 0 && c.get(x, y + 3, z) == AIR) {
+                            c.set(x, y + 1, z, GLASS_REEDS);
+                            if ((r >> 8) % 2) c.set(x, y + 2, z, GLASS_REEDS);
+                        } else if (r % 120 == 7) {
+                            c.set(x, y + 1, z, SPORE_PAD);
+                        } else if (r % 300 == 11 && c.get(x, y + 8, z) == AIR) {
+                            const int tall = 2 + (int)((r >> 12) % 5);
+                            for (int k = 1; k <= tall; ++k) c.set(x, y + k, z, PRISMATIDE_PILLAR);
+                        }
+                    } else {
+                        // Overgrown Monolith: mossy cornerstone and grass, starberries and rare truffles.
+                        c.set(x, y, z, r % 2 ? (ItemId)MOSSY_CORNERSTONE : (ItemId)NETHER_GRASS);
+                        if (!room) continue;
+                        if (r % 37 == 0) c.set(x, y + 1, z, STARBERRY_BUSH);
+                        else if (r % 6 == 0) c.set(x, y + 1, z, NETHER_SPROUTS);
+                    }
+                    continue;
+                }
                 if (wasteland) {
                     // 1.5.1: the Powerstone Wasteland: dry grass, Grasser flowers, debris and broken pillars.
                     const uint32_t r = hash3(wx, y, wz, seed_ ^ 0x9A57u);
                     const bool room = c.get(x, y + 2, z) == AIR;
                     c.set(x, y, z, r % 120 == 0 ? (ItemId)DEBRIS_GRAVEL : (ItemId)WASTELAND_GRASS);
                     if (!room) continue;
-                    if (r % 400 == 7 && y + 6 < kChunkHeight && c.get(x, y + 5, z) == AIR) {
+                    if (r % 400 == 7 && y + 6 < kGenHeight && c.get(x, y + 5, z) == AIR) {
                         const int tall = 2 + (int)((r >> 12) % 3);
                         for (int k = 1; k <= tall; ++k)
                             c.set(x, y + k, z, k == tall ? (ItemId)CHISELED_POWERSTONE_BRICKS : (r >> (k + 3)) & 1 ? (ItemId)CRACKED_POWERSTONE_BRICKS : (ItemId)POWERSTONE_BRICKS);
@@ -849,7 +1174,7 @@ void World::generateNether(Chunk& c) {
     for (int i = 0; i < clusters; ++i) {
         uint32_t ri = hash3(c.cx, i, c.cz, seed_ ^ 0x6105u);
         int x = 3 + (int)(ri % 10), z = 3 + (int)((ri >> 5) % 10);
-        int y = kChunkHeight - 8;
+        int y = kGenHeight - 8;
         while (y > 40 && !(c.get(x, y, z) == AIR && isSolid(c.get(x, y + 1, z)))) --y;
         if (y <= 40) continue;
         for (int k = 0; k < 40; ++k) {
@@ -859,6 +1184,56 @@ void World::generateNether(Chunk& c) {
         }
     }
 
+    // 2.2.0 preview: the giant stonewood trees of the Overgrown Monolith: a 2 x 2 trunk of
+    // petrified bark, a wide crown of glowcap leaves with glowing strands hanging from it, and
+    // the rare void truffle between the roots.
+    if (kFeatures220 && nd.fill == NETHERRACK) {
+        const uint32_t tr = hash3(c.cx, 4242, c.cz, seed_ ^ 0x570Eu);
+        const int tx = 5 + (int)(tr % 5), tz = 5 + (int)((tr >> 4) % 5);
+        const int twx = c.cx * kChunkSize + tx, twz = c.cz * kChunkSize + tz;
+        if (tr % 3 == 0 && cornerBiomeAt(twx, twz) == 3)
+            for (int y = nd.lavaLevel + 2; y < kGenHeight - 26; ++y) {
+                const ItemId g = c.get(tx, y, tz);
+                if (g != MOSSY_CORNERSTONE && g != NETHER_GRASS) continue;
+                const int height = 12 + (int)((tr >> 8) % 8);
+                bool room = true;
+                for (int k = 1; k <= height + 2 && room; ++k)
+                    for (int dx = 0; dx < 2 && room; ++dx)
+                        for (int dz = 0; dz < 2 && room; ++dz) {
+                            const ItemId b = c.get(tx + dx, y + k, tz + dz);
+                            room = b == AIR || isPlant(b);
+                        }
+                if (!room) continue;
+                for (int k = 1; k <= height; ++k)
+                    for (int dx = 0; dx < 2; ++dx)
+                        for (int dz = 0; dz < 2; ++dz) c.set(tx + dx, y + k, tz + dz, STONEWOOD_LOG);
+                const int top = y + height;
+                auto inChunk = [](int v) { return v >= 0 && v < kChunkSize; };
+                for (int dy = -2; dy <= 2; ++dy) {
+                    const int rad = dy == 2 ? 3 : dy == -2 ? 4 : 5;
+                    for (int dx = -rad; dx <= rad + 1; ++dx)
+                        for (int dz = -rad; dz <= rad + 1; ++dz) {
+                            const float ox = dx - 0.5f, oz = dz - 0.5f;
+                            if (ox * ox + oz * oz > rad * rad + 1) continue;
+                            const int lx = tx + dx, lz = tz + dz;
+                            if (!inChunk(lx) || !inChunk(lz)) continue;
+                            if (c.get(lx, top + dy, lz) == AIR) c.set(lx, top + dy, lz, GLOWCAP_LEAVES);
+                        }
+                }
+                // Glowing strands hanging from the crown's edge.
+                for (int k = 0; k < 10; ++k) {
+                    const uint32_t q = hash3(c.cx * 31 + k, top, c.cz, seed_ ^ 0x9A1Eu);
+                    const int lx = tx + (int)(q % 11) - 5, lz = tz + (int)((q >> 4) % 11) - 5;
+                    if (!inChunk(lx) || !inChunk(lz)) continue;
+                    const int len = 2 + (int)((q >> 8) % 5);
+                    for (int d = 1; d <= len && c.get(lx, top - 3 - d + 1, lz) == AIR; ++d) c.set(lx, top - 3 - d + 1, lz, GLOWCAP_LEAVES);
+                }
+                // A truffle by the roots now and then.
+                if ((tr >> 20) % 3 == 0 && inChunk(tx + 2) && c.get(tx + 2, y + 1, tz) == AIR) c.set(tx + 2, y + 1, tz, VOID_TRUFFLE);
+                break;
+            }
+    }
+
     // Netherperk trees in the meadows: a red stem and a glowing orange crown.
     if (nd.fill == NETHERRACK)
         for (int x = 3; x <= 12; ++x)
@@ -866,7 +1241,7 @@ void World::generateNether(Chunk& c) {
                 const int wx = c.cx * kChunkSize + x, wz = c.cz * kChunkSize + z;
                 uint32_t r = hash3(wx, 77, wz, seed_ ^ 0x9E7Bu);
                 if (r % 1000 >= 14 || !netherGrassAt(wx, wz)) continue;
-                for (int y = nd.lavaLevel + 2; y < kChunkHeight - 16; ++y) {
+                for (int y = nd.lavaLevel + 2; y < kGenHeight - 16; ++y) {
                     if (c.get(x, y, z) != NETHER_GRASS) continue;
                     const int stem = 4 + (int)((r >> 10) % 4);
                     bool room = true;
@@ -928,6 +1303,16 @@ void World::generateNether(Chunk& c) {
                     }
                 }
         }
+}
+
+int World::cornerBiomeAt(int x, int z) const {
+    if (!kFeatures220 || dim_ != Dimension::Nether || config_.nether.fill != NETHERRACK || wastelandAt(x, z)) return 0;
+    const float a = humidity_.perlin2(x / 170.0f + 1300, z / 170.0f - 900);
+    const float b = humidity_.perlin2(x / 170.0f - 700, z / 170.0f + 500);
+    if (a > 0.18f) return 1;
+    if (a < -0.22f) return 2;
+    if (b > 0.2f) return 3;
+    return 0;
 }
 
 bool World::wastelandAt(int x, int z) const {
@@ -1000,7 +1385,7 @@ void World::stampBlueprint(Chunk& c, const Structure& s, int ox, int oy, int oz,
     if (ox > x1 || oz > z1 || ox + s.sx <= x0 || oz + s.sz <= z0) return;
     for (int y = 0; y < s.sy; ++y) {
         const int wy = oy + y;
-        if (wy < 1 || wy >= kChunkHeight - 1) continue;
+        if (wy < 1 || wy >= kGenHeight - 1) continue;
         for (int z = std::max(0, z0 - oz); z < s.sz && oz + z <= z1; ++z)
             for (int x = std::max(0, x0 - ox); x < s.sx && ox + x <= x1; ++x) {
                 ItemId id = s.at(x, y, z);
@@ -1056,12 +1441,13 @@ int World::voidHeight(int x, int z) const {
     // The arena itself sits on flat ground just above the lava.
     float a = std::clamp((arenaInfluence(x, z) - 0.75f) * 4, 0.0f, 1.0f);
     h = h * (1 - a) + (kVoidLavaLevel + 1) * a;
-    return std::clamp((int)h, 8, kChunkHeight - 20);
+    return std::clamp((int)h, 8, kGenHeight - 20);
 }
 
 std::string World::placeName(int x, int z) const {
     switch (dim_) {
         case Dimension::Nether:
+            if (const int cb = cornerBiomeAt(x, z)) return cb == 1 ? "Zlatavý lom" : cb == 2 ? "Prizmatické pobřeží" : "Zarostlý monolit";
             return wastelandAt(x, z) ? "Powerstonová pustina" : netherGrassAt(x, z) ? "Louka úhelného kamene" : "Dimenze úhelného kamene";
         case Dimension::Celestial: return "Nebeská říše";
         case Dimension::Void:
@@ -1223,6 +1609,7 @@ bool World::nearestStructure(int x, int z, int& outX, int& outY, int& outZ) cons
                 }
             }
     }
+    if (best >= 0) outY += yShift();
     return best >= 0;
 }
 
@@ -1433,10 +1820,10 @@ void World::generateVoid(Chunk& c) {
             // rolls in long dark dunes.
             if (b == VoidBiome::Shattered) h += (int)(std::fabs(detail_.perlin2(wx / 14.0f + 51.0f, wz / 14.0f)) * 14);
             if (b == VoidBiome::ShardDesert) h += (int)((1 - std::fabs(std::sin((wx * 0.5f + wz * 0.8f) / 11.0f))) * 4);
-            h = std::min(h, kChunkHeight - 24);
+            h = std::min(h, kGenHeight - 24);
             biomes[x][z] = b;
             heights[x][z] = h;
-            for (int y = 0; y < kChunkHeight; ++y) {
+            for (int y = 0; y < kGenHeight; ++y) {
                 ItemId id = AIR;
                 uint32_t r = hash3(wx, y, wz, seed_ ^ 0x701Du);
                 if (y == 0) id = WORLD_END;
@@ -1471,12 +1858,12 @@ void World::generateVoid(Chunk& c) {
     for (int x = 2; x <= 13; ++x)
         for (int z = 2; z <= 13; ++z) {
             const int wx = cx * kChunkSize + x, wz = cz * kChunkSize + z, h = heights[x][z];
-            if (h + 12 >= kChunkHeight) continue;
+            if (h + 12 >= kGenHeight) continue;
             uint32_t r = hash3(wx, 0, wz, seed_ ^ 0xE7E5u);
             if (biomes[x][z] == VoidBiome::Forgotten) {
                 // Oaks and grass of the lost world on its floating pieces.
                 const int t = forgottenTop(wx, wz, h);
-                if (t + 12 < kChunkHeight && c.get(x, t, z) == SOULED_GRASS && c.get(x, t + 1, z) == AIR) {
+                if (t + 12 < kGenHeight && c.get(x, t, z) == SOULED_GRASS && c.get(x, t + 1, z) == AIR) {
                     if (r % 1000 < 16) placeTree(c, x, t + 1, z, r, LOG, LEAVES);
                     else if (r % 1000 < 90) c.set(x, t + 1, z, TALL_GRASS);
                 }
@@ -1497,7 +1884,7 @@ void World::generateVoid(Chunk& c) {
                 // Spikes of broken rock, some tipped with crystal.
                 if (r % 1000 < 12) {
                     const int tall = 3 + (int)((r >> 12) % 6);
-                    for (int k = 1; k <= tall && h + k < kChunkHeight - 2; ++k) c.set(x, h + k, z, k == tall && (r >> 9) % 3 == 0 ? (ItemId)VOID_SHARD_BLOCK : (ItemId)SHATTERED_STONE);
+                    for (int k = 1; k <= tall && h + k < kGenHeight - 2; ++k) c.set(x, h + k, z, k == tall && (r >> 9) % 3 == 0 ? (ItemId)VOID_SHARD_BLOCK : (ItemId)SHATTERED_STONE);
                 }
                 continue;
             }
@@ -1518,7 +1905,7 @@ void World::generateVoid(Chunk& c) {
                 // 1.5.1: the desert's landmarks, few and far between.
                 const uint32_t kind = r % 1000;
                 auto putIf = [&](int lx, int ly, int lz, ItemId id) {
-                    if (lx >= 0 && lx < kChunkSize && lz >= 0 && lz < kChunkSize && ly > 0 && ly < kChunkHeight) c.set(lx, ly, lz, id);
+                    if (lx >= 0 && lx < kChunkSize && lz >= 0 && lz < kChunkSize && ly > 0 && ly < kGenHeight) c.set(lx, ly, lz, id);
                 };
                 if (kind < 31) {
                     // A boulder of crimson stone, sunk a little into the sand.
@@ -1563,10 +1950,10 @@ void World::generateVoid(Chunk& c) {
         const VoidBiome b = biomes[8][8];
         const int h0 = heights[8][8];
         auto put = [&](int x, int y, int z, ItemId id) {
-            if (x >= 0 && x < kChunkSize && z >= 0 && z < kChunkSize && y > 2 && y < kChunkHeight - 1) c.set(x, y, z, id);
+            if (x >= 0 && x < kChunkSize && z >= 0 && z < kChunkSize && y > 2 && y < kGenHeight - 1) c.set(x, y, z, id);
         };
         const int roll = (int)(r % 100);
-        if (b == VoidBiome::CrimsoniumForest && roll < 9 && h0 + 10 < kChunkHeight) {
+        if (b == VoidBiome::CrimsoniumForest && roll < 9 && h0 + 10 < kGenHeight) {
             // A forest shrine: a floor of shattered bricks, four crimsonium pillars, a slab roof
             // with a crystal on top, the shrine's chest in the middle.
             for (int x = 5; x <= 11; ++x)
@@ -1593,7 +1980,7 @@ void World::generateVoid(Chunk& c) {
                         for (int y = heights[x][z]; y < top; ++y) put(x, y, z, SHATTERED_STONE);  // the legs
                 }
             }
-        } else if (b == VoidBiome::Shattered && roll < 17 && h0 + 16 < kChunkHeight) {
+        } else if (b == VoidBiome::Shattered && roll < 17 && h0 + 16 < kGenHeight) {
             // A crumbling tower of shattered bricks, open to the sky, its chest on the floor.
             const int tall = 7 + (int)((r >> 9) % 7);
             for (int x = 6; x <= 10; ++x)
@@ -1649,7 +2036,7 @@ void World::generateVoid(Chunk& c) {
                     // by a higher piece of land and never missing over a hole.
                     for (int dx = -3; dx <= 3; ++dx)
                         for (int dz = -3; dz <= 3; ++dz) top = std::max(top, forgottenTop(px + dx, pz + dz, heights[lx + dx][lz + dz]) + 1);
-                    top = std::min(top, kChunkHeight - 10);
+                    top = std::min(top, kGenHeight - 10);
                     for (int dx = -3; dx <= 3; ++dx)
                         for (int dz = -3; dz <= 3; ++dz) {
                             for (int y = top + 1; y < top + 8; ++y) c.set(lx + dx, y, lz + dz, AIR);
@@ -1724,7 +2111,7 @@ void World::generateVoid(Chunk& c) {
 void World::placePine(Chunk& c, int x, int y, int z, uint32_t h, ItemId trunkBlock, ItemId leafBlock) {
     // A spruce: a tall trunk and a cone of needle rings that alternate wide and narrow.
     int trunk = 6 + (int)((h >> 8) % 4);
-    if (y + trunk + 2 >= kChunkHeight) return;
+    if (y + trunk + 2 >= kGenHeight) return;
     if (c.get(x, y - 1, z) == GRASS || c.get(x, y - 1, z) == SNOW_BLOCK) c.set(x, y - 1, z, DIRT);
     const int bottom = 2 + (int)((h >> 12) % 2);
     for (int dy = bottom; dy <= trunk + 1; ++dy) {
@@ -1741,7 +2128,7 @@ void World::placePine(Chunk& c, int x, int y, int z, uint32_t h, ItemId trunkBlo
 
 void World::placeTree(Chunk& c, int x, int y, int z, uint32_t h, ItemId trunkBlock, ItemId leafBlock) {
     int trunk = 4 + (int)((h >> 8) % 3);
-    if (y + trunk + 2 >= kChunkHeight) return;
+    if (y + trunk + 2 >= kGenHeight) return;
     if (c.get(x, y - 1, z) == GRASS) c.set(x, y - 1, z, DIRT);
     // Crown in four layers like the classic oak: two wide (5x5) and two narrow (3x3).
     // Corners are cut so the crown reads as a rounded shape instead of a box: the
@@ -1820,7 +2207,7 @@ std::vector<uint8_t> encodeChunk(const Chunk& c) {
     }
     uLongf packedSize = compressBound((uLong)runs.size());
     std::vector<uint8_t> out(8 + packedSize);
-    out[0] = 'V', out[1] = 'C', out[2] = 'C', out[3] = '4';
+    out[0] = 'V', out[1] = 'C', out[2] = 'C', out[3] = '5';  // 2.2.0: VCC5, chunks 192 blocks high
     for (int k = 0; k < 4; ++k) out[4 + k] = (uint8_t)(runs.size() >> (8 * k));
     if (compress2(out.data() + 8, &packedSize, runs.data(), (uLong)runs.size(), 6) != Z_OK) return {};
     out.resize(8 + packedSize);
@@ -1828,13 +2215,15 @@ std::vector<uint8_t> encodeChunk(const Chunk& c) {
 }
 
 // Reads any chunk format into c.blocks: VCC4, VCC3 (runs of 3 bytes), VCC2/VCC1 (2 bytes).
-bool decodeChunk(const std::vector<uint8_t>& data, Chunk& c) {
-    if (data.size() < 4 || data[0] != 'V' || data[1] != 'C' || data[2] != 'C' || data[3] < '1' || data[3] > '4') return false;
+bool decodeChunk(const std::vector<uint8_t>& data, Chunk& c, bool* legacyHeight = nullptr) {
+    if (data.size() < 4 || data[0] != 'V' || data[1] != 'C' || data[2] != 'C' || data[3] < '1' || data[3] > '5') return false;
     int version = data[3] - '0';
+    const bool tall = version == 5;  // VCC5: 192 blocks high; older chunks were 128 high, x << 11 | z << 7 | y
+    if (legacyHeight) *legacyHeight = !tall;
     std::vector<uint8_t> unpacked;
     const uint8_t* p = data.data() + 4;
     size_t n = data.size() - 4;
-    if (version == 4) {
+    if (version >= 4) {
         if (data.size() < 8) return false;
         const uLongf want = (uLongf)(data[4] | data[5] << 8 | data[6] << 16 | (uint32_t)data[7] << 24);
         if (want >= (1u << 20)) return false;
@@ -1843,16 +2232,26 @@ bool decodeChunk(const std::vector<uint8_t>& data, Chunk& c) {
         if (uncompress(unpacked.data(), &got, data.data() + 8, (uLong)(data.size() - 8)) != Z_OK || got != want) return false;
         p = unpacked.data(), n = unpacked.size(), version = 3;
     }
-    const size_t total = sizeof c.blocks / sizeof c.blocks[0], recSize = version >= 3 ? 3 : 2;
+    const size_t total = tall ? sizeof c.blocks / sizeof c.blocks[0] : (size_t)kChunkSize * kChunkSize * kGenHeight;
+    const size_t recSize = version >= 3 ? 3 : 2;
+    std::vector<ItemId> flat(tall ? 0 : total);
+    ItemId* dst = tall ? c.blocks : flat.data();
     size_t pos = 0;
     for (size_t at = 0; pos < total && at + recSize <= n; at += recSize) {
         const size_t count = std::min<size_t>(p[at] + 1, total - pos);
         ItemId id = version >= 3 ? (ItemId)(p[at + 1] | p[at + 2] << 8) : p[at + 1];
         if (version == 1) id = upgradeLegacyBlock(id);  // 1.3.0 reused the ids of removed Nether blocks
-        std::fill(c.blocks + pos, c.blocks + pos + count, id);
+        std::fill(dst + pos, dst + pos + count, id);
         pos += count;
     }
-    return pos == total;
+    if (pos != total) return false;
+    if (!tall) {
+        std::fill(c.blocks, c.blocks + sizeof c.blocks / sizeof c.blocks[0], (ItemId)AIR);
+        for (int x = 0; x < kChunkSize; ++x)
+            for (int z = 0; z < kChunkSize; ++z)
+                for (int y = 0; y < kGenHeight; ++y) c.blocks[Chunk::index(x, y, z)] = flat[(x << 11) | (z << 7) | y];
+    }
+    return true;
 }
 
 std::vector<uint8_t> readAll(const std::string& path) {
@@ -1925,12 +2324,14 @@ void World::flushRegions() const {
 bool World::loadChunk(Chunk& c) const {
     if (storageDir_.empty()) return false;
     const std::vector<uint8_t>& blob = region(floorDiv(c.cx, 32), floorDiv(c.cz, 32)).blobs[(c.cx & 31) + (c.cz & 31) * 32];
-    bool ok = !blob.empty() && decodeChunk(blob, c);
+    bool legacyHeight = false;
+    bool ok = !blob.empty() && decodeChunk(blob, c, &legacyHeight);
     if (!ok) {
         // Before 1.5.7 every chunk had a file of its own.
         const std::string legacy = chunkPath(c.cx, c.cz);
-        ok = decodeChunk(readAll(legacy), c);
+        ok = decodeChunk(readAll(legacy), c, &legacyHeight);
         if (ok) {
+            if (legacyHeight && deep_) const_cast<World*>(this)->deepenOverworld(c), legacyHeight = false;
             Region& r = region(floorDiv(c.cx, 32), floorDiv(c.cz, 32));
             r.blobs[(c.cx & 31) + (c.cz & 31) * 32] = encodeChunk(c);
             r.dirty = true;
@@ -1938,6 +2339,8 @@ bool World::loadChunk(Chunk& c) const {
         }
     }
     if (!ok) return false;
+    // 2.2.0: a chunk saved before the deeper Overworld is lifted, with the new deep layers below it.
+    if (legacyHeight && deep_) const_cast<World*>(this)->deepenOverworld(c);
     c.modified = true;  // keep saving it, it no longer matches the generator
     return true;
 }

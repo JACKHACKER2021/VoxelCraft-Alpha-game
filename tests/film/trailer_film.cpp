@@ -6551,3 +6551,374 @@ SHOT(b15_news) {
     d.game->openNews();
     d.seconds(0.5f);
 }
+
+// Build 12: track in eight directions: straight, a 45-degree bend, a diagonal, a bend back, a curve, a train on it.
+SHOT(c07_rails8) {
+    Director d(out, "c07");
+    d.openWorld("Rails8", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z) + 4, y = feetY(w, x, z);
+    for (int k = 0; k <= 8; ++k) w.setBlock(x, y, z - k, RAIL_NS);
+    w.setBlock(x, y, z - 9, TrainSystem::railFor(4, 1));             // bend north -> north-east
+    for (int k = 1; k <= 5; ++k) w.setBlock(x + k, y, z - 9 - k, TrainSystem::railFor(5, 1));  // diagonal
+    w.setBlock(x + 6, y, z - 15, TrainSystem::railFor(5, 0));        // bend north-east -> north
+    for (int k = 16; k <= 19; ++k) w.setBlock(x + 6, y, z - k, RAIL_NS);
+    w.setBlock(x + 6, y, z - 20, TrainSystem::railFor(4, 2));        // quarter curve to the east
+    for (int k = 7; k <= 9; ++k) w.setBlock(x + k, y, z - 20, RAIL_EW);
+    for (int k = 0; k < 4; ++k) w.setBlock(x + 10 + k, y, z - 20, (ItemId)(RAIL_GENTLE + 1 * 4 + k));  // a gentle climb east
+    for (int k = 14; k <= 19; ++k) {
+        w.setBlock(x + k, y, z - 20, STONE);
+        w.setBlock(x + k, y + 1, z - 20, RAIL_EW);
+    }
+    w.setBlock(x + 20, y, z - 20, STONE);
+    w.setBlock(x + 20, y + 1, z - 20, BUFFER_STOP + 1);
+    s.trains().place(w, s.dimIndex(), CarKind::Locomotive, x, y, z - 2, 0);
+    s.trains().trains()[0].throttle = 0.6f;
+    p.pos = Vec3(x - 6.5f, (float)y + 9, z - 4.5f);
+    p.flying = true;
+    d.idle(10);
+    d.lookNow(Vec3(x + 4.0f, (float)y, z - 12.0f));
+    d.shot("c07_rails8");
+    d.seconds(11.0f, [&](float) { d.lookNow(Vec3(x + 6.0f, (float)y, z - 14.0f)); });
+    p.pos = Vec3(x - 1.5f, (float)y + 2.6f, z - 5.0f);
+    d.lookNow(Vec3(x + 1.5f, (float)y, z - 11.0f));
+    d.seconds(0.5f);
+    p.pos = Vec3(x + 9.0f, (float)y + 2.4f, z - 13.0f);
+    d.lookNow(Vec3(x + 5.0f, (float)y, z - 16.0f));
+    d.seconds(0.5f);
+    p.pos = Vec3(x + 11.0f, (float)y + 2.2f, z - 15.0f);
+    d.lookNow(Vec3(x + 13.0f, (float)y + 0.5f, z - 20.0f));
+    d.seconds(0.5f);
+}
+
+// VoxelCraft Classic 0.0.3 (build with -DVC_CLASSIC): the title, a creative world and survival with hearts.
+SHOT(k01_classic) {
+    Director d(out, "k01");
+    d.idle(20);
+    d.shot("k01_title");
+    d.seconds(0.4f);
+    d.openWorld("Classic", 4242, GameMode::Creative, [](GenConfig& g) { g.oldWorld = true; });
+    d.shot("k01_creative");
+    d.seconds(0.4f);
+    Player& p = d.s().player();
+    d.lookNow(p.pos + Vec3(6, -2.5f, 2));
+    d.seconds(0.4f);
+    d.openWorld("ClassicSurvival", 77, GameMode::Survival, [](GenConfig& g) { g.oldWorld = true; });
+    d.give(0, WOOD_PICKAXE), d.give(1, STONE_SHOVEL), d.give(2, IRON_AXE), d.give(3, COBBLESTONE, 32), d.give(4, PLANKS, 12);
+    d.s().inventory().slots[5] = {};
+    d.idle(4);
+    d.shot("k01_survival");
+    d.seconds(0.4f);
+    // The Double, watching from the haze.
+    Session& ss = d.s();
+    Player& pl = ss.player();
+    const Vec3 at = pl.pos + Vec3(-15, 0, -3);  // on the beach
+    ss.doppel_.active = true, ss.doppel_.attack = false, ss.doppel_.time = 0, ss.doppel_.wait = 999;
+    ss.doppel_.pos = Vec3(std::floor(at.x) + 0.5f, (float)ss.currentWorld().skyHeight((int)std::floor(at.x), (int)std::floor(at.z)), std::floor(at.z) + 0.5f);
+    std::printf("double at %.1f %.1f %.1f, player %.1f %.1f %.1f\n", ss.doppel_.pos.x, ss.doppel_.pos.y, ss.doppel_.pos.z, pl.pos.x, pl.pos.y, pl.pos.z);
+    d.lookNow(ss.doppel_.pos + Vec3(0, 1.2f, 0));
+    d.shot("k01_double");
+    d.seconds(0.3f, [&](float) { ss.doppel_.stare = 0, ss.doppel_.time = 0; d.lookNow(ss.doppel_.pos + Vec3(0, 1.2f, 0)); });
+    std::printf("double active %d\n", (int)ss.doppel_.active);
+}
+
+// Classic 0.0.3: the small inventory (creative and survival), the short settings, the old tools.
+SHOT(k02_classic_ui) {
+    Director d(out, "k02");
+    d.openWorld("ClassicUi", 4242, GameMode::Creative, [](GenConfig& g) { g.oldWorld = true; });
+    d.s().wantsInventory = true;
+    d.idle(6);
+    d.shot("k02_inv_creative");
+    d.seconds(0.3f);
+    d.s().wantsPause = true;
+    d.idle(6);
+    d.shot("k02_settings");
+    d.seconds(0.3f);
+    d.openWorld("ClassicUi2", 77, GameMode::Survival, [](GenConfig& g) { g.oldWorld = true; });
+    d.give(0, IRON_PICKAXE), d.give(1, STONE_AXE), d.give(2, WOOD_SHOVEL), d.give(3, IRON_SWORD), d.give(9, LOG, 5), d.give(10, COBBLESTONE, 20), d.give(11, COAL, 3);
+    d.s().wantsInventory = true;
+    d.idle(6);
+    d.shot("k02_inv_survival");
+    d.seconds(0.3f);
+}
+
+// 2.3.0 build 2: track laid piece by piece (as the player lays it): straight, a right switch into a
+// diagonal and back, a left switch; two trains take the two branches.
+SHOT(c08_switches) {
+    Director d(out, "c08");
+    d.openWorld("Switches", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z) + 6, y = feetY(w, x, z);
+    auto lay = [&](int cx, int cz, int look) { w.setBlock(cx, y, cz, s.shapeRail(cx, y, cz, look)); };
+    for (int k = 0; k <= 14; ++k) lay(x, z - k, 0);
+    w.setBlock(x, y, z - 15, BUFFER_STOP + 0);
+    w.setBlock(x, y, z - 4, railSwitchId(0, 1));          // right switch, set to the branch
+    for (int k = 1; k <= 3; ++k) lay(x + k, z - 4, 1);
+    for (int k = 1; k <= 3; ++k) lay(x + 3 + k, z - 4 - k, 0);  // diagonal north-east
+    for (int k = 7; k <= 10; ++k) lay(x + k, z - 7, 1);
+    w.setBlock(x + 11, y, z - 7, BUFFER_STOP + 1);
+    w.setBlock(x, y, z - 10, railSwitchId(0, 1, true));   // left switch, set to the branch
+    for (int k = 1; k <= 5; ++k) lay(x - k, z - 10, 3);
+    w.setBlock(x - 6, y, z - 10, BUFFER_STOP + 3);
+    s.trains().place(w, s.dimIndex(), CarKind::Locomotive, x, y, z - 1, 0);
+    s.trains().place(w, s.dimIndex(), CarKind::Locomotive, x, y, z - 7, 0);
+    for (auto& t : s.trains().trains()) t.throttle = 0.45f;
+    p.flying = true;
+    d.idle(10);
+    d.shot("c08_switches");
+    const Vec3 c(x + 2.5f, (float)y, z - 7.5f);
+    d.seconds(20.0f, [&](float t) {
+        const float a = -0.6f + t * 0.9f;
+        p.pos = c + Vec3(std::sin(a) * 15, 11, std::cos(a) * 15);
+        d.lookNow(c);
+    });
+}
+
+// 2.3.0: the Bronze Halls: the treasury, a corner hall with its spawner, a corridor.
+SHOT(c09_bronze_halls) {
+    Director d(out, "c09");
+    d.openWorld("BronzeHalls", 4242, GameMode::Creative);
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    int ox = 0, oz = 0;
+    bool found = false;
+    for (int r = 0; r < 6 && !found; ++r)
+        for (int rx = -r; rx <= r && !found; ++rx)
+            for (int rz = -r; rz <= r && !found; ++rz) found = w.bronzeHallsIn(rx, rz, ox, oz);
+    std::printf("halls at %d %d\n", ox, oz);
+    const float fy = 14 + 1.0f;
+    p.flying = true;
+    w.ensureChunksAround(floorDiv(ox + 49, 16), floorDiv(oz + 49, 16), 6, 100000);
+    auto view = [&](const char* name, Vec3 at, Vec3 look) {
+        p.pos = at;
+        d.idle(90);
+        d.lookNow(look);
+        d.shot(name);
+        d.seconds(0.4f, [&](float) { d.lookNow(look); });
+    };
+    view("c09_treasury", Vec3(ox + 43.5f, fy + 3.5f, oz + 43.5f), Vec3(ox + 49.5f, fy + 1, oz + 49.5f));
+    view("c09_corner", Vec3(ox + 2.5f, fy + 3.0f, oz + 2.5f), Vec3(ox + 9.5f, fy, oz + 9.5f));
+    view("c09_corridor", Vec3(ox + 7.5f, fy + 1.6f, oz + 11.0f), Vec3(ox + 7.5f, fy + 1, oz + 30.0f));
+    const float gy = (float)w.skyHeight(ox + 6, oz + 6);
+    view("c09_marker", Vec3(ox - 3.5f, gy + 5, oz - 3.5f), Vec3(ox + 3.5f, gy - 1, oz + 3.5f));
+}
+
+// 2.3.0: flexible switches: on a straight track (branch 45 degrees north-east) and on a diagonal track
+// (branch north), laid as the player lays them, both set to the branch.
+SHOT(c10_switch8) {
+    Director d(out, "c10");
+    d.openWorld("Switch8", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x) - 4, z = (int)std::floor(p.pos.z) + 4, y = feetY(w, x, z);
+    auto lay = [&](int cx, int cz, int look) { w.setBlock(cx, y, cz, s.shapeRail(cx, y, cz, look)); };
+    for (int k = 0; k <= 2; ++k) lay(x, z - k, 0);
+    w.setBlock(x, y, z - 3, s.shapeSwitch(x, y, z - 3, 0));
+    for (int k = 4; k <= 9; ++k) lay(x, z - k, 0);
+    for (int k = 1; k <= 5; ++k) lay(x + k, z - 3 - k, 0);
+    const int x2 = x + 9;
+    for (int k = 0; k <= 2; ++k) lay(x2 + k, z - k, 0);
+    w.setBlock(x2 + 3, y, z - 3, s.shapeSwitch(x2 + 3, y, z - 3, 0));
+    for (int k = 4; k <= 7; ++k) lay(x2 + k, z - k, 0);
+    for (int k = 4; k <= 9; ++k) lay(x2 + 3, z - k, 0);
+    for (int sx : {x, x2 + 3}) {
+        const ItemId sw = w.getBlock(sx, y, z - 3);
+        w.setBlock(sx, y, z - 3, railSwitch8Id(railSwitch8Entry(sw), railSwitch8Left(sw), 1));
+    }
+    s.trains().place(w, s.dimIndex(), CarKind::Locomotive, x, y, z - 1, 0);
+    s.trains().trains()[0].throttle = 0.35f;
+    p.flying = true;
+    p.pos = Vec3(x + 6.5f, (float)y + 9, z + 5.5f);
+    d.idle(30);
+    d.lookNow(Vec3(x + 6.5f, (float)y, z - 4.5f));
+    d.shot("c10_overview");
+    d.seconds(0.3f, [&](float) { d.lookNow(Vec3(x + 6.5f, (float)y, z - 4.5f)); });
+    p.pos = Vec3(x - 2.0f, (float)y + 2.4f, z - 0.5f);
+    d.lookNow(Vec3(x + 1.0f, (float)y, z - 4.5f));
+    d.shot("c10_straight");
+    d.seconds(0.3f, [&](float) { d.lookNow(Vec3(x + 1.0f, (float)y, z - 4.5f)); });
+    p.pos = Vec3(x2 + 0.5f, (float)y + 2.4f, z + 1.0f);
+    d.lookNow(Vec3(x2 + 3.5f, (float)y, z - 4.0f));
+    d.shot("c10_diagonal");
+    d.seconds(0.3f, [&](float) { d.lookNow(Vec3(x2 + 3.5f, (float)y, z - 4.0f)); });
+    p.pos = Vec3(x + 6.5f, (float)y + 9, z + 5.5f);
+    d.shot("c10_train");
+    d.seconds(5.0f, [&](float) { d.lookNow(Vec3(x + 4.0f, (float)y, z - 5.0f)); });
+}
+
+// 2.3.0 preview build 7: the subway: the doors slide open at a stop, shut, and it speeds off.
+SHOT(c11_subway) {
+    Director d(out, "c11");
+    d.openWorld("Subway", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x) + 3, z = (int)std::floor(p.pos.z) + 20, y = feetY(w, x, z);
+    for (int k = 0; k < 90; ++k) w.setBlock(x, y, z - k, s.shapeRail(x, y, z - k, 0));
+    s.trains().place(w, s.dimIndex(), CarKind::SubwayLocomotive, x, y, z - 30, 0);
+    s.trains().place(w, s.dimIndex(), CarKind::SubwayCar, x, y, z - 22, 0);
+    s.trains().place(w, s.dimIndex(), CarKind::SubwayCar, x, y, z - 14, 0);
+    Train& t = s.trains().trains()[0];
+    t.throttle = 0;
+    s.setTimeOfDay(6000);
+    p.flying = true;
+    const Vec3 car = t.cars[1].pos;
+    p.pos = Vec3(car.x - 7.0f, car.y + 1.2f, car.z + 3.0f);
+    d.idle(10);
+    d.lookNow(Vec3(car.x, car.y + 1.6f, car.z));
+    d.shot("c11_shut");
+    d.seconds(1.6f, [&](float) { d.lookNow(Vec3(car.x, car.y + 1.6f, car.z)); });
+    d.shot("c11_open");
+    t.throttle = 1;
+    d.seconds(3.4f, [&](float) {
+        const Vec3 c = t.cars[1].pos;
+        d.lookNow(Vec3(c.x, c.y + 1.4f, c.z));
+    });
+    d.shot("c11_away");
+}
+
+// 2.2.0 preview: the big Bronze Update, the Tiny Caps letters and colour codes.
+SHOT(c01_bronze) {
+    Director d(out, "c01");
+    d.openWorld("Bronze2", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z) - 6, y = feetY(w, x, z);
+    // Four rows: bright, tarnished, rusty, waxed; columns block, cut, chiseled, grate.
+    for (int base = 0; base < 4; ++base)
+        for (int st = 0; st < 3; ++st) w.setBlock(x - 4 + base * 2, y + st, z, bronzeVariant(base, 2 - st, false));
+    w.setBlock(x + 4, y, z, stairsId(41, 2, false));
+    w.setBlock(x + 5, y, z, slabId(42, 0));
+    w.setBlock(x + 6, y, z, doorId(BRONZE_DOOR, {2, false, false}));
+    w.setBlock(x + 6, y + 1, z, doorId(BRONZE_DOOR, {2, false, true}));
+    w.setBlock(x + 7, y, z, doorId(BRONZE_TRAPDOOR, {0, false, false}));
+    w.setBlock(x + 8, y, z, BRONZE_BULB + 1);
+    s.setTimeOfDay(6000);
+    p.pos = Vec3(x + 1.5f, (float)y + 1.2f, z + 6.5f);
+    d.idle(10);
+    d.lookNow(Vec3(x + 1.5f, y + 1.2f, z + 0.5f));
+    d.shot("c01_bronze");
+    d.seconds(0.6f);
+    // The letters and colour codes in the chat.
+    d.game->onTextResult(14, "\xC2\xA7" "6Bronze \xC2\xA7" "cUpdate \xC2\xA7" "r\xC2\xA7" "nPodtr\xC5\xBE" "eno\xC2\xA7" "r \xC2\xA7" "mP\xC5\x99" "e\xC5\xA1krtnuto\xC2\xA7" "r \xC2\xA7" "lTu\xC4\x8Dn\xC3\xA9");
+    d.seconds(0.8f);
+}
+
+// 2.2.0 preview: the livelier player: breathing arms, walking, drawing the bow (third person).
+SHOT(c02_player) {
+    Director d(out, "c02");
+    d.openWorld("Player", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    d.settings().cameraMode = 2;  // from the front
+    s.inventory().slots[0] = {BOW, 1, 0};
+    s.setTimeOfDay(6000);
+    d.idle(10);
+    d.shot("c02_player");
+    d.seconds(1.0f);
+    for (int k = 0; k <= 20; ++k) {
+        s.forceBowCharge(k / 20.0f);
+        d.frames(2);
+    }
+    d.seconds(1.0f);
+    s.forceBowCharge(-1);
+    d.settings().cameraMode = 0;
+    s.forceBowCharge(0.1f);
+    d.frames(6);
+    s.forceBowCharge(1.0f);
+    d.seconds(0.8f);
+    s.forceBowCharge(-1);
+}
+
+// 2.2.0 preview: the menu panorama in all four worlds.
+SHOT(c03_panorama) {
+    Director d(out, "c03");
+    d.idle(24);
+    d.shot("c03_panorama");
+    for (int k = 0; k < 4; ++k) {
+        d.seconds(1.2f);
+        d.game->filmNextMenuWorld();
+        d.frames(20);
+    }
+}
+
+// 2.2.0 preview: the Display tab of the settings.
+SHOT(c04_display) {
+    Director d(out, "c04");
+    d.idle(10);
+    d.shot("c04_display");
+    d.tap(378, 121, 20);   // Settings
+    d.tap(103, 133, 20);   // the fourth tab: Display
+    d.seconds(0.4f);
+}
+
+// 2.2.0 preview: the three new biomes of the Cornerstone Dimension.
+SHOT(c05_corner_biomes) {
+    Director d(out, "c05");
+    d.openWorld("CornerBiomes", 4242, GameMode::Creative);
+    Session& s = d.s();
+    goNether(d);
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    p.flying = true;
+    d.shot("c05_corner_biomes");
+    for (int cb = 1; cb <= 3; ++cb) {
+        int fx = 0, fz = 0;
+        bool found = false;
+        for (int r = 0; r < 3000 && !found; r += 24)
+            for (int k = 0; k < 16 && !found; ++k) {
+                const float a = k * 0.3927f;
+                const int x = (int)(std::cos(a) * r), z = (int)(std::sin(a) * r);
+                if (w.cornerBiomeAt(x, z) == cb && w.cornerBiomeAt(x + 24, z) == cb && w.cornerBiomeAt(x, z + 24) == cb) fx = x, fz = z, found = true;
+            }
+        if (!found) continue;
+        w.ensureChunksAround(fx >> 4, fz >> 4, 4, 100000);
+        // An open spot: a floor with at least 8 blocks of air above it.
+        int fy = 40;
+        for (int y = 30; y < 110; ++y) {
+            bool open = isSolid(w.getBlock(fx, y - 1, fz)) || w.getBlock(fx, y - 1, fz) == AETHER_BRINE;
+            for (int k = 0; k < 8 && open; ++k) open = w.getBlock(fx, y + k, fz) == AIR;
+            if (open) { fy = y; break; }
+        }
+        // Stand where the most open floor is in view: try a few directions and keep the one with the longest view.
+        p.pos = Vec3(fx + 0.5f, (float)fy + 4, fz + 0.5f);
+        float bestA = 0; int bestLen = 0;
+        for (int k = 0; k < 8; ++k) {
+            const float a = k * 0.785f; int len = 0;
+            while (len < 40 && w.getBlock(fx + (int)(std::cos(a) * len), fy + 3, fz + (int)(std::sin(a) * len)) == AIR) ++len;
+            if (len > bestLen) bestLen = len, bestA = a;
+        }
+        d.idle(20);
+        d.lookNow(Vec3(fx + std::cos(bestA) * 14 + 0.5f, (float)fy, fz + std::sin(bestA) * 14 + 0.5f));
+        d.seconds(1.0f);
+    }
+}
+
+// 2.2.0 "Cornerstone and Frost": the frost blocks; the player sinks into dried snow.
+SHOT(c06_frost) {
+    Director d(out, "c06");
+    d.openWorld("Frost", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z) - 5, y = feetY(w, x, z);
+    const ItemId row[] = {THIN_ICE, ICE_BRICKS, SNOWFLAKE_BLOCK, ICE};
+    for (int k = 0; k < 4; ++k)
+        for (int h = 0; h < 2; ++h) w.setBlock(x - 3 + k * 2, y + h, z, row[k]);
+    for (int dx = -2; dx <= 2; ++dx)
+        for (int dz = 1; dz <= 4; ++dz)
+            for (int h = -2; h <= 0; ++h) w.setBlock(x + dx, y + h, z + dz, DRIED_SNOW);
+    s.setTimeOfDay(6000);
+    d.settings().cameraMode = 1;
+    p.pos = Vec3(x + 0.5f, (float)y + 2.5f, z + 2.5f);
+    d.idle(10);
+    d.lookNow(Vec3(x + 0.5f, y + 1.0f, z - 0.5f));
+    d.shot("c06_frost");
+    d.seconds(4.0f);
+}

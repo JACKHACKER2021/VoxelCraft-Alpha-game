@@ -42,7 +42,8 @@ private:
 // Geometry of the hand in view space (x right, y up, looking along -z), ready for a
 // projection of its own. Skin-textured parts go to `skin`, blocks and items (terrain
 // atlas) to `atlas`. `light` darkens the hand in caves and at night.
-void buildFirstPerson(const HandAnimator& hand, float light, std::vector<Vertex>& skin, std::vector<Vertex>& atlas);
+// 2.2.0 preview: `bowCharge` (0..1) draws a held bow in front of the eye and pulls it back.
+void buildFirstPerson(const HandAnimator& hand, float light, std::vector<Vertex>& skin, std::vector<Vertex>& atlas, float bowCharge = 0);
 // 1.5.7: a shield or torch in the off hand, appended to `atlas` (other items are not shown).
 void buildOffhandFirstPerson(ItemId id, bool raised, const HandAnimator& hand, float light, std::vector<Vertex>& atlas);
 

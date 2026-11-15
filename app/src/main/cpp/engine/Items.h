@@ -46,6 +46,9 @@ ItemId dropFor(ItemId block, float roll, ItemId tool = AIR);
 
 // Everything shown in the creative inventory, in display order.
 extern const ItemId kCreativeItems[];
+// VoxelCraft Classic 0.0.3: the only blocks and items of the old game (nothing of the new versions).
+extern const std::vector<ItemId> kClassicItems;
+bool classicAllowed(ItemId id);
 extern const int kCreativeItemCount;
 // Tabs of the creative inventory: a name and a range of kCreativeItems.
 struct CreativeTab {
@@ -59,7 +62,7 @@ extern const int kCreativeTabCount;
 // exactly one), and groups of variants shown behind one button (stained glass, stairs...).
 enum CreativeCategory {
     CatBuilding, CatGlass, CatLighting, CatNature, CatDecoration, CatPowerstone, CatTools, CatArmor, CatMaps,
-    CatMaterials, CatEggs, CatSpecial, CatCount  // 2.0.0: special blocks (command, structure...)
+    CatMaterials, CatEggs, CatSpecial, CatRailway, CatBronze, CatCount  // 2.0.0: special blocks; 2.2.0: railway and bronze
 };
 const char* creativeCategoryName(int category);
 ItemId creativeCategoryIcon(int category);

@@ -1,5 +1,7 @@
 #include "Ui.h"
 
+#include <cctype>
+
 #include "Lang.h"
 
 #include <algorithm>
@@ -144,21 +146,54 @@ float Ui::text(float x, float y, const std::string& source, Color c, float scale
     if (textLog) textLog->push_back(s);
     if (shadow) {
         Color sc{c.r * 0.25f, c.g * 0.25f, c.b * 0.25f, c.a};
-        drawText(x + scale, y + scale, s, sc, scale, maxWidth);
+        drawText(x + scale, y + scale, s, sc, scale, maxWidth, 0.25f);
     }
     return drawText(x, y, s, c, scale, maxWidth);
 }
 
-float Ui::drawText(float x, float y, const std::string& s, Color c, float scale, float maxWidth) {
+float Ui::drawText(float x, float y, const std::string& s, Color c, float scale, float maxWidth, float codeShade) {
     float start = x;
+    const Color base = c;
+    // 2.2.0: Tiny Caps letters are 5 pixels tall, the classic ones 7: they are drawn 1.4 times
+    // bigger, so they are as tall as the classic letters and sit where the layout expects them.
+    scale *= font_.sizeFactor();
+    bool bold = false, underline = false, strike = false;  // 2.2.0: §l, §n, §m
     for (size_t i = 0; i < s.size();) {
-        int g = font_.glyphFor(Font::nextCodepoint(s, i));
+        const uint32_t cp = Font::nextCodepoint(s, i);
+        // 2.2.0: colour codes as in Minecraft: "§" and 0-9 / a-f picks a colour, "§r" goes back.
+        if (cp == 0xA7 && i < s.size()) {
+            const char k = (char)std::tolower((unsigned char)s[i++]);
+            Color code;
+            if (Font::codeColor(k, code.r, code.g, code.b)) {
+                c = Color{code.r * codeShade, code.g * codeShade, code.b * codeShade, base.a};
+                bold = underline = strike = false;  // a colour ends the styles, as in Java Edition
+            } else if (k == 'r') {
+                c = base, bold = underline = strike = false;
+            } else if (k == 'l') {
+                bold = true;
+            } else if (k == 'n') {
+                underline = true;
+            } else if (k == 'm') {
+                strike = true;
+            }
+            continue;
+        }
+        int g = font_.glyphFor(cp);
         if (maxWidth > 0 && x + font_.advance(g) * scale - start > maxWidth) break;
         float u0, v0, u1, v1;
         font_.uv(g, u0, v0, u1, v1);
         // y is the top of the letters; the cell starts two rows higher for accents.
         image(TexGui, x, y - 2 * scale, Font::kCellW * scale, Font::kCellH * scale, u0, v0, u1, v1, c);
-        x += font_.advance(g) * scale;
+        float adv = font_.advance(g) * scale;
+        if (bold) {
+            image(TexGui, x + scale, y - 2 * scale, Font::kCellW * scale, Font::kCellH * scale, u0, v0, u1, v1, c);
+            adv += scale;
+        }
+        // The lines run under / through the letters (Tiny Caps letters are 5 rows tall, classic 7).
+        const float h = font_.tinyCaps() ? 5 : 7, line = std::max(1.0f, std::round(scale / font_.sizeFactor()));
+        if (underline) fill(x - scale, y + h * scale, adv, line, c);
+        if (strike) fill(x - scale, y + std::floor(h / 2) * scale, adv, line, c);
+        x += adv;
     }
     return x - start;
 }
@@ -258,6 +293,13 @@ void Ui::roundRect(float x, float y, float w, float h, int r, Color c) {
     fill(x, y + r, w, h - 2 * r, c);
 }
 
+void Ui::hudPicture(float x, float y, float w, float h, int button, bool pressed) {
+    float u0, v0, u1, v1;
+    Font::hudButtonUv(button, u0, v0, u1, v1);
+    const float d = pressed ? 1 : 0;  // pressed: it sinks a pixel and darkens
+    image(TexGui, x, y + d, w, h, u0, v0, u1, v1, pressed ? Color{0.72f, 0.75f, 0.8f, 1} : Color{1, 1, 1, 0.92f});
+}
+
 void Ui::roundPanel(float x, float y, float w, float h) {
     if (preAlpha) {
         fill(x, y, w, h, {0, 0, 0, 0.45f});  // 0.3 had no panels: the world shows through
@@ -265,9 +307,28 @@ void Ui::roundPanel(float x, float y, float w, float h) {
     }
     // A soft shadow, a rounded rim, and dark glass inside.
     roundRect(x + 2, y + 3, w, h, 4, {0, 0, 0, 0.35f});
+#if 1  // 2.2.0: the green theme in both editions
+    roundRect(x, y, w, h, 4, {0.07f, 0.12f, 0.08f, 0.96f});
+    roundRect(x + 2, y + 2, w - 4, h - 4, 3, {0.137f, 0.227f, 0.161f, 0.94f});
+    pixelGrain(x + 2, y + 2, w - 4, h - 4, 11, 0.6f);
+#else
     roundRect(x, y, w, h, 4, {0.47f, 0.44f, 0.38f, 0.95f});
     roundRect(x + 1, y + 1, w - 2, h - 2, 4, {0.11f, 0.1f, 0.09f, 0.88f});
+#endif
     fill(x + 5, y + 2, w - 10, 1, {1, 1, 1, 0.08f});
+}
+
+void Ui::pixelGrain(float x, float y, float w, float h, unsigned seed, float strength) {
+    // Fixed to the GUI pixel grid (not to the box), so moving a box does not make it shimmer.
+    const int x0 = (int)std::ceil(x / 2) * 2, y0 = (int)std::ceil(y / 2) * 2;
+    for (int py = y0; py + 2 <= y + h; py += 2)
+        for (int px = x0; px + 2 <= x + w; px += 2) {
+            unsigned hsh = (unsigned)px * 73856093u ^ (unsigned)py * 19349663u ^ seed * 83492791u;
+            hsh ^= hsh >> 13, hsh *= 0x5bd1e995u, hsh ^= hsh >> 15;
+            const unsigned k = hsh % 100;
+            if (k < 7) fill((float)px, (float)py, 2, 2, {1, 1, 1, 0.06f * strength});
+            else if (k < 15) fill((float)px, (float)py, 2, 2, {0, 0, 0, 0.1f * strength});
+        }
 }
 
 bool Ui::menuButton(float x, float y, float w, float h, const std::string& label, Style style, int iconGlyph, bool enabled) {
@@ -288,12 +349,23 @@ bool Ui::menuButton(float x, float y, float w, float h, const std::string& label
     const bool down = enabled && held(x, y, w, h);
     Color face, rim;
     switch (style) {
+#if 1  // 2.2.0: the green theme in both editions
+        // 2.2.0 preview: the project's design: green buttons with a thick dark green edge.
+        case Style::Primary: face = {0.31f, 0.55f, 0.18f, 1}, rim = {0.08f, 0.14f, 0.09f, 1}; break;
+        case Style::Danger: face = {0.55f, 0.26f, 0.2f, 1}, rim = {0.2f, 0.08f, 0.06f, 1}; break;
+        default: face = {0.2f, 0.36f, 0.23f, 1}, rim = {0.08f, 0.14f, 0.09f, 1}; break;
+#else
         case Style::Primary: face = {0.24f, 0.47f, 0.09f, 1}, rim = {0.56f, 0.78f, 0.3f, 1}; break;
         case Style::Danger: face = {0.43f, 0.16f, 0.13f, 1}, rim = {0.72f, 0.33f, 0.27f, 1}; break;
         default: face = {0.27f, 0.25f, 0.22f, 1}, rim = {0.52f, 0.49f, 0.43f, 1}; break;
+#endif
     }
     if (down) face = {face.r * 1.2f, face.g * 1.2f, face.b * 1.2f, 1};
+#if 1  // 2.2.0: the green theme in both editions
+    if (!enabled) face = {0.15f, 0.2f, 0.16f, 1}, rim = {0.07f, 0.1f, 0.08f, 1};
+#else
     if (!enabled) face = {0.17f, 0.16f, 0.14f, 1}, rim = {0.3f, 0.28f, 0.25f, 1};
+#endif
     // Raised: a 2px shadow under it; pressed it sinks onto the shadow.
     const float dy = down ? 2 : 0;
     if (!down) roundRect(x + 1, y + 2, w - 2, h, 4, {0, 0, 0, 0.45f});
@@ -301,12 +373,23 @@ bool Ui::menuButton(float x, float y, float w, float h, const std::string& label
     // The rim with rounded corners, then the face.
     const int r = h >= 18 ? 4 : 3;
     roundRect(x, by, w, h, r, rim);
+#if 1  // 2.2.0: the green theme in both editions
+    roundRect(x + 2, by + 2, w - 4, h - 4, r - 1, face);  // a 2-pixel dark edge, as in the design
+#else
     roundRect(x + 1, by + 1, w - 2, h - 2, r - 1, face);
+#endif
+#if 1  // 2.2.0: the green theme in both editions
+    pixelGrain(x + 2, by + 2, w - 4, h - 4, 5);  // 2.2.0 preview: pixel-art grain on the face
+#endif
     // A glossy upper half and a darker lip at the bottom, like the picture.
     roundRect(x + 2, by + 2, w - 4, std::floor((h - 4) / 2), 2, {1, 1, 1, enabled ? 0.07f : 0.02f});
     fill(x + 4, by + 2, w - 8, 1, {1, 1, 1, enabled ? 0.22f : 0.05f});
     fill(x + 3, by + h - 4, w - 6, 2, {0, 0, 0, 0.25f});
+#if 1  // 2.2.0: the green theme in both editions
+    const Color tc = !enabled ? kTextDim : kTextBright;
+#else
     const Color tc = !enabled ? kTextDim : style == Style::Normal ? kTextBright : Color{1, 1, 1, 1};
+#endif
     const float tw = textWidth(label);
     float cx = x + (w - tw) / 2;
     if (iconGlyph >= 0) {

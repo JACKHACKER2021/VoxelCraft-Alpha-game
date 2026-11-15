@@ -32,6 +32,8 @@ struct Rgb {
 const Rgb kWood{168, 122, 66}, kStone{138, 138, 138}, kIron{190, 192, 200}, kBronze{208, 128, 52},
     kSteel{150, 166, 184}, kRuby{214, 34, 64}, kHandle{120, 84, 44};
 
+#include "CornerstoneRemaster.inc"
+
 class Canvas {
 public:
     explicit Canvas(int size) : size_(size), img_(size * size * 4, 0) {}
@@ -1936,8 +1938,8 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
             }
         // Build 4: pixel-art tiles for the train models, one per palette colour: painted panels with
         // seams and rivets, wooden planks, metal, glass with a frame and a glint.
-        for (int ci = 0; ci < 14; ++ci) {
-            const int tile = T_TRAIN_TEX + ci;
+        for (int ci = 0; ci < 30; ++ci) {
+            const int tile = trainTexTile(ci);
             const bool have = ci < kTrainPaletteSize;
             const int r = have ? kTrainPalette[ci][0] : 128, g = have ? kTrainPalette[ci][1] : 128, bl = have ? kTrainPalette[ci][2] : 128;
             const bool glass = have && kTrainPalette[ci][3] < 128;
@@ -2001,6 +2003,16 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
             icon(T_LOCOMOTIVE_ITEM, Rgb{180, 40, 36}, Rgb{100, 104, 112}, true);
             icon(T_PASSENGER_WAGON_ITEM, Rgb{34, 72, 140}, Rgb{100, 104, 112}, false);
             icon(T_FREIGHT_WAGON_ITEM, Rgb{120, 84, 50}, Rgb{120, 84, 50}, false);
+            // 2.3.0: the subway: a silver body with a blue band and big windows (the cab has a sloped nose).
+            icon(T_SUBWAY_LOCO_ITEM, Rgb{196, 200, 206}, Rgb{60, 62, 68}, false);
+            icon(T_SUBWAY_CAR_ITEM, Rgb{196, 200, 206}, Rgb{60, 62, 68}, false);
+            for (int t : {(int)T_SUBWAY_LOCO_ITEM, (int)T_SUBWAY_CAR_ITEM})
+                for (int px = 1; px < 15; ++px) {
+                    a.put(t, px, 10, Rgb{30, 90, 190});
+                    if (px % 4 != 0 && px > 1 && px < 14) a.put(t, px, 6, Rgb{150, 200, 230});
+                }
+            for (int py = 3; py < 9; ++py)
+                for (int px = 15 - (8 - py) / 2; px < 16; ++px) a.clear(T_SUBWAY_LOCO_ITEM, px, py);
             // Build 5: the drill car: a yellow machine on a frame with a stepped grey drill in front.
             icon(T_DRILL_CAR_ITEM, Rgb{230, 180, 30}, Rgb{60, 62, 68}, false);
             for (int py = 4; py < 12; ++py)
@@ -2010,24 +2022,40 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
                 }
         }
         // 2.1.0 preview build 6: the Bronze Update (our own pixel art, in the bronze block's colour).
+        // 2.2.0: the same four blocks tarnished and rusty (darker, with rust spots).
+        auto paintBronze = [&](int tCut, int tChis, int tGrate, int tBlock, Rgb b, int rust) {
+            if (tBlock >= 0) metalBlock(a, tBlock, b);
+            for (int py = 0; py < 16; ++py)
+                for (int px = 0; px < 16; ++px) {
+                    const int n = (int)(hash3(px, py, 61, 3) % 10) - 5;
+                    const uint32_t h = hash3(px, py, 77, rust);
+                    const bool spot = rust > 0 && (int)(h % 100) < (rust == 1 ? 12 : 34);
+                    const Rgb rc = (h >> 8) % 2 ? Rgb{168, 78, 38} : Rgb{96, 44, 24};
+                    if (tBlock >= 0 && spot) a.put(tBlock, px, py, rc.plus(n));
+                    const int qx = px % 8, qy = py % 8;
+                    const float cut = qx == 0 || qy == 0 ? 1.25f : qx == 7 || qy == 7 ? 0.62f : 1.0f;
+                    a.put(tCut, px, py, spot ? rc.plus(n) : b.scaled(cut).plus(n));
+                    const int dx = std::abs(px * 2 - 15), dy = std::abs(py * 2 - 15);
+                    const bool frame = px <= 1 || py <= 1 || px >= 14 || py >= 14;
+                    const bool diamond = dx + dy >= 10 && dx + dy <= 13;
+                    const float ch = frame ? (px == 0 || py == 0 ? 1.25f : 0.7f) : diamond ? 0.68f : dx + dy < 10 ? 1.12f : 0.95f;
+                    a.put(tChis, px, py, spot ? rc.plus(n) : b.scaled(ch).plus(n));
+                    const bool bar = px % 4 == 0 || py % 4 == 0 || px == 15 || py == 15;
+                    if (bar) a.put(tGrate, px, py, spot ? rc.plus(n) : b.scaled(px % 4 == 0 && py % 4 == 0 ? 1.2f : 0.92f).plus(n));
+                    else a.clear(tGrate, px, py);
+                }
+        };
+        paintBronze(T_CUT_BRONZE, T_CHISELED_BRONZE, T_BRONZE_GRATE, -1, kBronze, 0);
+        const Rgb aged[2] = {{150, 102, 58}, {128, 70, 40}};
+        for (int st = 0; st < 2; ++st) {
+            // T_BRONZE_AGED + base * 2 + stage: base 0 block, 1 cut, 2 chiseled, 3 grate.
+            paintBronze(T_BRONZE_AGED + 2 + st, T_BRONZE_AGED + 4 + st, T_BRONZE_AGED + 6 + st, T_BRONZE_AGED + st, aged[st], st + 1);
+        }
         for (int py = 0; py < 16; ++py)
             for (int px = 0; px < 16; ++px) {
                 const int n = (int)(hash3(px, py, 61, 3) % 10) - 5;
                 const Rgb b = kBronze;
-                // Cut: four plates, each with a light top-left and dark bottom-right edge.
-                const int qx = px % 8, qy = py % 8;
-                const float cut = qx == 0 || qy == 0 ? 1.25f : qx == 7 || qy == 7 ? 0.62f : 1.0f;
-                a.put(T_CUT_BRONZE, px, py, b.scaled(cut).plus(n));
-                // Chiseled: a frame and a pressed diamond in the middle.
-                const int dx = std::abs(px * 2 - 15), dy = std::abs(py * 2 - 15);
                 const bool frame = px <= 1 || py <= 1 || px >= 14 || py >= 14;
-                const bool diamond = dx + dy >= 10 && dx + dy <= 13;
-                const float ch = frame ? (px == 0 || py == 0 ? 1.25f : 0.7f) : diamond ? 0.68f : dx + dy < 10 ? 1.12f : 0.95f;
-                a.put(T_CHISELED_BRONZE, px, py, b.scaled(ch).plus(n));
-                // Grate: bars every 4 pixels with see-through holes between them.
-                const bool bar = px % 4 == 0 || py % 4 == 0 || px == 15 || py == 15;
-                if (bar) a.put(T_BRONZE_GRATE, px, py, b.scaled(px % 4 == 0 && py % 4 == 0 ? 1.2f : 0.92f).plus(n));
-                else a.clear(T_BRONZE_GRATE, px, py);
                 // Bulb: a bronze cage round a glass bulb, dark when off and bright when lit.
                 const bool cage = frame || px == 7 || px == 8 || py == 7 || py == 8;
                 const int r2 = (px * 2 - 15) * (px * 2 - 15) + (py * 2 - 15) * (py * 2 - 15);
@@ -2035,6 +2063,148 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
                 const Rgb on = r2 < 30 ? Rgb{255, 250, 220} : r2 < 90 ? Rgb{255, 214, 120} : Rgb{240, 170, 70};
                 a.put(T_BRONZE_BULB, px, py, cage ? b.scaled(0.9f).plus(n) : off.plus(n));
                 a.put(T_BRONZE_BULB_ON, px, py, cage ? b.scaled(1.05f).plus(n) : on.plus(n / 2));
+                // 2.2.0: the bronze door (two halves with a window in the top) and trapdoor.
+                const bool dframe = px <= 1 || px >= 14 || py == 0 || py == 15;
+                const bool window = py >= 3 && py <= 9 && px >= 4 && px <= 11 && px != 7 && px != 8;
+                const bool rivet = (px == 3 || px == 12) && (py == 3 || py == 12);
+                const Rgb dc = b.scaled(dframe ? 0.72f : rivet ? 0.55f : (py % 4 == 0 ? 0.88f : 1.0f)).plus(n / 2);
+                if (window) a.clear(T_BRONZE_DOOR_UPPER, px, py);
+                else a.put(T_BRONZE_DOOR_UPPER, px, py, dc);
+                a.put(T_BRONZE_DOOR_LOWER, px, py, px == 12 && (py == 1 || py == 2) ? Rgb{60, 40, 30} : dc);
+                const bool hole = px % 5 >= 2 && px % 5 <= 3 && py % 5 >= 2 && py % 5 <= 3 && px < 15 && py < 15;
+                if (hole) a.clear(T_BRONZE_TRAPDOOR, px, py);
+                else a.put(T_BRONZE_TRAPDOOR, px, py, b.scaled(px == 0 || px == 15 || py == 0 || py == 15 ? 0.7f : 1.0f).plus(n));
+            }
+        a.sprite(T_BRONZE_DOOR_ITEM, kSprite_door, kBronze, {60, 40, 30});
+        // 2.2.0 preview: the new biomes of the Cornerstone Dimension (our own pixel art).
+        {
+            auto H = [](int x, int y, int k) { return (int)(hash3(x, y, 9100 + k, 17) % 100); };
+            const Rgb redA{0x86, 0x1C, 0x1E}, redB{0x9E, 0x25, 0x27}, redC{0xB3, 0x30, 0x2E}, redD{0x6A, 0x12, 0x15};
+            for (int py = 0; py < 16; ++py)
+                for (int px = 0; px < 16; ++px) {
+                    const int h = H(px, py, 0);
+                    // Carved cornerstone: red blocks with a carved rune ring and a cross in the middle.
+                    {
+                        const int dx = std::abs(px * 2 - 15), dy = std::abs(py * 2 - 15), d = std::max(dx, dy);
+                        const bool frame = px == 0 || py == 0 || px == 15 || py == 15;
+                        const bool ring = d >= 9 && d <= 10;
+                        const bool rune = (dx <= 1 && dy <= 7) || (dy <= 1 && dx <= 7) || (dx == dy && d <= 5);
+                        a.put(T_CARVED_CORNERSTONE, px, py, frame ? redD : ring || rune ? Rgb{0x5A, 0x0E, 0x10} : h < 30 ? redC : redB);
+                    }
+                    // Gilded cobble: rounded red cobbles with gold filling between them.
+                    {
+                        const int cx = (px + (py / 5) * 2) % 6, cy = py % 5;
+                        const bool gap = cx == 0 || cy == 0;
+                        a.put(T_GILDED_COBBLE, px, py, gap ? (h < 50 ? Rgb{0xE8, 0xB8, 0x3A} : Rgb{0xC8, 0x92, 0x22}) : (cy == 1 ? redC : h < 40 ? redA : redB));
+                    }
+                    // Amber resin: warm see-through amber with darker streaks and bubbles.
+                    {
+                        const bool streak = (px + py * 2) % 9 == 0;
+                        const bool bubble = H(px, py, 2) < 4;
+                        a.put(T_AMBER_RESIN, px, py, bubble ? Rgb{0xFF, 0xE6, 0x9C} : streak ? Rgb{0xC2, 0x6A, 0x10} : Rgb{0xE8, 0x96, 0x24}, 200);
+                    }
+                    // Copper moss: a shrub of copper crystals with green-blue tips.
+                    {
+                        const int stem = px % 4 == 1 ? 6 + (int)(hash3(px, 0, 9103, 3) % 8) : -1;
+                        const bool on = stem >= 0 && 15 - py <= stem;
+                        if (on) a.put(T_COPPER_MOSS, px, py, 15 - py >= stem - 1 ? Rgb{0x4E, 0xD8, 0xB8} : (py % 3 ? Rgb{0xC0, 0x6A, 0x3A} : Rgb{0xA0, 0x52, 0x2C}));
+                        else a.clear(T_COPPER_MOSS, px, py);
+                    }
+                    // Prismatide pillar: hexagonal crystal facets (recoloured over time by the game).
+                    {
+                        const int band = (px / 4 + py / 6) % 3;
+                        const bool edge = px % 4 == 0 || (py % 6 == 0 && px % 8 < 4);
+                        const Rgb c = band == 0 ? Rgb{0x5C, 0xE4, 0xEC} : band == 1 ? Rgb{0x9C, 0x8C, 0xF4} : Rgb{0xE4, 0x9C, 0xEC};
+                        a.put(T_PRISMATIDE_PILLAR, px, py, edge ? c.scaled(0.7f) : c);
+                    }
+                    // Siltstone: soft layered dark blue stone.
+                    a.put(T_SILTSTONE, px, py, (py + (H(px, 0, 4) % 3)) % 5 == 0 ? Rgb{0x16, 0x26, 0x4A} : h < 30 ? Rgb{0x2A, 0x40, 0x6C} : Rgb{0x22, 0x36, 0x5E});
+                    // Luminous salt: white crystals with a faint cyan glow.
+                    a.put(T_LUMINOUS_SALT, px, py, h < 10 ? Rgb{0xC8, 0xF6, 0xFA} : h < 40 ? Rgb{0xF6, 0xFA, 0xFA} : Rgb{0xE0, 0xEC, 0xEE});
+                    // Aether brine: thick turquoise glowing liquid with light swirls.
+                    a.put(T_AETHER_BRINE, px, py, (px * 3 + py * 5) % 11 < 2 ? Rgb{0x7C, 0xF4, 0xE8} : h < 30 ? Rgb{0x22, 0xC8, 0xC0} : Rgb{0x18, 0xAE, 0xAC}, 190);
+                    // Glass reeds: tall hollow see-through stems with joints.
+                    {
+                        const bool stem = px % 5 == 2 || px % 5 == 3;
+                        const int top = (int)(hash3(px / 5, 0, 9108, 3) % 4);
+                        if (stem && py >= top) a.put(T_GLASS_REEDS, px, py, py % 5 == 0 ? Rgb{0x9C, 0xD8, 0xE0} : px % 5 == 2 ? Rgb{0xD8, 0xF6, 0xFA} : Rgb{0xB4, 0xE6, 0xEE}, 210);
+                        else a.clear(T_GLASS_REEDS, px, py);
+                    }
+                    // Spore pad: a spongy violet cap with lighter spots; the side shows the stem.
+                    {
+                        const int dx = px * 2 - 15, dy = py * 2 - 15, r2 = dx * dx + dy * dy;
+                        a.put(T_SPORE_PAD_TOP, px, py, r2 < 40 && h < 50 ? Rgb{0xE8, 0xC4, 0xF6} : H(px, py, 9) < 14 ? Rgb{0xF0, 0xD8, 0xFF} : Rgb{0xA8, 0x5C, 0xD0});
+                        a.put(T_SPORE_PAD_SIDE, px, py, py < 5 ? (py == 4 ? Rgb{0x80, 0x3E, 0xA8} : Rgb{0xA8, 0x5C, 0xD0}) : (h < 30 ? Rgb{0xC8, 0xB8, 0xA8} : Rgb{0xB4, 0xA4, 0x94}));
+                    }
+                    // Stonewood: grey stone bark with deep vertical cracks; rings of stone on top.
+                    {
+                        const bool crack = (px + (int)(hash3(0, py / 3, 9110, px / 3) % 2)) % 4 == 0;
+                        a.put(T_STONEWOOD_LOG, px, py, crack ? Rgb{0x3E, 0x3E, 0x44} : h < 30 ? Rgb{0x7C, 0x7A, 0x80} : Rgb{0x68, 0x66, 0x6E});
+                        const int dx = std::abs(px * 2 - 15), dy = std::abs(py * 2 - 15), d = std::max(dx, dy);
+                        a.put(T_STONEWOOD_TOP, px, py, d >= 13 ? Rgb{0x56, 0x54, 0x5C} : (d / 3) % 2 ? Rgb{0x8C, 0x8A, 0x90} : Rgb{0x74, 0x72, 0x7A});
+                    }
+                    // Mossy cornerstone: red rock half covered by cyan moss from the top.
+                    {
+                        const bool moss = py < 4 + (int)(hash3(px, 0, 9112, 5) % 7) || H(px, py, 12) < 12;
+                        a.put(T_MOSSY_CORNERSTONE, px, py, moss ? (h < 40 ? Rgb{0x14, 0x92, 0x9C} : Rgb{0x0F, 0x7A, 0x86}) : (h < 30 ? redC : redB));
+                    }
+                    // Glowcap leaves: dark teal leaves with glowing yellow-green caps.
+                    if (H(px, py, 14) < 12) a.clear(T_GLOWCAP_LEAVES, px, py);
+                    else a.put(T_GLOWCAP_LEAVES, px, py, H(px, py, 15) < 14 ? Rgb{0xD8, 0xF0, 0x6C} : h < 50 ? Rgb{0x1C, 0x6C, 0x5C} : Rgb{0x14, 0x56, 0x4A});
+                    // Starberry bush: a low dark bush with star-shaped pale berries.
+                    {
+                        const bool leaf = py >= 6 && H(px, py, 16) < 70 && std::abs(px - 8) < 8 - (15 - py) / 3;
+                        const bool berry = ((px == 4 || px == 11) && (py == 8 || py == 12)) || (px == 8 && py == 10);
+                        if (berry) a.put(T_STARBERRY_BUSH, px, py, Rgb{0xF8, 0xE8, 0x7C});
+                        else if (leaf) a.put(T_STARBERRY_BUSH, px, py, h < 50 ? Rgb{0x24, 0x5E, 0x52} : Rgb{0x18, 0x48, 0x40});
+                        else a.clear(T_STARBERRY_BUSH, px, py);
+                    }
+                    // Void truffle: a dark purple lumpy fungus on the ground with violet sparks.
+                    {
+                        const int dx = px * 2 - 15, dy = (py - 11) * 3, r2 = dx * dx + dy * dy;
+                        if (r2 < 90) a.put(T_VOID_TRUFFLE, px, py, H(px, py, 17) < 12 ? Rgb{0xC8, 0x7C, 0xFF} : h < 40 ? Rgb{0x3A, 0x1A, 0x52} : Rgb{0x2A, 0x10, 0x3E});
+                        else a.clear(T_VOID_TRUFFLE, px, py);
+                    }
+                    // Starberries (item): three pale stars.
+                    {
+                        auto star = [&](int cx, int cy) { const int ax = std::abs(px - cx), ay = std::abs(py - cy); return (ax == 0 && ay <= 2) || (ay == 0 && ax <= 2) || (ax == 1 && ay == 1); };
+                        if (star(5, 5) || star(10, 9) || star(5, 12)) a.put(T_STARBERRIES, px, py, std::abs(px - 5) + std::abs(py - 5) == 0 || std::abs(px - 10) + std::abs(py - 9) == 0 ? Rgb{0xFF, 0xFF, 0xD0} : Rgb{0xF8, 0xD8, 0x5C});
+                        else a.clear(T_STARBERRIES, px, py);
+                    }
+                }
+        }
+        // 2.2.0 "Cornerstone and Frost": frost blocks (our own pixel art).
+        for (int py = 0; py < 16; ++py)
+            for (int px = 0; px < 16; ++px) {
+                const int h = (int)(hash3(px, py, 9300, 7) % 100);
+                const bool streak = (px + py) % 7 == 0 || (px - py + 16) % 11 == 0;
+                // Thin ice: the ice colour with white cracks from a broken middle.
+                const bool crack = (px == py && px > 3 && px < 12) || (px + py == 15 && px > 5 && px < 13) || (py == 8 && px > 1 && px < 7) || (px == 9 && py > 9);
+                a.put(T_THIN_ICE, px, py, crack ? Rgb{236, 246, 255} : Rgb{150, 192, 242}.scaled(streak ? 1.12f : 0.96f));
+                // Ice bricks: pale blue bricks with frosty white mortar.
+                const int row = py / 4, bx = (px + (row % 2) * 4) % 8;
+                const bool mortar = py % 4 == 3 || bx == 7;
+                a.put(T_ICE_BRICKS, px, py, mortar ? Rgb{226, 240, 252} : py % 4 == 0 ? Rgb{186, 216, 250} : Rgb{150, 192, 242}.scaled(h < 20 ? 1.06f : 1.0f));
+                // Snowflake block: snow with a blue six-armed flake in the middle.
+                const int dx = px * 2 - 15, dy = py * 2 - 15;
+                const bool arm = (std::abs(dx) <= 1 && std::abs(dy) <= 11) || (std::abs(dy) <= 1 && std::abs(dx) <= 11) || (std::abs(dx - dy) <= 1 && std::abs(dx) <= 8) ||
+                                 (std::abs(dx + dy) <= 1 && std::abs(dx) <= 8);
+                const bool frame = px == 0 || py == 0 || px == 15 || py == 15;
+                a.put(T_SNOWFLAKE_BLOCK, px, py, arm ? Rgb{120, 176, 236} : frame ? Rgb{214, 226, 238} : Rgb{246, 250, 252}.scaled(h < 15 ? 0.97f : 1.0f));
+                // Dried snow: powdery white with soft grey-blue speckles.
+                a.put(T_DRIED_SNOW, px, py, h < 8 ? Rgb{200, 210, 224} : h < 25 ? Rgb{232, 238, 246} : Rgb{248, 250, 252});
+                // Abyssal rock: near-black slate in flat plates, with faint violet glints.
+                const int plate = (py + (px / 5) % 2 * 2) % 5;
+                // Rozhlas: a green-grey metal box with a round loudspeaker grille; the top has the bolts.
+                {
+                    const int ddx = px * 2 - 15, ddy = py * 2 - 13, rr = ddx * ddx + ddy * ddy;
+                    const bool rim = px == 0 || py == 0 || px == 15 || py == 15;
+                    const bool horn = rr < 130, ring = rr >= 130 && rr < 170, hole = horn && (px + py) % 2 == 0 && rr > 12;
+                    a.put(T_RADIO, px, py, rim ? Rgb{52, 66, 58} : ring ? Rgb{200, 204, 196} : hole ? Rgb{28, 30, 30} : horn ? Rgb{150, 156, 150} : py >= 14 ? Rgb{90, 108, 96} : Rgb{110, 132, 116}.scaled(h < 12 ? 0.94f : 1.0f));
+                    const bool bolt = (px == 2 || px == 13) && (py == 2 || py == 13);
+                    a.put(T_RADIO_TOP, px, py, rim ? Rgb{52, 66, 58} : bolt ? Rgb{206, 210, 200} : Rgb{104, 126, 110}.scaled(h < 12 ? 0.94f : 1.0f));
+                }
+                a.put(T_ABYSSAL_ROCK, px, py, plate == 0 ? Rgb{18, 16, 26} : h < 4 ? Rgb{92, 70, 128} : Rgb{40, 38, 52}.scaled(0.85f + (h % 30) / 100.0f));
             }
         // 2.1.0 preview build 3: railway blocks (our own pixel art).
         for (int py = 0; py < 16; ++py)
@@ -2168,6 +2338,15 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
                 a.put(kOreRedesignTiles[i], px, py, {p[0], p[1], p[2]});
             }
     }
+    // 2.2.0 preview: the Cornerstone remaster: redder cornerstone and bricks, cyan moss and crystals.
+    if (kFeatures220)
+        for (const RemasterTile& t : kCornerstoneRemaster)
+            for (int py = 0; py < 16; ++py)
+                for (int px = 0; px < 16; ++px) {
+                    const uint8_t* q = t.rgba + (py * 16 + px) * 4;
+                    if (q[3] < 128) a.clear(t.tile, px, py);
+                    else a.put(t.tile, px, py, Rgb{q[0], q[1], q[2]}, q[3]);
+                }
     return a.image();
 }
 
@@ -2623,12 +2802,12 @@ void drawUpdate15(Canvas& a, int tile) {
                     break;
                 }
                 case T_WASTELAND_GRASS_TOP: {
-                    // 1.5.1: the wasteland of the Cornerstone Dimension: rusty dry grass, cornerstone
-                    // showing through in bare red patches, and a few powerstone specks.
+                    // 1.5.1: the wasteland of the Cornerstone Dimension: rusty dry grass and a few
+                    // powerstone specks.
                     const float f = 0.85f + patch(px, py, 157, 4) * 0.25f;
                     Rgb c = Rgb{150, 104, 58}.scaled(f).plus(n / 2);
                     if (hash3(px, py, 166, 4) % 5 == 0) c = Rgb{190, 150, 80}.scaled(f).plus(n / 2);  // pale blades
-                    if (patch(px, py, 158, 5) > 0.68f) c = Rgb{116, 50, 50}.scaled(0.8f + patch(px, py, 13, 3) * 0.4f).plus(n);  // cornerstone
+                    // 2.2.0: no bare cornerstone patch any more (it looked like a stray red corner).
                     if (hash3(px, py, 167, 3) % 61 == 0) c = power.scaled(0.9f);
                     a.put(tile, px, py, c);
                     break;
@@ -3293,4 +3472,104 @@ void applyLegacyTiles(std::vector<uint8_t>& rgba, int size) {
         if (tmpl < 0) ageTile(rgba, size, tile, palette);
 }
 
+}  // namespace vc
+
+namespace vc {
+// VoxelCraft Classic 0.0.3: the textures of the first HTML version (Voxel Craft Alpha 0.0.5), painted the
+// same way: a few colours sprinkled pixel by pixel, then lines for mortar, rings and seams.
+void applyClassicTiles(std::vector<uint8_t>& rgba, int size) {
+    const int t = size / kAtlasCols;
+    uint32_t seed = 0xC1A55u;
+    auto rnd = [&] { seed ^= seed << 13, seed ^= seed >> 17, seed ^= seed << 5; return seed; };
+    auto hex = [](uint32_t c) { return std::array<uint8_t, 3>{(uint8_t)(c >> 16), (uint8_t)(c >> 8), (uint8_t)c}; };
+    auto put = [&](int tile, int x, int y, uint32_t c, uint8_t a = 255) {
+        const int s = t / 16;
+        for (int dy = 0; dy < s; ++dy)
+            for (int dx = 0; dx < s; ++dx) {
+                uint8_t* p = &rgba[((size_t)((tile / kAtlasCols) * t + y * s + dy) * size + (tile % kAtlasCols) * t + x * s + dx) * 4];
+                const auto v = hex(c);
+                p[0] = v[0], p[1] = v[1], p[2] = v[2], p[3] = a;
+            }
+    };
+    auto noise = [&](int tile, std::initializer_list<uint32_t> cs) {
+        std::vector<uint32_t> v(cs);
+        for (int y = 0; y < 16; ++y)
+            for (int x = 0; x < 16; ++x) put(tile, x, y, v[rnd() % v.size()]);
+    };
+    auto rect = [&](int tile, int x0, int y0, int w, int h, uint32_t c) {
+        for (int y = y0; y < y0 + h; ++y)
+            for (int x = x0; x < x0 + w; ++x) put(tile, x, y, c);
+    };
+    const std::initializer_list<uint32_t> dirt = {0x533924, 0x60432c, 0x4d341f, 0x6c4b31, 0x442d1b, 0x5c3e27};
+    const std::initializer_list<uint32_t> grass = {0x5c9c30, 0x4e8726, 0x67ab38, 0x548e2a, 0x6cb83c, 0x44781e};
+    noise(T_DIRT, dirt);
+    noise(T_GRASS_TOP, grass);
+    noise(T_GRASS_SIDE, dirt);
+    for (int x = 0; x < 16; ++x) {
+        const int depth = 4 + (int)std::floor(std::sin(x * 1.5f) * 2) + (rnd() % 10 > 5 ? 1 : 0);
+        for (int y = 0; y < depth; ++y) put(T_GRASS_SIDE, x, y, std::data(grass)[rnd() % grass.size()]);
+    }
+    // The oak log keeps the Old World textures (its trunk model looks wrong with the HTML bark).
+    noise(T_COBBLE, {0x737373, 0x828282, 0x646464, 0x909090, 0x555555});
+    rect(T_COBBLE, 0, 0, 16, 1, 0x3a3a3a), rect(T_COBBLE, 0, 8, 16, 1, 0x3a3a3a), rect(T_COBBLE, 0, 15, 16, 1, 0x3a3a3a);
+    rect(T_COBBLE, 4, 0, 1, 8, 0x3a3a3a), rect(T_COBBLE, 12, 0, 1, 8, 0x3a3a3a), rect(T_COBBLE, 8, 8, 1, 8, 0x3a3a3a);
+    rect(T_COBBLE, 1, 1, 3, 1, 0xb0b0b0), rect(T_COBBLE, 5, 1, 7, 1, 0xb0b0b0), rect(T_COBBLE, 1, 9, 6, 1, 0xb0b0b0);
+    noise(T_STONE, {0x737373, 0x828282, 0x646464, 0x909090, 0x555555});
+    noise(T_LEAVES, {0x386b1d, 0x447d25, 0x2c5916, 0x4f8f2d});
+    noise(T_BRICKS, {0x9e3323, 0xad4030, 0x8c281a, 0xb84938, 0x731c10});
+    rect(T_BRICKS, 0, 4, 16, 1, 0x7a7675), rect(T_BRICKS, 0, 9, 16, 1, 0x7a7675), rect(T_BRICKS, 0, 14, 16, 1, 0x7a7675);
+    rect(T_BRICKS, 4, 0, 1, 4, 0x7a7675), rect(T_BRICKS, 12, 4, 1, 5, 0x7a7675), rect(T_BRICKS, 6, 9, 1, 5, 0x7a7675);
+    noise(T_SAND, {0xe2c48b, 0xdbb875, 0xd2aa62, 0xe8ce9d, 0xcfa559});
+    for (int y = 0; y < 16; ++y)
+        for (int x = 0; x < 16; ++x) {
+            const bool frame = x == 0 || y == 0 || x == 15 || y == 15, streak = x + y == 16 && x >= 2 && x <= 14;
+            put(T_GLASS, x, y, frame ? 0xffffff : streak ? 0xf0faff : 0xd2f5ff, frame ? 255 : streak ? 160 : 0);
+        }
+    noise(T_PLANKS, {0xb98e59, 0xa67b48, 0xc49964, 0x9e713e, 0xb18652});
+    rect(T_PLANKS, 0, 4, 16, 1, 0x6e4c23), rect(T_PLANKS, 0, 9, 16, 1, 0x6e4c23), rect(T_PLANKS, 0, 14, 16, 1, 0x6e4c23);
+    noise(T_WATER, {0x1d4ed8, 0x1e40af, 0x2563eb, 0x3b82f6});
+    // The tools in the same old style: a sprinkled brown handle from the lower left, a head of the
+    // material's colours, a dark outline round it all.
+    struct Mat { uint32_t a, b; };
+    const Mat wood{0x9e713e, 0xc49964}, stone{0x646464, 0x909090}, iron{0xb8b8b8, 0xe8e8e8};
+    auto tool = [&](ItemId id, int kind, Mat m) {
+        const int tile = tileFor(id, F_NORTH);
+        bool on[16][16] = {}, head[16][16] = {};
+        auto mark = [&](int x, int y, bool h) {
+            if (x >= 0 && y >= 0 && x < 16 && y < 16) on[y][x] = true, head[y][x] = h;
+        };
+        const int handleTo = kind == 3 ? 6 : 9;  // a sword's grip is short
+        for (int k = 2; k <= handleTo; ++k) mark(k, 15 - k, false), mark(k + 1, 15 - k, false);
+        if (kind == 0)  // pickaxe: a curved head across the top
+            for (int x = 3; x <= 13; ++x) mark(x, 3 + std::abs(x - 8) / 3, true), mark(x, 4 + std::abs(x - 8) / 3, true);
+        if (kind == 1)  // axe: a broad blade on one side
+            for (int y = 2; y <= 8; ++y)
+                for (int x = 8; x <= 12 - std::abs(y - 5) / 2; ++x) mark(x, y, true);
+        if (kind == 2)  // shovel: a round blade at the end
+            for (int y = 2; y <= 7; ++y)
+                for (int x = 9; x <= 13; ++x)
+                    if ((x - 11) * (x - 11) + (y - 4) * (y - 4) <= 6) mark(x, y, true);
+        if (kind == 3) {  // sword: a long blade and a guard
+            for (int k = 7; k <= 13; ++k) mark(k, 15 - k, true), mark(k + 1, 15 - k, true);
+            for (int k = -2; k <= 2; ++k) mark(6 + k, 9 + k, false);
+        }
+        for (int y = 0; y < 16; ++y)
+            for (int x = 0; x < 16; ++x) {
+                if (on[y][x]) {
+                    const uint32_t c = head[y][x] ? (rnd() % 3 ? m.a : m.b) : (rnd() % 3 ? 0x6e4c23 : 0x8a5f2e);
+                    put(tile, x, y, c);
+                    continue;
+                }
+                bool edge = false;
+                for (int dy = -1; dy <= 1; ++dy)
+                    for (int dx = -1; dx <= 1; ++dx)
+                        if (x + dx >= 0 && y + dy >= 0 && x + dx < 16 && y + dy < 16 && on[y + dy][x + dx]) edge = true;
+                put(tile, x, y, 0x1a120a, edge ? 255 : 0);
+            }
+    };
+    tool(WOOD_PICKAXE, 0, wood), tool(STONE_PICKAXE, 0, stone), tool(IRON_PICKAXE, 0, iron);
+    tool(WOOD_AXE, 1, wood), tool(STONE_AXE, 1, stone), tool(IRON_AXE, 1, iron);
+    tool(WOOD_SHOVEL, 2, wood), tool(STONE_SHOVEL, 2, stone), tool(IRON_SHOVEL, 2, iron);
+    tool(WOOD_SWORD, 3, wood), tool(STONE_SWORD, 3, stone), tool(IRON_SWORD, 3, iron);
+}
 }  // namespace vc

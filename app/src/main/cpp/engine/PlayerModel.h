@@ -21,6 +21,10 @@ struct PlayerPose {
     bool riding = false;     // sitting in a boat
     ItemId offhand = 0;      // 1.5.7: a shield or torch in the left hand (0 = none shown)
     bool sneaking = false;   // 1.5.7: crouched, the shield raised in front
+    // 2.2.0 preview: livelier animations.
+    bool lively = false;     // arms sway apart a little and breathe, the body bobs while walking
+    float time = 0;          // seconds, for the idle breathing
+    float bow = 0;           // 0..1 drawing the bow: both arms up, the right one pulling the string
 };
 
 // Builds the textured boxes of a player model (base layer plus the slightly

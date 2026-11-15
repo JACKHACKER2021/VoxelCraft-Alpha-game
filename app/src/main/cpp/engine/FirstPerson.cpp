@@ -110,7 +110,8 @@ void heldBlock(const Transform& tr, ItemId id, float light, std::vector<Vertex>&
 void heldFlat(const Transform& tr, ItemId id, float light, std::vector<Vertex>& out) {
     // A 3D item: the sprite extruded one pixel deep, held like a tool.
     const float s = 0.55f;
-    appendItemModel(tileFor(id, F_SOUTH), light, 1 / 16.0f, [&](const Vec3& q) { return tr.apply(q * s); }, out);
+    // Classic 0.0.3: the old flat item, a sprite with (almost) no depth.
+    appendItemModel(tileFor(id, F_SOUTH), light, kClassicEdition ? 1 / 512.0f : 1 / 16.0f, [&](const Vec3& q) { return tr.apply(q * s); }, out);
 }
 
 }  // namespace
@@ -177,7 +178,7 @@ void buildOffhandFirstPerson(ItemId id, bool raised, const HandAnimator& hand, f
     }
 }
 
-void buildFirstPerson(const HandAnimator& hand, float light, std::vector<Vertex>& skin, std::vector<Vertex>& atlas) {
+void buildFirstPerson(const HandAnimator& hand, float light, std::vector<Vertex>& skin, std::vector<Vertex>& atlas, float bowCharge) {
     skin.clear();
     atlas.clear();
     const ItemId id = hand.shown();
@@ -212,6 +213,17 @@ void buildFirstPerson(const HandAnimator& hand, float light, std::vector<Vertex>
         const float size = 0.6f;
         const Vec3 grip(2.5f / 16 - 0.5f, 0.5f - 13.5f / 16, 0);
         appendItemModel(tileFor(id, F_SOUTH), light, 1 / 16.0f, [&](const Vec3& q) { return tr.apply((q - grip) * size); }, atlas);
+        return;
+    }
+    if (id == BOW && bowCharge > 0) {
+        // Drawing the bow: it comes up to the middle of the view, stands upright and comes closer
+        // as the string is pulled; at full draw it trembles a little.
+        const float c = std::min(1.0f, bowCharge), shake = c >= 1 ? std::sin(hand.time() * 38.0f) * 0.006f : 0;
+        Transform base;
+        base.t = {0.3f - 0.1f * c + shake, -0.34f + 0.05f * c, -1.25f + 0.15f * c};
+        base.ry = -0.25f - 0.25f * c;
+        base.rz = 0.15f + 0.55f * c;
+        heldFlat(base, id, light, atlas);
         return;
     }
     if (isItemOnly(id) || isPlant(id)) {

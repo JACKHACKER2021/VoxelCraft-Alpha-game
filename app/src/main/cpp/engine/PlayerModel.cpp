@@ -27,11 +27,17 @@ public:
     // A box in model pixels (x0..x1, y0..y1, z0..z1), rotated by `angle` about the X axis
     // through `pivot` (pitch for the head, swing for limbs). `grow` inflates overlay layers.
     void box(const SkinPart& p, float x0, float y0, float z0, float x1, float y1, float z1, Vec3 pivot, float angle,
-             float grow = 0) {
-        const float ca = std::cos(angle), sa = std::sin(angle);
+             float grow = 0, float roll = 0) {
+        const float ca = std::cos(angle), sa = std::sin(angle), cr = std::cos(roll), sr = std::sin(roll);
         appendSkinBox(out_, p, {x0, y0, z0}, {x1, y1, z1}, grow, 1.0f, [&](const Vec3& q) {
-            // Rotate about X through the pivot (limb swing / head pitch).
+            // 2.2.0: first a roll about Z through the pivot (arms away from the body), then the
+            // rotation about X (limb swing / head pitch).
             Vec3 p = q;
+            if (roll != 0) {
+                const float rx = p.x - pivot.x, ry0 = p.y - pivot.y;
+                p.x = pivot.x + rx * cr - ry0 * sr;
+                p.y = pivot.y + rx * sr + ry0 * cr;
+            }
             float ry = p.y - pivot.y, rz = p.z - pivot.z;
             p.y = pivot.y + ry * ca - rz * sa;
             p.z = pivot.z + ry * sa + rz * ca;
@@ -75,6 +81,8 @@ namespace {
 
 // The right arm's angle: walking swing, a strike and a short push when placing.
 float rightArmAngle(const PlayerPose& pose) {
+    // 2.2.0 preview: drawing a bow, the right hand comes up to the face (pulling the string).
+    if (pose.bow > 0) return 1.35f + 0.2f * (1 - pose.bow) - pose.headPitch * 0.8f;
     // Positive angles swing the arm forward (towards -Z, where the model looks).
     float a = -pose.swing;
     if (pose.attack < 1) a += std::sin(std::sqrt(pose.attack) * 3.14159265f) * 1.5f;
@@ -86,12 +94,31 @@ float rightArmAngle(const PlayerPose& pose) {
 // 1.5.7: the left arm: walking swing, a little forward with a shield or torch, raised with the
 // shield in front of the body while crouching.
 float leftArmAngle(const PlayerPose& pose) {
+    if (pose.bow > 0) return 1.55f - pose.headPitch * 0.8f;  // 2.2.0: the arm holding the bow points ahead
     if (pose.offhand == SHIELD && pose.sneaking) return 1.1f;
     return pose.swing + (pose.offhand ? 0.25f : 0.0f);
 }
 
-// Model pixels -> world, with a rotation about X through `pivot` (like Builder::box).
-Vec3 modelToWorld(const PlayerPose& pose, Vec3 p, Vec3 pivot, float angle) {
+// 2.2.0 preview: the arms' roll away from the body (positive moves the right hand outwards):
+// a little apart and breathing at rest, together in front of the chest drawing a bow.
+float rightArmRoll(const PlayerPose& pose) {
+    if (!pose.lively) return 0;
+    if (pose.bow > 0) return -0.35f - 0.25f * pose.bow;
+    return 0.06f + 0.035f * std::sin(pose.time * 1.7f);
+}
+float leftArmRoll(const PlayerPose& pose) {
+    if (!pose.lively) return 0;
+    if (pose.bow > 0) return 0.25f;
+    return -0.06f - 0.035f * std::sin(pose.time * 1.7f + 0.4f);
+}
+
+// Model pixels -> world, with a roll about Z and a rotation about X through `pivot` (like Builder::box).
+Vec3 modelToWorld(const PlayerPose& pose, Vec3 p, Vec3 pivot, float angle, float roll = 0) {
+    if (roll != 0) {
+        const float cr = std::cos(roll), sr = std::sin(roll), rx = p.x - pivot.x, ry0 = p.y - pivot.y;
+        p.x = pivot.x + rx * cr - ry0 * sr;
+        p.y = pivot.y + rx * sr + ry0 * cr;
+    }
     const float ca = std::cos(angle), sa = std::sin(angle);
     float ry = p.y - pivot.y, rz = p.z - pivot.z;
     p.y = pivot.y + ry * ca - rz * sa;
@@ -116,8 +143,8 @@ std::vector<Vertex> buildPlayerModel(const PlayerPose& pose) {
         float lg = layer ? 0.25f : 0;
         b.box(layer ? kHat : kHead, -4, 24, -4, 4, 32, 4, neck, pose.headPitch, g);
         b.box(layer ? kJacket : kBody, -4, 12, -2, 4, 24, 2, neck, 0, lg);
-        b.box(layer ? kRightSleeve : kRightArm, 4, 12, -2, 4 + arm, 24, 2, rS, rightArmAngle(pose), lg);
-        b.box(layer ? kLeftSleeve : kLeftArm, -4 - arm, 12, -2, -4, 24, 2, lS, leftArmAngle(pose), lg);
+        b.box(layer ? kRightSleeve : kRightArm, 4, 12, -2, 4 + arm, 24, 2, rS, rightArmAngle(pose), lg, rightArmRoll(pose));
+        b.box(layer ? kLeftSleeve : kLeftArm, -4 - arm, 12, -2, -4, 24, 2, lS, leftArmAngle(pose), lg, leftArmRoll(pose));
         // In a boat the legs point forward.
         const float rl = pose.riding ? 1.4f : s, ll = pose.riding ? 1.4f : -s;
         b.box(layer ? kRightPants : kRightLeg, 0, 0, -2, 4, 12, 2, rH, rl, lg);
@@ -134,7 +161,7 @@ std::vector<Vertex> buildPlayerExtras(const PlayerPose& pose) {
     std::vector<Vertex> out;
     const float tileUv = kTileUv;
     // A box in model pixels with one atlas tile on every face, rotated like a body part.
-    auto box = [&](int tile, Vec3 lo, Vec3 hi, Vec3 pivot, float angle, float light) {
+    auto box = [&](int tile, Vec3 lo, Vec3 hi, Vec3 pivot, float angle, float light, float roll = 0) {
         const float u0 = (tile % kAtlasCols) * tileUv, v0 = (tile / kAtlasCols) * tileUv;
         static const int faces[6][4][3] = {
             {{0, 1, 1}, {1, 1, 1}, {1, 1, 0}, {0, 1, 0}}, {{0, 0, 0}, {1, 0, 0}, {1, 0, 1}, {0, 0, 1}},
@@ -146,7 +173,7 @@ std::vector<Vertex> buildPlayerExtras(const PlayerPose& pose) {
             Vertex q[4];
             for (int k = 0; k < 4; ++k) {
                 Vec3 p(faces[f][k][0] ? hi.x : lo.x, faces[f][k][1] ? hi.y : lo.y, faces[f][k][2] ? hi.z : lo.z);
-                Vec3 w = modelToWorld(pose, p, pivot, angle);
+                Vec3 w = modelToWorld(pose, p, pivot, angle, roll);
                 q[k] = {w.x, w.y, w.z, u0 + uv[k][0] * tileUv, v0 + uv[k][1] * tileUv, shade[f] * light};
             }
             out.insert(out.end(), {q[0], q[1], q[2], q[0], q[2], q[3]});
@@ -172,8 +199,8 @@ std::vector<Vertex> buildPlayerExtras(const PlayerPose& pose) {
             box(tile, {-3.2f, 30, -4 - g}, {3.2f, 31, -3.2f}, neck, hp, 0.95f);
         } else if (piece == 1) {
             box(tile, {-4 - 0.8f, 12.5f, -2 - 0.8f}, {4 + 0.8f, 24 + 0.8f, 2 + 0.8f}, neck, 0, 0.95f);
-            box(tile, {4 - 0.6f, 17, -2 - 0.8f}, {4 + arm + 0.8f, 24 + 0.8f, 2 + 0.8f}, rS, ra, 0.95f);
-            box(tile, {-4 - arm - 0.8f, 17, -2 - 0.8f}, {-4 + 0.6f, 24 + 0.8f, 2 + 0.8f}, lS, leftArmAngle(pose), 0.95f);
+            box(tile, {4 - 0.6f, 17, -2 - 0.8f}, {4 + arm + 0.8f, 24 + 0.8f, 2 + 0.8f}, rS, ra, 0.95f, rightArmRoll(pose));
+            box(tile, {-4 - arm - 0.8f, 17, -2 - 0.8f}, {-4 + 0.6f, 24 + 0.8f, 2 + 0.8f}, lS, leftArmAngle(pose), 0.95f, leftArmRoll(pose));
         } else if (piece == 2) {
             box(tile, {-4 - 0.5f, 10, -2 - 0.5f}, {4 + 0.5f, 13, 2 + 0.5f}, neck, 0, 0.9f);  // waist
             box(tile, {0 - 0.5f, 4, -2 - 0.5f}, {4 + 0.5f, 12, 2 + 0.5f}, rH, rl, 0.9f);
@@ -197,11 +224,11 @@ std::vector<Vertex> buildPlayerExtras(const PlayerPose& pose) {
                 // Sprite x runs forward (-z), sprite y up, its thickness across the hand (x).
                 const Vec3 d = (q - grip) * size;
                 Vec3 p(hand.x + d.z, hand.y + d.y, hand.z - d.x);
-                return modelToWorld(pose, p, {6, 22, 0}, ra);
+                return modelToWorld(pose, p, {6, 22, 0}, ra, rightArmRoll(pose));
             }, out);
         } else {
             const float h = 2.6f;
-            box(tileFor(pose.held, F_SOUTH), {hand.x - h, hand.y - h * 2, -1 - h}, {hand.x + h, hand.y, -1 + h}, rS, ra, 0.95f);
+            box(tileFor(pose.held, F_SOUTH), {hand.x - h, hand.y - h * 2, -1 - h}, {hand.x + h, hand.y, -1 + h}, rS, ra, 0.95f, rightArmRoll(pose));
         }
     }
     // 1.5.7: the off hand: a shield on the forearm, or a torch in the fist.
@@ -209,12 +236,12 @@ std::vector<Vertex> buildPlayerExtras(const PlayerPose& pose) {
         const float la = leftArmAngle(pose);
         if (pose.offhand == SHIELD) {
             // A board in front of the forearm, its face looking forward.
-            box(T_SHIELD, {-4 - arm - 2.5f, 6, -5.5f}, {-4 + 2.5f, 18, -4.3f}, lS, la, 0.95f);
+            box(T_SHIELD, {-4 - arm - 2.5f, 6, -5.5f}, {-4 + 2.5f, 18, -4.3f}, lS, la, 0.95f, leftArmRoll(pose));
         } else {
             const Vec3 hand{-4 - arm / 2, 13, -1};
             appendItemModel(tileFor(pose.offhand, F_SOUTH), 0.95f, 1 / 16.0f, [&](const Vec3& q) {
                 const Vec3 d = (q - Vec3(0, -0.3f, 0)) * 8.0f;
-                return modelToWorld(pose, Vec3(hand.x + d.z, hand.y + d.y, hand.z - d.x), lS, la);
+                return modelToWorld(pose, Vec3(hand.x + d.z, hand.y + d.y, hand.z - d.x), lS, la, leftArmRoll(pose));
             }, out);
         }
     }

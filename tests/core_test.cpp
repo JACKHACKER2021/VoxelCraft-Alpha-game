@@ -119,7 +119,7 @@ static int testNether() {
         }
     std::printf("nether: netherrack %d, lava %d, air %d, glowstone %d\n", netherrack, lava, air, glow);
     CHECK(netherrack > 0 && lava > 0 && air > 0);
-    CHECK(w.getBlock(3, 0, 3) == WORLD_END && w.getBlock(3, kChunkHeight - 1, 3) == BEDROCK);
+    CHECK(w.getBlock(3, 0, 3) == WORLD_END && w.getBlock(3, kGenHeight - 1, 3) == BEDROCK);
     for (int y = 1; y <= kNetherLavaLevel; ++y) CHECK(w.getBlock(0, y, 0) != AIR);  // no air below lava level
     return 0;
 }
@@ -613,7 +613,7 @@ static int testJsonAndPacks() {
     std::vector<std::string> warn;
     GenConfig round = GenConfig::fromJson(def.toJson(), &warn);
     CHECK(warn.empty() && round.biomes.size() == 8 && round.biomes[2].surface == def.biomes[2].surface);
-    CHECK(RecipeBook::defaults().shaped.size() == 12 + 35 + 6 + 2 + 16 + 6 + 24 + 16 + 3 + 10 + 12 + 5 + 3 + 8 + 7 + 1 + 10 + 33 + 16 + 11 + 7 + 18 && RecipeBook::defaults().shapeless.size() == 2 + 4 + 1 + 1 + 6 + 1 + 1 + 3 + 1 + 3 + 3 + 1 + 2 + 49 + 1 + 1);  // 1.8.0: concrete, gray planks, 10 stairs and slabs  // 1.5.7: + book and quill; 1.6.0: + 3: torch, shield, lamp; crimson planks  // 1.5.1: no planks from Eye Logs
+    CHECK(RecipeBook::defaults().shaped.size() == 12 + 35 + 6 + 2 + 16 + 6 + 24 + 16 + 3 + 10 + 12 + 5 + 3 + 8 + 7 + 1 + 10 + 33 + 16 + 11 + 7 + 18 + 8 && RecipeBook::defaults().shapeless.size() == 2 + 4 + 1 + 1 + 6 + 1 + 1 + 3 + 1 + 3 + 3 + 1 + 2 + 49 + 1 + 1 + 4);  // 1.8.0: concrete, gray planks, 10 stairs and slabs  // 1.5.7: + book and quill; 1.6.0: + 3: torch, shield, lamp; crimson planks  // 1.5.1: no planks from Eye Logs
 
     // Biomes really show up in the world: deserts are sandy, forests have trees.
     World w(1234, Dimension::Overworld);
@@ -634,7 +634,7 @@ static int testJsonAndPacks() {
     auto list = pm.list();
     CHECK(list.size() == 2 && list[0].builtin && list[0].enabled && list[0].name == "VoxelCraft Default" &&
           list[1].name == "Pre-Alpha Style" && !list[1].enabled && list[1].style == "pre_alpha");
-    CHECK(pm.files("default").size() == 27 && pm.files("default")[0] == "manifest.json");
+    CHECK(pm.files("default").size() == 28 && pm.files("default")[0] == "manifest.json");
     warn.clear();
     GenConfig cfg = pm.buildConfig(&warn);
     CHECK(warn.empty() && cfg.biomes.size() == 8);
@@ -952,7 +952,7 @@ static int testLeavesMesh() {
     for (int x = -56; x < 72; ++x)
         for (int z = -56; z < 72; ++z) {
             int top = -1;
-            for (int y = 120; y > 1; --y)
+            for (int y = kChunkHeight - 2; y > 1; --y)
                 if (f.getBlock(x, y, z) == LOG) {
                     top = y;
                     break;
@@ -1315,7 +1315,7 @@ static int testStructures() {
     undoPlacement(w, undo);
     CHECK(w.getBlock(1, 2, 0) == BEDROCK);
     CHECK(!placeStructure(w, s, 500, 10, 0, undo, err) && undo.empty());
-    CHECK(!placeStructure(w, s, 0, 127, 0, undo, err));
+    CHECK(!placeStructure(w, s, 0, kChunkHeight - 1, 0, undo, err));
 
     // Capture from the world and the .mcstructure export read back by our importer.
     Structure cap;
@@ -1362,7 +1362,7 @@ static int testStructures() {
         int n = 0;
         for (int x = (int)p.x - 16; x <= (int)p.x + 16; ++x)
             for (int z = (int)p.z - 16; z <= (int)p.z + 16; ++z)
-                for (int y = 1; y < 100; ++y) n += gw.getBlock(x, y, z) == id;
+                for (int y = 1; y < kChunkHeight; ++y) n += gw.getBlock(x, y, z) == id;
         return n;
     };
     int bricksBefore = countBlocks(BRICKS);
@@ -1660,7 +1660,7 @@ static int testMetalsAndArmor() {
                     bronze += b == BRONZE_ORE;
                     steel += b == STEEL_ORE;
                     ruby += b == RUBY_ORE;
-                    rubyTooHigh += b == RUBY_ORE && y > 20;
+                    rubyTooHigh += b == RUBY_ORE && y > 20 + w.yShift();  // 2.2.0: deep rubies lie below the old floor
                 }
     std::printf("metals: ores in %zu chunks: bronze %d, steel %d, ruby %d\n", w.chunks().size(), bronze, steel, ruby);
     CHECK(bronze > steel && steel > ruby && ruby > 0 && rubyTooHigh == 0);
@@ -2152,7 +2152,7 @@ static int testWorldStructures() {
                         if (b >= LOOT_CHEST_RUIN && b <= LOOT_CHEST_MINE) {
                             ++chests[b];
                             if (b == LOOT_CHEST_SHIP && y < 62) ++wetShipChests;
-                            if ((b == LOOT_CHEST_DUNGEON || b == LOOT_CHEST_MINE) && y < 45) ++deepChests;
+                            if ((b == LOOT_CHEST_DUNGEON || b == LOOT_CHEST_MINE) && y < 45 + w.yShift()) ++deepChests;
                         }
                         fences += b == FENCE;
                     }
@@ -2165,7 +2165,7 @@ static int testWorldStructures() {
         bool found = false;
         for (int x = -2000; x < 2000 && !found; x += 32)
             for (int z = -2000; z < 2000 && !found; z += 32)
-                if (w.surfaceHeight(x, z) <= 48 && w.surfaceHeight(x + 64, z) <= 52 && w.surfaceHeight(x, z + 64) <= 52) {
+                if (w.surfaceHeight(x, z) <= 48 + w.yShift() && w.surfaceHeight(x + 64, z) <= 52 + w.yShift() && w.surfaceHeight(x, z + 64) <= 52 + w.yShift()) {
                     ox = x;
                     oz = z;
                     found = true;
@@ -2178,7 +2178,7 @@ static int testWorldStructures() {
                 for (int i = 0; i < 16 * 16 * kChunkHeight; ++i)
                     if (c->blocks[i] == LOOT_CHEST_SHIP) {
                         ++chests[LOOT_CHEST_SHIP];
-                        wetShipChests += (i & 127) < 62;
+                        wetShipChests += (i % kChunkHeight) < 62 + w.yShift();
                     }
             }
         std::printf("structures: %d shipwreck chests in the ocean near %d %d\n", chests[LOOT_CHEST_SHIP], ox, oz);
@@ -2486,7 +2486,7 @@ static int testCommands() {
     for (int i = 0; i < 30; ++i) s->update(1 / 60.0f, t += 1 / 60.0, 600, 270, settings);
     auto run = [&](const char* line, bool cheats) { return runCommand(*s, line, cheats); };
     // Without cheats only the harmless ones work.
-    CHECK(run("/help", false).size() == 6);
+    CHECK(run("/help", false).size() == 7);
     CHECK(run("/seed", false)[0] == "Seed: 9");
     CHECK(run("/gamemode creative", false)[0].find("not allowed") != std::string::npos);
     CHECK(s->survival());
@@ -2762,7 +2762,7 @@ static int testUpdate12() {
     {
         World w(77, Dimension::Overworld);
         w.ensureChunksAround(0, 0, 1, 1000);
-        const int y = 110;
+        const int y = 110 + (kChunkHeight - kGenHeight);  // 2.2.0: above the lifted land
         std::vector<std::array<int, 3>> ignite;
         for (int x = 1; x <= 3; ++x) w.setBlock(x, y, 0, POWER_CABLE);
         w.setBlock(4, y, 0, POWERSTONE_LAMP);
@@ -3238,10 +3238,10 @@ static int testUpdate14() {
         for (auto& [k, c] : cw.chunks())
             for (int x = 0; x < 16; ++x)
                 for (int z = 0; z < 16; ++z)
-                    for (int y = 1; y < 60; ++y) {
+                    for (int y = 1 + cw.yShift(); y < 60 + cw.yShift(); ++y) {  // 2.2.0: above the deep layers
                         const ItemId b = c->get(x, y, z);
                         tarBlocks += b == TAR;
-                        lakes += b == WATER && y <= kCaveLakeLevel;
+                        lakes += b == WATER && y <= kCaveLakeLevel + cw.yShift();
                         spikes += isDripstoneSpike(b);
                     }
         std::printf("caves 2.0: tar %d, cave water %d, dripstone %d\n", tarBlocks, lakes, spikes);
@@ -3819,6 +3819,7 @@ static int testExperiments151() {
         oreRedesignTile(i, px);
         int diff = 0, opaque = 0;
         const int tile = kOreRedesignTiles[i];
+        if (tile == T_POWERSTONE_ORE) continue;  // 2.2.0: the Cornerstone remaster has its own powerstone ore
         for (int y = 0; y < 16; ++y)
             for (int x = 0; x < 16; ++x) {
                 const uint8_t* a = &atlas[((size_t)((tile / kAtlasCols) * 16 + y) * size + (tile % kAtlasCols) * 16 + x) * 4];
@@ -4059,7 +4060,7 @@ static int testCaves160() {
     ow.ensureChunksAround(0, 0, 5, 100000);
     std::map<ItemId, long> n, o;
     for (auto& [k, c] : nw.chunks())
-        for (int y = 0; y < 70; ++y)
+        for (int y = nw.yShift(); y < 70 + nw.yShift(); ++y)  // 2.2.0: the old layers, lifted
             for (int z = 0; z < kChunkSize; ++z)
                 for (int x = 0; x < kChunkSize; ++x) ++n[c->get(x, y, z)];
     for (auto& [k, c] : ow.chunks())
@@ -4174,15 +4175,15 @@ static int testWorld157() {
     ow.ensureChunksAround(0, 0, 4, 1000);
     long airNew = 0, airOld = 0, lava = 0, openings = 0;
     for (auto& [k, c] : nw.chunks())
-        for (int y = 5; y < 60; ++y)
+        for (int y = 5 + nw.yShift(); y < 60 + nw.yShift(); ++y)  // 2.2.0: the same layers, lifted
             for (int z = 0; z < kChunkSize; ++z)
                 for (int x = 0; x < kChunkSize; ++x) {
                     const ItemId b = c->get(x, y, z);
                     airNew += b == AIR;
-                    lava += b == LAVA && y <= 7;
+                    lava += b == LAVA && y <= 7 + nw.yShift();
                 }
     for (auto& [k, c] : ow.chunks())
-        for (int y = 5; y < 60; ++y)
+        for (int y = 5 + ow.yShift(); y < 60 + ow.yShift(); ++y)
             for (int z = 0; z < kChunkSize; ++z)
                 for (int x = 0; x < kChunkSize; ++x) airOld += c->get(x, y, z) == AIR;
     // An opening: a column open to the sky whose ground lies far below the land around it.

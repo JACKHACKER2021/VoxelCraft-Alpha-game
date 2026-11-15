@@ -126,7 +126,14 @@ ItemId asOak(ItemId id) {
 CraftResult matchExact(const ItemStack* grid, int size);
 }  // namespace
 
+static CraftResult matchRecipeAll(const ItemStack* grid, int size);
 CraftResult matchRecipe(const ItemStack* grid, int size) {
+    // Classic 0.0.3: only what the old game could make.
+    const CraftResult r = matchRecipeAll(grid, size);
+    if (kClassicEdition && !classicAllowed(r.id)) return {};
+    return r;
+}
+static CraftResult matchRecipeAll(const ItemStack* grid, int size) {
     CraftResult r = matchExact(grid, size);
     if (!r.empty()) return r;
     std::vector<ItemStack> oak(grid, grid + size * size);

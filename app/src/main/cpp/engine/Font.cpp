@@ -1,5 +1,7 @@
 #include "Font.h"
 
+#include <cctype>
+
 #include <algorithm>
 #include <cstring>
 
@@ -62,6 +64,8 @@ const uint8_t kStar[8] = {0x08, 0x08, 0x7F, 0x3E, 0x1C, 0x36, 0x22, 0};
 const uint8_t kArrowLeft[8] = {0x08, 0x0C, 0x7E, 0x7F, 0x7E, 0x0C, 0x08, 0};
 const uint8_t kArrowRight[8] = {0x08, 0x18, 0x3F, 0x7F, 0x3F, 0x18, 0x08, 0};
 #include "FontGlyphs.inc"
+#include "FontSilkscreen.inc"
+#include "HudButtons.inc"
 
 // Cyrillic letters that look exactly like Latin ones reuse those glyphs.
 uint32_t latinTwin(uint32_t cp) {
@@ -106,18 +110,33 @@ int highestSetBit(uint8_t v) { int i = 7; while (i >= 0 && !(v >> i & 1)) --i; r
 
 }  // namespace
 
-Font::Font() {
-    for (int c = 32; c < 127; ++c) setGlyph(c, reinterpret_cast<const uint8_t*>(font8x8_basic[c]));
+Font::Font() { build(); }
+
+void Font::setTinyCaps(bool on) {
+    if (on == tiny_) return;
+    tiny_ = on;
+    build();
+}
+
+void Font::build() {
+    std::memset(bits_, 0, sizeof bits_);
+    std::memset(widths_, 0, sizeof widths_);
+    // Tiny Caps letters are 5 rows tall with 2 empty rows above: they sit at the top of the
+    // cell's letter area, so the accents of composites go straight above them.
+    auto ascii = [&](int c) -> const uint8_t* {
+        return tiny_ ? kSilkscreen[c - 32] : reinterpret_cast<const uint8_t*>(font8x8_basic[c]);
+    };
+    for (int c = 32; c < 127; ++c) setGlyph(c, ascii(c), tiny_ ? 0 : 2);
     widths_[' '] = 3;
 
     for (int i = 0; i < (int)(sizeof kComposites / sizeof kComposites[0]); ++i) {
         const Composite& comp = kComposites[i];
         int g = kFirstComposite + i;
         uint8_t rows[8];
-        std::memcpy(rows, font8x8_basic[(int)comp.base], 8);
-        bool upper = comp.base >= 'A' && comp.base <= 'Z';
-        if (comp.base == 'i') rows[0] = 0;  // dotless i under the accent
-        setGlyph(g, rows);
+        std::memcpy(rows, ascii((int)comp.base), 8);
+        bool upper = tiny_ || (comp.base >= 'A' && comp.base <= 'Z');  // Tiny Caps: every letter is a capital
+        if (comp.base == 'i' && !tiny_) rows[0] = 0;  // dotless i under the accent
+        setGlyph(g, rows, tiny_ ? 0 : 2);
 
         int minCol = 8, maxCol = -1;
         for (int r = 0; r < 8; ++r)
@@ -140,6 +159,19 @@ Font::Font() {
             case Diaeresis: acc[upper ? 0 : 1] = 0x1B; break;
             case Tilde: acc[0] = 0x16; acc[1] = 0x0D; break;
         }
+        if (tiny_) {
+            // Tiny Caps: accents as narrow as the 4-pixel letters, centred over them.
+            acc[0] = acc[1] = acc[2] = 0, accRows = 2;
+            switch (comp.accent) {
+                case Acute: acc[0] = 0x04; acc[1] = 0x02; break;
+                case Caron: acc[0] = 0x05; acc[1] = 0x02; break;
+                case Ring: acc[0] = 0x07; acc[1] = 0x07; break;
+                case Diaeresis: acc[1] = 0x05; break;
+                case Tilde: acc[0] = 0x0A; acc[1] = 0x05; break;
+                case Apostrophe: break;
+            }
+            center = (minCol + maxCol + 1) / 2 + 1;  // the accent's middle column is 1
+        }
         // Lowercase letters have two free rows above them, uppercase ones use the headroom.
         int top = upper ? 0 : (accRows == 3 ? 1 : 2);
         if (comp.accent == Apostrophe) {
@@ -149,7 +181,7 @@ Font::Font() {
             widths_[g] = (uint8_t)(col + 1);
             continue;
         }
-        int shift = center - 2;
+        int shift = center - 2;  // (Tiny Caps adds 1 to centre a 3-wide accent)
         for (int r = 0; r < accRows; ++r)
             bits_[g][top + r] |= (uint8_t)(shift >= 0 ? acc[r] << shift : acc[r] >> -shift);
     }
@@ -197,6 +229,14 @@ Font::Font() {
                 p[3] = (bits_[g][r] >> c & 1) ? 255 : 0;
             }
     }
+    // 2.2.0: the HUD buttons below the glyphs.
+    for (int b = 0; b < kHudButtonCount; ++b)
+        for (int y = 0; y < 32; ++y)
+            for (int x = 0; x < 32; ++x) {
+                const uint8_t* q = &kHudButtons[b][(y * 32 + x) * 4];
+                uint8_t* p = &rgba_[((kGlyphRows + (b / 4) * 32 + y) * kTexW + (b % 4) * 32 + x) * 4];
+                p[0] = q[0], p[1] = q[1], p[2] = q[2], p[3] = q[3];
+            }
 }
 
 void Font::setGlyph(int index, const uint8_t rows[8], int topRow) {
@@ -236,9 +276,30 @@ uint32_t Font::nextCodepoint(const std::string& s, size_t& i) {
     return cp;
 }
 
+bool Font::codeColor(char code, float& r, float& g, float& b) {
+    static const uint8_t k[16][3] = {{0, 0, 0},       {0, 0, 170},    {0, 170, 0},    {0, 170, 170},  {170, 0, 0},    {170, 0, 170},
+                                     {255, 170, 0},   {170, 170, 170}, {85, 85, 85},  {85, 85, 255},  {85, 255, 85},  {85, 255, 255},
+                                     {255, 85, 85},   {255, 85, 255},  {255, 255, 85}, {255, 255, 255}};
+    int i = code >= '0' && code <= '9' ? code - '0' : code >= 'a' && code <= 'f' ? code - 'a' + 10 : -1;
+    if (i < 0) return false;
+    r = k[i][0] / 255.0f, g = k[i][1] / 255.0f, b = k[i][2] / 255.0f;
+    return true;
+}
+
 int Font::measure(const std::string& utf8) const {
     int w = 0;
-    for (size_t i = 0; i < utf8.size();) w += advance(glyphFor(nextCodepoint(utf8, i)));
+    bool bold = false;
+    float dummy;
+    for (size_t i = 0; i < utf8.size();) {
+        const uint32_t cp = nextCodepoint(utf8, i);
+        if (cp == 0xA7 && i < utf8.size()) {  // a colour code takes no room; bold adds a pixel a letter
+            bold = std::tolower((unsigned char)utf8[i]) == 'l' ? true : std::tolower((unsigned char)utf8[i]) == 'r' || Font::codeColor((char)std::tolower((unsigned char)utf8[i]), dummy, dummy, dummy) ? false : bold;
+            ++i;
+            continue;
+        }
+        if (bold) ++w;
+        w += advance(glyphFor(cp));
+    }
     return w > 0 ? w - 1 : 0;
 }
 

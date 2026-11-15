@@ -15,15 +15,20 @@ namespace vc {
 // the originals so people fit inside: the cars are solid (floor, walls, roof) and have a door in
 // each side, so players can walk in. The driver sits in the locomotive and drives with the throttle
 // and the brake.
-enum class CarKind { Locomotive = 0, Passenger = 1, Freight = 2, Drill = 3 };  // build 5: the drill car
+enum class CarKind { Locomotive = 0, Passenger = 1, Freight = 2, Drill = 3, SubwayLocomotive = 4, SubwayCar = 5 };  // build 5: the drill car; 2.3.0: the subway
+inline bool isEngineCar(CarKind k) { return k == CarKind::Locomotive || k == CarKind::SubwayLocomotive; }
+inline bool isSubwayCar(CarKind k) { return k == CarKind::SubwayLocomotive || k == CarKind::SubwayCar; }
+// Half the length of a car in model units (the subway is a little longer).
+inline float carHalf(CarKind k) { return isSubwayCar(k) ? 2.55f : 2.25f; }
 
 // A place on the track: a rail cell, the side the train came in by and the side it leaves by
 // (0 north, 1 east, 2 south, 3 west), and how far through the cell it is (0..1).
 struct RailPos {
     int x = 0, y = 0, z = 0;
-    int in = 2, out = 0;
+    int in = 4, out = 0;  // build 12: ports 0..7 (even: side middles N E S W, odd: corners NE SE SW NW)
     float t = 0.5f;
-    int slopeHigh = -1;  // on a slope rail: the side it rises towards, else -1
+    int slopeHigh = -1;  // on a slope rail: the port it rises towards, else -1
+    float slopeLo = 0, slopeSpan = 1;  // build 12: the height at the low end and the rise (a gentle piece: k / 4, 1 / 4)
 };
 
 struct TrainCar {
@@ -37,11 +42,13 @@ struct TrainCar {
 struct Train {
     int dim = 0;
     std::vector<TrainCar> cars;  // cars[0] leads when going forward
+    int rails = 0;               // 2.3.0: rails loaded into the drill car, laid ahead as it bores
     float speed = 0;     // blocks per second, negative backwards
     float throttle = 0;  // -1..1: the speed the driver asks for (a fraction of kMaxSpeed)
     bool brake = false;
     float drillTimer = 0;  // build 5: time until the drill cuts the next block of tunnel
     float boosted = 0;   // seconds the extra speed of a booster lasts
+    float doors = 0;     // 2.3.0: the subway's sliding doors, 0 shut .. 1 open (they open when it stands)
 };
 
 class TrainSystem {
@@ -49,6 +56,7 @@ public:
     static constexpr float kScale = 1.6f;                 // model units to blocks
     static constexpr float kPitch = 4.45f * kScale;       // from the middle of one car to the next
     static constexpr float kMaxSpeed = 12.0f, kAccel = 2.5f, kBrake = 7.0f;
+    static constexpr float kSubwaySpeed = 22.0f, kSubwayAccel = 4.5f;  // 2.3.0: the subway is faster
 
     // Puts a car on the rail at (x, y, z): behind the last car of a train whose end is close,
     // or as a new train heading the way `look` points (0 north...). False when it does not fit.
@@ -70,14 +78,18 @@ public:
 
     // Build 5: where a train with a drill car in front wants the next piece of tunnel: the rail cell
     // the track ends in and the side it leaves by (x, y, z, side). Session cuts it and lays the rail.
-    std::vector<std::array<int, 4>>& drillRequests() { return drillRequests_; }
+    std::vector<std::array<int, 5>>& drillRequests() { return drillRequests_; }  // x, y, z, port, train
+    bool infiniteRails = false;  // 2.3.0: creative: the drill car never runs out of rails
     std::vector<Train>& trains() { return trains_; }
     const std::vector<Train>& trains() const { return trains_; }
     bool save(const std::string& folder) const;
     void load(const std::string& folder);
 
     // Track geometry (also used by tests).
-    static bool railSides(ItemId id, int& a, int& b);                    // the two ends of a plain piece
+    static bool railSides(ItemId id, int& a, int& b);                    // the two ends (ports, 0..7) of a plain piece
+    static ItemId railFor(int a, int b);                                  // build 12: the plain piece joining two ports, or AIR
+    static float pathLength(int in, int out);
+    static void setSlope(RailPos& p, ItemId id);  // build 12: slope fields from the rail piece
     static bool nextSide(ItemId id, int in, int& out);                    // where a train entering by `in` leaves
     static Vec3 pointOn(const RailPos& p, Vec3* tangent = nullptr);       // world position (rail head) and direction
     static bool advance(const World& world, RailPos& p, float dist, float& moved);  // false when it hit the end
@@ -85,7 +97,7 @@ public:
 
 private:
     std::vector<Train> trains_;
-    std::vector<std::array<int, 4>> drillRequests_;
+    std::vector<std::array<int, 5>> drillRequests_;
     void refresh(TrainCar& car) const;
     void pose(const World& world, TrainCar& car) const;  // build 5: tilt and height from both ends
 };

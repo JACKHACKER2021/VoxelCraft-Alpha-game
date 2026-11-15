@@ -122,6 +122,7 @@ public:
 
     bool wantsPause = false;
     bool wantsChat = false;
+    bool wantsCamera = false;  // 2.2.0 preview: the camera button switches the view
     bool wantsInventory = false;
     bool wantsCrafting = false;  // tapped a crafting table
     bool wantsCutter = false;    // 1.7.2 build 2: tapped a cutter
@@ -199,6 +200,7 @@ public:
     };
     const std::vector<Arrow>& arrows() const { return arrows_; }
     float bowCharge() const { return bowCharge_; }
+    void forceBowCharge(float c) { forcedBow_ = c; }  // films: hold the bow drawn this far (-1 = off)
     void shootArrow(const Vec3& dir, float power);
     bool riding() const { return riding_ >= 0 || seated_ || trainSeatTrain_ >= 0; }
     TrainSystem& trains() { return trains_; }  // 2.1.0 preview
@@ -231,7 +233,7 @@ public:
 private:
     struct Touch {
         int id = -1;
-        enum Kind { None, DPad, Look, Jump, FlyDown, Hotbar, InventoryButton, Pause, Chat, Map, Sneak, Joystick } kind = None;
+        enum Kind { None, DPad, Look, Jump, FlyDown, Hotbar, InventoryButton, Pause, Chat, Map, Sneak, Joystick, Camera } kind = None;
         float startX = 0, startY = 0, x = 0, y = 0, lastX = 0, lastY = 0;
         double startTime = 0, lastBreak = 0;
         bool moved = false;
@@ -241,6 +243,7 @@ private:
         float jumpX, jumpY, flyDownX, buttonSize;
         float pauseX, pauseY, pauseSize;
         float chatX;  // chat button, left of the pause button (same size)
+        float cameraX = -1000;  // 2.2.0 preview: camera button, right of the pause button
         float padX, padY, padButton;  // D-pad: 3x3 grid of padButton-sized cells
         float mapX, mapY, mapSize;    // minimap, top right (mapSize 0 when hidden)
     };
@@ -366,6 +369,9 @@ private:
     uint32_t fireSeed_ = 7177;
     float burning_ = 0;  // seconds the player keeps burning
     void updateExperiments20(float dt);  // 1.9.0 build 3: the previews of 2.0.0
+    void updateBronzeAndGrass(float dt);  // 2.2.0 preview
+    float bronzeTimer_ = 1;
+    float thinIceTimer_ = 0;  // 2.2.0: how long the player has stood on thin ice
     float stormTimer_ = 8, starTimer_ = 4, lightningFlash_ = 0;
     // 1.9.5 weather 2.0
     float wind_ = 0.1f, thunderIn_ = -1;
@@ -383,13 +389,27 @@ private:
     void saveBlockTexts() const;
     void loadBlockTexts();
 public:
-    int wantsBlockEditor = 0;  // 1 command block, 2 structure block (Game opens the editor)
+    int wantsBlockEditor = 0;  // 1 command block, 2 structure block, 3 Rozhlas (Game opens the editor)
+    std::function<void(const std::string& text)> onRadio;  // 2.2.0: a Rozhlas reads out its text
     FurnaceKey blockEditorKey;
     std::string blockText(const FurnaceKey& key) const;
     std::string setBlockText(const FurnaceKey& key, const std::string& text);  // returns a message
     // 2.0.0: the sound block: which sound it plays (kept with the block texts).
     static constexpr int kSoundBlockSounds = 10;
     static const char* soundBlockName(int i);
+    struct Doppel {
+        bool active = false, attack = false;
+        Vec3 pos;
+        float yaw = 0, time = 0, stare = 0, wait = 45;
+    } doppel_;  // Classic 0.0.3: the Double
+    void updateDoppel(float dt);
+    PlayerPose doppelPose() const;
+    static constexpr int kDoppelSkinSlot = 7;  // his skin: the player's, eyes white
+    bool classicStarted_ = false;
+    float waterStuck_ = 0;  // Classic 0.0.3: stuck in the water for a moment
+    ItemId shapeSwitch(int x, int y, int z, int look);  // 2.3.0
+    ItemId shapeRail(int x, int y, int z, int look);  // build 12
+    void playRadio(const FurnaceKey& key);  // 2.2.0
     void playSoundBlock(const FurnaceKey& key);
     void powerChangedAt(int x, int y, int z) { powerChanged(x, y, z); }  // tests
 private:
@@ -408,7 +428,7 @@ private:
     void loadFlow();
     std::vector<Vertex> tntVerts_, arrowVerts_;
     std::vector<Arrow> arrows_;
-    float bowCharge_ = 0;
+    float bowCharge_ = 0, forcedBow_ = -1;
     void updateArrows(float dt);
     // 1.5.0: fireballs spat by Huskings.
     struct Fireball {

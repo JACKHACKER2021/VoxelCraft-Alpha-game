@@ -11,11 +11,8 @@ android {
         applicationId = "cz.voxelcraft"
         minSdk = 30
         targetSdk = 36
-        versionCode = 30
-        versionName = "2.1.0"
-        ndk {
-            abiFilters += listOf("arm64-v8a", "x86_64")
-        }
+        versionCode = 31
+        versionName = "2.2.0"
     }
 
     externalNativeBuild {
@@ -33,13 +30,26 @@ android {
         create("normal") {
             dimension = "edition"
             resValue("string", "app_name", "VoxelCraft")
+            ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
         }
         create("preview") {
             dimension = "edition"
             applicationIdSuffix = ".preview"
             versionNameSuffix = "-preview"
             resValue("string", "app_name", "VoxelCraft Preview")
+            ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
             externalNativeBuild { cmake { arguments += listOf("-DVC_PREVIEW=ON") } }
+        }
+        // VoxelCraft Classic 0.0.3: the old game as its own small app (at most 20 MB): the old world,
+        // the old look and the textures of the first HTML version; no music files, no Rozhlas voice.
+        create("classic") {
+            dimension = "edition"
+            applicationIdSuffix = ".classic"
+            versionCode = 3
+            versionName = "0.0.3"
+            resValue("string", "app_name", "VoxelCraft Classic")
+            ndk { abiFilters += listOf("arm64-v8a") }  // phones only: keeps the APK small
+            externalNativeBuild { cmake { arguments += listOf("-DVC_CLASSIC=ON") } }
         }
     }
 
@@ -60,6 +70,24 @@ android {
             }
         }
     }
+
+    // Classic leaves out the big assets (its sounds are synthesized, as they were back then).
+    sourceSets {
+        getByName("classic") { assets.srcDirs("src/classic/assets") }
+    }
+    applicationVariants.all {
+        if (flavorName == "classic") {
+            mergeAssetsProvider.configure {
+                doLast {
+                    val out = outputDir.get().asFile
+                    listOf("espeak-ng-data", "trailers").forEach { project.delete(out.resolve(it)) }
+                    // Only its own menu song (src/classic/assets/music/menu_theme.mp3) stays.
+                    out.resolve("music").listFiles()?.filter { it.name != "menu_theme.mp3" }?.forEach { project.delete(it) }
+                }
+            }
+        }
+    }
+    packaging { jniLibs { keepDebugSymbols.clear() } }
 
     androidResources {
         // Music is streamed straight from the APK (AssetFileDescriptor), so keep it uncompressed.

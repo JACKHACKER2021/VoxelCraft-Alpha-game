@@ -86,6 +86,7 @@ public:
     void onTypingText(const std::string& text);
     bool typing() const { return typingId_.load() >= 0; }
     void openNews() { newsOpen_ = true; }  // films and tests
+    void filmNextMenuWorld() { nextMenuWorld(); }  // films: the next world of the menu panorama now
     std::function<void(int requestId, const std::string& initial, bool password)> onShowKeyboard;
     std::function<void()> onHideKeyboard;
     std::function<void(int requestId, const std::string& title, const std::string& text)> onEditText;  // multi-line
@@ -93,6 +94,7 @@ public:
     std::function<void(int ms)> onVibrate;
     std::function<void()> onQuit;
     std::function<void(const std::string& sound, float volume)> onPlaySound;
+    std::function<void(const std::string& path, float volume)> onPlayFile;  // 2.2.0: the Rozhlas voice (a WAV file)
     std::function<void(float volume)> onMusicVolume;
     // Plays a music track ("asset:music/x.mp3" or a file path, "" = silence), crossfading.
     std::function<void(const std::string& source, bool loop)> onPlayMusic;
@@ -146,6 +148,7 @@ private:
 
     void setScreen(Screen s);
     Settings playSettings() const;  // settings_ without developer options for normal players
+    void speakRadio(const std::string& text);  // 2.2.0: Rozhlas, in our own synthesized voice
     void playSound(Sound s);
     void loadSkins();
     void applySkin();
@@ -225,6 +228,7 @@ private:
     float chatScroll_ = 0;
     double creditsStart_ = 0;
     int documentPage_ = 0;
+    void classicInventoryScreen();  // Classic 0.0.3
     void inventoryScreen();
     void creativeInventoryScreen();
     void survivalInventoryScreen();
@@ -335,6 +339,10 @@ private:
 
     // Rotating world behind the title screen.
     std::unique_ptr<World> menuWorld_;
+    // 2.2.0 preview: the menu panorama turns once round each world, then moves on to the next one.
+    int menuDim_ = 0;
+    float menuTurn_ = 0, menuFade_ = 0;
+    void nextMenuWorld();
     Player menuCamera_;
 
     Screen screen_ = Screen::Title;

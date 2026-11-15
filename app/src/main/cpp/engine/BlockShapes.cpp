@@ -34,7 +34,7 @@ Box sideSlab(int side, float y0, float y1) {
 }  // namespace
 
 DoorState doorState(ItemId id) {
-    int v = isDoor(id) ? (id - (id >= IRON_DOOR ? IRON_DOOR : OAK_DOOR)) : id - OAK_TRAPDOOR;
+    int v = isDoor(id) ? id - doorBase(id) : id - trapdoorBase(id);
     return {v & 3, (v & 4) != 0, (v & 8) != 0};
 }
 
@@ -43,7 +43,7 @@ ItemId doorId(ItemId base, DoorState s) { return (ItemId)(base + (s.facing & 3) 
 bool fenceConnects(ItemId n) { return isFence(n) || isOpaque(n); }
 
 bool cableConnects(ItemId n) {
-    return isCable(n) || isSwitch(n) || isLamp(n) || isTnt(n) || n == POWERSTONE_BLOCK || (isDoor(n) && n >= IRON_DOOR) || isPowerstoneFurnace(n) ||
+    return isCable(n) || isSwitch(n) || isLamp(n) || isTnt(n) || n == POWERSTONE_BLOCK || isPoweredDoor(n) || isPowerstoneFurnace(n) ||
            n == SOUND_BLOCK || n == COMMAND_BLOCK || isBronzeBulb(n);
 }
 
@@ -260,6 +260,11 @@ int blockBoxes(const World& world, int x, int y, int z, ItemId id, bool collisio
     }
     if (id == SNOW_LAYER) {
         out[0] = {0, 0, 0, 1, collision ? 0.01f : 2 / 16.0f, 1};
+        return 1;
+    }
+    if (id == CUSHION && isBed(world.getBlock(x, y - 1, z))) {
+        // 2.2.0: on a bed the cushion is a pillow lying on the mattress (the bed is 9/16 high).
+        out[0] = {2 / 16.0f, -7 / 16.0f, 2 / 16.0f, 14 / 16.0f, -3 / 16.0f, 14 / 16.0f};
         return 1;
     }
     if (id == CUSHION) {  // 2.0.0: a soft cushion to sit on

@@ -112,7 +112,7 @@ bool leafSupported(const World& w, int x, int y, int z) {
 // ---------------------------------------------------------------- powerstone
 
 bool isPowerBlock(ItemId id) {
-    return isCable(id) || isSwitch(id) || isLamp(id) || id == POWERSTONE_BLOCK || isTnt(id) || (isDoor(id) && id >= IRON_DOOR) ||
+    return isCable(id) || isSwitch(id) || isLamp(id) || id == POWERSTONE_BLOCK || isTnt(id) || isPoweredDoor(id) ||
            id == SOUND_BLOCK || id == COMMAND_BLOCK || isBronzeBulb(id);
 }
 
@@ -144,7 +144,7 @@ void applyConsumer(World& w, int x, int y, int z, std::vector<std::array<int, 3>
         if (b != want) w.setBlock(x, y, z, want);
     } else if (isTnt(b) && on) {
         ignite.push_back({x, y, z});
-    } else if (isDoor(b) && b >= IRON_DOOR) {
+    } else if (isPoweredDoor(b)) {
         // Iron doors open with power (both halves).
         DoorState s = doorState(b);
         if (s.open != on) {
@@ -154,7 +154,7 @@ void applyConsumer(World& w, int x, int y, int z, std::vector<std::array<int, 3>
                 if (!isDoor(half)) continue;
                 DoorState hs = doorState(half);
                 hs.open = on;
-                w.setBlock(x, lower + k, z, doorId(IRON_DOOR, hs));
+                w.setBlock(x, lower + k, z, doorId(doorBase(half), hs));
             }
         }
     }
@@ -179,7 +179,7 @@ void updatePower(World& w, int x, int y, int z, std::vector<std::array<int, 3>>&
                 ItemId b = w.getBlock(n[0], n[1], n[2]);
                 if (isSource(b)) powered = true;
                 if (isCable(b) && done.insert(n).second) net.push_back(n);
-                if (isLamp(b) || isBronzeBulb(b) || isTnt(b) || (isDoor(b) && b >= IRON_DOOR)) consumers.push_back(n);
+                if (isLamp(b) || isBronzeBulb(b) || isTnt(b) || isPoweredDoor(b)) consumers.push_back(n);
             }
         }
         for (auto& c : net) {

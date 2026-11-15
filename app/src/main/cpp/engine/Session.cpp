@@ -43,6 +43,7 @@ enum class SoundMat { Grass, Dirt, Sand, Gravel, Stone, Wood, Snow, Ice, Glass, 
 SoundMat soundMaterial(ItemId b) {
     const ItemId base = isStairs(b) || isSlab(b) ? shapeMaterial(b) : b;
     const int m = shapeMaterialOf(base);
+    if (base == AMBER_RESIN || base == PRISMATIDE_PILLAR || base == LUMINOUS_SALT || base == GLASS_REEDS) return SoundMat::Glass;
     if (base == GLASS || base == POWERSTONE_GLASS || isStainedGlass(base) || base == PALE_CRYSTAL || base == VOID_SHARD_BLOCK) return SoundMat::Glass;
     if (base == ICE) return SoundMat::Ice;
     if (base == SNOW_BLOCK || base == SNOW_LAYER) return SoundMat::Snow;
@@ -68,6 +69,7 @@ const char* blockSoundStyle(ItemId b) {
         case POWERSTONE_ORE: case POWERSTONE_BLOCK: case POWERSTONE_LAMP: case POWERSTONE_LAMP_ON: case POWERSTONE_LIGHT:
         case POWERSTONE_BRICKS: case CRACKED_POWERSTONE_BRICKS: case CHISELED_POWERSTONE_BRICKS: case POWERSTONE_GLASS: case POWERSTONE_FENCE:
         case POWERSTONE_FURNACE: case POWERSTONE_FURNACE_ON: return "power";
+        case GILDED_COBBLE: return "crystal";  // 2.2.0: a metal clink underfoot
         case CELESTIAL_GRASS: case CELESTIAL_DIRT: case CELESTIAL_STONE: case CELESTIAL_STONE_BRICKS: case CELESTIAL_LOG: case CELESTIAL_PLANKS:
         case CELESTIAL_LEAVES: case PALE_STONE: case SKY_STONE: case CELESTIUM_ORE: return "sky";
         case VOID_STONE: case VOID_GRASS: case VOID_LOG: case VOID_PLANKS: case VOID_LEAVES: case VOID_STONE_BRICKS: case EYE_LOG: case VOID_BRICK_EYE:
@@ -164,6 +166,14 @@ Session::Session(const WorldInfo& info, const PlayerState& player)
     loadTimers();
     spawnRng_ ^= info.seed * 2654435761u;
 
+    // 2.2.0: a world saved before the deeper Overworld: its land now lies kDeepShift blocks higher.
+    if (state_.valid && state_.legacyHeight && overworld_.yShift() > 0) {
+        const float s = (float)overworld_.yShift();
+        state_.spawn.y += s;
+        if (state_.dimension == 0) state_.pos.y += s;
+        if (state_.hasShowcase) state_.showcaseY += overworld_.yShift();
+        state_.legacyHeight = false;
+    }
     if (state_.valid) {
         world_ = &worldAt(state_.dimension);
         player_.pos = state_.pos;
@@ -367,12 +377,12 @@ bool Session::toggleDoor(int x, int y, int z) {
     if (isTrapdoor(id)) {
         DoorState s = doorState(id);
         s.open = !s.open;
-        w.setBlock(x, y, z, doorId(OAK_TRAPDOOR, s));
-        sound(Sound::Door);
+        w.setBlock(x, y, z, doorId(trapdoorBase(id), s));
+        sound(id >= BRONZE_TRAPDOOR ? Sound::DoorIron : Sound::Door);
         return true;
     }
     if (!isDoor(id)) return false;
-    const ItemId base = id >= IRON_DOOR ? (ItemId)IRON_DOOR : (ItemId)OAK_DOOR;
+    const ItemId base = doorBase(id);
     DoorState s = doorState(id);
     const int lowerY = s.upper ? y - 1 : y;
     s.open = !s.open;
@@ -384,7 +394,7 @@ bool Session::toggleDoor(int x, int y, int z) {
         ps.open = s.open;
         w.setBlock(x, lowerY + half, z, doorId(base, ps));
     }
-    sound(base == IRON_DOOR ? Sound::DoorIron : Sound::Door);
+    sound(base == OAK_DOOR ? Sound::Door : Sound::DoorIron);
     return true;
 }
 
@@ -393,19 +403,19 @@ bool Session::placeSpecial(const RayHit& hit, ItemStack& held, int x, int y, int
     // The side the player looks towards, snapped to north/east/south/west.
     Vec3 f = player_.forward();
     int facing = std::fabs(f.x) > std::fabs(f.z) ? (f.x > 0 ? 1 : 3) : (f.z > 0 ? 2 : 0);
-    if (held.id == OAK_DOOR_ITEM || held.id == IRON_DOOR_ITEM) {
+    if (held.id == OAK_DOOR_ITEM || held.id == IRON_DOOR_ITEM || held.id == BRONZE_DOOR_ITEM) {
         // A door needs two free blocks on solid ground; it closes on the far side of the cell.
         ItemId up = w.getBlock(x, y + 1, z);
         if (!(up == AIR || up == TALL_GRASS) || !isOpaque(w.getBlock(x, y - 1, z))) return true;
         if (player_.intersectsBlock(x, y, z) || player_.intersectsBlock(x, y + 1, z)) return true;
-        ItemId base = held.id == OAK_DOOR_ITEM ? (ItemId)OAK_DOOR : (ItemId)IRON_DOOR;
+        ItemId base = held.id == OAK_DOOR_ITEM ? (ItemId)OAK_DOOR : held.id == BRONZE_DOOR_ITEM ? (ItemId)BRONZE_DOOR : (ItemId)IRON_DOOR;
         w.setBlock(x, y, z, doorId(base, {facing, false, false}));
         w.setBlock(x, y + 1, z, doorId(base, {facing, false, true}));
         achieve("door");
     } else if (isTrapdoor(held.id)) {
         // On the underside of a block it hangs at the top; it swings up on the near side.
         bool top = hit.ny == -1;
-        w.setBlock(x, y, z, doorId(OAK_TRAPDOOR, {(facing + 2) % 4, false, top}));
+        w.setBlock(x, y, z, doorId(trapdoorBase(held.id), {(facing + 2) % 4, false, top}));
     } else if (held.id == BED_ITEM) {
         // The foot goes where the player taps, the head one block further in the looking direction.
         static const int kDir[4][2] = {{0, -1}, {1, 0}, {0, 1}, {-1, 0}};
@@ -716,6 +726,189 @@ void Session::playSoundBlock(const FurnaceKey& key) {
         particles_.spawnAmbient(*world_, Vec3(key.x + 0.3f + 0.2f * i, key.y + 1.1f, key.z + 0.5f), Vec3(0, 1.2f, 0), SOUND_BLOCK, 0.8f, 0.18f, 0, 1.2f);
 }
 
+void Session::playRadio(const FurnaceKey& key) {
+    const std::string text = blockText(key);
+    if (text.empty()) {
+        if (onMessage) onMessage(tr("Rozhlas zatím nemá text. Klepni na něj a napiš ho."));
+        return;
+    }
+    for (int i = 0; i < 4; ++i)
+        particles_.spawnAmbient(*world_, Vec3(key.x + 0.2f + 0.2f * i, key.y + 1.1f, key.z + 0.5f), Vec3(0, 1.4f, 0), SOUND_BLOCK, 0.8f, 0.18f, 0, 1.4f);
+    if (onRadio) onRadio(text);
+}
+
+// 2.3.0: the flexible switch takes its shape from the track around it: its points face the rail behind the
+// player (or the end of track that points at the cell), the straight goes on opposite, and the 45-degree
+// branch leans to the side where a rail waits (else to the right).
+ItemId Session::shapeSwitch(int x, int y, int z, int look) {
+    static constexpr int px[8] = {0, 1, 1, 1, 0, -1, -1, -1}, pz[8] = {-1, -1, 0, 1, 1, 1, 0, -1};
+    World& w = *world_;
+    auto pointsAt = [&](int p) {
+        const ItemId id = w.getBlock(x + px[p], y, z + pz[p]);
+        int a, b, out;
+        if (TrainSystem::railSides(id, a, b)) return a == ((p + 4) & 7) || b == ((p + 4) & 7);
+        return isRail(id) && TrainSystem::nextSide(id, (p + 4) & 7, out);
+    };
+    auto apart = [](int u, int v) { const int d = (u - v) & 7; return std::min(d, 8 - d); };
+    const int behind = (look * 2 + 4) & 7;
+    int entry = behind, best = 9;
+    for (int p = 0; p < 8; ++p)
+        if (pointsAt(p) && apart(p, behind) < best) best = apart(p, behind), entry = p;
+    const int right = (entry + 5) & 7, left = (entry + 3) & 7;
+    const bool toLeft = isRail(w.getBlock(x + px[left], y, z + pz[left])) && !isRail(w.getBlock(x + px[right], y, z + pz[right]));
+    return railSwitch8Id(entry, toLeft, 0);
+}
+
+// Build 12: rails in eight directions. A new rail joins the open ends that point at its cell (sides and
+// corners); when fewer than two do, a neighbouring rail with a free end turns towards it (a straight
+// piece, a diagonal, a quarter curve or a 45-degree bend), the way track is laid piece by piece.
+ItemId Session::shapeRail(int x, int y, int z, int look) {
+    static constexpr int px[8] = {0, 1, 1, 1, 0, -1, -1, -1}, pz[8] = {-1, -1, 0, 1, 1, 1, 0, -1};
+    World& w = *world_;
+    auto plain = [&](int cx, int cz, int& a, int& b) {
+        const ItemId id = w.getBlock(cx, y, cz);
+        return !isRailSlope(id) && !isTurntable(id) && TrainSystem::railSides(id, a, b);
+    };
+    auto pointsAt = [&](int cx, int cz, int port) {  // does the rail at (cx, cz) have an end at its port `port`?
+        const ItemId id = w.getBlock(cx, y, cz);
+        int a, b, out;
+        if (TrainSystem::railSides(id, a, b)) return a == port || b == port;
+        return (isRailSwitch(id) || isRailSwitch8(id) || isBufferStop(id)) && TrainSystem::nextSide(id, port, out);
+    };
+    // 2.3.0: a flexible switch beside the new rail whose branch leads nowhere turns its branch to the
+    // other side when that side is this cell.
+    for (int p = 0; p < 8; ++p) {
+        const int nx = x + px[p], nz = z + pz[p];
+        const ItemId sw = w.getBlock(nx, y, nz);
+        if (!isRailSwitch8(sw)) continue;
+        const int e = railSwitch8Entry(sw), branch = railSwitch8Branch(sw), other = (e + 4 + (railSwitch8Left(sw) ? 1 : -1)) & 7;
+        if (other != ((p + 4) & 7) || isRail(w.getBlock(nx + px[branch], y, nz + pz[branch]))) continue;
+        w.setBlock(nx, y, nz, railSwitch8Id(e, !railSwitch8Left(sw), railSwitch8State(sw)));
+    }
+    std::vector<int> fixed;
+    for (int p : {0, 2, 4, 6, 1, 3, 5, 7})
+        if (fixed.size() < 2 && pointsAt(x + px[p], z + pz[p], (p + 4) & 7)) fixed.push_back(p);
+    for (int p : {0, 2, 4, 6, 1, 3, 5, 7}) {
+        if (fixed.size() >= 2) break;
+        if (std::find(fixed.begin(), fixed.end(), p) != fixed.end()) continue;
+        const int nx = x + px[p], nz = z + pz[p], back = (p + 4) & 7;
+        // Only a neighbour ahead of or behind the player (within 45 degrees of the way they look) turns
+        // towards the new rail: a track laid beside another one stays straight.
+        const int lookPort = look * 2;
+        auto apart = [](int u, int v) { const int d = (u - v) & 7; return std::min(d, 8 - d); };
+        if (std::min(apart(p, lookPort), apart(p, (lookPort + 4) & 7)) > 1) continue;
+        int a, b;
+        if (!plain(nx, nz, a, b)) continue;
+        // Keep the neighbour's end that is joined to the track (or the one farther from us), turn the other to us.
+        const bool aJoined = pointsAt(nx + px[a], nz + pz[a], (a + 4) & 7), bJoined = pointsAt(nx + px[b], nz + pz[b], (b + 4) & 7);
+        if (aJoined && bJoined) continue;
+        auto away = [&](int q) { const int d = (q - back) & 7; return std::min(d, 8 - d); };
+        // A lone rail (neither end joined) simply turns to run straight through to the new one.
+        const int keep = aJoined ? a : bJoined ? b : (back + 4) & 7;
+        const ItemId turned = TrainSystem::railFor(keep, back);
+        if (turned == AIR) continue;
+        if (!fixed.empty() && TrainSystem::railFor(fixed[0], p) == AIR) continue;
+        w.setBlock(nx, y, nz, turned);
+        fixed.push_back(p);
+    }
+    if (fixed.size() >= 2) {
+        const ItemId both = TrainSystem::railFor(fixed[0], fixed[1]);
+        if (both != AIR) return both;
+    }
+    if (!fixed.empty()) return TrainSystem::railFor(fixed[0], (fixed[0] + 4) & 7);
+    return (look == 1 || look == 3) ? RAIL_EW : RAIL_NS;
+}
+
+// VoxelCraft Classic 0.0.3: the legend of the Double. Someone with the player's own skin and empty white
+// eyes stands far off in the haze, watching. Come near or stare back and he is gone. Now and then he runs
+// at the player instead, strikes once and vanishes; and he leaves things in the world: a little sand
+// pyramid, a tree stripped of its leaves, a square tunnel into a hill.
+void Session::updateDoppel(float dt) {
+    if (world_ != &overworld_ || dead_) {
+        doppel_.active = false;
+        return;
+    }
+    World& w = *world_;
+    auto groundAt = [&](int x, int z) { return w.skyHeight(x, z); };
+    if (!doppel_.active) {
+        if ((doppel_.wait -= dt) > 0) return;
+        doppel_.wait = 70 + fireRandom() * 140;
+        const float roll = fireRandom();
+        if (roll < 0.25f) {
+            // A sign of him: built out of sight, behind the player.
+            const float a = player_.yaw + kPi + (fireRandom() - 0.5f) * 1.5f;
+            const int bx = (int)std::floor(player_.pos.x + std::sin(a) * -22), bz = (int)std::floor(player_.pos.z + std::cos(a) * 22);
+            const int gy = groundAt(bx, bz);
+            if (gy <= 2 || !w.getChunk(floorDiv(bx, 16), floorDiv(bz, 16))) return;
+            const int kind = (int)(fireRandom() * 3);
+            if (kind == 0) {
+                for (int l = 0; l < 3; ++l)
+                    for (int dx = -2 + l; dx <= 2 - l; ++dx)
+                        for (int dz = -2 + l; dz <= 2 - l; ++dz) w.setBlock(bx + dx, gy + l, bz + dz, SAND);
+            } else if (kind == 1) {
+                for (int dx = -6; dx <= 6; ++dx)
+                    for (int dz = -6; dz <= 6; ++dz)
+                        for (int y = gy - 2; y < gy + 10; ++y)
+                            if (w.getBlock(bx + dx, y, bz + dz) == LEAVES) w.setBlock(bx + dx, y, bz + dz, AIR);
+            } else {
+                for (int k = 0; k < 6; ++k)
+                    for (int dy = 0; dy < 2; ++dy)
+                        for (int dz = 0; dz < 2; ++dz)
+                            if (w.getBlock(bx + k, gy - 3 + dy, bz + dz) != BEDROCK) w.setBlock(bx + k, gy - 3 + dy, bz + dz, AIR);
+            }
+            return;
+        }
+        // He appears at the edge of sight, ahead of the player, in the haze.
+        const float a = player_.yaw + (fireRandom() - 0.5f) * 1.2f, dist = 26 + fireRandom() * 12;
+        const float fx = player_.pos.x - std::sin(a) * dist, fz = player_.pos.z - std::cos(a) * dist;
+        const int gy = groundAt((int)std::floor(fx), (int)std::floor(fz));
+        if (gy <= 2) return;
+        doppel_.active = true;
+        doppel_.pos = Vec3(std::floor(fx) + 0.5f, (float)gy, std::floor(fz) + 0.5f);
+        doppel_.time = 0;
+        doppel_.attack = survival() && roll > 0.8f;
+        return;
+    }
+    doppel_.time += dt;
+    Vec3 to = player_.pos - doppel_.pos;
+    const float d = std::sqrt(to.x * to.x + to.z * to.z);
+    doppel_.yaw = std::atan2(-to.x, -to.z);
+    auto vanish = [&] {
+        for (int i = 0; i < 3; ++i)
+            particles_.spawnBurst(*world_, (int)std::floor(doppel_.pos.x), (int)std::floor(doppel_.pos.y) + i % 2, (int)std::floor(doppel_.pos.z), OBSIDIAN);
+        doppel_.active = false;
+        doppel_.wait = 90 + fireRandom() * 150;
+    };
+    if (doppel_.attack) {
+        // He runs at the player, strikes once, and is gone.
+        if (d > 0.01f) {
+            const float step = std::min(d, 6.5f * dt);
+            doppel_.pos.x += to.x / d * step, doppel_.pos.z += to.z / d * step;
+            doppel_.pos.y = (float)groundAt((int)std::floor(doppel_.pos.x), (int)std::floor(doppel_.pos.z));
+        }
+        if (d < 1.6f) {
+            hurt(4, true, true);
+            vanish();
+        } else if (doppel_.time > 12) {
+            vanish();
+        }
+        return;
+    }
+    // Watching: gone when the player comes close, looks straight at him for a while, or after a time.
+    const Vec3 look = camera_.forward();
+    const float facing = d > 0.01f ? -(look.x * to.x + look.z * to.z) / d : 0;
+    doppel_.stare = facing > 0.97f ? doppel_.stare + dt : 0;
+    if (d < 14 || doppel_.stare > 1.3f || doppel_.time > 20) vanish();
+}
+
+PlayerPose Session::doppelPose() const {
+    PlayerPose p;
+    p.feet = doppel_.pos;
+    p.yaw = doppel_.yaw;
+    p.swing = doppel_.attack ? std::sin(doppel_.time * 12) * 0.8f : 0;
+    return p;
+}
+
 void Session::powerChanged(int x, int y, int z) {
     std::vector<std::array<int, 3>> ignite;
     updatePower(*world_, x, y, z, ignite);
@@ -725,7 +918,7 @@ void Session::powerChanged(int x, int y, int z) {
             for (int dz = -2; dz <= 2; ++dz) {
                 const int cx = x + dx, cy = y + dy, cz = z + dz;
                 const ItemId here = world_->getBlock(cx, cy, cz);
-                if (here != COMMAND_BLOCK && here != SOUND_BLOCK) continue;
+                if (here != COMMAND_BLOCK && here != SOUND_BLOCK && here != RADIO) continue;
                 bool powered = false;
                 static const int k6[6][3] = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
                 for (const auto& o : k6) {
@@ -735,6 +928,7 @@ void Session::powerChanged(int x, int y, int z) {
                 const FurnaceKey key{dimIndex(), cx, cy, cz};
                 if (powered && poweredCommands_.insert(key).second) {
                     if (here == SOUND_BLOCK) playSoundBlock(key);  // 2.0.0
+                    else if (here == RADIO) playRadio(key);    // 2.2.0
                     else runCommandBlock(key);
                 }
                 if (!powered) poweredCommands_.erase(key);
@@ -917,7 +1111,7 @@ float Session::targetTemperature() const {
         if (b) t = (b->temperature - 0.5f) * 3.0f + 0.3f;
         if (b && (b->freeze || b->id == "ice_plains")) t -= 1.2f;
         if (b && b->id == "snowy_taiga") t -= 0.6f;
-        if (y > 95) t -= (y - 95) / 25.0f;  // high peaks are cold
+        if (y - overworld_.yShift() > 95) t -= (y - overworld_.yShift() - 95) / 25.0f;  // high peaks are cold
         if (dayLight_ < 0.5f) t -= 0.5f;
         if (state_.raining) t -= precipitation() == Precipitation::Snow ? 0.8f : 0.4f;
         if (snowySeason(settings_.season)) t -= 0.5f;
@@ -929,16 +1123,24 @@ float Session::targetTemperature() const {
         t = -0.4f;  // the Celestial Reach: thin cold air up there
     }
     if (player_.inWater) t -= 1.0f;
+    if (player_.inDriedSnow) t -= 2.5f;  // 2.2.0: buried in dried snow, you freeze fast
     if (player_.inLava) t += 3.0f;
     for (const auto& f : fireSpots_) {
         const float d = Vec3(f[0] + 0.5f - player_.pos.x, f[1] + 0.5f - player_.pos.y, f[2] + 0.5f - player_.pos.z).length();
         if (d < 4) t = std::max(t, std::min(t + 2.0f, 0.9f));  // the warmth of a fire: comfortable, not hot
     }
     if (isTorch(state_.inventory.slots[state_.selectedSlot].id) || state_.offhand.id == TORCH) t = std::max(t, std::min(t + 0.6f, 0.6f));
+    float warm = -100;
     for (int dx = -2; dx <= 2; ++dx)
         for (int dz = -2; dz <= 2; ++dz)
-            for (int dy = -1; dy <= 1; ++dy)
-                if (w.getBlock(x + dx, y + dy, z + dz) == LAVA) return std::max(t + 1.5f, 1.6f);
+            for (int dy = -1; dy <= 1; ++dy) {
+                const ItemId b = w.getBlock(x + dx, y + dy, z + dz);
+                if (b == LAVA) return std::max(t + 1.5f, 1.6f);
+                // 2.2.0: a lit furnace, a lit bulb or a lamp next to you warms you up too.
+                if (b == LIT_FURNACE || b == POWERSTONE_FURNACE_ON) warm = std::max(warm, 0.9f);
+                else if (b == POWERSTONE_LIGHT || b == POWERSTONE_LAMP_ON || bronzeBulbLit(b) || b == AMBER_RESIN) warm = std::max(warm, 0.5f);
+            }
+    if (warm > -100) t = std::max(t, std::min(t + 1.5f, warm));
     return t;
 }
 
@@ -1027,6 +1229,33 @@ void Session::updateAmbientParticles(float dt) {
     }
 }
 
+// 2.2.0 preview: a few random blocks round the player each second. Bronze that is not waxed ages
+// (bright, tarnished, rusty), and dirt next to grass grows grass when nothing covers it.
+void Session::updateBronzeAndGrass(float dt) {
+    if ((bronzeTimer_ -= dt) > 0) return;
+    bronzeTimer_ = 1.0f;
+    World& w = *world_;
+    const int px = (int)std::floor(player_.pos.x), py = (int)std::floor(player_.pos.y), pz = (int)std::floor(player_.pos.z);
+    for (int k = 0; k < 600; ++k) {
+        const int x = px + (int)(fireRandom() * 49) - 24, y = py + (int)(fireRandom() * 25) - 12, z = pz + (int)(fireRandom() * 49) - 24;
+        if (y < 1 || y >= kChunkHeight - 1) continue;
+        const ItemId b = w.getBlock(x, y, z);
+        const int base = bronzeAgingBase(b);
+        if (base >= 0) {
+            // About an in-game day for each stage on average.
+            if (!bronzeWaxed(b) && bronzeStage(b) < 2 && fireRandom() < 0.02f) w.setBlock(x, y, z, bronzeVariant(base, bronzeStage(b) + 1, false));
+            continue;
+        }
+        if (b != DIRT || isOpaque(w.getBlock(x, y + 1, z)) || isLiquid(w.getBlock(x, y + 1, z))) continue;
+        bool near = false;
+        for (int dx = -1; dx <= 1 && !near; ++dx)
+            for (int dz = -1; dz <= 1 && !near; ++dz)
+                for (int dy = -1; dy <= 1 && !near; ++dy)
+                    if ((dx || dz) && w.getBlock(x + dx, y + dy, z + dz) == GRASS) near = true;
+        if (near && fireRandom() < 0.5f) w.setBlock(x, y, z, GRASS);
+    }
+}
+
 void Session::updateExperiments20(float dt) {
     lightningFlash_ = std::max(0.0f, lightningFlash_ - dt * 3);
     if (world_ != &overworld_ || oldMode()) return;  // 1.9.5: nothing of this in the Old World
@@ -1090,6 +1319,7 @@ std::string Session::setBlockText(const FurnaceKey& key, const std::string& text
     //   load <name>
     blockTexts_[key] = text;
     World& w = worldAt(key.dim);
+    if (w.getBlock(key.x, key.y, key.z) == RADIO) return trf("Rozhlas nastaven: {0}", {text});
     if (w.getBlock(key.x, key.y, key.z) != STRUCTURE_BLOCK) return trf("Příkaz uložen: {0}", {text});
     std::istringstream in(text);
     std::string mode, name;
@@ -1362,6 +1592,12 @@ Session::Layout Session::layout() const {
         l.mapX = l.mapY = -1000;
         l.padX = l.padY = -1000;
         l.padButton = 0;
+        if (kClassicEdition) {
+            // Classic 0.0.3: the creator's own D-pad bottom left instead of the floating joystick.
+            l.padButton = std::round(30 * settings_.buttonScale);
+            l.padX = 10;
+            l.padY = guiH_ - 3 * l.padButton - 8;
+        }
         return l;
     }
     l.slot = 20;
@@ -1379,6 +1615,7 @@ Session::Layout Session::layout() const {
     l.mapY = 4;
     l.pauseY = 4;
     l.chatX = l.pauseX - l.pauseSize - 6;
+    if (kFeatures220) l.cameraX = l.pauseX + l.pauseSize + 6;
     l.padButton = std::round(33 * settings_.buttonScale);
     l.padX = 10;
     l.padY = guiH_ - 3 * l.padButton - 10;
@@ -1500,7 +1737,21 @@ void Session::touchDown(int id, float x, float y, double time) {
             t->kind = Touch::Pause;
         } else if (in(l.jumpX, l.jumpY, l.buttonSize, l.buttonSize)) {
             t->kind = Touch::Jump;
-        } else if ((settings_.lefty ? x > guiW_ * 0.6f : x < guiW_ * 0.4f) && y > guiH_ * 0.35f) {  // as in 0.3
+            if (kClassicEdition && !survival()) {
+                // Classic 0.0.3: creative flies; two taps on jump take off or land.
+                if (time - lastJumpTap_ < kDoubleTap) {
+                    player_.flying = !player_.flying;
+                    player_.vel = {};
+                    lastJumpTap_ = -1;
+                } else {
+                    lastJumpTap_ = time;
+                }
+            }
+        } else if (kClassicEdition && player_.flying && in(l.jumpX - l.buttonSize - 6, l.jumpY, l.buttonSize, l.buttonSize)) {
+            t->kind = Touch::FlyDown;
+        } else if (int dx, dz; kClassicEdition && dpadDirection(l, x, y, dx, dz)) {
+            t->kind = Touch::DPad;
+        } else if (!kClassicEdition && (settings_.lefty ? x > guiW_ * 0.6f : x < guiW_ * 0.4f) && y > guiH_ * 0.35f) {  // as in 0.3
             t->kind = Touch::Joystick;
         } else {
             t->kind = Touch::Look;
@@ -1530,6 +1781,8 @@ void Session::touchDown(int id, float x, float y, double time) {
         t->kind = Touch::Pause;
     } else if (in(l.chatX, l.pauseY, l.pauseSize, l.pauseSize)) {
         t->kind = Touch::Chat;
+    } else if (in(l.cameraX, l.pauseY, l.pauseSize, l.pauseSize)) {
+        t->kind = Touch::Camera;
     } else if (l.mapSize > 0 && in(l.mapX, l.mapY, l.mapSize, l.mapSize)) {
         t->kind = Touch::Map;
     } else if (in(l.jumpX, l.jumpY, l.buttonSize, l.buttonSize)) {
@@ -1605,7 +1858,7 @@ void Session::touchUp(int id, float x, float y, double time) {
                 const bool powerstone = heldNow.id == POWERSTONE_DUST || heldNow.id == POWERSTONE_CHIP || heldNow.id == POWERSTONE_BLOCK;
                 // 2.1.0 preview: a tap on a car takes it off the track (back into the inventory in survival).
                 int trainCar = -1;
-                if (heldNow.id != LOCOMOTIVE && heldNow.id != PASSENGER_WAGON && heldNow.id != FREIGHT_WAGON && heldNow.id != DRILL_CAR && trainSeatTrain_ < 0) {
+                if (heldNow.id != LOCOMOTIVE && heldNow.id != PASSENGER_WAGON && heldNow.id != FREIGHT_WAGON && heldNow.id != DRILL_CAR && heldNow.id != SUBWAY_LOCOMOTIVE && heldNow.id != SUBWAY_CAR && trainSeatTrain_ < 0) {
                     float dist;
                     trainCar = trains_.pick(dimIndex(), camera_.eye(), rayThroughScreen(x, y), Player::kReach + cameraDistance_, dist);
                     if (trainCar >= 0) {
@@ -1613,12 +1866,22 @@ void Session::touchUp(int id, float x, float y, double time) {
                         if (block.hit && (Vec3(block.x + 0.5f, block.y + 0.5f, block.z + 0.5f) - camera_.eye()).length() < dist) trainCar = -1;
                     }
                 }
-                if (trainCar >= 0) {
+                if (trainCar >= 0 && trains_.trains()[(size_t)(trainCar / 64)].cars[(size_t)(trainCar % 64)].kind == CarKind::Drill &&
+                    heldNow.id == RAIL_NS) {
+                    // 2.3.0: rails held against the drill car go into it; it lays them ahead as it bores on.
+                    Train& tr = trains_.trains()[(size_t)(trainCar / 64)];
+                    ItemStack& h = state_.inventory.slots[state_.selectedSlot];
+                    tr.rails += h.count;
+                    if (survival()) h = {};
+                    if (onMessage) onMessage(trf("Vrtací vůz: {0} kolejí", {std::to_string(tr.rails)}));
+                    hand_.use();
+                    sound(Sound::Place);
+                } else if (trainCar >= 0) {
                     const int ti = trainCar / 64, ci = trainCar % 64;
                     const CarKind kind = trains_.trains()[(size_t)ti].cars[(size_t)ci].kind;
                     trains_.removeCar(ti, ci);
                     if (survival())
-                        giveItem({kind == CarKind::Locomotive ? LOCOMOTIVE : kind == CarKind::Passenger ? PASSENGER_WAGON : kind == CarKind::Drill ? DRILL_CAR : FREIGHT_WAGON, 1, 0});
+                        giveItem({kind == CarKind::Locomotive ? LOCOMOTIVE : kind == CarKind::Passenger ? PASSENGER_WAGON : kind == CarKind::Drill ? DRILL_CAR : kind == CarKind::SubwayLocomotive ? SUBWAY_LOCOMOTIVE : kind == CarKind::SubwayCar ? SUBWAY_CAR : FREIGHT_WAGON, 1, 0});
                     hand_.use();
                     sound(Sound::DoorIron);
                 } else if (mob >= 0 && mobs_.mobs()[mob].type == MobType::Villager) {
@@ -1680,12 +1943,12 @@ void Session::touchUp(int id, float x, float y, double time) {
                         sound(Sound::Place);
                     }
                 } else if (const ItemId held = state_.inventory.slots[state_.selectedSlot].id;
-                           held == LOCOMOTIVE || held == PASSENGER_WAGON || held == FREIGHT_WAGON || held == DRILL_CAR) {
+                           held == LOCOMOTIVE || held == PASSENGER_WAGON || held == FREIGHT_WAGON || held == DRILL_CAR || held == SUBWAY_LOCOMOTIVE || held == SUBWAY_CAR) {
                     // 2.1.0 preview: a car goes on the rail the player taps.
                     const RayHit h = pick(x, y);
                     const Vec3 f = player_.forward();
                     const int look = std::fabs(f.x) > std::fabs(f.z) ? (f.x > 0 ? 1 : 3) : (f.z > 0 ? 2 : 0);
-                    const CarKind kind = held == LOCOMOTIVE ? CarKind::Locomotive : held == PASSENGER_WAGON ? CarKind::Passenger : held == DRILL_CAR ? CarKind::Drill : CarKind::Freight;
+                    const CarKind kind = held == LOCOMOTIVE ? CarKind::Locomotive : held == PASSENGER_WAGON ? CarKind::Passenger : held == DRILL_CAR ? CarKind::Drill : held == SUBWAY_LOCOMOTIVE ? CarKind::SubwayLocomotive : held == SUBWAY_CAR ? CarKind::SubwayCar : CarKind::Freight;
                     if (h.hit && isRail(world_->getBlock(h.x, h.y, h.z)) && trains_.place(*world_, dimIndex(), kind, h.x, h.y, h.z, look)) {
                         if (survival()) state_.inventory.removeOne(state_.selectedSlot);
                         hand_.place();
@@ -1704,10 +1967,13 @@ void Session::touchUp(int id, float x, float y, double time) {
             if (in(l.hotbarX + l.slot * 9, l.hotbarY, l.slot, l.slot)) wantsInventory = true;
             break;
         case Touch::Pause:
-            if (in(l.pauseX, l.pauseY, l.pauseSize, l.pauseSize)) wantsPause = true;
+            if (in(l.pauseX, l.pauseY, l.pauseSize, l.pauseSize)) (kClassicEdition && oldMode() ? wantsInventory : wantsPause) = true;
             break;
         case Touch::Chat:
             if (in(l.chatX, l.pauseY, l.pauseSize, l.pauseSize)) wantsChat = true;
+            break;
+        case Touch::Camera:
+            if (in(l.cameraX, l.pauseY, l.pauseSize, l.pauseSize)) wantsCamera = true;
             break;
         case Touch::Map:
             if (in(l.mapX, l.mapY, l.mapSize, l.mapSize)) mapBig_ = !mapBig_;  // tap: bigger / smaller
@@ -2456,6 +2722,23 @@ void Session::useItem(const RayHit& hit) {
             cutterWood = block == WOOD_CUTTER;
             return;
         }
+        // 2.2.0 preview: honey waxes bronze (it stops ageing); an axe scrapes the wax off, or the
+        // rust down by one stage.
+        if (kFeatures220 && bronzeAgingBase(block) >= 0 && (held.id == HONEY_BALL || toolKind(held.id) == ToolKind::Axe)) {
+            const int base = bronzeAgingBase(block), stage = bronzeStage(block);
+            ItemId to = block;
+            if (held.id == HONEY_BALL && !bronzeWaxed(block)) to = bronzeVariant(base, stage, true);
+            else if (held.id != HONEY_BALL && bronzeWaxed(block)) to = bronzeVariant(base, stage, false);
+            else if (held.id != HONEY_BALL && stage > 0) to = bronzeVariant(base, stage - 1, false);
+            if (to != block) {
+                w.setBlock(hit.x, hit.y, hit.z, to);
+                particles_.spawnBurst(w, hit.x, hit.y, hit.z, held.id == HONEY_BALL ? HONEY_BLOCK : block);
+                if (held.id == HONEY_BALL && survival() && --held.count == 0) held = {};
+                hand_.use();
+                sound(held.id == HONEY_BALL ? Sound::Place : Sound::Dig);
+                return;
+            }
+        }
         if (block == CELESTIAL_FRAME && held.id == CRIMSON_HEAD) {
             // 1.7.0 preview: a head on a frame block, like an eye on the End's frame. The ring of
             // twelve frames lies round a 3 x 3 hole; with every head in place the hole lights up.
@@ -2494,8 +2777,20 @@ void Session::useItem(const RayHit& hit) {
             hand_.use();
             return;
         }
+        if (isBed(block) && held.id == CUSHION && w.getBlock(hit.x, hit.y + 1, hit.z) == AIR) {
+            // 2.2.0: a cushion laid on the bed, as a pillow.
+            w.setBlock(hit.x, hit.y + 1, hit.z, CUSHION);
+            if (survival()) state_.inventory.removeOne(state_.selectedSlot);
+            sound(Sound::Place);
+            hand_.use();
+            return;
+        }
         if (isBed(block)) {
             sleepInBed(hit.x, hit.y, hit.z);
+            return;
+        }
+        if (block == CUSHION && isBed(w.getBlock(hit.x, hit.y - 1, hit.z))) {
+            sleepInBed(hit.x, hit.y - 1, hit.z);  // 2.2.0: a pillow: tapping it is tapping the bed
             return;
         }
         if (block == CUSHION && !player_.sneaking) {
@@ -2504,6 +2799,19 @@ void Session::useItem(const RayHit& hit) {
             seatX_ = hit.x, seatY_ = hit.y, seatZ_ = hit.z;
             player_.flying = false;
             player_.vel = {};
+            hand_.use();
+            return;
+        }
+        if (block == RADIO) {
+            // 2.2.0: Rozhlas. A tap writes its announcement; a sneaking tap reads it out now.
+            const FurnaceKey key{dimIndex(), hit.x, hit.y, hit.z};
+            if (player_.sneaking) {
+                playRadio(key);
+            } else {
+                wantsBlockEditor = 3;
+                blockEditorKey = key;
+                sound(Sound::Click);
+            }
             hand_.use();
             return;
         }
@@ -2524,10 +2832,17 @@ void Session::useItem(const RayHit& hit) {
             sound(Sound::DoorIron);
             return;
         }
+        if (isRailSwitch8(block)) {
+            // 2.3.0: a tap throws the flexible switch.
+            w.setBlock(hit.x, hit.y, hit.z, railSwitch8Id(railSwitch8Entry(block), railSwitch8Left(block), 1 - railSwitch8State(block)));
+            hand_.use();
+            sound(Sound::DoorIron);
+            return;
+        }
         if (isRailSwitch(block)) {
             // 2.1.0 preview: a tap throws the switch.
             const int k = railSwitchIndex(block);
-            w.setBlock(hit.x, hit.y, hit.z, railSwitchId(k / 2, 1 - k % 2));
+            w.setBlock(hit.x, hit.y, hit.z, railSwitchId(k / 2, 1 - k % 2, railSwitchLeft(block)));
             hand_.use();
             sound(Sound::Click);
             return;
@@ -2598,6 +2913,8 @@ void Session::useItem(const RayHit& hit) {
         if (held.id == COOKED_MUTTON) food = 6, saturation = 9.6f;
         if (held.id == BREAD) food = 5, saturation = 6;
         if (held.id == HONEY_BALL) food = 3, saturation = 1.5f;  // 1.9.5 build 3
+        if (held.id == STARBERRIES) food = 2, saturation = 2, state_.health = std::min(20.0f, state_.health + 4);  // 2.2.0: they heal
+        if (held.id == VOID_TRUFFLE) food = 6, saturation = 8;
         if (held.id == RAW_CHICKEN) food = 2, saturation = 1.2f;
         if (held.id == COOKED_CHICKEN) food = 6, saturation = 7.2f;
         if (held.id == RAW_BEEF) food = 3, saturation = 1.8f;
@@ -2672,7 +2989,7 @@ void Session::useItem(const RayHit& hit) {
         }
         return;
     }
-    if (held.id == OAK_DOOR_ITEM || held.id == IRON_DOOR_ITEM || held.id == CACTUS || isTrapdoor(held.id) || held.id == BED_ITEM ||
+    if (held.id == OAK_DOOR_ITEM || held.id == IRON_DOOR_ITEM || held.id == BRONZE_DOOR_ITEM || held.id == CACTUS || isTrapdoor(held.id) || held.id == BED_ITEM ||
         isSkeletonHead(held.id) || held.id == TORCH) {
         ItemId existing = w.getBlock(x, y, z);
         if ((existing == AIR || existing == TALL_GRASS || isLiquid(existing)) && (held.id == TORCH || !player_.intersectsBlock(x, y, z)))
@@ -2742,20 +3059,42 @@ void Session::useItem(const RayHit& hit) {
             place = (ItemId)(TURNTABLE + (look & 1));
         } else if (isRailSlope(held.id)) {
             place = (ItemId)(RAIL_SLOPE + look);  // rising the way the player looks
+        } else if (isRailGentle(held.id)) {
+            // Build 12: a gentle slope, four pieces to a block of height, rising the way the player looks;
+            // each piece follows the one behind it (after the fourth, the track goes on one block higher).
+            static constexpr int dx[4] = {0, 1, 0, -1}, dz[4] = {-1, 0, 1, 0};
+            const ItemId behind = w.getBlock(x - dx[look], y, z - dz[look]);
+            int piece = 0;
+            if (isRailGentle(behind) && (behind - RAIL_GENTLE) / 4 == look && (behind - RAIL_GENTLE) % 4 < 3) piece = (behind - RAIL_GENTLE) % 4 + 1;
+            place = (ItemId)(RAIL_GENTLE + look * 4 + piece);
         } else if (isRailSwitch(held.id)) {
-            place = railSwitchId(look, 0);
+            place = shapeSwitch(x, y, z, look);
         } else {
-            const bool n = isRail(w.getBlock(x, y, z - 1)), so = isRail(w.getBlock(x, y, z + 1));
-            const bool e = isRail(w.getBlock(x + 1, y, z)), we = isRail(w.getBlock(x - 1, y, z));
-            if ((n || so) && (e || we)) {
-                // A curve: north-east, east-south, south-west or west-north.
-                place = (ItemId)(RAIL_CURVE + (n && e ? 0 : so && e ? 1 : so && we ? 2 : 3));
-            } else if (e || we) {
-                place = RAIL_EW;
-            } else if (n || so) {
-                place = RAIL_NS;
+            place = shapeRail(x, y, z, look);
+            // 2.3.0: flexible track between heights. A rail one block higher beside this one: this becomes a
+            // slope up to it. The end of a track one block lower beside it: that end turns into a slope up to here.
+            static constexpr int sdx[4] = {0, 1, 0, -1}, sdz[4] = {-1, 0, 1, 0};
+            auto plainRail = [&](ItemId id) { int a, b; return !isRailSlope(id) && !isRailGentle(id) && TrainSystem::railSides(id, a, b); };
+            int up = -1;
+            for (int k = 0; k < 4; ++k) {
+                const int d = (look + k) & 3;  // the way the player looks first
+                if (up < 0 && isRail(w.getBlock(x + sdx[d], y + 1, z + sdz[d])) && !isRail(w.getBlock(x + sdx[d], y, z + sdz[d]))) up = d;
+            }
+            if (up >= 0) {
+                place = (ItemId)(RAIL_SLOPE + up);
             } else {
-                place = (look == 1 || look == 3) ? RAIL_EW : RAIL_NS;
+                for (int k = 0; k < 4; ++k) {
+                    const int d = (look + k + 2) & 3;  // behind the player first
+                    const int nx = x + sdx[d], ny = y - 1, nz = z + sdz[d];
+                    const ItemId below = w.getBlock(nx, ny, nz);
+                    int a, b;
+                    if (!plainRail(below) || isRail(w.getBlock(nx, y, nz)) || !TrainSystem::railSides(below, a, b)) continue;
+                    const int towards = ((d + 2) & 3) * 2;  // the port of that rail facing this cell
+                    if (a != towards && b != towards) continue;
+                    w.setBlock(nx, ny, nz, (ItemId)(RAIL_SLOPE + ((d + 2) & 3)));
+                    place = (d & 1) ? RAIL_EW : RAIL_NS;
+                    break;
+                }
             }
         }
     }
@@ -2878,6 +3217,7 @@ void Session::updateMining(float dt, double time) {
         bool holding = false;
         for (const Touch& t : touches_) holding |= t.id >= 0 && t.kind == Touch::Look && time - t.startTime > 0.12;
         bowCharge_ = holding ? std::min(1.0f, bowCharge_ + dt) : 0;
+        if (forcedBow_ >= 0) bowCharge_ = forcedBow_;
         if (holding) miningNow_ = false;
         return;
     }
@@ -3028,9 +3368,25 @@ void Session::updateSurvival(float dt, bool jumped) {
         player_.landedFall = state_.armor[1].id == CELESTIUM_CHESTPLATE ? 0 : player_.landedFall / 3;
     }
     if (player_.landedFall > 0 &&
-        world_->getBlock((int)std::floor(player_.pos.x), (int)std::floor(player_.pos.y - 0.05f), (int)std::floor(player_.pos.z)) == HONEY_BLOCK)
-        player_.landedFall = 0;  // 1.9.5 build 3: honey catches every fall
+        (world_->getBlock((int)std::floor(player_.pos.x), (int)std::floor(player_.pos.y - 0.05f), (int)std::floor(player_.pos.z)) == HONEY_BLOCK ||
+         world_->getBlock((int)std::floor(player_.pos.x), (int)std::floor(player_.pos.y - 0.05f), (int)std::floor(player_.pos.z)) == AMBER_RESIN))
+        player_.landedFall = 0;  // 1.9.5 build 3: honey catches every fall; 2.2.0: amber resin too
     if (player_.landedFall > 3) hurt(std::ceil(player_.landedFall - 3), true, true);
+    {
+        // 2.2.0: thin ice holds a moment, then gives way under whoever stands on it.
+        const int ix = (int)std::floor(player_.pos.x), iy = (int)std::floor(player_.pos.y - 0.05f), iz = (int)std::floor(player_.pos.z);
+        if (player_.onGround && world_->getBlock(ix, iy, iz) == THIN_ICE) {
+            if ((thinIceTimer_ += dt) > 1.1f) {
+                thinIceTimer_ = 0;
+                particles_.spawnBurst(*world_, ix, iy, iz, THIN_ICE);
+                const bool water = world_->getBlock(ix, iy - 1, iz) == WATER;
+                world_->setBlock(ix, iy, iz, water ? (ItemId)WATER : (ItemId)AIR);
+                sound(Sound::Dig);
+            }
+        } else {
+            thinIceTimer_ = 0;
+        }
+    }
     if (player_.inLava) hurt(4, false, true);
     if (player_.touches(*world_, FIRE) || player_.touches(*world_, CAMPFIRE)) {
         hurt(1, false, true);  // 1.9.0: burns
@@ -3070,7 +3426,8 @@ void Session::updateSurvival(float dt, bool jumped) {
         drownTimer_ = 0;
     }
 
-    // Hunger, following the classic exhaustion rules.
+    // Hunger, following the classic exhaustion rules. Classic 0.0.3 had no food: always full.
+    if (kClassicEdition) state_.food = kMaxFood, state_.saturation = 5, exhaustion_ = 0;
     if (player_.onGround) addExhaustion(player_.walked * 0.01f);
     if (jumped) addExhaustion(0.05f);
     while (exhaustion_ >= 4) {
@@ -3238,9 +3595,15 @@ void Session::update(float dt, double time, float guiW, float guiH, const Settin
         // 1.8.0 Old World: creative only, the nine blocks of 0.3 in the hotbar, no flying and
         // the old jump (no auto-jump).
         static const ItemId kOldBlocks[kHotbarSize] = {GRASS, COBBLESTONE, PLANKS, LOG, GLASS, BRICKS, NETHERRACK, OBSIDIAN, FLINT_AND_STEEL};
-        info_.mode = GameMode::Creative;
-        for (int i = 0; i < kHotbarSize; ++i) state_.inventory.slots[i] = ItemStack{kOldBlocks[i], 1};
-        player_.flying = false;
+        // Classic 0.0.3: survival too (hearts only, no food); its hotbar holds what the player gathers.
+        if (!kClassicEdition) info_.mode = GameMode::Creative;
+        if (!survival() && !kClassicEdition)
+            for (int i = 0; i < kHotbarSize; ++i) state_.inventory.slots[i] = ItemStack{kOldBlocks[i], 1};
+        if (kClassicEdition && !survival() && state_.inventory.slots[0].empty() && !classicStarted_) {
+            classicStarted_ = true;  // a new creative world starts with the nine blocks of 0.3; the inventory changes them
+            for (int i = 0; i < kHotbarSize; ++i) state_.inventory.slots[i] = ItemStack{kOldBlocks[i], 1};
+        }
+        if (!kClassicEdition || survival()) player_.flying = false;
         player_.autoJump = false;
         player_.speedMul = 1;
         player_.noclip = false;
@@ -3292,10 +3655,12 @@ void Session::update(float dt, double time, float guiW, float guiH, const Settin
     trains_.update(*world_, dimIndex(), dt, player_.pos, player_.yaw, trainSeatTrain_ >= 0);
     // Build 5: the drill car bores the tunnel: the next cell past the end of the track is cut
     // 3 wide and 4 high, a floor goes under it where there is none, and a straight rail goes on it.
+    trains_.infiniteRails = !survival();
     for (const auto& r : trains_.drillRequests()) {
         static constexpr int dx[4] = {0, 1, 0, -1}, dz[4] = {-1, 0, 1, 0};
         World& w = *world_;
-        const int side = r[3] & 3, nx = r[0] + dx[side], ny = r[1], nz = r[2] + dz[side];
+        if (r[3] & 1) continue;  // build 12: the drill bores only straight along a side
+        const int side = (r[3] >> 1) & 3, nx = r[0] + dx[side], ny = r[1], nz = r[2] + dz[side];
         const int px = dz[side] != 0 ? 1 : 0, pz = dx[side] != 0 ? 1 : 0;  // across the track
         bool cut = false;
         for (int k = -1; k <= 1; ++k)
@@ -3312,8 +3677,19 @@ void Session::update(float dt, double time, float guiW, float guiH, const Settin
                 cut = true;
             }
         if (w.getBlock(nx, ny, nz) == BEDROCK) continue;
-        const ItemId floor = w.getBlock(nx, ny - 1, nz);
-        if (floor == AIR || floor == WATER || floor == LAVA) w.setBlock(nx, ny - 1, nz, COBBLESTONE);
+        // 2.3.0: it walls up every hole round the tunnel: the floor under all three, both sides and the roof.
+        auto seal = [&](int bx, int by, int bz) {
+            const ItemId b = w.getBlock(bx, by, bz);
+            if (b == AIR || isLiquid(b) || isPlant(b)) w.setBlock(bx, by, bz, COBBLESTONE);
+        };
+        for (int k = -1; k <= 1; ++k) seal(nx + px * k, ny - 1, nz + pz * k), seal(nx + px * k, ny + 4, nz + pz * k);
+        for (int h = 0; h < 4; ++h) seal(nx - px * 2, ny + h, nz - pz * 2), seal(nx + px * 2, ny + h, nz + pz * 2);
+        // The rail ahead, out of the train's own load.
+        if (r[4] >= 0 && r[4] < (int)trains_.trains().size()) {
+            Train& tr = trains_.trains()[(size_t)r[4]];
+            if (!trains_.infiniteRails && tr.rails <= 0) continue;
+            if (!trains_.infiniteRails) --tr.rails;
+        }
         w.setBlock(nx, ny, nz, side == 0 || side == 2 ? RAIL_NS : RAIL_EW);
         if (cut) sound(Sound::Dig);
     }
@@ -3422,6 +3798,13 @@ void Session::update(float dt, double time, float guiW, float guiH, const Settin
         boats_.update(*world_, dimIndex(), dt, -1, 0, 0, 0);
         if (world_->getChunk(pcx, pcz)) {
             jumped = jump && player_.onGround && !player_.flying;
+            // Classic 0.0.3: the old water now and then held the player fast for a moment, as it did back then.
+            if (kClassicEdition && player_.inWater) {
+                if (waterStuck_ <= 0 && fireRandom() < dt * 0.12f) waterStuck_ = 0.6f + fireRandom() * 0.8f;
+                if (waterStuck_ > 0) waterStuck_ -= dt, moveX = moveZ = 0, jump = false;
+            } else {
+                waterStuck_ = 0;
+            }
             player_.update(*world_, dt, moveX, moveZ, jump, descend);
             // 2.1.0 preview: the cars are solid; walk in by their doors, stand on their floors.
             if (!player_.flying && trains_.collide(dimIndex(), player_.pos, player_.vel)) {
@@ -3472,6 +3855,8 @@ void Session::update(float dt, double time, float guiW, float guiH, const Settin
     updateBlocksOverTime(dt);
     for (Mob& m : mobs_.mobs()) m.love = std::max(0.0f, m.love - dt);
     updateExperiments20(dt);
+    if (kFeatures220 && !oldMode()) updateBronzeAndGrass(dt);  // 2.2.0 preview
+    if (kClassicEdition) updateDoppel(dt);  // Classic 0.0.3: the legend of the Double
     if (!oldMode() && settings_.season == Season::NewYear && world_ == &overworld_ && dayLight_ < 0.6f && (fireworkTimer_ -= dt) <= 0) {
         // 1.9.0 New Year's Eve: fireworks burst over the player all night long.
         auto rnd = [&] { fireworkSeed_ = fireworkSeed_ * 1664525u + 1013904223u; return (fireworkSeed_ >> 8) / 16777216.0f; };
@@ -3626,7 +4011,7 @@ void Session::render(Renderer& renderer, Ui& ui, const Settings& settings, bool 
         renderer.setVoidFog(voidFog_);
         renderer.setBrightness(settings.brightness * 0.8f);
     }
-    renderer.setFogScale(settings.addonHalloween ? 0.3f : 1.0f);
+    renderer.setFogScale(kClassicEdition ? (settings.classicFog == 0 ? 6.0f : settings.classicFog == 2 ? 0.55f : 1.0f) : settings.addonHalloween ? 0.3f : 1.0f);
     // 1.5.7: the player (also in first person), other players and mobs cast shadows.
     mobs_.buildVertices(dimIndex(), clock_, mobVerts_);
     shadowCasters_ = buildPlayerModel(this->pose());
@@ -3751,19 +4136,20 @@ void Session::render(Renderer& renderer, Ui& ui, const Settings& settings, bool 
         playerExtras_ = buildPlayerExtras(pose);
         if (!playerExtras_.empty()) renderer.drawParticles(playerExtras_);
     }
+    if (kClassicEdition && doppel_.active && world_ == &overworld_) renderer.drawPlayerModel(doppelPose(), kDoppelSkinSlot);
     for (const RemoteAvatar& a : remotePlayers) {
         if (a.dim != dimIndex()) continue;
         renderer.drawPlayerModel(a.pose, a.skinSlot);
         playerExtras_ = buildPlayerExtras(a.pose);
         if (!playerExtras_.empty()) renderer.drawParticles(playerExtras_);
     }
-    if (settings.cameraMode == 0 && !settings.hideGui && !oldMode()) {  // 0.3 showed no hand
+    if (settings.cameraMode == 0 && !settings.hideGui && (!oldMode() || kClassicEdition)) {  // 0.3 showed no hand; Classic does
         // The hand is lit like the place the player stands in.
         Vec3 e = player_.eye();
         float light = world_->dimension() != Dimension::Overworld ? 0.8f
                       : (int)std::floor(e.y) >= world_->skyHeight((int)std::floor(e.x), (int)std::floor(e.z)) ? 1.0f
                                                                                                              : 0.55f;
-        buildFirstPerson(hand_, light, handSkin_, handAtlas_);
+        buildFirstPerson(hand_, light, handSkin_, handAtlas_, kFeatures220 ? bowCharge_ : 0);
         buildOffhandFirstPerson(state_.offhand.id, player_.sneaking, hand_, light, handAtlas_);
         renderer.drawFirstPerson(handSkin_, handAtlas_);
     }
@@ -3798,6 +4184,13 @@ PlayerPose Session::pose() const {
     pose.sneaking = player_.sneaking && !player_.flying && riding_ < 0;
     pose.riding = riding_ >= 0 || seated_ || trainSeatTrain_ >= 0;
     if (pose.riding) pose.feet.y -= 0.45f;  // sitting in the boat
+    if (kFeatures220) {
+        // 2.2.0 preview: the arms breathe, the body dips as the legs stride apart, a bow is drawn.
+        pose.lively = true;
+        pose.time = clock_;
+        pose.bow = pose.held == BOW ? bowCharge_ : 0;
+        if (!pose.riding) pose.feet.y -= std::fabs(std::sin(pose.swing)) * 0.06f;
+    }
     return pose;
 }
 
@@ -3950,11 +4343,52 @@ void Session::drawOldHud(Ui& ui) const {
     // The menu: a grass block on a slate square.
     ui.fill(l.pauseX - 2, l.pauseY - 2, l.pauseSize + 4, l.pauseSize + 4, pauseHeld ? Color{0.5f, 0.6f, 0.75f, 0.9f} : Color{0.3f, 0.38f, 0.5f, 0.85f});
     ui.tile(l.pauseX + 2, l.pauseY + 2, l.pauseSize - 4, T_GRASS_SIDE);
+    if (kClassicEdition && player_.flying) {
+        // Classic 0.0.3: flying down, a second square beside jump with the step glyph upside down.
+        const float fx = l.jumpX - l.buttonSize - 6;
+        ui.fill(fx, l.jumpY, l.buttonSize, l.buttonSize, {1, 1, 1, 0.18f});
+        const float cx = fx + l.buttonSize / 2, cy = l.jumpY + l.buttonSize / 2;
+        ui.fill(cx - 2, cy - 1, 4, 9, {1, 1, 1, 0.85f});
+        ui.fill(cx - 9, cy - 5, 18, 4, {1, 1, 1, 0.85f});
+    }
+    if (kClassicEdition && settings_.showFps) {
+        const std::string info = "FPS: " + std::to_string((int)std::round(fps_)) + "  XYZ: " + std::to_string((int)std::floor(player_.pos.x)) + " " +
+                                 std::to_string((int)std::floor(player_.pos.y)) + " " + std::to_string((int)std::floor(player_.pos.z));
+        ui.fill(2, 2, ui.textWidth(info) + 4, 11, {0, 0, 0, 0.5f});
+        ui.text(4, 4, info, {1, 1, 1, 1});
+    }
     // Jump: a pale see-through square with the step glyph.
     ui.fill(l.jumpX, l.jumpY, l.buttonSize, l.buttonSize, {1, 1, 1, jumpHeld ? 0.35f : 0.18f});
     const float gx = l.jumpX + l.buttonSize / 2, gy = l.jumpY + l.buttonSize / 2;
     ui.fill(gx - 2, gy - 8, 4, 9, {1, 1, 1, 0.85f});
     ui.fill(gx - 9, gy + 1, 18, 4, {1, 1, 1, 0.85f});
+    if (kClassicEdition) {
+        // Classic 0.0.3: a D-pad in the old style.
+        bool pad[3][3] = {};
+        for (const Touch& t : touches_) {
+            int dx, dz;
+            if (t.id >= 0 && t.kind == Touch::DPad && dpadDirection(l, t.x, t.y, dx, dz)) pad[1 - dz][dx + 1] = true;
+        }
+        const float b = l.padButton;
+        const int arrows[4][3] = {{1, 0, Font::HudUp}, {0, 1, Font::HudLeft}, {2, 1, Font::HudRight}, {1, 2, Font::HudDown}};
+        for (const auto& a : arrows) {
+            const int col = a[0], row = a[1];
+            const bool on = pad[row][col] || (row == 0 && (pad[0][0] || pad[0][2])) || (row == 2 && (pad[2][0] || pad[2][2])) ||
+                            (col == 0 && (pad[0][0] || pad[2][0])) || (col == 2 && (pad[0][2] || pad[2][2]));
+            // The look of 0.3: a pale see-through square, a plain white arrow made of pixel rows.
+            const float x = l.padX + col * b + 1, y = l.padY + row * b + 1, w = b - 2;
+            ui.fill(x, y, w, w, {1, 1, 1, on ? 0.35f : 0.18f});
+            const float cx = x + w / 2, cy = y + w / 2;
+            const Color arrow{1, 1, 1, 0.85f};
+            for (int k = 0; k < 5; ++k) {
+                const float len = 2 + k * 2.5f, off = -5 + k * 2.2f;
+                if (a[2] == Font::HudUp) ui.fill(cx - len / 2, cy + off, len, 2.2f, arrow);
+                if (a[2] == Font::HudDown) ui.fill(cx - len / 2, cy - off - 2.2f, len, 2.2f, arrow);
+                if (a[2] == Font::HudLeft) ui.fill(cx + off, cy - len / 2, 2.2f, len, arrow);
+                if (a[2] == Font::HudRight) ui.fill(cx - off - 2.2f, cy - len / 2, 2.2f, len, arrow);
+            }
+        }
+    }
     // The floating joystick of 0.3, wherever the left thumb went down.
     for (const Touch& t : touches_) {
         if (t.id < 0 || t.kind != Touch::Joystick) continue;
@@ -3962,6 +4396,19 @@ void Session::drawOldHud(Ui& ui) const {
         ui.fill(t.startX - r, t.startY - r, 2 * r, 2 * r, {1, 1, 1, 0.18f});
         const float kx = t.startX + std::clamp(t.x - t.startX, -r, r), ky = t.startY + std::clamp(t.y - t.startY, -r, r);
         ui.fill(kx - 9, ky - 9, 18, 18, {1, 1, 1, 0.5f});
+    }
+    // Classic 0.0.3: hearts above the hotbar in survival (there was no food yet), and counts on the slots.
+    if (kClassicEdition && survival()) {
+        for (int i = 0; i < 10; ++i) {
+            const float hp = state_.health - i * 2;
+            ui.icon(l.hotbarX + i * 9, l.hotbarY - 11, Font::HeartEmpty, {1, 1, 1, 1});
+            if (hp >= 2) ui.icon(l.hotbarX + i * 9, l.hotbarY - 11, Font::HeartFull, {1, 0.3f, 0.3f, 1});
+            else if (hp >= 1) ui.icon(l.hotbarX + i * 9, l.hotbarY - 11, Font::HeartHalf, {1, 0.3f, 0.3f, 1});
+        }
+        for (int i = 0; i < kHotbarSize; ++i) {
+            const ItemStack& st = state_.inventory.slots[i];
+            if (st.count > 1) ui.text(l.hotbarX + i * l.slot + l.slot - 3 - ui.textWidth(std::to_string(st.count)), l.hotbarY + l.slot - 10, std::to_string(st.count), {1, 1, 1, 1});
+        }
     }
     // Crosshair.
     ui.fill(guiW_ / 2 - 4, guiH_ / 2, 9, 1, {1, 1, 1, 0.8f});
@@ -3976,7 +4423,7 @@ Session::TrainButtons Session::trainButtons() const {
     b.y = std::max(guiH_ * 0.30f, 84.0f);  // below the minimap
     if (trainSeatTrain_ >= 0) {
         const bool driver = trainSeat_ == 0 &&
-                            trains_.trains()[(size_t)trainSeatTrain_].cars[(size_t)trainSeatCar_].kind == CarKind::Locomotive;
+                            isEngineCar(trains_.trains()[(size_t)trainSeatTrain_].cars[(size_t)trainSeatCar_].kind);
         if (driver) {
             b.labels[b.count++] = "Plyn +";
             b.labels[b.count++] = "Plyn -";
@@ -4008,7 +4455,7 @@ bool Session::trainButtonTap(float x, float y) {
             }
             trainSeatTrain_ = tr, trainSeatCar_ = car;
             trainSeat_ = (int)(hash3((int)clock_, tr, car, 7) % (unsigned)trains_.seatCount(c.kind));
-            if (c.kind == CarKind::Locomotive) trainSeat_ = 0;
+            if (isEngineCar(c.kind)) trainSeat_ = 0;
             player_.flying = false;
             seated_ = false;
             sound(Sound::Door);
@@ -4289,7 +4736,7 @@ void Session::drawHud(Ui& ui) const {
     }
 
     // Jump (and fly down) buttons
-    bool jumpHeld = false, downHeld = false, pauseHeld = false, chatHeld = false;
+    bool jumpHeld = false, downHeld = false, pauseHeld = false, chatHeld = false, cameraHeld = false;
     bool pad[3][3] = {};
     for (const Touch& t : touches_) {
         if (t.id < 0) continue;
@@ -4297,9 +4744,16 @@ void Session::drawHud(Ui& ui) const {
         downHeld |= t.kind == Touch::FlyDown;
         pauseHeld |= t.kind == Touch::Pause;
         chatHeld |= t.kind == Touch::Chat;
+        cameraHeld |= t.kind == Touch::Camera;
         int dx, dz;
         if (t.kind == Touch::DPad && dpadDirection(l, t.x, t.y, dx, dz)) pad[1 - dz][dx + 1] = true;
     }
+    if (kFeatures220) {
+        // 2.2.0 preview: the project's own button pictures.
+        ui.hudPicture(l.jumpX, l.jumpY, l.buttonSize, l.buttonSize, Font::HudJump, jumpHeld);
+        if (player_.flying) ui.hudPicture(l.flyDownX, l.jumpY, l.buttonSize, l.buttonSize, Font::HudDown, downHeld);
+        else if (riding_ < 0) ui.hudPicture(l.flyDownX, l.jumpY, l.buttonSize, l.buttonSize, Font::HudSneak, player_.sneaking);
+    } else {
     ui.hudButton(l.jumpX, l.jumpY, l.buttonSize, l.buttonSize, jumpHeld);
     ui.hudGlyph(l.jumpX, l.jumpY, l.buttonSize, l.buttonSize, Font::ArrowUp);
     if (player_.flying) {
@@ -4310,6 +4764,7 @@ void Session::drawHud(Ui& ui) const {
         ui.hudButton(l.flyDownX, l.jumpY, l.buttonSize, l.buttonSize, player_.sneaking);
         ui.hudGlyph(l.flyDownX, l.jumpY, l.buttonSize, l.buttonSize, Font::ArrowDown);
     }
+    }
 
     // D-pad: four arrow buttons around an empty centre; corner presses light up both arrows.
     const float b = l.padButton;
@@ -4319,6 +4774,11 @@ void Session::drawHud(Ui& ui) const {
         bool on = pad[row][col] || (row == 0 && (pad[0][0] || pad[0][2])) || (row == 2 && (pad[2][0] || pad[2][2])) ||
                   (col == 0 && (pad[0][0] || pad[2][0])) || (col == 2 && (pad[0][2] || pad[2][2]));
         float bx = l.padX + col * b, by = l.padY + row * b;
+        if (kFeatures220) {
+            const int pic = a[2] == Font::ArrowUp ? Font::HudUp : a[2] == Font::ArrowDown ? Font::HudDown : a[2] == Font::ArrowLeft ? Font::HudLeft : Font::HudRight;
+            ui.hudPicture(bx + 1, by + 1, b - 2, b - 2, pic, on);
+            continue;
+        }
         ui.hudButton(bx + 1, by + 1, b - 2, b - 2, on);
         ui.hudGlyph(bx + 1, by + 1, b - 2, b - 2, a[2], b >= 26 ? 2 : 1);
     }
@@ -4369,16 +4829,25 @@ void Session::drawHud(Ui& ui) const {
     }
 
     // Pause button, top centre
-    ui.hudButton(l.pauseX, l.pauseY, l.pauseSize, l.pauseSize, pauseHeld);
-    ui.fill(l.pauseX + 5, l.pauseY + 4, 3, l.pauseSize - 8, theme::kTextBright);
-    ui.fill(l.pauseX + l.pauseSize - 8, l.pauseY + 4, 3, l.pauseSize - 8, theme::kTextBright);
+    if (kFeatures220) {
+        ui.hudPicture(l.pauseX, l.pauseY, l.pauseSize, l.pauseSize, Font::HudPause, pauseHeld);
+    } else {
+        ui.hudButton(l.pauseX, l.pauseY, l.pauseSize, l.pauseSize, pauseHeld);
+        ui.fill(l.pauseX + 5, l.pauseY + 4, 3, l.pauseSize - 8, theme::kTextBright);
+        ui.fill(l.pauseX + l.pauseSize - 8, l.pauseY + 4, 3, l.pauseSize - 8, theme::kTextBright);
+    }
     // Chat button: a speech bubble.
+    if (kFeatures220) {
+        ui.hudPicture(l.chatX, l.pauseY, l.pauseSize, l.pauseSize, Font::HudChat, chatHeld);
+        ui.hudPicture(l.cameraX, l.pauseY, l.pauseSize, l.pauseSize, Font::HudCamera, cameraHeld);
+    } else {
     ui.hudButton(l.chatX, l.pauseY, l.pauseSize, l.pauseSize, chatHeld);
     ui.fill(l.chatX + 4, l.pauseY + 4, l.pauseSize - 8, 7, theme::kTextBright);
     ui.fill(l.chatX + 6, l.pauseY + 11, 3, 2, theme::kTextBright);
     ui.fill(l.chatX + 5, l.pauseY + 13, 2, 1, theme::kTextBright);
     ui.fill(l.chatX + 6, l.pauseY + 6, l.pauseSize - 12, 1, {0.3f, 0.3f, 0.3f, 1});
     ui.fill(l.chatX + 6, l.pauseY + 8, l.pauseSize - 15, 1, {0.3f, 0.3f, 0.3f, 1});
+    }
 
     if (info_.showCoordinates) {
         // Position and biome, top left.

@@ -1,0 +1,6 @@
+The "Tiny Caps" font in this pack is Silkscreen by Jason Kottke, redrawn as a
+Minecraft glyph sheet by createtextures.com. It is licensed under the SIL Open Font
+License 1.1 - see OFL-Silkscreen.txt - and so are the glyph sheets made from it.
+
+Copyright 2001 The Silkscreen Project Authors (https://github.com/googlefonts/silkscreen)
+https://fonts.google.com/specimen/Silkscreen

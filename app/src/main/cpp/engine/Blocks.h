@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <algorithm>
 
 namespace vc {
 
@@ -15,6 +16,14 @@ constexpr bool kPreviewEdition = true;
 #else
 constexpr bool kPreviewEdition = false;
 #endif
+// VoxelCraft Classic 0.0.3 (built with VC_CLASSIC): the old game, its own small app.
+#ifdef VC_CLASSIC
+constexpr bool kClassicEdition = true;
+#else
+constexpr bool kClassicEdition = false;
+#endif
+// 2.2.0 "Cornerstone and Frost" is out: its features are in both editions (the preview moves on to 2.3.0).
+constexpr bool kFeatures220 = true;
 constexpr int kModIdBase = 2000;     // blocks and items of VoxelCraft Mods (see Mods.h) start here
 // 2.0.0: the engine's own ids above the mods (the ids under 2000 are all taken): 60000..64999.
 constexpr int kExtIdBase = 60000;
@@ -271,6 +280,46 @@ enum BlockId : uint16_t {
     CHISELED_BRONZE = 60047,  // a bronze plate with a pattern pressed in
     BRONZE_GRATE = 60048,     // a see-through bronze lattice
     BRONZE_BULB = 60049,      // 60049..60052: + 1 lit, + 2 powered; each new pulse of power switches it on or off
+    // 2.2.0 preview: the big Bronze Update.
+    STAIRS_EXTRA6 = 60080,    // 60080..60095: stairs of materials 41..42 (bronze, cut bronze)
+    SLAB_EXTRA6 = 60096,      // 60096..60101: slabs of materials 41..42
+    BRONZE_DOOR = 60102,      // 60102..60117: like OAK_DOOR (opens by hand and with power)
+    BRONZE_TRAPDOOR = 60118,  // 60118..60133: like OAK_TRAPDOOR
+    BRONZE_DOOR_ITEM = 60134,
+    BRONZE_AGED = 60135,      // 60135..60154: base * 5 + (0 waxed, 1 tarnished, 2 waxed tarnished, 3 rusty, 4 waxed rusty)
+    // 2.2.0 preview: the new biomes of the Cornerstone Dimension.
+    CARVED_CORNERSTONE = 60155,  // Gilded Quarry: cornerstone with a rune pattern
+    GILDED_COBBLE = 60156,       // rings like metal underfoot
+    AMBER_RESIN = 60157,         // see-through, glows, catches falls
+    COPPER_MOSS = 60158,         // a crystal shrub
+    PRISMATIDE_PILLAR = 60159,   // Prismatide Coast: shimmers through the colours over time
+    SILTSTONE = 60160,           // soft dark blue stone of the lagoon floors
+    LUMINOUS_SALT = 60161,       // the glowing white shores
+    AETHER_BRINE = 60162,        // the lagoons' liquid: lighter jumps, slow walking
+    GLASS_REEDS = 60163,         // tall hollow reeds
+    SPORE_PAD = 60164,           // bouncy like a trampoline
+    STONEWOOD_LOG = 60165,       // Overgrown Monolith: petrified bark, does not burn
+    MOSSY_CORNERSTONE = 60166,
+    GLOWCAP_LEAVES = 60167,      // glowing leaves of the stonewood trees
+    STARBERRY_BUSH = 60168,      // gives starberries
+    VOID_TRUFFLE = 60169,        // rare, at the roots of the stonewood trees (also food)
+    STARBERRIES = 60170,         // food that heals (an item)
+    // 2.2.0 "Cornerstone and Frost": frost.
+    THIN_ICE = 60171,            // cracked ice: breaks under whoever stands on it
+    ICE_BRICKS = 60172,
+    SNOWFLAKE_BLOCK = 60173,
+    DRIED_SNOW = 60174,          // powdery snow: you sink into it and freeze
+    ABYSSAL_ROCK = 60175,        // 2.2.0: the deepest layer of the Overworld, below the deepstone
+    RADIO = 60176,               // 2.2.0: Rozhlas, a loudspeaker that reads out its text to every player
+    // 2.2.0 preview build 12: rails in eight directions (they take their shape from the rails around them).
+    RAIL_DIAG = 60177,           // 60177: north-east to south-west corner, 60178: north-west to south-east
+    RAIL_BEND = 60179,           // 60179..60186: from the middle of side c (0 N, 1 E, 2 S, 3 W) to a far corner (s 0 / 1)
+    LOOT_CHEST_BRONZE = 60211,
+    SUBWAY_LOCOMOTIVE = 60244,   // 2.3.0 preview build 7: the subway (items, past the blocks' range)
+    SUBWAY_CAR = 60245,
+    RAIL_SWITCH8 = 60212,        // 60212..60243: 2.3.0 the flexible switch: entry port * 4 + left * 2 + state   // 2.3.0: a chest of the Bronze Halls
+    RAIL_SWITCH_L = 60203,       // 60203..60210: 2.3.0 the mirrored switch, its branch to the left (facing * 2 + state)
+    RAIL_GENTLE = 60187,         // 60187..60202: a gentle slope, 4 pieces per block of height: facing * 4 + piece
     COMMAND_BLOCK = 1586,     // runs its command when powerstone powers it  // 1.7.2 build 3: a barrel of the Overworld camps, filled the first time it opens
     EGG_HUSKING = 1307,
     // Blocks of the forgotten civilization, the wasteland and the fortress.
@@ -408,12 +457,13 @@ inline bool isFence(ItemId id) { return id == FENCE || (id >= SPRUCE_FENCE && id
 // halves (0 bottom, 1 top, 2 double) per material:
 //   stairs: 0..11 at STAIRS, 12 at STAIRS_EXTRA, 13..16 at STAIRS_EXTRA2, 17..21 at STAIRS_EXTRA3, 22.. at STAIRS_EXTRA4
 //   slabs:  0..12 at SLAB, 13..16 at SLAB_EXTRA, 17..21 at SLAB_EXTRA3, 22.. at SLAB_EXTRA4
-constexpr int kShapeMaterials = 41;
+constexpr int kShapeMaterials = 43;  // 2.2.0: + bronze, cut bronze
 constexpr int kFirstStairsMaterials = 12;
 constexpr int kFirstSlabMaterials = 13;
 constexpr int kThirdShapeMaterials = 17;
 constexpr int kFourthShapeMaterials = 22;  // 1.7.2 build 2: every other solid building block
 constexpr int kFifthShapeMaterials = 37;   // 1.7.2 build 3: the Crimson Void Expansion's blocks
+constexpr int kSixthShapeMaterials = 41;   // 2.2.0: bronze
 inline ItemId shapeMaterialBlock(int material) {
     const ItemId kBlocks[kShapeMaterials] = {PLANKS,  SPRUCE_PLANKS,     VOID_PLANKS, NETHERPERK_PLANKS,
                                              COBBLESTONE, STONE,         STONE_BRICKS, MOSSY_COBBLESTONE,
@@ -425,7 +475,7 @@ inline ItemId shapeMaterialBlock(int material) {
                                              CELESTIAL_STONE, DRIPSTONE_BLOCK, TAR_BLOCK, CRACKED_POWERSTONE_BRICKS,
                                              CRACKED_NETHER_BRICKS, CRACKED_DEEPSTONE_BRICKS, ROTTEN_PLANKS, MOSSY_DEEPSTONE,
                                              CHISELED_POWERSTONE_BRICKS, CRIMSONIUM_PLANKS, SHATTERED_STONE, SHATTERED_BRICKS,
-                                             DARK_SANDSTONE};
+                                             DARK_SANDSTONE, BRONZE_BLOCK, CUT_BRONZE};
     return kBlocks[material < 0 || material >= kShapeMaterials ? 0 : material];
 }
 // Wooden shape materials (the wood cutter's), and what a log and planks become there.
@@ -467,35 +517,37 @@ struct ShapeRange {
     int base;  // first id
 };
 inline const ShapeRange* stairsRanges() {
-    static const ShapeRange r[6] = {{0, kFirstStairsMaterials, STAIRS}, {kFirstStairsMaterials, 1, STAIRS_EXTRA},
+    static const ShapeRange r[7] = {{0, kFirstStairsMaterials, STAIRS}, {kFirstStairsMaterials, 1, STAIRS_EXTRA},
                                     {kFirstSlabMaterials, kThirdShapeMaterials - kFirstSlabMaterials, STAIRS_EXTRA2},
                                     {kThirdShapeMaterials, kFourthShapeMaterials - kThirdShapeMaterials, STAIRS_EXTRA3},
                                     {kFourthShapeMaterials, kFifthShapeMaterials - kFourthShapeMaterials, STAIRS_EXTRA4},
-                                    {kFifthShapeMaterials, kShapeMaterials - kFifthShapeMaterials, STAIRS_EXTRA5}};
+                                    {kFifthShapeMaterials, kSixthShapeMaterials - kFifthShapeMaterials, STAIRS_EXTRA5},
+                                    {kSixthShapeMaterials, kShapeMaterials - kSixthShapeMaterials, STAIRS_EXTRA6}};
     return r;
 }
 inline const ShapeRange* slabRanges() {
-    static const ShapeRange r[5] = {{0, kFirstSlabMaterials, SLAB}, {kFirstSlabMaterials, kThirdShapeMaterials - kFirstSlabMaterials, SLAB_EXTRA},
+    static const ShapeRange r[6] = {{0, kFirstSlabMaterials, SLAB}, {kFirstSlabMaterials, kThirdShapeMaterials - kFirstSlabMaterials, SLAB_EXTRA},
                                     {kThirdShapeMaterials, kFourthShapeMaterials - kThirdShapeMaterials, SLAB_EXTRA3},
                                     {kFourthShapeMaterials, kFifthShapeMaterials - kFourthShapeMaterials, SLAB_EXTRA4},
-                                    {kFifthShapeMaterials, kShapeMaterials - kFifthShapeMaterials, SLAB_EXTRA5}};
+                                    {kFifthShapeMaterials, kSixthShapeMaterials - kFifthShapeMaterials, SLAB_EXTRA5},
+                                    {kSixthShapeMaterials, kShapeMaterials - kSixthShapeMaterials, SLAB_EXTRA6}};
     return r;
 }
 inline const ShapeRange* stairsRangeOf(ItemId id) {
-    for (int i = 0; i < 6; ++i) {
+    for (int i = 0; i < 7; ++i) {
         const ShapeRange& r = stairsRanges()[i];
         if (id >= r.base && id < r.base + r.count * 8) return &r;
     }
     return nullptr;
 }
 inline const ShapeRange* slabRangeOf(ItemId id) {
-    for (int i = 0; i < 5; ++i) {
+    for (int i = 0; i < 6; ++i) {
         const ShapeRange& r = slabRanges()[i];
         if (id >= r.base && id < r.base + r.count * 3) return &r;
     }
     return nullptr;
 }
-inline bool isStairs(ItemId id) { return id >= STAIRS && id < 2000 && stairsRangeOf(id) != nullptr; }
+inline bool isStairs(ItemId id) { return id >= STAIRS && (id < 2000 || id >= kExtIdBase) && stairsRangeOf(id) != nullptr; }
 inline int stairsMaterial(ItemId id) {
     const ShapeRange* r = stairsRangeOf(id);
     return r ? r->firstMaterial + (id - r->base) / 8 : 0;
@@ -504,7 +556,7 @@ inline int stairsVariant(ItemId id) {
     const ShapeRange* r = stairsRangeOf(id);
     return r ? (id - r->base) % 8 : 0;
 }
-inline bool isSlab(ItemId id) { return id >= SLAB && id < 2000 && slabRangeOf(id) != nullptr; }
+inline bool isSlab(ItemId id) { return id >= SLAB && (id < 2000 || id >= kExtIdBase) && slabRangeOf(id) != nullptr; }
 inline int slabMaterial(ItemId id) {
     const ShapeRange* r = slabRangeOf(id);
     return r ? r->firstMaterial + (id - r->base) / 3 : 0;
@@ -515,7 +567,7 @@ inline int slabHalf(ItemId id) {
 }  // 0 bottom, 1 top, 2 double
 inline bool isDoubleSlab(ItemId id) { return isSlab(id) && slabHalf(id) == 2; }
 inline ItemId stairsId(int material, int facing, bool upsideDown) {
-    for (int i = 0; i < 6; ++i) {
+    for (int i = 0; i < 7; ++i) {
         const ShapeRange& r = stairsRanges()[i];
         if (material >= r.firstMaterial && material < r.firstMaterial + r.count)
             return (ItemId)(r.base + (material - r.firstMaterial) * 8 + (facing & 3) + (upsideDown ? 4 : 0));
@@ -523,7 +575,7 @@ inline ItemId stairsId(int material, int facing, bool upsideDown) {
     return AIR;
 }
 inline ItemId slabId(int material, int half) {  // 0 bottom, 1 top, 2 double
-    for (int i = 0; i < 5; ++i) {
+    for (int i = 0; i < 6; ++i) {
         const ShapeRange& r = slabRanges()[i];
         if (material >= r.firstMaterial && material < r.firstMaterial + r.count) return (ItemId)(r.base + (material - r.firstMaterial) * 3 + half);
     }
@@ -533,16 +585,34 @@ inline bool isStainedGlass(ItemId id) { return id >= STAINED_GLASS && id < STAIN
 inline bool isDripstoneSpike(ItemId id) { return id == DRIPSTONE_UP || id == DRIPSTONE_DOWN; }
 // 2.1.0 preview rails. A switch: facing 0-3 (the way its straight track runs, 0 = north-south with
 // the branch to the east, then turned clockwise), state 0 straight, 1 turned onto the branch.
-inline ItemId railSwitchId(int facing, int state) { return (ItemId)(RAIL_SWITCH + (facing & 3) * 2 + (state & 1)); }
-inline int railSwitchIndex(ItemId id) { return id >= RAIL_SWITCH && id < RAIL_SWITCH + 8 ? id - RAIL_SWITCH : -1; }
+inline ItemId railSwitchId(int facing, int state, bool left = false) { return (ItemId)((left ? RAIL_SWITCH_L : RAIL_SWITCH) + (facing & 3) * 2 + (state & 1)); }
+inline int railSwitchIndex(ItemId id) {
+    if (id >= RAIL_SWITCH && id < RAIL_SWITCH + 8) return id - RAIL_SWITCH;
+    if (id >= RAIL_SWITCH_L && id < RAIL_SWITCH_L + 8) return id - RAIL_SWITCH_L;
+    return -1;
+}
+// 2.3.0: the branch side: right switches turn to facing + 1, left (mirrored) ones to facing + 3.
+inline bool railSwitchLeft(ItemId id) { return id >= RAIL_SWITCH_L && id < RAIL_SWITCH_L + 8; }
+inline int railSwitchBranch(ItemId id) { const int f = railSwitchIndex(id) / 2; return (f + (railSwitchLeft(id) ? 3 : 1)) & 3; }
 inline bool isRailSwitch(ItemId id) { return railSwitchIndex(id) >= 0; }
 inline bool isBufferStop(ItemId id) { return id >= BUFFER_STOP && id < BUFFER_STOP + 4; }
 inline bool isRailSlope(ItemId id) { return id >= RAIL_SLOPE && id < RAIL_SLOPE + 4; }
 inline bool isCrossingSignal(ItemId id) { return id >= CROSSING_SIGNAL && id < CROSSING_SIGNAL + 12; }
 inline bool isCrossingGate(ItemId id) { return id >= CROSSING_GATE && id < CROSSING_GATE + 8; }
 inline bool isTurntable(ItemId id) { return id == TURNTABLE || id == TURNTABLE + 1; }
-constexpr int kExtLastBlock = BRONZE_BULB + 3;
-inline bool isRail(ItemId id) { return isRailSlope(id) || isTurntable(id) || id == RAIL_NS || id == RAIL_EW || (id >= RAIL_CURVE && id < RAIL_CURVE + 4) || isRailSwitch(id); }
+constexpr int kExtLastBlock = RAIL_SWITCH8 + 31;
+inline bool isRailGentle(ItemId id) { return id >= RAIL_GENTLE && id < RAIL_GENTLE + 16; }
+inline bool isRailDiag(ItemId id) { return id == RAIL_DIAG || id == RAIL_DIAG + 1; }
+inline bool isRailBend(ItemId id) { return id >= RAIL_BEND && id < RAIL_BEND + 8; }
+// 2.3.0: the flexible switch. Its points face entry port e (0..7, sides even, corners odd): straight on to
+// e + 4, or a 45-degree bend to e + 4 + 1 (right) or e + 4 - 1 (left), as its state says.
+inline bool isRailSwitch8(ItemId id) { return id >= RAIL_SWITCH8 && id < RAIL_SWITCH8 + 32; }
+inline ItemId railSwitch8Id(int entry, bool left, int state) { return (ItemId)(RAIL_SWITCH8 + (entry & 7) * 4 + (left ? 2 : 0) + (state & 1)); }
+inline int railSwitch8Entry(ItemId id) { return (id - RAIL_SWITCH8) / 4; }
+inline bool railSwitch8Left(ItemId id) { return ((id - RAIL_SWITCH8) / 2) & 1; }
+inline int railSwitch8State(ItemId id) { return (id - RAIL_SWITCH8) & 1; }
+inline int railSwitch8Branch(ItemId id) { return (railSwitch8Entry(id) + 4 + (railSwitch8Left(id) ? -1 : 1)) & 7; }
+inline bool isRail(ItemId id) { return isRailSwitch8(id) || isRailGentle(id) || isRailDiag(id) || isRailBend(id) || isRailSlope(id) || isTurntable(id) || id == RAIL_NS || id == RAIL_EW || (id >= RAIL_CURVE && id < RAIL_CURVE + 4) || isRailSwitch(id); }
 // Blocks with ids from 1000 up (everything else up there is an item).
 inline bool isBalloon(ItemId id) { return id >= BALLOON && id < BALLOON + 3; }
 inline bool isPaintedPlanks(ItemId id) { return id >= PAINTED_PLANKS && id < PAINTED_PLANKS + 4; }
@@ -556,7 +626,7 @@ bool modIsTransparent(ItemId id);
 bool modIsEmissive(ItemId id);
 int modFood(ItemId id);
 inline bool isNewBlock(ItemId id) {
-    if (id >= kExtIdBase && id <= kExtLastBlock && !(id >= LOCOMOTIVE && id <= FREIGHT_WAGON) && id != DRILL_CAR) return true;  // the engine's own range
+    if (id >= kExtIdBase && id <= kExtLastBlock && !(id >= LOCOMOTIVE && id <= FREIGHT_WAGON) && id != DRILL_CAR && id != STARBERRIES) return true;  // the engine's own range
     if (isModId(id)) return modIsBlock(id);
     return isStairs(id) || isSlab(id) || (id >= TAR && id <= SNOW_LAYER) || isStainedGlass(id) || (id >= WALL_CABLE && id < WALL_CABLE + 8) || (id >= WALL_SWITCH && id < WALL_SWITCH + 8) ||
            (id >= ANNIV_LOGO && id <= PAINTED_PLANKS + 3) || (id >= POWERSTONE_BRICKS && id <= COMMAND_BLOCK && id != 1518 && id != 1519) || (id >= SOUND_BLOCK && id <= RAIL_CURVE + 3) || (id >= RAIL_SWITCH && id < BUFFER_STOP + 4) || isRailSlope(id) ||
@@ -666,20 +736,37 @@ enum Tile : uint16_t {
     T_CELESTLING_BODY, T_CELESTLING_FACE, T_STALKER_BODY, T_STALKER_FACE, T_DRIFTER_BODY, T_DRIFTER_FACE, T_DRIFTER_WING,
     T_TRAIN_TEX, T_TRAIN_TEX_LAST = T_TRAIN_TEX + 13,  // 2.1.0 preview build 4: a pixel-art tile per train colour
     T_DRILL_CAR_ITEM,  // build 5
+    // 2.2.0 preview: the new Cornerstone biomes.
+    T_CARVED_CORNERSTONE, T_GILDED_COBBLE, T_AMBER_RESIN, T_COPPER_MOSS, T_PRISMATIDE_PILLAR, T_SILTSTONE, T_LUMINOUS_SALT,
+    T_AETHER_BRINE, T_GLASS_REEDS, T_SPORE_PAD_TOP, T_SPORE_PAD_SIDE, T_STONEWOOD_LOG, T_STONEWOOD_TOP, T_MOSSY_CORNERSTONE,
+    T_GLOWCAP_LEAVES, T_STARBERRY_BUSH, T_VOID_TRUFFLE, T_STARBERRIES,
+    T_THIN_ICE, T_ICE_BRICKS, T_SNOWFLAKE_BLOCK, T_DRIED_SNOW,  // 2.2.0: frost
+    T_ABYSSAL_ROCK,  // 2.2.0: the deep layers
+    T_RADIO, T_RADIO_TOP,  // 2.2.0: Rozhlas
     T_CUT_BRONZE, T_CHISELED_BRONZE, T_BRONZE_GRATE, T_BRONZE_BULB, T_BRONZE_BULB_ON,  // build 6: the Bronze Update
+    T_BRONZE_AGED, T_BRONZE_AGED_LAST = T_BRONZE_AGED + 7,  // 2.2.0: base * 2 + (0 tarnished, 1 rusty)
+    T_BRONZE_DOOR_LOWER, T_BRONZE_DOOR_UPPER, T_BRONZE_TRAPDOOR, T_BRONZE_DOOR_ITEM,
+    T_SUBWAY_LOCO_ITEM, T_SUBWAY_CAR_ITEM,
+    T_TRAIN_TEX2, T_TRAIN_TEX2_LAST = T_TRAIN_TEX2 + 15,  // 2.3.0 preview build 7: more train colours (the subway)
     T_COUNT
 };
 static_assert(T_COUNT <= kAtlasCols * kAtlasCols, "the atlas has room for every tile");
+// The pixel-art tile of train palette colour ci (14 in the first block, 16 more at the end of the atlas).
+inline int trainTexTile(int ci) { return ci < 14 ? T_TRAIN_TEX + ci : T_TRAIN_TEX2 + std::min(ci - 14, 15); }
 
 enum Face : int { F_TOP, F_BOTTOM, F_NORTH, F_SOUTH, F_EAST, F_WEST };
 
-inline bool isLiquid(ItemId id) { return id == WATER || id == LAVA || id == TAR; }
-inline bool isDoor(ItemId id) { return id >= OAK_DOOR && id < IRON_DOOR + 16; }
-inline bool isTrapdoor(ItemId id) { return id >= OAK_TRAPDOOR && id < OAK_TRAPDOOR + 16; }
+inline bool isLiquid(ItemId id) { return id == WATER || id == LAVA || id == TAR || id == AETHER_BRINE || id == DRIED_SNOW; }
+inline bool isDoor(ItemId id) { return (id >= OAK_DOOR && id < IRON_DOOR + 16) || (id >= BRONZE_DOOR && id < BRONZE_DOOR + 16); }
+// The first id of a door's 16 states (oak, iron or bronze).
+inline ItemId doorBase(ItemId id) { return id >= BRONZE_DOOR ? (ItemId)BRONZE_DOOR : id >= IRON_DOOR ? (ItemId)IRON_DOOR : (ItemId)OAK_DOOR; }
+inline bool isPoweredDoor(ItemId id) { return isDoor(id) && id >= IRON_DOOR; }  // iron and bronze open with power
+inline bool isTrapdoor(ItemId id) { return (id >= OAK_TRAPDOOR && id < OAK_TRAPDOOR + 16) || (id >= BRONZE_TRAPDOOR && id < BRONZE_TRAPDOOR + 16); }
+inline ItemId trapdoorBase(ItemId id) { return id >= BRONZE_TRAPDOOR ? (ItemId)BRONZE_TRAPDOOR : (ItemId)OAK_TRAPDOOR; }
 inline bool isChest(ItemId id) {
     return id == CHEST || (id >= LOOT_CHEST_RUIN && id <= LOOT_CHEST_MINE) || id == LOOT_CHEST_FORTRESS ||
            (id >= LOOT_CHEST_VOID && id <= LOOT_CHEST_TOWER) || (id >= LOOT_CHEST_FORGOTTEN && id <= LOOT_CHEST_PORTAL) ||
-           id == LOOT_CHEST_SHRINE || id == LOOT_CHEST_CHAMBER;
+           id == LOOT_CHEST_SHRINE || id == LOOT_CHEST_CHAMBER || id == LOOT_CHEST_BRONZE;
 }
 inline bool isSapling(ItemId id) { return (id >= OAK_SAPLING && id <= NETHERPERK_SAPLING) || id == GRAY_SAPLING || id == CELESTIAL_SAPLING; }
 inline bool isWallCable(ItemId id) { return id >= WALL_CABLE && id < WALL_CABLE + 8; }
@@ -703,6 +790,36 @@ inline ItemId toggledSwitch(ItemId id) {
 inline int wallSide(ItemId id) { return isWallCable(id) ? (id - WALL_CABLE) % 4 : isWallSwitch(id) ? (id - WALL_SWITCH) % 4 : -1; }
 inline bool isLamp(ItemId id) { return id == POWERSTONE_LAMP || id == POWERSTONE_LAMP_ON; }
 inline bool isBronzeBulb(ItemId id) { return id >= BRONZE_BULB && id <= BRONZE_BULB + 3; }
+// 2.2.0 preview: bronze ages (tarnished, then rusty) unless it is waxed. The four full blocks
+// (0 block, 1 cut, 2 chiseled, 3 grate) have their plain ids; the rest sit at BRONZE_AGED.
+inline int bronzeAgingBase(ItemId id) {
+    if (id == BRONZE_BLOCK) return 0;
+    if (id == CUT_BRONZE) return 1;
+    if (id == CHISELED_BRONZE) return 2;
+    if (id == BRONZE_GRATE) return 3;
+    if (id >= BRONZE_AGED && id < BRONZE_AGED + 20) return (id - BRONZE_AGED) / 5;
+    return -1;
+}
+inline int bronzeStage(ItemId id) {  // 0 bright, 1 tarnished, 2 rusty
+    if (id < BRONZE_AGED || id >= BRONZE_AGED + 20) return 0;
+    const int k = (id - BRONZE_AGED) % 5;
+    return k == 0 ? 0 : (k + 1) / 2;
+}
+inline bool bronzeWaxed(ItemId id) {
+    if (id < BRONZE_AGED || id >= BRONZE_AGED + 20) return false;
+    const int k = (id - BRONZE_AGED) % 5;
+    return k == 0 || k == 2 || k == 4;
+}
+inline ItemId bronzeVariant(int base, int stage, bool waxed) {
+    static const ItemId kPlain[4] = {BRONZE_BLOCK, CUT_BRONZE, CHISELED_BRONZE, BRONZE_GRATE};
+    if (stage == 0 && !waxed) return kPlain[base & 3];
+    const int k = stage == 0 ? 0 : stage * 2 - 1 + (waxed ? 1 : 0);
+    return (ItemId)(BRONZE_AGED + (base & 3) * 5 + k);
+}
+// 2.2.0: the bronze building blocks (the creative "Bronze" folder).
+inline bool isBronzeBuilding(ItemId id) {
+    return bronzeAgingBase(id) >= 0 || isBronzeBulb(id) || (id >= STAIRS_EXTRA6 && id <= BRONZE_DOOR_ITEM);
+}
 inline bool bronzeBulbLit(ItemId id) { return isBronzeBulb(id) && ((id - BRONZE_BULB) & 1); }
 inline bool isTnt(ItemId id) { return id == TNT || id == NUKE_TNT; }
 inline bool isSword(ItemId id) { return (id >= WOOD_SWORD && id <= RUBY_SWORD) || id == HARDIUM_SWORD || id == CELESTIUM_SWORD; }
@@ -726,30 +843,32 @@ inline bool isShaped(ItemId id) {
            isBalloon(id) || id == PARTY_LANTERN || id == SNOW_LAYER || isTorch(id) || isCarpet(id) || id == CAMPFIRE || id == LEAF_LITTER || isRail(id) || id == CUSHION || isBufferStop(id) || isCrossingSignal(id) || isCrossingGate(id);
 }
 inline bool isLeaves(ItemId id) { return id == LEAVES || id == SPRUCE_LEAVES || id == VOID_LEAVES || id == NETHERPERK_CAP || id == CELESTIAL_LEAVES ||
-                                         (id >= RED_LEAVES && id <= YELLOW_LEAVES) || id == CRIMSONIUM_LEAVES; }
+                                         (id >= RED_LEAVES && id <= YELLOW_LEAVES) || id == CRIMSONIUM_LEAVES || id == GLOWCAP_LEAVES; }
 inline bool isLog(ItemId id) {
-    return id == LOG || id == SPRUCE_LOG || id == VOID_LOG || id == EYE_LOG || id == NETHERPERK_LOG || id == CRIMSON_LOG || id == CELESTIAL_LOG || id == GRAY_LOG || id == CRIMSONIUM_LOG;
+    return id == LOG || id == SPRUCE_LOG || id == VOID_LOG || id == EYE_LOG || id == NETHERPERK_LOG || id == CRIMSON_LOG || id == CELESTIAL_LOG || id == GRAY_LOG || id == CRIMSONIUM_LOG || id == STONEWOOD_LOG;
 }
 inline bool isPortal(ItemId id) { return id == PORTAL || id == VOID_PORTAL || id == CELESTIAL_PORTAL; }
 // Small plants: drawn as two crossed planes, no collision, but they can be targeted and broken.
 inline bool isPlant(ItemId id) {
     return id == TALL_GRASS || id == DANDELION || id == POPPY || id == NETHER_SPROUTS || id == CRIMSON_ROOTS || isSapling(id) ||
-           isCrop(id) || isDripstoneSpike(id) || id == DRY_GRASS || id == GRASSER_FLOWER || id == FERN || id == VINES || id == SHARD_CLUSTER || id == FIRE;
+           isCrop(id) || isDripstoneSpike(id) || id == DRY_GRASS || id == GRASSER_FLOWER || id == FERN || id == VINES || id == SHARD_CLUSTER || id == FIRE ||
+           id == COPPER_MOSS || id == GLASS_REEDS || id == STARBERRY_BUSH || id == VOID_TRUFFLE;
 }
 inline bool isSolid(ItemId id) { return id != AIR && !isLiquid(id) && !isPortal(id) && !isPlant(id); }
 // What a tap or a mining finger can hit.
-inline bool isTargetable(ItemId id) { return isSolid(id) || isPlant(id); }
+inline bool isTargetable(ItemId id) { return isSolid(id) || isPlant(id) || id == DRIED_SNOW; }  // 2.2.0: dried snow can be dug
 // Opaque blocks fully hide the faces of their neighbours.
 inline bool isOpaque(ItemId id) {
-    return isSolid(id) && !isLeaves(id) && id != GLASS && id != POWERSTONE_GLASS && id != BRONZE_GRATE && !isShaped(id) && !isStainedGlass(id) && id != BARRIER &&
-           id != HONEY_BLOCK &&
+    return isSolid(id) && !isLeaves(id) && id != GLASS && id != POWERSTONE_GLASS && bronzeAgingBase(id) != 3 && !isShaped(id) && !isStainedGlass(id) && id != BARRIER &&
+           id != HONEY_BLOCK && id != AMBER_RESIN &&
            !(isModId(id) && modIsTransparent(id));
 }
 // Rendered at full brightness regardless of shading.
 inline bool isEmissive(ItemId id) {
     return id == LAVA || isPortal(id) || id == LIT_FURNACE || id == EYE_LOG || id == POWERSTONE_LIGHT ||
            id == POWERSTONE_LAMP_ON || bronzeBulbLit(id) || id == NETHERPERK_CAP || cableOn(id) || id == POWERSTONE_BLOCK ||
-           id == PARTY_LANTERN || id == ANNIV_LOGO || id == VOID_BRICK_EYE || isTorch(id) || id == FUNGAL_DEEPSTONE || id == VOID_SHARD_BLOCK || id == SHARD_CLUSTER || id == FIRE || id == CAMPFIRE || id == PALE_CRYSTAL || (isModId(id) && modIsEmissive(id));
+           id == PARTY_LANTERN || id == ANNIV_LOGO || id == VOID_BRICK_EYE || isTorch(id) || id == FUNGAL_DEEPSTONE || id == VOID_SHARD_BLOCK || id == SHARD_CLUSTER || id == FIRE || id == CAMPFIRE || id == PALE_CRYSTAL ||
+           id == AMBER_RESIN || id == PRISMATIDE_PILLAR || id == LUMINOUS_SALT || id == AETHER_BRINE || id == GLOWCAP_LEAVES || id == COPPER_MOSS || (isModId(id) && modIsEmissive(id));
 }
 inline bool isFurnace(ItemId id) { return id == FURNACE || id == LIT_FURNACE || id == POWERSTONE_FURNACE || id == POWERSTONE_FURNACE_ON; }
 inline bool isPowerstoneFurnace(ItemId id) { return id == POWERSTONE_FURNACE || id == POWERSTONE_FURNACE_ON; }
@@ -757,7 +876,10 @@ inline bool isPowerstoneFurnace(ItemId id) { return id == POWERSTONE_FURNACE || 
 inline int lightLevel(ItemId id) {
     switch (id) {
         case POWERSTONE_LAMP_ON: case POWERSTONE_LIGHT: case PARTY_LANTERN: case FIRE: case CAMPFIRE: case BRONZE_BULB + 1: case BRONZE_BULB + 3: return 15;
-        case PALE_CRYSTAL: return 11;
+        case PALE_CRYSTAL: case AMBER_RESIN: case PRISMATIDE_PILLAR: return 11;
+        case LUMINOUS_SALT: case GLOWCAP_LEAVES: return 9;
+        case AETHER_BRINE: return 7;
+        case COPPER_MOSS: return 5;
         case LAVA: return 14;
         case TORCH: case TORCH_WALL: case TORCH_WALL + 1: case TORCH_WALL + 2: case TORCH_WALL + 3: return 14;
         case LIT_FURNACE: case POWERSTONE_BLOCK: case POWERSTONE_FURNACE_ON: return 12;
@@ -777,10 +899,10 @@ inline bool isArmor(ItemId id) {
     return (id >= FIRST_ARMOR && id <= LAST_ARMOR) || (id >= HARDIUM_ARMOR && id < HARDIUM_ARMOR + 4) || id == CELESTIUM_CHESTPLATE || id == CELESTIAL_WINGS;
 }
 // Drawn in the blended pass after everything else.
-inline bool isTranslucent(ItemId id) { return id == WATER || isPortal(id) || isStainedGlass(id) || id == HONEY_BLOCK; }  // 1.7.0: ice is solid (no see-through grid)
+inline bool isTranslucent(ItemId id) { return id == WATER || isPortal(id) || isStainedGlass(id) || id == HONEY_BLOCK || id == AMBER_RESIN || id == AETHER_BRINE; }  // 1.7.0: ice is solid (no see-through grid)
 inline bool isFood(ItemId id) {
     return id == APPLE || (id >= RAW_PORK && id <= COOKED_MUTTON) || id == CANDY_CANE || id == BREAD || id == HONEY_BALL ||
-           (id >= RAW_CHICKEN && id <= STEAK) || id == MILK_BUCKET || (isModId(id) && modFood(id) > 0);
+           (id >= RAW_CHICKEN && id <= STEAK) || id == MILK_BUCKET || id == STARBERRIES || id == VOID_TRUFFLE || (isModId(id) && modFood(id) > 0);
 }
 // Old saves (chunk format VCC1) still hold the Nether blocks removed in 1.2.0, whose ids 1.3.0 reuses.
 inline ItemId upgradeLegacyBlock(ItemId id) {
@@ -943,6 +1065,8 @@ inline int tileFor(ItemId id, Face face) {
             if (isDye(id)) return T_DYE + (id - DYE);
             if (id >= RAIL_CURVE && id < RAIL_CURVE + 4) return T_RAIL_CURVE0 + (id - RAIL_CURVE);
             if (isRailSlope(id)) return (id - RAIL_SLOPE) % 2 ? T_RAIL_EW : T_RAIL_NS;
+            if (isRailDiag(id) || isRailBend(id) || isRailGentle(id)) return T_RAIL_NS;
+            if (isRailSwitch8(id)) return T_RAIL_SWITCH0;
             if (isRailSwitch(id)) return T_RAIL_SWITCH0 + railSwitchIndex(id);
             if (id == CUSHION) return face == F_TOP ? T_CUSHION_TOP : T_CUSHION_SIDE;
             if (id == TRAIN_BOOSTER) return face == F_TOP ? T_BOOSTER_TOP : T_BOOSTER_SIDE;
@@ -955,6 +1079,39 @@ inline int tileFor(ItemId id, Face face) {
             if (id == PASSENGER_WAGON) return T_PASSENGER_WAGON_ITEM;
             if (id == FREIGHT_WAGON) return T_FREIGHT_WAGON_ITEM;
             if (id == DRILL_CAR) return T_DRILL_CAR_ITEM;
+            if (id == SUBWAY_LOCOMOTIVE) return T_SUBWAY_LOCO_ITEM;
+            if (id == SUBWAY_CAR) return T_SUBWAY_CAR_ITEM;
+            switch (id) {  // 2.2.0 preview: the new Cornerstone biomes
+                case CARVED_CORNERSTONE: return T_CARVED_CORNERSTONE;
+                case GILDED_COBBLE: return T_GILDED_COBBLE;
+                case AMBER_RESIN: return T_AMBER_RESIN;
+                case COPPER_MOSS: return T_COPPER_MOSS;
+                case PRISMATIDE_PILLAR: return T_PRISMATIDE_PILLAR;
+                case SILTSTONE: return T_SILTSTONE;
+                case LUMINOUS_SALT: return T_LUMINOUS_SALT;
+                case AETHER_BRINE: return T_AETHER_BRINE;
+                case GLASS_REEDS: return T_GLASS_REEDS;
+                case SPORE_PAD: return face == F_TOP || face == F_BOTTOM ? T_SPORE_PAD_TOP : T_SPORE_PAD_SIDE;
+                case STONEWOOD_LOG: return face == F_TOP || face == F_BOTTOM ? T_STONEWOOD_TOP : T_STONEWOOD_LOG;
+                case MOSSY_CORNERSTONE: return T_MOSSY_CORNERSTONE;
+                case GLOWCAP_LEAVES: return T_GLOWCAP_LEAVES;
+                case STARBERRY_BUSH: return T_STARBERRY_BUSH;
+                case VOID_TRUFFLE: return T_VOID_TRUFFLE;
+                case STARBERRIES: return T_STARBERRIES;
+                case THIN_ICE: return T_THIN_ICE;
+                case ICE_BRICKS: return T_ICE_BRICKS;
+                case SNOWFLAKE_BLOCK: return T_SNOWFLAKE_BLOCK;
+                case DRIED_SNOW: return T_DRIED_SNOW;
+                case ABYSSAL_ROCK: return T_ABYSSAL_ROCK;
+                case RADIO: return face == F_TOP || face == F_BOTTOM ? T_RADIO_TOP : T_RADIO;
+                default: break;
+            }
+            if (bronzeAgingBase(id) >= 0 && bronzeStage(id) > 0) return T_BRONZE_AGED + bronzeAgingBase(id) * 2 + bronzeStage(id) - 1;
+            if (bronzeAgingBase(id) == 0) return T_BRONZE_BLOCK;
+            if (bronzeAgingBase(id) == 1) return T_CUT_BRONZE;
+            if (bronzeAgingBase(id) == 2) return T_CHISELED_BRONZE;
+            if (bronzeAgingBase(id) == 3) return T_BRONZE_GRATE;
+            if (id == BRONZE_DOOR_ITEM) return T_BRONZE_DOOR_ITEM;
             if (id == CUT_BRONZE) return T_CUT_BRONZE;
             if (id == CHISELED_BRONZE) return T_CHISELED_BRONZE;
             if (id == BRONZE_GRATE) return T_BRONZE_GRATE;
@@ -1118,6 +1275,8 @@ inline int tileFor(ItemId id, Face face) {
             if (isSword(id)) return T_FIRST_SWORD + (id - WOOD_SWORD);
             if (isSpawnEgg(id)) return T_EGG_PIG + (id - EGG_PIG);
             if (isChest(id)) return face == F_TOP || face == F_BOTTOM ? T_CHEST_TOP : (face == F_NORTH || face == F_SOUTH) ? T_CHEST_FRONT : T_CHEST_SIDE;
+            if (isDoor(id) && id >= BRONZE_DOOR) return ((id - BRONZE_DOOR) & 8) ? T_BRONZE_DOOR_UPPER : T_BRONZE_DOOR_LOWER;
+            if (isTrapdoor(id) && id >= BRONZE_TRAPDOOR) return T_BRONZE_TRAPDOOR;
             if (isDoor(id)) {
                 bool iron = id >= IRON_DOOR, upper = ((id - (iron ? IRON_DOOR : OAK_DOOR)) & 8) != 0;
                 return iron ? (upper ? T_IRON_DOOR_UPPER : T_IRON_DOOR_LOWER) : (upper ? T_OAK_DOOR_UPPER : T_OAK_DOOR_LOWER);

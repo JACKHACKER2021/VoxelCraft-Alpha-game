@@ -188,7 +188,9 @@ void Player::update(const World& world, float dt, float moveX, float moveZ, bool
     inWater = body == WATER || feetIn == WATER;
     inLava = body == LAVA || feetIn == LAVA;
     inTar = body == TAR || feetIn == TAR;
-    bool inLiquid = inWater || inLava || inTar;
+    inBrine = body == AETHER_BRINE || feetIn == AETHER_BRINE;
+    inDriedSnow = body == DRIED_SNOW || feetIn == DRIED_SNOW;
+    bool inLiquid = inWater || inLava || inTar;  // the brine is walked through, not swum in
     // What the eyes see decides the underwater fog.
     Vec3 e = eye();
     ItemId head = world.getBlock((int)std::floor(e.x), (int)std::floor(e.y), (int)std::floor(e.z));
@@ -197,6 +199,8 @@ void Player::update(const World& world, float dt, float moveX, float moveZ, bool
     headInTar = head == TAR;
 
     float speed = (flying ? 10.0f : inTar ? 0.9f : inLava ? 1.2f : inWater ? 2.0f : sneaking ? 1.3f : 4.3f) * speedMul;
+    if (inBrine && !flying) speed *= 0.55f;
+    if (inDriedSnow && !flying) speed *= 0.4f;
     float s = std::sin(yaw), c = std::cos(yaw);
     // Forward on the horizontal plane is (sin yaw, -cos yaw), right is (cos yaw, sin yaw).
     vel.x = (s * moveZ + c * moveX) * speed;
@@ -210,6 +214,12 @@ void Player::update(const World& world, float dt, float moveX, float moveZ, bool
         vel.y -= (thick ? 3.0f : 6.0f) * dt;
         vel.y = std::max(vel.y, thick ? -1.0f : -2.0f);
         if (jump) vel.y = inTar ? 1.2f : inLava ? 1.5f : 2.5f;
+    } else if (inDriedSnow) {
+        // 2.2.0: dried snow: you sink in slowly and struggle up out of it.
+        vel.y -= 6.0f * dt;
+        vel.y = std::max(vel.y, -1.2f);
+        if (jump) vel.y = 2.2f;
+        fallDistance = 0;
     } else if (body == VINES || feetIn == VINES) {
         // 1.6.0: vines are climbed: up while jumping or walking, slowly down otherwise, and
         // holding on (no fall) while crouched.
@@ -217,9 +227,9 @@ void Player::update(const World& world, float dt, float moveX, float moveZ, bool
         vel.y = jump || moving ? 3.0f : sneaking ? 0.0f : -2.0f;
         fallDistance = 0;
     } else {
-        vel.y -= 28.0f * gravityMul * dt;
+        vel.y -= (inBrine ? 18.0f : 28.0f) * gravityMul * dt;
         vel.y = std::max(vel.y, -60.0f);
-        if (jump && onGround) vel.y = 8.4f;
+        if (jump && onGround) vel.y = inBrine ? 11.5f : 8.4f;
     }
 
     Vec3 before = pos;
@@ -247,7 +257,15 @@ void Player::update(const World& world, float dt, float moveX, float moveZ, bool
             vel.y = std::max(vel.y, (inLava || feet == LAVA) ? 3.5f : 5.0f);
     }
     canStep_ = false;
+    const float fallSpeed = vel.y;
     moveAxis(world, 1, vel.y * dt);
+    // 2.2.0 preview: a spore pad throws back whoever lands on it (no fall damage).
+    if (onGround && !flying && fallSpeed < -5.0f && !sneaking &&
+        world.getBlock((int)std::floor(pos.x), (int)std::floor(pos.y - 0.05f), (int)std::floor(pos.z)) == SPORE_PAD) {
+        vel.y = -fallSpeed * 0.8f;
+        onGround = false;
+        fallDistance = 0;
+    }
     walked = std::hypot(pos.x - before.x, pos.z - before.z);
 
     // Fall tracking for damage: liquids and flight break a fall.

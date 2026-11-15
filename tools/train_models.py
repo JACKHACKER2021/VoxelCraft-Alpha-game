@@ -11,7 +11,9 @@ import sys
 
 SRC, OUT = sys.argv[1], sys.argv[2]
 DRILL = ("drill", "train_freight_wagon.glb")  # build 5: the freight wagon's frame with a drill head
-CARS = [("locomotive", "train_locomotive.glb"), ("passenger", "train_passenger_wagon.glb"), ("freight", "train_freight_wagon.glb")]
+CARS = [("locomotive", "train_locomotive.glb"), ("passenger", "train_passenger_wagon.glb"), ("freight", "train_freight_wagon.glb"),
+        ("subway_locomotive", "train_subway_locomotive.glb"), ("subway_car", "train_subway_car.glb")]  # 2.3.0: the creator's subway
+SUBWAY = ("subway_locomotive", "subway_car")
 palette = []  # (r, g, b, a) 0..255
 
 
@@ -81,7 +83,10 @@ def load(path, skip=()):
                         shade = 0.45
                     tri.append((v[0], v[1], v[2], ci, shade))
                 tris.append(tri)
-    extras = j["scenes"][0].get("extras", {}) or j["asset"].get("extras", {})
+    extras = dict(j["scenes"][0].get("extras", {}) or j["asset"].get("extras", {}))
+    names = [m.get("name", "") for m in j["materials"]]
+    if "door" in names:
+        extras["_door"] = mats[names.index("door")]  # 2.3.0: the subway's sliding door leaves
     return tris, extras
 
 
@@ -376,12 +381,45 @@ with open(OUT, "w") as o:
     o.write("// A vertex: x, y, z in 1/2048 of a model unit, colour index, shade 0..255, u, v 0..255 inside the colour\'s tile.\n")
     for name, f in CARS + [DRILL]:
         tris, ex = load(SRC + "/" + f, skip=("cargo",) if name == "drill" else ())
+        ex = dict(ex)
         if name == "drill":
             tris = tris + drill_head()
         tris = blocky(tris)
         if name in DOORS:
             tris = cut_doors(tris, DOORS[name])
         tris = separate(texture(tris))
+        doors = {-1: [], 1: []}
+        if name in SUBWAY and "_door" in ex:
+            # 2.3.0: the door leaves come out of the body: each slides away from the middle of its doorway.
+            dc = ex.pop("_door")
+            # Only the side doorways slide (|z| 0.4..2); the end doors of the gangway stay shut in the body.
+            def sliding(t):
+                cz = abs(sum(v[2] for v in t) / 3)
+                return t[0][3] == dc and 0.4 < cz < 2.0
+            leaves = [t for t in tris if sliding(t)]
+            tris = [t for t in tris if not sliding(t)]
+            for side in (-1, 1):
+                mine = [t for t in leaves if (sum(v[0] for v in t) > 0) == (side > 0)]
+                zs = sorted((min(v[2] for v in t), max(v[2] for v in t)) for t in mine)
+                spans = []
+                for z0, z1 in zs:
+                    if spans and z0 <= spans[-1][1] + 0.05:
+                        spans[-1][1] = max(spans[-1][1], z1)
+                    else:
+                        spans.append([z0, z1])
+                for t in mine:
+                    cz = sum(v[2] for v in t) / 3
+                    span = min(spans, key=lambda sp: 0 if sp[0] - 0.01 <= cz <= sp[1] + 0.01 else 9)
+                    doors[-1 if cz < (span[0] + span[1]) / 2 else 1].append(t)
+            print(name, "door leaves", len(doors[-1]), len(doors[1]))
+            if not ex.get("seat_pos"):
+                ex["seat_pos"] = [[sx, 0.95, sz] for sz in (-1.9, 1.9, -0.1) for sx in (-0.55, 0.55)] if name == "subway_car" else [[0.0, 0.95, -1.6]]
+        for sign, side_name in ((-1, "Neg"), (1, "Pos")):
+            if name in SUBWAY:
+                o.write("static const int16_t kTrainDoors%s_%s[] = {\n" % (side_name, name))
+                for v in [v for t in doors[sign] for v in t] or [(0, 0, 0, 0, 0, 0, 0)] * 3:
+                    o.write("%d,%d,%d,%d,%d,%d,%d,\n" % (round(v[0] * 2048), round(v[1] * 2048), round(v[2] * 2048), v[3], round(v[4] * 255), round(v[5] * 255), round(v[6] * 255)))
+                o.write("};\n")
         verts = [v for t in tris for v in t]
         o.write("static const int16_t kTrain_%s[] = {\n" % name)
         for v in verts:

@@ -1,0 +1,3044 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Voxel Craft Alpha (v0.0.5 - Audio & Layout Update)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+            background-color: #0f1423;
+            font-family: 'Press Start 2P', monospace;
+        }
+        canvas {
+            display: block;
+            image-rendering: pixelated;
+        }
+        /* Retro stylizace */
+        .pixel-border {
+            border: 4px solid #222;
+            border-top-color: #888;
+            border-left-color: #888;
+            border-bottom-color: #111;
+            border-right-color: #111;
+            background-color: #3e3e3e;
+        }
+        .pixel-border-active {
+            border: 4px solid #fff;
+            background-color: #666;
+        }
+        .retro-btn {
+            box-shadow: inset -3px -3px 0px #111, inset 3px 3px 0px #eee;
+            background-color: #555;
+            text-shadow: 1px 1px 0px #000;
+        }
+        .retro-btn:active {
+            box-shadow: inset 3px 3px 0px #111, inset -3px -3px 0px #eee;
+            background-color: #333;
+            padding-top: 2px;
+            padding-left: 2px;
+        }
+        .menu-bg {
+            background-color: #1a1a2e;
+            background-image: radial-gradient(#2d2d44 1px, transparent 1px);
+            background-size: 16px 16px;
+        }
+        /* Křížek uprostřed */
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            pointer-events: none;
+        }
+        #crosshair::before, #crosshair::after {
+            content: '';
+            position: absolute;
+            background: white;
+            mix-blend-mode: difference;
+        }
+        #crosshair::before {
+            top: 9px;
+            left: 0;
+            width: 20px;
+            height: 2px;
+        }
+        #crosshair::after {
+            top: 0;
+            left: 9px;
+            width: 2px;
+            height: 20px;
+        }
+        /* Vlastní scrollbar */
+        .retro-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+        .retro-scroll::-webkit-scrollbar-track {
+            background: #111;
+        }
+        .retro-scroll::-webkit-scrollbar-thumb {
+            background: #444;
+            border: 2px solid #111;
+        }
+        /* Dragging highlight style */
+        .dragging-active {
+            outline: 3px dashed #22c55e !important;
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.8) !important;
+            z-index: 9999 !important;
+        }
+    </style>
+</head>
+<body class="relative w-screen h-screen overflow-hidden select-none">
+
+    <div id="game-container" class="w-full h-full hidden"></div>
+
+    <div id="crosshair" class="hidden"></div>
+
+    <!-- HLAVNÍ MENU -->
+    <div id="main-menu" class="absolute inset-0 z-50 flex flex-col items-center justify-center p-4 menu-bg select-none overflow-y-auto">
+        <h1 class="text-xl sm:text-4xl text-yellow-400 font-bold mb-8 text-center tracking-wider leading-relaxed" style="text-shadow: 4px 4px 0px #aa0000;">
+            VOXEL CRAFT<br><span class="text-xs sm:text-sm text-gray-400">AUDIO & HUD UPDATE v0.0.5</span>
+        </h1>
+        
+        <div class="flex flex-col gap-3 w-64">
+            <button id="btn-menu-play" class="py-3 px-4 text-white text-xs font-bold rounded retro-btn pixel-border">SPUSTIT SVĚT (PLAY)</button>
+            <button id="btn-menu-worlds" class="py-3 px-4 text-white text-xs font-bold rounded retro-btn pixel-border">SVĚTY (WORLDS)</button>
+            <button id="btn-menu-inventory" class="py-3 px-4 text-white text-xs font-bold rounded retro-btn pixel-border">INVENTÁŘ (ITEMS)</button>
+            <button id="btn-menu-mods" class="py-3 px-4 text-white text-xs font-bold rounded retro-btn pixel-border">MÓDY (MODS)</button>
+            <button id="btn-menu-files" class="py-3 px-4 text-emerald-400 text-xs font-bold rounded retro-btn pixel-border">SOUBORY (FILES)</button>
+            <button id="btn-menu-settings" class="py-3 px-4 text-white text-xs font-bold rounded retro-btn pixel-border">NASTAVENÍ</button>
+            <button id="btn-menu-ui-editor" class="py-3 px-4 text-cyan-400 text-xs font-bold rounded retro-btn pixel-border">UI & OVLÁDÁNÍ</button>
+            <button id="btn-menu-exit" class="py-3 px-4 text-red-400 text-xs font-bold rounded retro-btn pixel-border">KONEC (EXIT)</button>
+        </div>
+        <p class="text-[8px] text-gray-500 mt-8 text-center">© 2000-2026 VOXEL SOFTWORKS INC.</p>
+    </div>
+
+    <!-- SPRÁVA SVĚTŮ -->
+    <div id="worlds-overlay" class="absolute inset-0 z-50 bg-black/95 hidden flex flex-col items-center p-4 sm:p-8 overflow-y-auto retro-scroll">
+        <div class="w-full max-w-2xl bg-[#2a2a3e] border-4 border-[#444] rounded-lg p-4 flex flex-col gap-4">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xs sm:text-sm text-yellow-400 font-bold">SPRÁVA SVĚTŮ (WORLDS)</h2>
+                <button class="btn-back-to-menu px-2 py-1 bg-red-800 text-white font-bold rounded text-[8px] retro-btn">ZAVŘÍT [X]</button>
+            </div>
+
+            <div id="worlds-list" class="flex flex-col gap-2 max-h-60 overflow-y-auto retro-scroll bg-black/50 p-2 rounded"></div>
+
+            <div class="border-t-4 border-[#3a3a55] pt-4 flex flex-col gap-3">
+                <h3 class="text-[10px] text-green-400 font-bold">VYTVOŘIT NOVÝ SVĚT</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[8px] text-white">
+                    <div class="flex flex-col gap-1">
+                        <label>Název světa:</label>
+                        <input id="world-name" type="text" value="Můj Svět" class="p-2 bg-black border border-gray-600 rounded text-white font-mono">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label>Generátor:</label>
+                        <select id="world-generator" class="p-2 bg-black border border-gray-600 rounded text-white font-mono">
+                            <option value="classic">CLASSIC (Standardní generace)</option>
+                            <option value="old">OLD (Původní malá mapa)</option>
+                            <option value="infinite">INFINITE (Nekonečný Chunkový svět)</option>
+                            <option value="flat">FLAT (Jednoduchý rovný svět)</option>
+                            <option value="one_chunk">ONE CHUNK (Svět v jednom chunku)</option>
+                        </select>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label>Seed (Číslo):</label>
+                        <input id="world-seed" type="number" value="12345" class="p-2 bg-black border border-gray-600 rounded text-white font-mono">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label>Ikona (Retro Emoji):</label>
+                        <input id="world-icon" type="text" value="🌲" class="p-2 bg-black border border-gray-600 rounded text-white font-mono text-center">
+                    </div>
+                </div>
+
+                <div class="bg-black/30 p-2 rounded text-[7px] text-gray-300 flex flex-wrap gap-4">
+                    <label class="flex items-center gap-1">
+                        <input id="gen-trees" type="checkbox" checked> Stromy (Trees)
+                    </label>
+                    <label class="flex items-center gap-1">
+                        <input id="gen-fog" type="checkbox" checked> Mlha (Fog)
+                    </label>
+                    <label class="flex items-center gap-1">
+                        <input id="gen-water" type="checkbox" checked> Vodní hladina a pláže
+                    </label>
+                    <label class="flex items-center gap-1">
+                        <input id="gen-caves" type="checkbox" checked> Jeskyně (Caves)
+                    </label>
+                    <div class="w-full flex justify-between items-center mt-2">
+                        <span>Max. Výška světa (8-32):</span>
+                        <input id="gen-height" type="number" min="8" max="32" value="16" class="bg-black text-white p-1 rounded border border-gray-600 w-12 text-center">
+                    </div>
+                </div>
+
+                <button id="btn-create-world" class="py-2.5 px-4 bg-green-700 hover:bg-green-600 text-white font-bold rounded text-[9px] retro-btn pixel-border">
+                    + VYTVOŘIT SVĚT
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- INVENTÁŘ BLOKŮ -->
+    <div id="inventory-overlay" class="absolute inset-0 z-50 bg-black/95 hidden flex flex-col items-center p-4 sm:p-8 overflow-y-auto retro-scroll">
+        <div class="w-full max-w-3xl bg-[#2e2e2e] border-4 border-[#555] rounded-lg p-4 flex flex-col gap-4">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xs sm:text-sm text-yellow-400 font-bold">INVENTÁŘ BLOKŮ (INVENTORY)</h2>
+                <button class="btn-back-to-menu px-2 py-1 bg-red-800 text-white font-bold rounded text-[8px] retro-btn">ZAVŘÍT [X]</button>
+            </div>
+
+            <div class="flex flex-wrap gap-2 border-b-4 border-[#444] pb-2 text-[8px] sm:text-[9px]">
+                <button id="cat-basic" class="px-2 py-1.5 bg-[#555] text-white font-bold rounded">BASIC</button>
+                <button id="cat-nature" class="px-2 py-1.5 bg-[#444] text-gray-400 font-bold rounded">NATURE</button>
+                <button id="cat-building" class="px-2 py-1.5 bg-[#444] text-gray-400 font-bold rounded">BUILDING</button>
+                <button id="cat-modded" class="px-2 py-1.5 bg-[#444] text-gray-400 font-bold rounded">MODDED</button>
+            </div>
+
+            <div class="flex justify-between items-center bg-[#222] p-2 rounded border border-gray-600">
+                <span class="text-[8px] text-green-400 font-bold">VLASTNÍ BLOKY:</span>
+                <button id="btn-add-new-custom-block" class="px-2 py-1 bg-green-700 text-white rounded text-[8px] retro-btn font-bold">+ PŘIDAT NOVÝ BLOK</button>
+            </div>
+
+            <div class="bg-black/40 p-3 rounded border border-gray-700">
+                <p class="text-[7px] text-gray-400 mb-2">Kliknutím na blok v mřížce jej vložíte do vybraného slotu v hotbaru.</p>
+                <div id="inventory-grid" class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 max-h-60 overflow-y-auto retro-scroll p-1"></div>
+            </div>
+
+            <div class="bg-[#111] p-3 rounded flex flex-col gap-2 items-center">
+                <span class="text-[8px] text-yellow-500 font-bold">AKTUÁLNÍ HOTBAR (6 SLOTŮ)</span>
+                <div class="flex gap-2" id="inv-hotbar-view"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SPRÁVCE SOUBORŮ & HUDBY -->
+    <div id="files-overlay" class="absolute inset-0 z-50 bg-black/95 hidden flex flex-col items-center p-4 sm:p-8 overflow-y-auto retro-scroll">
+        <div class="w-full max-w-2xl bg-[#14231a] border-4 border-emerald-800 rounded-lg p-4 flex flex-col gap-4">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xs sm:text-sm text-emerald-400 font-bold">SPRÁVCE RETRO SOUBORŮ, ZVUKŮ & HUDBY</h2>
+                <button class="btn-back-to-menu px-2 py-1 bg-red-800 text-white font-bold rounded text-[8px] retro-btn">ZAVŘÍT [X]</button>
+            </div>
+            
+            <p class="text-[7px] text-gray-300 leading-relaxed">
+                Zde můžete nahrát vlastní textury (.png), zvuky (.mp3/.ogg) nebo hotové JS skripty. 
+                Rovněž můžete importovat **celou složku** s mody ze svého zařízení.
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Nahrávání celých složek / balíčků -->
+                <div class="bg-black/50 p-3 rounded border border-emerald-900 flex flex-col gap-2 text-[8px] text-white">
+                    <span class="text-yellow-400 font-bold">IMPORT SLOŽKY (FOLDER IMPORT)</span>
+                    <p class="text-[6px] text-gray-400">Vyberte složku s texturami/zvuky/mody ze svého zařízení. Hra soubory automaticky namapuje.</p>
+                    <input id="folder-picker" type="file" webkitdirectory directory multiple class="hidden">
+                    <button onclick="document.getElementById('folder-picker').click()" class="py-2 px-2 bg-emerald-800 text-white font-bold rounded retro-btn text-[8px]">
+                        📁 VYBRAT SLOŽKU V ZAŘÍZENÍ
+                    </button>
+                    <div id="folder-import-status" class="text-[6px] text-emerald-400 font-mono mt-1">Status: Čeká se na výběr...</div>
+                </div>
+
+                <!-- Jednotlivé nahrávání textur/zvuků/hudby -->
+                <div class="bg-black/50 p-3 rounded border border-emerald-900 flex flex-col gap-2 text-[8px] text-white">
+                    <span class="text-cyan-400 font-bold">RYCHLÝ IMPORT HUDBY NEBO ZVUKU</span>
+                    
+                    <div class="flex flex-col gap-1 mt-1">
+                        <label>Zacílení Importu:</label>
+                        <select id="file-import-sound-target" class="p-1 bg-black text-white rounded border border-emerald-800">
+                            <!-- Hudba -->
+                            <option value="music_menu">Hudba v menu (Menu Music BGM)</option>
+                            <option value="music_game">Hudba ve hře (Overworld Music BGM)</option>
+                            <!-- Efekty -->
+                            <option value="walk">Zvuk kroků (Walk SFX)</option>
+                            <option value="break">Zvuk ničení bloku (Break SFX)</option>
+                            <option value="place">Zvuk položení bloku (Place SFX)</option>
+                            <option value="jump">Zvuk skoku (Jump SFX)</option>
+                            <option value="click">Retro kliknutí v menu (Click SFX)</option>
+                        </select>
+                    </div>
+                    <div class="flex flex-col gap-1 mt-1">
+                        <label>Audio soubor (.mp3, .wav, .ogg, .mpeg):</label>
+                        <input id="single-mp3-picker" type="file" accept="audio/*, .mp3, .wav, .ogg, .mpeg" class="text-[6px] bg-black p-1 rounded border border-emerald-950">
+                    </div>
+
+                    <!-- OBNOVIT VÝCHOZÍ TLAČÍTKO -->
+                    <button id="btn-audio-reset-target" class="w-full mt-2 py-2 px-2 bg-yellow-800/80 hover:bg-yellow-800 text-white font-bold rounded retro-btn text-[7px]">
+                        🔄 OBNOVIT VÝCHOZÍ PRO VYBRANÝ CÍL
+                    </button>
+                </div>
+            </div>
+
+            <!-- OPRAVENÝ INTERAKTIVNÍ PANEL NÁHLEDU, ULOŽENÍ A STORNA -->
+            <div id="audio-preview-panel" class="hidden bg-[#1e293b] border-2 border-cyan-600 rounded-lg p-3 flex flex-col gap-2.5">
+                <span class="text-[8px] font-bold text-cyan-400">🎵 NAHRANÝ NÁHLED K OVĚŘENÍ (AUDIO PREVIEW)</span>
+                <div class="bg-black/50 p-2 rounded border border-cyan-900">
+                    <p id="audio-preview-info" class="text-[7px] text-white font-mono leading-relaxed">Soubor: -</p>
+                </div>
+                
+                <div class="flex gap-2 flex-wrap text-[7px] text-white">
+                    <button id="btn-audio-preview-play" class="py-2 px-3 bg-cyan-700 hover:bg-cyan-600 rounded retro-btn font-bold">▶ PŘEHRÁT TEST</button>
+                    <button id="btn-audio-preview-stop" class="py-2 px-3 bg-gray-600 hover:bg-gray-500 rounded retro-btn font-bold">■ STOP</button>
+                    <button id="btn-audio-preview-save" class="py-2 px-4 bg-green-700 hover:bg-green-600 text-white rounded retro-btn font-bold">💾 POUŽÍT & ULOŽIT</button>
+                    <button id="btn-audio-preview-cancel" class="py-2 px-3 bg-red-800 hover:bg-red-700 text-white rounded retro-btn font-bold">❌ STORNO (CANCEL)</button>
+                </div>
+                <div id="audio-preview-status" class="text-[6px] text-green-400 font-mono animate-pulse">Připraveno k testu...</div>
+            </div>
+
+            <div class="bg-black/85 p-2.5 rounded border border-emerald-800 text-[6px] font-mono text-emerald-500 max-h-28 overflow-y-auto" id="file-system-console">
+                Aktivní cesta úložiska: Interní paměť sandboxu (IndexedDB emulace)
+            </div>
+        </div>
+    </div>
+
+    <!-- EDITACE BLOKU -->
+    <div id="block-editor-overlay" class="absolute inset-0 z-50 bg-black/95 hidden flex flex-col items-center p-4 sm:p-8 overflow-y-auto retro-scroll">
+        <div class="w-full max-w-2xl bg-[#3c2a21] border-4 border-[#8f5e3b] rounded-lg p-4 flex flex-col gap-4 relative">
+            <button id="btn-close-block-editor" class="absolute top-2 right-2 px-3 py-1 bg-red-800 text-white font-bold rounded text-[8px] retro-btn">X</button>
+            
+            <h2 class="text-xs sm:text-sm text-yellow-400 font-bold text-center">EDITACE BLOKU (EDIT BLOCK)</h2>
+            <p class="text-[7px] text-center text-gray-400" id="editing-block-title">Editujete blok ID: 1</p>
+
+            <div class="flex flex-col md:flex-row gap-4">
+                <div class="flex-1 bg-black/40 p-3 rounded border border-yellow-800 flex flex-col gap-2 text-[8px] text-white">
+                    <div class="flex flex-col gap-1">
+                        <label>Název bloku:</label>
+                        <input id="edit-block-name" type="text" class="p-1.5 bg-black border border-gray-600 rounded text-white font-mono">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label>Tvrdost (Hardness - čas ničení v ms):</label>
+                        <input id="edit-block-hardness" type="number" class="p-1.5 bg-black border border-gray-600 rounded text-white font-mono">
+                    </div>
+                    <div class="flex items-center justify-between mt-2">
+                        <label>Solidní (Pevný kolizní blok):</label>
+                        <input id="edit-block-solid" type="checkbox">
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <label>Světlo (Emisivní vlastnosti):</label>
+                        <input id="edit-block-light" type="checkbox">
+                    </div>
+                    <div class="flex flex-col gap-1 mt-2">
+                        <label>Překrytí barvou (Hex Tint Override):</label>
+                        <input id="edit-block-color" type="color" class="w-full h-8 bg-black rounded cursor-pointer">
+                    </div>
+                </div>
+
+                <div class="flex-1 bg-black/40 p-3 rounded border border-yellow-800 flex flex-col items-center gap-2">
+                    <span class="text-[8px] font-bold text-yellow-400">Přebarvení textury:</span>
+                    <div id="editor-pixel-grid" class="grid grid-cols-16 gap-0.5 bg-black p-1 rounded max-w-[130px] max-h-[130px]" style="display: grid; grid-template-columns: repeat(16, 7px); gap: 1px;"></div>
+                    <div class="flex gap-1 flex-wrap justify-center my-1" id="editor-palette">
+                        <div class="w-3.5 h-3.5 rounded cursor-pointer border border-white" style="background-color: #ffd700;" data-color="#ffd700"></div>
+                        <div class="w-3.5 h-3.5 rounded cursor-pointer border border-transparent" style="background-color: #ff3333;" data-color="#ff3333"></div>
+                        <div class="w-3.5 h-3.5 rounded cursor-pointer border border-transparent" style="background-color: #33cc33;" data-color="#33cc33"></div>
+                        <div class="w-3.5 h-3.5 rounded cursor-pointer border border-transparent" style="background-color: #3333ff;" data-color="#3333ff"></div>
+                        <div class="w-3.5 h-3.5 rounded cursor-pointer border border-transparent" style="background-color: #7a5c33;" data-color="#7a5c33"></div>
+                        <div class="w-3.5 h-3.5 rounded cursor-pointer border border-transparent" style="background-color: #ffffff;" data-color="#ffffff"></div>
+                        <div class="w-3.5 h-3.5 rounded cursor-pointer border border-transparent" style="background-color: #000000;" data-color="#000000"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-2 text-[8px] justify-between border-t-2 border-yellow-800 pt-3">
+                <button id="btn-editor-reset" class="px-3 py-2 bg-gray-700 text-white font-bold rounded retro-btn">VÝCHOZÍ (RESET)</button>
+                <button id="btn-editor-export" class="px-3 py-2 bg-yellow-700 text-white font-bold rounded retro-btn">EXPORT (.JSON)</button>
+                <button id="btn-editor-save" class="px-4 py-2 bg-green-700 text-white font-bold rounded retro-btn">ULOŽIT (SAVE)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- UI EDITACE A ROZVRŽENÍ OVLÁDÁNÍ -->
+    <div id="ui-editor-overlay" class="absolute inset-0 z-50 bg-black/95 hidden flex flex-col items-center p-4 sm:p-8 overflow-y-auto retro-scroll">
+        <div class="w-full max-w-2xl bg-[#1e293b] border-4 border-cyan-700 rounded-lg p-4 flex flex-col gap-4">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xs sm:text-sm text-cyan-400 font-bold">UI LAYOUT & OVLÁDACÍ PRVKY</h2>
+                <button class="btn-back-to-menu px-2 py-1 bg-red-800 text-white font-bold rounded text-[8px] retro-btn">ZAVŘÍT [X]</button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-[8px] text-white">
+                <div class="bg-black/40 p-3 rounded border border-cyan-800 flex flex-col gap-2">
+                    <span class="text-yellow-400 font-bold">D-PAD & HUD EDITOR (PŘETAHOVÁNÍ):</span>
+                    <button id="btn-enter-drag-edit" class="py-2.5 px-3 bg-cyan-800 hover:bg-cyan-700 text-white font-bold rounded text-[8px] retro-btn">
+                        📐 UPRAVIT ROZLOŽENÍ NA HERNÍ PLOŠE
+                    </button>
+                    <p class="text-[6px] text-gray-300 mt-1">Po kliknutí můžete všechny prvky včetně hotbaru libovolně přetahovat.</p>
+
+                    <div class="flex flex-col gap-1 mt-2 border-t border-cyan-900 pt-2">
+                        <label>Měřítko tlačítek (D-Pad Scale):</label>
+                        <input id="ui-scale-range" type="range" min="50" max="150" value="100" class="w-full accent-cyan-500">
+                    </div>
+                    <div class="flex flex-col gap-1 mt-1">
+                        <label>Průhlednost HUD (Opacity):</label>
+                        <input id="ui-opacity-range" type="range" min="20" max="100" value="100" class="w-full accent-cyan-500">
+                    </div>
+                </div>
+
+                <div class="bg-black/40 p-3 rounded border border-cyan-800 flex flex-col gap-2">
+                    <span class="text-yellow-400 font-bold">ZOBRAZENÍ UI PRVKŮ:</span>
+                    <label class="flex items-center justify-between">
+                        <span>Mobilní D-Pad:</span>
+                        <input id="ui-toggle-dpad" type="checkbox" checked>
+                    </label>
+                    <label class="flex items-center justify-between">
+                        <span>Akční tlačítka (Zničit/Položit):</span>
+                        <input id="ui-toggle-actions" type="checkbox" checked>
+                    </label>
+                    <label class="flex items-center justify-between">
+                        <span>Hotbar na herní ploše:</span>
+                        <input id="ui-toggle-hotbar" type="checkbox" checked>
+                    </label>
+                    <label class="flex items-center justify-between">
+                        <span>FPS a Pozice Info:</span>
+                        <input id="ui-toggle-info" type="checkbox" checked>
+                    </label>
+                </div>
+            </div>
+
+            <div class="bg-black/40 p-3 rounded border border-cyan-800 text-[8px] text-white">
+                <span class="text-yellow-400 font-bold">EDITOR KLÁVES (KEYBINDS):</span>
+                <div class="grid grid-cols-2 gap-2 mt-2">
+                    <div class="flex flex-col gap-1">
+                        <label>Dopředu (Forward):</label>
+                        <input id="key-forward" type="text" class="p-1 bg-black border border-gray-600 rounded text-center font-mono text-cyan-400">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label>Dozadu (Back):</label>
+                        <input id="key-back" type="text" class="p-1 bg-black border border-gray-600 rounded text-center font-mono text-cyan-400">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label>Doleva (Left):</label>
+                        <input id="key-left" type="text" class="p-1 bg-black border border-gray-600 rounded text-center font-mono text-cyan-400">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label>Doprava (Right):</label>
+                        <input id="key-right" type="text" class="p-1 bg-black border border-gray-600 rounded text-center font-mono text-cyan-400">
+                    </div>
+                </div>
+            </div>
+
+            <button id="btn-save-ui-setup" class="py-2.5 px-4 bg-cyan-700 text-white font-bold rounded text-[8px] retro-btn pixel-border">
+                ULOŽIT NASTAVENÍ UI A KLÁVES
+            </button>
+        </div>
+    </div>
+
+    <!-- HERNÍ HUD PLOCHA -->
+    <div id="hud-overlay" class="absolute inset-0 z-10 pointer-events-none hidden flex flex-col justify-between p-4 select-none">
+        <!-- Vrchní informační lišta -->
+        <div id="hud-info-panel" class="flex justify-between items-start w-full text-[8px] sm:text-xs text-white select-none">
+            <div class="bg-black/60 p-2 rounded pixel-border pointer-events-auto">
+                <p class="text-yellow-400">VOXEL CRAFT v0.0.5</p>
+                <p class="mt-1 text-gray-400" id="fps-counter">FPS: 60</p>
+                <p class="text-green-400" id="world-info-label">Svět: Infinite</p>
+            </div>
+            
+            <!-- Pomocný panel pro úpravu pozic HUD na obrazovce -->
+            <div id="hud-drag-editor-banner" class="hidden bg-cyan-950 border-2 border-cyan-500 text-white p-2 text-[7px] max-w-sm rounded pointer-events-auto flex flex-col gap-2 shadow-lg">
+                <span class="font-bold text-cyan-300">📐 REŽIM EDITACE OVLÁDÁNÍ</span>
+                <span>Přetáhněte D-Pad, akční tlačítka nebo Hotbar na požadované místo.</span>
+                <div class="flex gap-2">
+                    <button id="btn-exit-drag-edit" class="py-1 px-2 bg-green-700 text-white rounded retro-btn font-bold">ULOŽIT & ZAVŘÍT</button>
+                    <button id="btn-cancel-drag-edit" class="py-1 px-2 bg-red-800 text-white rounded retro-btn font-bold">ZRUŠIT</button>
+                </div>
+            </div>
+
+            <div class="bg-black/60 p-2 rounded pixel-border text-right flex flex-col items-end gap-1 pointer-events-auto">
+                <p id="pos-counter">X: 0 Y: 0 Z: 0</p>
+                <button id="btn-exit-world" class="mt-2 px-3 py-2 bg-red-800 text-white font-bold rounded text-[8px] retro-btn cursor-pointer">
+                    UKONČIT (EXIT WORLD)
+                </button>
+            </div>
+        </div>
+
+        <!-- Minecraft-like ukazatel rozbíjení bloku -->
+        <div id="breaking-progress-container" class="absolute left-1/2 top-[58%] transform -translate-x-1/2 -translate-y-1/2 hidden w-28 bg-black/70 p-1 rounded-sm border border-yellow-600 pointer-events-none">
+            <div class="text-[6px] text-yellow-500 font-bold mb-1 text-center">NIČENÍ...</div>
+            <div class="w-full bg-gray-800 h-2 rounded-sm overflow-hidden">
+                <div id="breaking-progress-bar" class="bg-yellow-500 h-full w-0"></div>
+            </div>
+        </div>
+
+        <!-- Spodní ovládací sekce (D-pad, Hotbar, Akční prvky) -->
+        <div class="flex justify-between items-end w-full select-none">
+            <!-- D-pad Mobilní sekce -->
+            <div class="flex flex-col items-center select-none pointer-events-auto relative touch-none" id="dpad" style="touch-action: none;">
+                <button id="btn-forward" class="w-12 h-12 retro-btn text-white font-bold rounded flex items-center justify-center text-xl">▲</button>
+                <div class="flex gap-12 my-1">
+                    <button id="btn-left" class="w-12 h-12 retro-btn text-white font-bold rounded flex items-center justify-center text-xl">◀</button>
+                    <button id="btn-right" class="w-12 h-12 retro-btn text-white font-bold rounded flex items-center justify-center text-xl">▶</button>
+                </div>
+                <button id="btn-back" class="w-12 h-12 retro-btn text-white font-bold rounded flex items-center justify-center text-xl">▼</button>
+            </div>
+
+            <!-- Herní Hotbar -->
+            <div class="bg-black/50 p-2 rounded-lg flex gap-1.5 pixel-border pointer-events-auto select-none absolute" id="game-hotbar" style="bottom: 16px; left: 50%; transform: translateX(-50%);"></div>
+
+            <!-- Akční herní tlačítka s novým přepínačem DIMENZÍ -->
+            <div class="flex flex-col gap-2 items-end select-none pointer-events-auto relative touch-none" id="hud-action-buttons" style="touch-action: none;">
+                <div class="flex gap-1.5">
+                    <button id="btn-fly" class="px-3 py-2 text-[8px] retro-btn text-white bg-gray-700 font-bold rounded text-center">
+                        MÓD: CHŮZE
+                    </button>
+                    <button id="btn-dimension" class="px-3 py-2 text-[8px] retro-btn text-white bg-blue-800 font-bold rounded text-center">
+                        DIMENZE: OVERWORLD
+                    </button>
+                </div>
+
+                <div class="flex gap-2">
+                    <button id="btn-break" class="w-14 h-14 bg-red-800 hover:bg-red-700 text-white font-bold rounded text-[9px] flex items-center justify-center retro-btn">
+                        ZNIČIT
+                    </button>
+                    <button id="btn-place" class="w-14 h-14 bg-green-800 hover:bg-green-700 text-white font-bold rounded text-[9px] flex items-center justify-center retro-btn">
+                        POLOŽIT
+                    </button>
+                    <button id="btn-jump" class="w-14 h-14 bg-blue-800 hover:bg-blue-700 text-white font-bold rounded text-[9px] flex items-center justify-center retro-btn">
+                        SKOK
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SPRÁVA MÓDŮ -->
+    <div id="mods-overlay" class="absolute inset-0 z-50 bg-black/95 hidden flex flex-col items-center p-4 sm:p-8 overflow-y-auto retro-scroll">
+        <div class="w-full max-w-2xl bg-[#333] border-4 border-[#555] rounded-lg p-4 flex flex-col gap-4">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xs sm:text-sm text-yellow-400 font-bold">SPRÁVA MÓDŮ (SANDBOX MOD ENGINE)</h2>
+                <button class="btn-back-to-menu px-2 py-1 bg-red-800 text-white font-bold rounded text-[8px] retro-btn">ZAVŘÍT</button>
+            </div>
+            
+            <div class="flex flex-col sm:flex-row gap-4">
+                <div class="flex-1 flex flex-col gap-2">
+                    <span class="text-[8px] text-white">Vytvořené skripty:</span>
+                    <div id="mods-list-container" class="bg-black/50 p-2 rounded h-32 overflow-y-auto retro-scroll text-[8px] flex flex-col gap-1.5"></div>
+                    <button id="btn-create-mod" class="py-2 bg-green-800 text-white font-bold rounded text-[8px] retro-btn">+ VYTVOŘIT MÓD</button>
+                </div>
+                <div class="flex-1 flex flex-col gap-2">
+                    <input id="mod-name-input" type="text" placeholder="NazevModu" class="bg-black text-white text-[8px] p-2 border border-gray-600 rounded">
+                    <input id="mod-version-input" type="text" placeholder="v1.0.0" value="v1.0.0" class="bg-black text-white text-[8px] p-2 border border-gray-600 rounded">
+                    <textarea id="mod-editor" class="w-full h-24 bg-black text-green-400 font-mono text-[8px] p-2 border border-gray-600 rounded resize-none" placeholder="// API: VoxelAPI.registerBlock(...)"></textarea>
+                    
+                    <div class="flex justify-between items-center bg-black/30 p-1 rounded text-[7px] text-white">
+                        <label class="flex items-center gap-1">
+                            <input id="mod-enabled-checkbox" type="checkbox" checked> Aktivní (Enabled)
+                        </label>
+                        <span class="text-gray-400 text-[6px]">Podpora Hot-Reloadu</span>
+                    </div>
+                    <button id="btn-save-mod" class="py-2 bg-blue-800 text-white font-bold rounded text-[8px] retro-btn">ULOŽIT & NAČÍST MÓD</button>
+                </div>
+            </div>
+            <div class="bg-black p-2 rounded border border-red-900 text-[8px] font-mono h-16 overflow-y-auto retro-scroll" id="mod-console">
+                Console: Žádné chyby.
+            </div>
+        </div>
+    </div>
+
+    <!-- NASTAVENÍ HRY -->
+    <div id="settings-overlay" class="absolute inset-0 z-50 bg-black/95 hidden flex flex-col items-center p-4 sm:p-8 overflow-y-auto retro-scroll">
+        <div class="w-full max-w-xl bg-[#333] border-4 border-[#555] rounded-lg p-4 flex flex-col gap-4">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xs sm:text-sm text-yellow-400 font-bold">NASTAVENÍ HRY & AUDIA</h2>
+                <button class="btn-back-to-menu px-2 py-1 bg-red-800 text-white font-bold rounded text-[8px] retro-btn">ZAVŘÍT</button>
+            </div>
+            <div class="flex flex-col gap-3 text-[8px] text-white">
+                <!-- Vylepšený systém mlhy (FOG OPTIONS) -->
+                <div class="bg-black/50 p-3 rounded flex flex-col gap-3">
+                    <span class="text-yellow-400 font-bold">REŽIM MLHY (FOG CONFIG):</span>
+                    <div class="flex gap-2 flex-wrap">
+                        <button id="fog-none" class="px-2.5 py-2 bg-[#555] rounded retro-btn">ŽÁDNÁ (NONE)</button>
+                        <button id="fog-medium" class="px-2.5 py-2 bg-green-800 rounded retro-btn">NORMÁLNÍ (NORMAL)</button>
+                        <button id="fog-far" class="px-2.5 py-2 bg-blue-800 rounded retro-btn">DÁLKOVÝ OPAR (FAR HAZE)</button>
+                    </div>
+                    
+                    <div class="flex flex-col gap-1.5 mt-2 border-t border-gray-800 pt-2">
+                        <label>Vlastní hustota mlhy:</label>
+                        <input id="fog-density-slider" type="range" min="5" max="150" value="45" class="w-full accent-green-500">
+                    </div>
+
+                    <div class="flex flex-col gap-2 mt-1">
+                        <label class="text-cyan-400">Atmosféra (Sky & Color Preset):</label>
+                        <select id="fog-preset-selector" class="p-1.5 bg-black text-white border border-gray-600 rounded">
+                            <option value="day">Nostalgický Klasický Den (Modré nebe)</option>
+                            <option value="sunset">Zářivý Západ Slunce (Zlato-oranžový opar)</option>
+                            <option value="night">Půlnoční Stín (Černo-modrá temnota)</option>
+                            <option value="swamp">Jedovatý Močál (Kyselinově zelený opar)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Přepínače a slidery zvuku -->
+                <div class="bg-black/50 p-3 rounded flex flex-col gap-3">
+                    <span class="text-yellow-400 font-bold">NASTAVENÍ RETRO AUDIA:</span>
+                    <div class="flex justify-between items-center border-b border-gray-800 pb-2">
+                        <span>ZVUKOVÉ RETRO EFEKTY:</span>
+                        <button id="btn-toggle-sound" class="px-3 py-2 bg-green-700 rounded retro-btn text-white">SFX: ZAPNUTÉ</button>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label>Hlasitost efektů (SFX Volume):</label>
+                        <input id="audio-sfx-volume" type="range" min="0" max="100" value="70" class="w-full accent-green-500">
+                    </div>
+                    <div class="flex flex-col gap-1 border-t border-gray-800 pt-2 mt-1">
+                        <label>Hlasitost hudby na pozadí (Music BGM Volume):</label>
+                        <input id="audio-music-volume" type="range" min="0" max="100" value="50" class="w-full accent-green-500">
+                    </div>
+                </div>
+
+                <div class="bg-black/50 p-3 rounded flex justify-between items-center">
+                    <span class="text-red-400">VYČISTIT ÚLOŽIŠTĚ (RESET):</span>
+                    <button id="btn-clear-storage" class="px-3 py-2 bg-red-700 rounded retro-btn text-white">RESETOVAT HRU</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- CHYTRÝ INTERAKTIVNÍ AUDIO ENGINE (MP3 / WAV / OGG & RETRO SYNTH BGM) ---
+        const AudioEngine = {
+            ctx: null,
+            enabled: true,
+            sfxVolume: 0.7,
+            musicVolume: 0.5,
+            customSounds: {
+                music_menu: 'voxel_craft_theme.mp3', // Nastaveno na zadanou tématickou hudbu
+                music_game: 'Overworld_welcome_voxel_full.mp3'
+            },
+            currentBgm: null, // HTMLAudioElement pro custom hudbu
+            currentBgmType: null, // 'menu' nebo 'game'
+            proceduralInterval: null, // Interval pro vestavěnou synth hudbu
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                const savedMute = localStorage.getItem('vc_audio_muted');
+                if (savedMute) {
+                    this.enabled = savedMute !== 'true';
+                }
+                
+                // Načtení uložené hudby z localStorage, pokud byla dříve naimportována
+                const cachedMenuMusic = localStorage.getItem('vc_custom_bgm_menu');
+                if (cachedMenuMusic) this.customSounds['music_menu'] = cachedMenuMusic;
+                const cachedGameMusic = localStorage.getItem('vc_custom_bgm_game');
+                if (cachedGameMusic) this.customSounds['music_game'] = cachedGameMusic;
+
+                // Načtení uložených custom SFX efektů
+                for (let sfx of ['walk', 'break', 'place', 'jump', 'click']) {
+                    const cachedSfx = localStorage.getItem('vc_custom_sfx_' + sfx);
+                    if (cachedSfx) this.customSounds[sfx] = cachedSfx;
+                }
+
+                this.updateSoundButtonUI();
+            },
+            toggleSound() {
+                this.enabled = !this.enabled;
+                localStorage.setItem('vc_audio_muted', (!this.enabled).toString());
+                this.updateSoundButtonUI();
+                this.play('click');
+                if (!this.enabled) {
+                    this.stopBGM();
+                } else {
+                    this.playBGM(this.currentBgmType || 'menu');
+                }
+            },
+            updateSoundButtonUI() {
+                const btn = document.getElementById('btn-toggle-sound');
+                if (btn) {
+                    btn.innerText = this.enabled ? "SFX & HUD: ZAPNUTÉ" : "SFX & HUD: VYPNUTÉ";
+                    btn.className = this.enabled ? "px-3 py-2 bg-green-700 rounded retro-btn text-white" : "px-3 py-2 bg-gray-600 rounded retro-btn text-gray-300";
+                }
+            },
+            // Přehrávání standardních herních efektů (SFX)
+            async play(type, customDataUrl = null) {
+                this.init();
+                if (!this.enabled) return;
+
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+
+                let sourceUrl = customDataUrl || this.customSounds[type];
+                if (sourceUrl && type !== 'music_menu' && type !== 'music_game') {
+                    try {
+                        const res = await fetch(sourceUrl);
+                        const arrayBuf = await res.arrayBuffer();
+                        this.ctx.decodeAudioData(arrayBuf, (buf) => {
+                            const src = this.ctx.createBufferSource();
+                            src.buffer = buf;
+                            const gain = this.ctx.createGain();
+                            gain.gain.value = this.sfxVolume;
+                            src.connect(gain);
+                            gain.connect(this.ctx.destination);
+                            src.start(0);
+                        });
+                        return;
+                    } catch(e) {}
+                }
+
+                // Fallback procedurální generátor chiptune efektů
+                const osc = this.ctx.createOscillator();
+                const gainNode = this.ctx.createGain();
+                osc.connect(gainNode);
+                gainNode.connect(this.ctx.destination);
+
+                const now = this.ctx.currentTime;
+                gainNode.gain.setValueAtTime(this.sfxVolume * 0.2, now);
+
+                if (type === 'click') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(800, now);
+                    osc.frequency.exponentialRampToValueAtTime(150, now + 0.08);
+                    gainNode.gain.linearRampToValueAtTime(0.001, now + 0.08);
+                    osc.start(now);
+                    osc.stop(now + 0.08);
+                } else if (type === 'walk') {
+                    const bufferSize = this.ctx.sampleRate * 0.08;
+                    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                    const data = buffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) {
+                        data[i] = Math.random() * 2 - 1;
+                    }
+                    const noise = this.ctx.createBufferSource();
+                    noise.buffer = buffer;
+                    const filter = this.ctx.createBiquadFilter();
+                    filter.type = 'bandpass';
+                    filter.frequency.value = 350;
+                    
+                    noise.connect(filter);
+                    filter.connect(gainNode);
+                    gainNode.gain.setValueAtTime(this.sfxVolume * 0.12, now);
+                    gainNode.gain.linearRampToValueAtTime(0.001, now + 0.08);
+                    noise.start(now);
+                    noise.stop(now + 0.08);
+                } else if (type === 'jump') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(140, now);
+                    osc.frequency.exponentialRampToValueAtTime(400, now + 0.14);
+                    gainNode.gain.linearRampToValueAtTime(0.001, now + 0.14);
+                    osc.start(now);
+                    osc.stop(now + 0.14);
+                } else if (type === 'break') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(100, now);
+                    osc.frequency.linearRampToValueAtTime(30, now + 0.18);
+                    gainNode.gain.setValueAtTime(this.sfxVolume * 0.35, now);
+                    gainNode.gain.linearRampToValueAtTime(0.001, now + 0.18);
+                    osc.start(now);
+                    osc.stop(now + 0.18);
+                } else if (type === 'place') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(250, now);
+                    osc.frequency.exponentialRampToValueAtTime(130, now + 0.12);
+                    gainNode.gain.linearRampToValueAtTime(0.001, now + 0.12);
+                    osc.start(now);
+                    osc.stop(now + 0.12);
+                }
+            },
+
+            // Přehrávání hudby na pozadí (BGM)
+            playBGM(type) {
+                this.init();
+                this.currentBgmType = type;
+                if (!this.enabled) return;
+
+                this.stopBGM();
+
+                // Pokud máme custom audio pro menu/hru
+                const customTrack = this.customSounds[`music_${type}`];
+                if (customTrack) {
+                    try {
+                        this.currentBgm = new Audio(customTrack);
+                        this.currentBgm.loop = true;
+                        this.currentBgm.volume = this.musicVolume;
+                        this.currentBgm.play().catch(e => {
+                            console.log("BGM autoplay zablokován, čeká se na interakci:", e);
+                            this.playProceduralBGM(type);
+                        });
+                        return;
+                    } catch(e) {
+                        console.log("Custom BGM failure, fallback to procedural", e);
+                    }
+                }
+
+                // Spustit vestavěný procedurální retro syntezátor
+                this.playProceduralBGM(type);
+            },
+
+            // Plynulé vypnutí hudby
+            stopBGM() {
+                if (this.currentBgm) {
+                    const trackToFade = this.currentBgm;
+                    let vol = trackToFade.volume;
+                    const fadeInterval = setInterval(() => {
+                        vol -= 0.05;
+                        if (vol <= 0) {
+                            clearInterval(fadeInterval);
+                            trackToFade.pause();
+                            trackToFade.remove();
+                        } else {
+                            trackToFade.volume = Math.max(0, vol);
+                        }
+                    }, 30);
+                    this.currentBgm = null;
+                }
+                if (this.proceduralInterval) {
+                    clearInterval(this.proceduralInterval);
+                    this.proceduralInterval = null;
+                }
+            },
+
+            // Syntetizování retro melodie přímo ve zvukovém bufferu (když není dostupná MP3)
+            playProceduralBGM(type) {
+                if (this.proceduralInterval) clearInterval(this.proceduralInterval);
+                
+                let step = 0;
+                const menuNotes = [261.63, 329.63, 392.00, 523.25, 392.00, 329.63, 261.63, 293.66];
+                const gameNotes = [196.00, 246.94, 293.66, 392.00, 349.23, 293.66, 220.00, 261.63];
+                const notes = type === 'menu' ? menuNotes : gameNotes;
+                const tempo = type === 'menu' ? 180 : 450;
+
+                this.proceduralInterval = setInterval(() => {
+                    if (!this.enabled || !this.ctx) return;
+                    if (this.ctx.state === 'suspended') return;
+
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    
+                    osc.type = type === 'menu' ? 'triangle' : 'sine';
+                    osc.frequency.setValueAtTime(notes[step % notes.length], this.ctx.currentTime);
+                    
+                    gain.gain.setValueAtTime(this.musicVolume * 0.05, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + (tempo / 1000) * 0.9);
+                    
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + (tempo / 1000));
+                    
+                    step++;
+                }, tempo);
+            }
+        };
+
+        // --- RETRO PROCEDURÁLNÍ KRESLIČ PRO PREVIEW BLOKŮ (ŘEŠÍ WHITE BLOCK BUG) ---
+        function drawBlockPreviewToCanvas(canvas, blockId) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, 16, 16);
+            const config = BlockConfigs[blockId];
+            if (!config) return;
+
+            const override = localStorage.getItem(`voxel_texture_override_${blockId}`);
+            if (override) {
+                const img = new Image();
+                img.src = override;
+                img.onload = () => ctx.drawImage(img, 0, 0, 16, 16);
+                return;
+            }
+
+            ctx.fillStyle = config.color || '#ffffff';
+            ctx.fillRect(0, 0, 16, 16);
+
+            if (blockId === 1) { // Grass Side
+                ctx.fillStyle = '#533924'; ctx.fillRect(0, 4, 16, 12);
+                ctx.fillStyle = '#5c9c30'; ctx.fillRect(0, 0, 16, 5);
+                ctx.fillStyle = '#4e8726'; ctx.fillRect(2, 3, 1, 3); ctx.fillRect(8, 4, 2, 2); ctx.fillRect(13, 3, 1, 3);
+            } else if (blockId === 2) { // Dirt
+                ctx.fillStyle = '#533924'; ctx.fillRect(0, 0, 16, 16);
+                ctx.fillStyle = '#442d1b'; ctx.fillRect(1, 2, 2, 1); ctx.fillRect(9, 4, 1, 2); ctx.fillRect(4, 10, 2, 1);
+                ctx.fillStyle = '#60432c'; ctx.fillRect(11, 8, 2, 2); ctx.fillRect(2, 12, 1, 1);
+            } else if (blockId === 3) { // Wood Log
+                ctx.fillStyle = '#422a1b'; ctx.fillRect(0, 0, 16, 16);
+                ctx.fillStyle = '#553927'; ctx.fillRect(0, 0, 16, 2); ctx.fillRect(0, 10, 16, 2);
+                ctx.fillStyle = '#2d1a0e'; ctx.fillRect(4, 0, 2, 16); ctx.fillRect(12, 0, 2, 16);
+            } else if (blockId === 4) { // Stone
+                ctx.fillStyle = '#737373'; ctx.fillRect(0, 0, 16, 16);
+                ctx.fillStyle = '#555555'; ctx.fillRect(0, 7, 16, 1); ctx.fillRect(7, 0, 1, 7); ctx.fillRect(11, 8, 1, 8);
+                ctx.fillStyle = '#909090'; ctx.fillRect(2, 2, 3, 1); ctx.fillRect(10, 11, 2, 1);
+            } else if (blockId === 5) { // Leaves
+                ctx.fillStyle = '#2c5916'; ctx.fillRect(0, 0, 16, 16);
+                ctx.fillStyle = '#386b1d'; ctx.fillRect(1, 1, 3, 3); ctx.fillRect(8, 3, 4, 3); ctx.fillRect(3, 10, 3, 3);
+                ctx.fillStyle = '#4f8f2d'; ctx.fillRect(2, 2, 1, 1); ctx.fillRect(9, 4, 1, 1);
+            } else if (blockId === 6) { // Bricks
+                ctx.fillStyle = '#9e3323'; ctx.fillRect(0, 0, 16, 16);
+                ctx.fillStyle = '#7a7675'; ctx.fillRect(0, 5, 16, 1); ctx.fillRect(0, 11, 16, 1);
+                ctx.fillRect(4, 0, 1, 5); ctx.fillRect(11, 5, 1, 6); ctx.fillRect(6, 11, 1, 5);
+            } else if (blockId === 8) { // Sand (Písek)
+                ctx.fillStyle = '#e2c48b'; ctx.fillRect(0, 0, 16, 16);
+                ctx.fillStyle = '#cfa559'; ctx.fillRect(3, 2, 1, 1); ctx.fillRect(9, 10, 1, 1); ctx.fillRect(12, 5, 1, 1);
+            } else if (blockId === 9) { // Glass (Sklo)
+                ctx.fillStyle = 'rgba(200, 240, 255, 0.4)'; ctx.fillRect(0, 0, 16, 16);
+                ctx.strokeStyle = '#ffffff'; ctx.strokeRect(0, 0, 16, 16);
+                ctx.beginPath(); ctx.moveTo(2, 14); ctx.lineTo(14, 2); ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.stroke();
+            } else if (blockId === 10) { // Planks (Prkna)
+                ctx.fillStyle = '#b98e59'; ctx.fillRect(0, 0, 16, 16);
+                ctx.fillStyle = '#8f6534'; ctx.fillRect(0, 4, 16, 1); ctx.fillRect(0, 9, 16, 1); ctx.fillRect(0, 14, 16, 1);
+            } else if (blockId === 11) { // Water (Voda)
+                ctx.fillStyle = '#1d4ed8'; ctx.fillRect(0, 0, 16, 16);
+                ctx.fillStyle = '#2563eb'; ctx.fillRect(0, 3, 16, 3); ctx.fillRect(0, 10, 16, 3);
+            } else if (blockId === 13) { // untitled_block (Červený blok)
+                ctx.fillStyle = '#800000'; ctx.fillRect(0, 0, 16, 16);
+                ctx.fillStyle = '#ff2222'; ctx.fillRect(2, 2, 12, 12);
+                ctx.fillStyle = '#ffaaaa'; ctx.fillRect(5, 5, 6, 6);
+            } else { // Custom
+                ctx.fillStyle = '#1e293b'; ctx.fillRect(0, 0, 16, 16);
+                ctx.fillStyle = '#06b6d4'; ctx.fillRect(2, 2, 12, 12);
+                ctx.fillStyle = '#ffffff'; ctx.fillRect(5, 5, 6, 6);
+            }
+        }
+
+        // --- UI & OVLÁDÁNÍ KONFIGURACE SYSTEM ---
+        let UIConfig = {
+            showDpad: true,
+            showActions: true,
+            showHotbar: true,
+            showInfo: true,
+            hudScale: 100,
+            hudOpacity: 100,
+            dpadPos: { x: 16, y: 16 },
+            actionsPos: { x: 16, y: 16 },
+            hotbarPos: { x: null, y: 16 },
+            keybinds: {
+                forward: 'KeyW',
+                back: 'KeyS',
+                left: 'KeyA',
+                right: 'KeyD',
+                jump: 'Space'
+            }
+        };
+
+        function loadUIConfig() {
+            const saved = localStorage.getItem('vc_ui_config');
+            if (saved) {
+                try { 
+                    UIConfig = { ...UIConfig, ...JSON.parse(saved) }; 
+                } catch(e) {}
+            }
+            applyUIConfig();
+        }
+
+        function applyUIConfig() {
+            const dpadEl = document.getElementById('dpad');
+            const actionsEl = document.getElementById('hud-action-buttons');
+            const hotbarEl = document.getElementById('game-hotbar');
+            
+            dpadEl.style.display = UIConfig.showDpad ? 'flex' : 'none';
+            actionsEl.style.display = UIConfig.showActions ? 'flex' : 'none';
+            hotbarEl.style.display = UIConfig.showHotbar ? 'flex' : 'none';
+            document.getElementById('hud-info-panel').style.display = UIConfig.showInfo ? 'flex' : 'none';
+
+            const scaleFactor = UIConfig.hudScale / 100;
+            const opacityFactor = UIConfig.hudOpacity / 100;
+
+            dpadEl.style.transform = `scale(${scaleFactor})`;
+            dpadEl.style.transformOrigin = 'bottom left';
+            dpadEl.style.opacity = opacityFactor;
+            
+            actionsEl.style.transform = `scale(${scaleFactor})`;
+            actionsEl.style.transformOrigin = 'bottom right';
+            actionsEl.style.opacity = opacityFactor;
+
+            hotbarEl.style.transform = `scale(${scaleFactor}) ${UIConfig.hotbarPos.x !== null ? '' : 'translateX(-50%)'}`;
+            hotbarEl.style.transformOrigin = 'bottom center';
+            hotbarEl.style.opacity = opacityFactor;
+
+            if (UIConfig.dpadPos) {
+                dpadEl.style.position = 'absolute';
+                dpadEl.style.left = `${UIConfig.dpadPos.x}px`;
+                dpadEl.style.bottom = `${UIConfig.dpadPos.y}px`;
+                dpadEl.style.right = 'auto';
+            }
+
+            if (UIConfig.actionsPos) {
+                actionsEl.style.position = 'absolute';
+                actionsEl.style.right = `${UIConfig.actionsPos.x}px`;
+                actionsEl.style.bottom = `${UIConfig.actionsPos.y}px`;
+                actionsEl.style.left = 'auto';
+            }
+
+            if (UIConfig.hotbarPos && UIConfig.hotbarPos.x !== null) {
+                hotbarEl.style.position = 'absolute';
+                hotbarEl.style.left = `${UIConfig.hotbarPos.x}px`;
+                hotbarEl.style.bottom = `${UIConfig.hotbarPos.y}px`;
+                hotbarEl.style.transform = `scale(${scaleFactor})`;
+            } else {
+                hotbarEl.style.position = 'absolute';
+                hotbarEl.style.left = `50%`;
+                hotbarEl.style.bottom = `16px`;
+            }
+
+            document.getElementById('ui-toggle-dpad').checked = UIConfig.showDpad;
+            document.getElementById('ui-toggle-actions').checked = UIConfig.showActions;
+            document.getElementById('ui-toggle-hotbar').checked = UIConfig.showHotbar;
+            document.getElementById('ui-toggle-info').checked = UIConfig.showInfo;
+            document.getElementById('ui-scale-range').value = UIConfig.hudScale;
+            document.getElementById('ui-opacity-range').value = UIConfig.hudOpacity;
+
+            document.getElementById('key-forward').value = UIConfig.keybinds.forward;
+            document.getElementById('key-back').value = UIConfig.keybinds.back;
+            document.getElementById('key-left').value = UIConfig.keybinds.left;
+            document.getElementById('key-right').value = UIConfig.keybinds.right;
+        }
+
+        // --- DRAG & DROP EDITOR LAYOUT SYSTEM ---
+        let dragEditActive = false;
+        function initDragEditor() {
+            const dpad = document.getElementById('dpad');
+            const actions = document.getElementById('hud-action-buttons');
+            const hotbar = document.getElementById('game-hotbar');
+
+            const makeDraggable = (el, storagePosKey) => {
+                let active = false;
+                let pointerOffsetX = 0;
+                let pointerOffsetY = 0;
+
+                const dragStart = (e) => {
+                    if (!dragEditActive) return;
+                    active = true;
+                    el.classList.add('dragging-active');
+                    
+                    const clientX = e.type === "touchstart" ? e.touches[0].clientX : e.clientX;
+                    const clientY = e.type === "touchstart" ? e.touches[0].clientY : e.clientY;
+                    const rect = el.getBoundingClientRect();
+                    
+                    pointerOffsetX = clientX - rect.left;
+                    pointerOffsetY = rect.bottom - clientY;
+                };
+
+                const drag = (e) => {
+                    if (!active) return;
+                    e.preventDefault();
+                    
+                    const clientX = e.type === "touchmove" ? e.touches[0].clientX : e.clientX;
+                    const clientY = e.type === "touchmove" ? e.touches[0].clientY : e.clientY;
+                    const rect = el.getBoundingClientRect();
+
+                    let x = clientX - pointerOffsetX;
+                    let y = window.innerHeight - clientY - pointerOffsetY;
+
+                    x = Math.max(0, Math.min(window.innerWidth - rect.width, x));
+                    y = Math.max(0, Math.min(window.innerHeight - rect.height, y));
+
+                    if (storagePosKey === 'dpadPos') {
+                        UIConfig.dpadPos = { x, y };
+                        el.style.left = `${x}px`;
+                        el.style.bottom = `${y}px`;
+                        el.style.right = 'auto';
+                    } else if (storagePosKey === 'actionsPos') {
+                        let rx = window.innerWidth - (x + rect.width);
+                        UIConfig.actionsPos = { x: rx, y };
+                        el.style.right = `${rx}px`;
+                        el.style.bottom = `${y}px`;
+                        el.style.left = 'auto';
+                    } else if (storagePosKey === 'hotbarPos') {
+                        UIConfig.hotbarPos = { x, y };
+                        el.style.left = `${x}px`;
+                        el.style.bottom = `${y}px`;
+                        el.style.transform = `scale(${UIConfig.hudScale / 100})`;
+                    }
+                };
+
+                const dragEnd = () => {
+                    if (!active) return;
+                    active = false;
+                    el.classList.remove('dragging-active');
+                };
+
+                el.addEventListener('mousedown', dragStart);
+                el.addEventListener('touchstart', dragStart, { passive: false });
+                window.addEventListener('mousemove', drag);
+                window.addEventListener('touchmove', drag, { passive: false });
+                window.addEventListener('mouseup', dragEnd);
+                window.addEventListener('touchend', dragEnd);
+            };
+
+            makeDraggable(dpad, 'dpadPos');
+            makeDraggable(actions, 'actionsPos');
+            makeDraggable(hotbar, 'hotbarPos');
+        }
+
+        let backupUIConfig = null;
+        function toggleDragEditMode(state, isCancel = false) {
+            dragEditActive = state;
+            const banner = document.getElementById('hud-drag-editor-banner');
+            
+            const allButtons = document.querySelectorAll('#hud-overlay button');
+            allButtons.forEach(btn => {
+                if (btn.id === 'btn-exit-drag-edit' || btn.id === 'btn-cancel-drag-edit') {
+                    btn.style.pointerEvents = 'auto';
+                    return;
+                }
+                btn.style.pointerEvents = state ? 'none' : 'auto';
+            });
+
+            if (state) {
+                backupUIConfig = JSON.parse(JSON.stringify(UIConfig));
+                document.getElementById('ui-editor-overlay').classList.add('hidden');
+                document.getElementById('main-menu').classList.add('hidden');
+                document.getElementById('game-container').classList.remove('hidden');
+                document.getElementById('hud-overlay').classList.remove('hidden');
+                banner.classList.remove('hidden');
+                AudioEngine.play('click');
+            } else {
+                banner.classList.add('hidden');
+                if (isCancel && backupUIConfig) {
+                    UIConfig = backupUIConfig;
+                } else {
+                    localStorage.setItem('vc_ui_config', JSON.stringify(UIConfig));
+                }
+                applyUIConfig();
+                document.getElementById('ui-editor-overlay').classList.remove('hidden');
+                AudioEngine.play('place');
+            }
+        }
+
+        document.getElementById('btn-enter-drag-edit').addEventListener('click', () => toggleDragEditMode(true));
+        document.getElementById('btn-exit-drag-edit').addEventListener('click', () => toggleDragEditMode(false));
+        document.getElementById('btn-cancel-drag-edit').addEventListener('click', () => toggleDragEditMode(false, true));
+
+        // --- BLOCK CONFIGS REGISTRY (ROZŠÍŘENÝ INVENTÁŘ) ---
+        let BlockConfigs = {
+            1: { id: 1, name: "Grass", solid: true, hardness: 400, light: false, color: "#ffffff", editable: true, category: "Basic" },
+            2: { id: 2, name: "Dirt", solid: true, hardness: 300, light: false, color: "#ffffff", editable: true, category: "Basic" },
+            3: { id: 3, name: "Wood", solid: true, hardness: 500, light: false, color: "#ffffff", editable: true, category: "Nature" },
+            4: { id: 4, name: "Stone", solid: true, hardness: 750, light: false, color: "#ffffff", editable: true, category: "Basic" },
+            5: { id: 5, name: "Leaves", solid: false, hardness: 150, light: false, color: "#ffffff", editable: true, category: "Nature" },
+            6: { id: 6, name: "Classic Bricks", solid: true, hardness: 650, light: false, color: "#ffffff", editable: true, category: "Building" },
+            7: { id: 7, name: "Custom Block", solid: true, hardness: 400, light: true, color: "#ffffff", editable: true, category: "Building" },
+            8: { id: 8, name: "Sand", solid: true, hardness: 300, light: false, color: "#ffffff", editable: true, category: "Basic", gravity: true },
+            9: { id: 9, name: "Glass", solid: true, hardness: 200, light: false, color: "#ffffff", editable: true, category: "Building", transparent: true },
+            10: { id: 10, name: "Planks", solid: true, hardness: 400, light: false, color: "#ffffff", editable: true, category: "Building" },
+            11: { id: 11, name: "Water", solid: false, hardness: 100, light: false, color: "#ffffff", editable: true, category: "Nature", transparent: true },
+            13: { id: 13, name: "untitled_block", solid: true, hardness: 500, light: true, color: "#ff2222", editable: true, category: "Modded" }
+        };
+
+        const savedConfigs = localStorage.getItem('vc_block_configs');
+        if (savedConfigs) {
+            try { BlockConfigs = JSON.parse(savedConfigs); } catch(e) {}
+        }
+
+        function saveBlockConfigs() {
+            localStorage.setItem('vc_block_configs', JSON.stringify(BlockConfigs));
+        }
+
+        // --- RETRO PIXELOVÉ TEXTURY GENERÁTOR ---
+        const dirtColors = ['#533924', '#60432c', '#4d341f', '#6c4b31', '#442d1b', '#5c3e27'];
+        function generateDirtCanvas() {
+            const canvas = document.createElement('canvas'); canvas.width = 16; canvas.height = 16;
+            createPixelNoise(canvas.getContext('2d'), 0, 0, 16, 16, dirtColors);
+            return canvas;
+        }
+
+        const grassColors = ['#5c9c30', '#4e8726', '#67ab38', '#548e2a', '#6cb83c', '#44781e'];
+        function generateGrassTopCanvas() {
+            const canvas = document.createElement('canvas'); canvas.width = 16; canvas.height = 16;
+            createPixelNoise(canvas.getContext('2d'), 0, 0, 16, 16, grassColors);
+            return canvas;
+        }
+
+        function generateGrassSideCanvas() {
+            const canvas = document.createElement('canvas'); canvas.width = 16; canvas.height = 16;
+            const ctx = canvas.getContext('2d');
+            createPixelNoise(ctx, 0, 0, 16, 16, dirtColors);
+            for (let x = 0; x < 16; x++) {
+                const depth = 4 + Math.floor(Math.sin(x * 1.5) * 2) + (Math.random() > 0.6 ? 1 : 0);
+                for (let y = 0; y < depth; y++) {
+                    ctx.fillStyle = grassColors[Math.floor(Math.random() * grassColors.length)];
+                    ctx.fillRect(x, y, 1, 1);
+                }
+            }
+            return canvas;
+        }
+
+        const barkColors = ['#422a1b', '#4d3222', '#362114', '#553927', '#2d1a0e'];
+        function generateWoodSideCanvas() {
+            const canvas = document.createElement('canvas'); canvas.width = 16; canvas.height = 16;
+            const ctx = canvas.getContext('2d');
+            createPixelNoise(ctx, 0, 0, 16, 16, barkColors);
+            ctx.fillStyle = '#24140a';
+            for (let i = 0; i < 4; i++) {
+                const x = Math.floor(Math.random() * 12) + 2;
+                ctx.fillRect(x, 0, 1 + Math.floor(Math.random() * 2), 16);
+            }
+            return canvas;
+        }
+
+        function generateWoodTopCanvas() {
+            const canvas = document.createElement('canvas'); canvas.width = 16; canvas.height = 16;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#9a7a50'; ctx.fillRect(0,0,16,16);
+            ctx.fillStyle = '#765935'; ctx.fillRect(2, 2, 12, 12);
+            ctx.fillStyle = '#9a7a50'; ctx.fillRect(4, 4, 8, 8);
+            ctx.fillStyle = '#765935'; ctx.fillRect(6, 6, 4, 4);
+            ctx.fillStyle = '#362114'; ctx.strokeRect(0, 0, 16, 16);
+            return canvas;
+        }
+
+        const stoneColors = ['#737373', '#828282', '#646464', '#909090', '#555555'];
+        function generateCobbleCanvas() {
+            const canvas = document.createElement('canvas'); canvas.width = 16; canvas.height = 16;
+            const ctx = canvas.getContext('2d');
+            createPixelNoise(ctx, 0, 0, 16, 16, stoneColors);
+            ctx.fillStyle = '#3a3a3a';
+            ctx.fillRect(0, 0, 16, 1); ctx.fillRect(0, 8, 16, 1); ctx.fillRect(0, 15, 16, 1);
+            ctx.fillRect(4, 0, 1, 8); ctx.fillRect(12, 0, 1, 8); ctx.fillRect(8, 8, 1, 8);
+            ctx.fillStyle = '#b0b0b0';
+            ctx.fillRect(1, 1, 3, 1); ctx.fillRect(5, 1, 7, 1); ctx.fillRect(1, 9, 6, 1);
+            return canvas;
+        }
+
+        const leafColors = ['#386b1d', '#447d25', '#2c5916', '#4f8f2d'];
+        function generateLeavesCanvas() {
+            const canvas = document.createElement('canvas'); canvas.width = 16; canvas.height = 16;
+            createPixelNoise(canvas.getContext('2d'), 0, 0, 16, 16, leafColors);
+            return canvas;
+        }
+
+        const brickColors = ['#9e3323', '#ad4030', '#8c281a', '#b84938', '#731c10'];
+        function generateBricksCanvas() {
+            const canvas = document.createElement('canvas'); canvas.width = 16; canvas.height = 16;
+            const ctx = canvas.getContext('2d');
+            createPixelNoise(ctx, 0, 0, 16, 16, brickColors);
+            ctx.fillStyle = '#7a7675';
+            ctx.fillRect(0, 4, 16, 1); ctx.fillRect(0, 9, 16, 1); ctx.fillRect(0, 14, 16, 1);
+            ctx.fillRect(4, 0, 1, 4); ctx.fillRect(12, 4, 1, 5); ctx.fillRect(6, 9, 1, 5);
+            return canvas;
+        }
+
+        // --- RETRO TEXTURY PRO NOVÉ BLOKY ---
+        const sandColors = ['#e2c48b', '#dbb875', '#d2aa62', '#e8ce9d', '#cfa559'];
+        function generateSandCanvas() {
+            const canvas = document.createElement('canvas'); canvas.width = 16; canvas.height = 16;
+            createPixelNoise(canvas.getContext('2d'), 0, 0, 16, 16, sandColors);
+            return canvas;
+        }
+
+        function generateGlassCanvas() {
+            const canvas = document.createElement('canvas'); canvas.width = 16; canvas.height = 16;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'rgba(210, 245, 255, 0.3)'; ctx.fillRect(0,0,16,16);
+            ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1; ctx.strokeRect(0,0,16,16);
+            ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+            ctx.beginPath(); ctx.moveTo(2,14); ctx.lineTo(14,2); ctx.stroke();
+            return canvas;
+        }
+
+        const plankColors = ['#b98e59', '#a67b48', '#c49964', '#9e713e', '#b18652'];
+        function generatePlanksCanvas() {
+            const canvas = document.createElement('canvas'); canvas.width = 16; canvas.height = 16;
+            const ctx = canvas.getContext('2d');
+            createPixelNoise(ctx, 0, 0, 16, 16, plankColors);
+            ctx.fillStyle = '#6e4c23';
+            ctx.fillRect(0, 4, 16, 1); ctx.fillRect(0, 9, 16, 1); ctx.fillRect(0, 14, 16, 1);
+            return canvas;
+        }
+
+        const waterColors = ['#1d4ed8', '#1e40af', '#2563eb', '#3b82f6'];
+        function generateWaterCanvas() {
+            const canvas = document.createElement('canvas'); canvas.width = 16; canvas.height = 16;
+            createPixelNoise(canvas.getContext('2d'), 0, 0, 16, 16, waterColors);
+            return canvas;
+        }
+
+        const crimsonVoidColors = ['#450505', '#600505', '#800000', '#ff2222', '#220000'];
+        function generateUntitledBlockCanvas() {
+            const canvas = document.createElement('canvas'); canvas.width = 16; canvas.height = 16;
+            const ctx = canvas.getContext('2d');
+            createPixelNoise(ctx, 0, 0, 16, 16, crimsonVoidColors);
+            ctx.fillStyle = '#ff8888'; ctx.fillRect(5,5,6,6);
+            return canvas;
+        }
+
+        function generateUnknownCanvas() {
+            const canvas = document.createElement('canvas'); canvas.width = 16; canvas.height = 16;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ff00ff'; ctx.fillRect(0, 0, 16, 16);
+            ctx.fillStyle = '#000000';
+            for (let x = 0; x < 16; x += 4) {
+                for (let y = 0; y < 16; y += 4) {
+                    if ((x / 4 + y / 4) % 2 === 0) ctx.fillRect(x, y, 4, 4);
+                }
+            }
+            return canvas;
+        }
+
+        // --- INVENTORY API ---
+        window.getBlocks = function() { return Object.values(BlockConfigs); };
+        window.addBlock = function(config) {
+            if (config.id && !BlockConfigs[config.id]) {
+                BlockConfigs[config.id] = {
+                    id: config.id,
+                    name: config.name || "Mod Block",
+                    solid: config.solid !== undefined ? config.solid : true,
+                    hardness: config.hardness || 300,
+                    light: config.light || false,
+                    color: config.color || "#ffffff",
+                    editable: true,
+                    category: config.category || "Modded"
+                };
+                saveBlockConfigs();
+                refreshInventory();
+            }
+        };
+        window.removeBlock = function(id) {
+            if (BlockConfigs[id]) {
+                delete BlockConfigs[id];
+                saveBlockConfigs();
+                refreshInventory();
+            }
+        };
+        window.moveToHotbar = function(blockId, slotIdx) {
+            if (slotIdx >= 0 && slotIdx < 6) {
+                activeWorldData.hotbar[slotIdx] = blockId;
+                saveActiveWorld();
+                renderInGameHotbar();
+            }
+        };
+        window.refreshInventory = function() { renderInventoryGrid(); };
+
+        // --- WORLD MANAGER ---
+        let worldsList = [];
+        let activeWorldData = null;
+        let currentDimension = 'overworld'; // 'overworld' nebo 'crimson_void'
+
+        function loadWorldsFromStorage() {
+            const saved = localStorage.getItem('vc_worlds_list');
+            if (saved) {
+                try { worldsList = JSON.parse(saved); } catch(e) { worldsList = []; }
+            } else {
+                worldsList = [{
+                    id: 'default_world',
+                    name: "Nostalgie 2000",
+                    generator: 'classic',
+                    seed: 42,
+                    icon: '🧱',
+                    height: 16,
+                    trees: true,
+                    fog: true,
+                    playerPos: { x: 12, y: 14, z: 12 },
+                    playerRot: { x: 0, y: 0 },
+                    hotbar: [1, 8, 10, 9, 11, 13], // Upraven výchozí hotbar pro nové bloky
+                    modifiedBlocks: {}
+                }];
+                saveWorldsToStorage();
+            }
+        }
+
+        function saveWorldsToStorage() { localStorage.setItem('vc_worlds_list', JSON.stringify(worldsList)); }
+        function saveActiveWorld() {
+            if (activeWorldData) {
+                activeWorldData.playerPos = { x: player.position.x, y: player.position.y, z: player.position.z };
+                activeWorldData.playerRot = { x: player.rotation.x, y: player.rotation.y };
+                
+                const idx = worldsList.findIndex(w => w.id === activeWorldData.id);
+                if (idx !== -1) {
+                    worldsList[idx] = activeWorldData;
+                    saveWorldsToStorage();
+                }
+            }
+        }
+
+        // --- INITIALIZATION OF THREE.JS ---
+        let container, scene, camera, renderer;
+        let ambientLight, dirLight;
+        
+        container = document.getElementById('game-container');
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color('#90b4fe');
+
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+
+        ambientLight = new THREE.AmbientLight(0xcccccc);
+        scene.add(ambientLight);
+        dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+        dirLight.position.set(10, 40, 20);
+        scene.add(dirLight);
+
+        // --- PARTICLE EMITTER ---
+        const activeParticles = [];
+        const particleGeometry = new THREE.BoxGeometry(0.12, 0.12, 0.12);
+
+        function spawnVoxelParticles(position, blockId, count = 12) {
+            const config = BlockConfigs[blockId];
+            if (!config) return;
+            const blockColor = new THREE.Color(config.color || '#ffffff');
+
+            for (let i = 0; i < count; i++) {
+                const mat = new THREE.MeshLambertMaterial({ 
+                    color: blockColor,
+                    emissive: config.light ? 0x222222 : 0x000000 
+                });
+                const mesh = new THREE.Mesh(particleGeometry, mat);
+                mesh.material.color.multiplyScalar(0.7 + Math.random() * 0.4);
+
+                mesh.position.set(
+                    position.x + (Math.random() - 0.5) * 0.8,
+                    position.y + (Math.random() - 0.5) * 0.8,
+                    position.z + (Math.random() - 0.5) * 0.8
+                );
+
+                const velocity = new THREE.Vector3(
+                    (Math.random() - 0.5) * 0.14,
+                    Math.random() * 0.12 + 0.08,
+                    (Math.random() - 0.5) * 0.14
+                );
+
+                activeParticles.push({
+                    mesh: mesh,
+                    velocity: velocity,
+                    gravity: 0.008,
+                    life: 1.0,
+                    decay: 0.02 + Math.random() * 0.03
+                });
+
+                scene.add(mesh);
+            }
+        }
+
+        function updateVoxelParticles() {
+            for (let i = activeParticles.length - 1; i >= 0; i--) {
+                const p = activeParticles[i];
+                p.mesh.position.add(p.velocity);
+                p.velocity.y -= p.gravity;
+                p.life -= p.decay;
+
+                p.mesh.rotation.x += 0.05;
+                p.mesh.rotation.y += 0.05;
+
+                if (p.life > 0) p.mesh.scale.setScalar(p.life);
+
+                if (p.life <= 0) {
+                    scene.remove(p.mesh);
+                    p.mesh.geometry.dispose();
+                    p.mesh.material.dispose();
+                    activeParticles.splice(i, 1);
+                }
+            }
+        }
+
+        // --- MATERIALS ENGINE ---
+        function makeThreeTexture(canvas) {
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.magFilter = THREE.NearestFilter;
+            tex.minFilter = THREE.NearestFilter;
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.wrapT = THREE.RepeatWrapping;
+            return tex;
+        }
+
+        const unknownTex = makeThreeTexture(generateUnknownCanvas());
+        const defaultMaterial = new THREE.MeshLambertMaterial({ map: unknownTex });
+        const blockMaterials = {};
+
+        function buildMaterials() {
+            Object.keys(blockMaterials).forEach(k => {
+                if (Array.isArray(blockMaterials[k])) {
+                    blockMaterials[k].forEach(m => m.dispose());
+                } else {
+                    blockMaterials[k].dispose();
+                }
+            });
+
+            const tDirt = makeThreeTexture(generateDirtCanvas());
+            const tGrassTop = makeThreeTexture(generateGrassTopCanvas());
+            const tGrassSide = makeThreeTexture(generateGrassSideCanvas());
+            const tWoodSide = makeThreeTexture(generateWoodSideCanvas());
+            const tWoodTop = makeThreeTexture(generateWoodTopCanvas());
+            const tCobble = makeThreeTexture(generateCobbleCanvas());
+            const tLeaves = makeThreeTexture(generateLeavesCanvas());
+            const tBricks = makeThreeTexture(generateBricksCanvas());
+            
+            // Textury pro nové bloky
+            const tSand = makeThreeTexture(generateSandCanvas());
+            const tGlass = makeThreeTexture(generateGlassCanvas());
+            const tPlanks = makeThreeTexture(generatePlanksCanvas());
+            const tWater = makeThreeTexture(generateWaterCanvas());
+            const tUntitled = makeThreeTexture(generateUntitledBlockCanvas());
+
+            const canvasMap = {
+                1: tGrassSide, 2: tDirt, 3: tWoodSide, 4: tCobble, 5: tLeaves, 6: tBricks,
+                8: tSand, 9: tGlass, 10: tPlanks, 11: tWater, 13: tUntitled
+            };
+
+            for (let id of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13]) {
+                const config = BlockConfigs[id];
+                if (!config) continue;
+
+                const colorObj = new THREE.Color(config.color || '#ffffff');
+                const emissiveVal = config.light ? 0x444444 : 0x000000;
+
+                let customAssetTex = null;
+                const savedPng = localStorage.getItem(`voxel_texture_override_${id}`);
+                if (savedPng) {
+                    const img = new Image(); img.src = savedPng;
+                    customAssetTex = new THREE.Texture(img);
+                    img.onload = () => customAssetTex.needsUpdate = true;
+                    customAssetTex.magFilter = THREE.NearestFilter;
+                    customAssetTex.minFilter = THREE.NearestFilter;
+                }
+
+                if (id === 1 && !customAssetTex) {
+                    blockMaterials[id] = [
+                        new THREE.MeshLambertMaterial({ map: tGrassSide, color: colorObj, emissive: emissiveVal }),
+                        new THREE.MeshLambertMaterial({ map: tGrassSide, color: colorObj, emissive: emissiveVal }),
+                        new THREE.MeshLambertMaterial({ map: tGrassTop, color: colorObj, emissive: emissiveVal }),
+                        new THREE.MeshLambertMaterial({ map: tDirt, color: colorObj, emissive: emissiveVal }),
+                        new THREE.MeshLambertMaterial({ map: tGrassSide, color: colorObj, emissive: emissiveVal }),
+                        new THREE.MeshLambertMaterial({ map: tGrassSide, color: colorObj, emissive: emissiveVal })
+                    ];
+                } else if (id === 3 && !customAssetTex) {
+                    blockMaterials[id] = [
+                        new THREE.MeshLambertMaterial({ map: tWoodSide, color: colorObj, emissive: emissiveVal }),
+                        new THREE.MeshLambertMaterial({ map: tWoodSide, color: colorObj, emissive: emissiveVal }),
+                        new THREE.MeshLambertMaterial({ map: tWoodTop, color: colorObj, emissive: emissiveVal }),
+                        new THREE.MeshLambertMaterial({ map: tWoodTop, color: colorObj, emissive: emissiveVal }),
+                        new THREE.MeshLambertMaterial({ map: tWoodSide, color: colorObj, emissive: emissiveVal }),
+                        new THREE.MeshLambertMaterial({ map: tWoodSide, color: colorObj, emissive: emissiveVal })
+                    ];
+                } else if (id === 5 && !customAssetTex) {
+                    blockMaterials[id] = new THREE.MeshLambertMaterial({ map: tLeaves, color: colorObj, transparent: true, alphaTest: 0.5, emissive: emissiveVal });
+                } else if (id === 9 && !customAssetTex) { // Glass - průhledný materiál
+                    blockMaterials[id] = new THREE.MeshLambertMaterial({ map: tGlass, color: colorObj, transparent: true, opacity: 0.4, depthWrite: true });
+                } else if (id === 11 && !customAssetTex) { // Water - průsvitný materiál
+                    blockMaterials[id] = new THREE.MeshLambertMaterial({ map: tWater, color: colorObj, transparent: true, opacity: 0.6, depthWrite: false });
+                } else {
+                    const mapTex = customAssetTex || canvasMap[id] || tCobble;
+                    blockMaterials[id] = new THREE.MeshLambertMaterial({ map: mapTex, color: colorObj, emissive: emissiveVal });
+                }
+            }
+
+            Object.values(BlockConfigs).forEach(config => {
+                if (config.id > 13 || config.id === 12) {
+                    const savedTex = localStorage.getItem(`voxel_texture_override_${config.id}`);
+                    let modTex = unknownTex;
+                    if (savedTex) {
+                        const img = new Image(); img.src = savedTex;
+                        modTex = new THREE.Texture(img);
+                        img.onload = () => modTex.needsUpdate = true;
+                        modTex.magFilter = THREE.NearestFilter;
+                        modTex.minFilter = THREE.NearestFilter;
+                    }
+                    blockMaterials[config.id] = new THREE.MeshLambertMaterial({
+                        map: modTex,
+                        color: new THREE.Color(config.color || '#ffffff'),
+                        emissive: config.light ? 0x444444 : 0x000000
+                    });
+                }
+            });
+        }
+
+        // --- WORLD ENGINE (BEACHES, STONE podloží, CAVE SYSTEM & CRIMSON VOID) ---
+        const blockMeshes = {};
+        const worldGrid = {};
+        const blockGeometry = new THREE.BoxGeometry(1, 1, 1);
+        const CHUNK_SIZE = 8;
+        const loadedChunks = {};
+
+        function getGridKey(x, y, z) { return `${Math.floor(x)},${Math.floor(y)},${Math.floor(z)}`; }
+
+        function createBlockMesh(x, y, z, id) {
+            const key = getGridKey(x, y, z);
+            if (blockMeshes[key]) {
+                scene.remove(blockMeshes[key]);
+                delete blockMeshes[key];
+            }
+
+            const config = BlockConfigs[id];
+            let material = blockMaterials[id];
+            if (!config || !material) material = defaultMaterial;
+
+            const mesh = new THREE.Mesh(blockGeometry, material);
+            mesh.position.set(x + 0.5, y + 0.5, z + 0.5);
+            scene.add(mesh);
+
+            blockMeshes[key] = mesh;
+            worldGrid[key] = id;
+        }
+
+        function removeBlockMesh(x, y, z) {
+            const key = getGridKey(x, y, z);
+            if (blockMeshes[key]) {
+                scene.remove(blockMeshes[key]);
+                delete blockMeshes[key];
+            }
+            delete worldGrid[key];
+        }
+
+        function seededRandom(seed) {
+            const x = Math.sin(seed++) * 10000;
+            return x - Math.floor(x);
+        }
+
+        // 3D sinusový jeskynní carver (Cave Generator)
+        function isCave(x, y, z, seed) {
+            if (y >= 10 || y <= 0) return false; // Jeskyně se tvoří pouze pod povrchem
+            const scale = 0.25;
+            const caveVal = Math.sin(x * scale + seed) * Math.cos(y * scale + seed * 1.5) +
+                            Math.sin(y * scale + seed * 0.7) * Math.cos(z * scale - seed) +
+                            Math.sin(z * scale) * Math.cos(x * scale + seed);
+            return caveVal > 0.85; // Práh pro vyřezání dutiny
+        }
+
+        function buildWorldTerrain() {
+            Object.keys(blockMeshes).forEach(k => { scene.remove(blockMeshes[k]); });
+            Object.keys(blockMeshes).forEach(key => delete blockMeshes[key]);
+            Object.keys(worldGrid).forEach(key => delete worldGrid[key]);
+            Object.keys(loadedChunks).forEach(key => delete loadedChunks[key]);
+
+            const mode = activeWorldData.generator || 'classic';
+            const seed = activeWorldData.seed || 12345;
+            const maxH = activeWorldData.height || 16;
+            const waterLevel = 4; // Výška mořské hladiny
+
+            // A) GENERACE PRO CRIMSON VOID DIMENZI (Červené ostrovy a Stone sloupy)
+            if (currentDimension === 'crimson_void') {
+                const width = 24; const depth = 24;
+                for (let x = 0; x < width; x++) {
+                    for (let z = 0; z < depth; z++) {
+                        const waveVal = Math.sin((x + seed) * 0.2) * 2 + Math.cos((z - seed) * 0.2) * 2 + 6;
+                        const surfaceY = Math.floor(waveVal);
+                        
+                        for (let y = 0; y < maxH; y++) {
+                            const mKey = getGridKey(x, y, z);
+                            if (activeWorldData.modifiedBlocks && activeWorldData.modifiedBlocks[mKey] !== undefined) {
+                                const savedId = activeWorldData.modifiedBlocks[mKey];
+                                if (savedId > 0) createBlockMesh(x, y, z, savedId);
+                                continue;
+                            }
+                            
+                            // Létající ostrovy z Stone (ID 4) a Červeného bloku (ID 13)
+                            if (y === surfaceY) {
+                                createBlockMesh(x, y, z, 13); // Červený untitled_block navrchu
+                            } else if (y < surfaceY && y > surfaceY - 4) {
+                                createBlockMesh(x, y, z, 4);  // Stone pod ním
+                            }
+                        }
+                    }
+                }
+                return;
+            }
+
+            // B) STANDARDNÍ GENERACE OVERWORLD
+            if (mode === 'flat') {
+                for (let x = 0; x < 24; x++) {
+                    for (let z = 0; z < 24; z++) {
+                        for (let y = 0; y < 5; y++) {
+                            const mKey = getGridKey(x, y, z);
+                            if (activeWorldData.modifiedBlocks && activeWorldData.modifiedBlocks[mKey] !== undefined) {
+                                const savedId = activeWorldData.modifiedBlocks[mKey];
+                                if (savedId > 0) createBlockMesh(x, y, z, savedId);
+                                continue;
+                            }
+                            createBlockMesh(x, y, z, y === 4 ? 1 : (y > 1 ? 2 : 4));
+                        }
+                    }
+                }
+            } else if (mode === 'one_chunk') {
+                for (let x = 0; x < CHUNK_SIZE; x++) {
+                    for (let z = 0; z < CHUNK_SIZE; z++) {
+                        const waveVal = Math.sin((x + seed) * 0.2) * 2;
+                        const surfaceY = Math.floor(waveVal) + Math.floor(maxH / 2);
+                        for (let y = 0; y < maxH; y++) {
+                            const mKey = getGridKey(x, y, z);
+                            if (activeWorldData.modifiedBlocks && activeWorldData.modifiedBlocks[mKey] !== undefined) {
+                                const savedId = activeWorldData.modifiedBlocks[mKey];
+                                if (savedId > 0) createBlockMesh(x, y, z, savedId);
+                                continue;
+                            }
+                            if (y === surfaceY) createBlockMesh(x, y, z, 1);
+                            else if (y < surfaceY && y > surfaceY - 3) createBlockMesh(x, y, z, 2);
+                            else if (y <= surfaceY - 3) createBlockMesh(x, y, z, 4);
+                        }
+                    }
+                }
+            } else if (mode === 'old' || mode === 'classic') {
+                const width = 24; const depth = 24;
+                for (let x = 0; x < width; x++) {
+                    for (let z = 0; z < depth; z++) {
+                        const waveVal = Math.sin((x + seed) * 0.15) * 2.5 + Math.cos((z - seed) * 0.15) * 2.5;
+                        const surfaceY = Math.floor(waveVal) + Math.floor(maxH / 2);
+
+                        for (let y = 0; y < maxH; y++) {
+                            const mKey = getGridKey(x, y, z);
+                            
+                            // Načtení úprav hráče
+                            if (activeWorldData.modifiedBlocks && activeWorldData.modifiedBlocks[mKey] !== undefined) {
+                                const savedId = activeWorldData.modifiedBlocks[mKey];
+                                if (savedId > 0) createBlockMesh(x, y, z, savedId);
+                                continue;
+                            }
+
+                            // 3D Jeskynní systém
+                            if (isCave(x, y, z, seed)) {
+                                continue; 
+                            }
+
+                            if (y < surfaceY - 3) {
+                                createBlockMesh(x, y, z, 4); // Kamenné podloží (Stone)
+                            } else if (y < surfaceY) {
+                                createBlockMesh(x, y, z, 2); // Hlína (Dirt)
+                            } else if (y === surfaceY) {
+                                // Pláže (Beaches): pokud jsme blízko vody, vygenerujeme Sand místo Grassu
+                                if (surfaceY <= waterLevel + 1) {
+                                    createBlockMesh(x, y, z, 8); // Sand
+                                } else {
+                                    createBlockMesh(x, y, z, 1); // Grass
+                                }
+                            } else if (y <= waterLevel) {
+                                createBlockMesh(x, y, z, 11); // Vodní hladina (Water)
+                            }
+                        }
+                        
+                        // Generování stromů pouze na trávě nad vodou
+                        if (activeWorldData.trees && x > 2 && x < width - 3 && z > 2 && z < depth - 3 && surfaceY > waterLevel + 1) {
+                            if (seededRandom(seed + x * 73 + z * 37) < 0.04) growProceduralTree(x, surfaceY + 1, z, seed);
+                        }
+                    }
+                }
+            } else if (mode === 'infinite') {
+                updateInfiniteChunks();
+            }
+        }
+
+        function growProceduralTree(tx, ty, tz, seed) {
+            const trunkH = 3 + Math.floor(seededRandom(seed + tx) * 2);
+            for (let i = 0; i < trunkH; i++) {
+                const key = getGridKey(tx, ty + i, tz);
+                if (!activeWorldData.modifiedBlocks || activeWorldData.modifiedBlocks[key] === undefined) createBlockMesh(tx, ty + i, tz, 3);
+            }
+            const leafTop = ty + trunkH;
+            for (let lx = -2; lx <= 2; lx++) {
+                for (let lz = -2; lz <= 2; lz++) {
+                    for (let ly = -1; ly <= 1; ly++) {
+                        if (Math.abs(lx) === 2 && Math.abs(lz) === 2 && ly === 1) continue;
+                        const bx = tx + lx; const by = leafTop + ly; const bz = tz + lz;
+                        if (lx === 0 && lz === 0 && ly < 0) continue;
+                        const key = getGridKey(bx, by, bz);
+                        if (!activeWorldData.modifiedBlocks || activeWorldData.modifiedBlocks[key] === undefined) {
+                            if (!worldGrid[key]) createBlockMesh(bx, by, bz, 5);
+                        }
+                    }
+                }
+            }
+        }
+
+        function updateInfiniteChunks() {
+            if (!activeWorldData || activeWorldData.generator !== 'infinite') return;
+            const px = Math.floor(player.position.x); const pz = Math.floor(player.position.z);
+            const playerChunkX = Math.floor(px / CHUNK_SIZE); const playerChunkZ = Math.floor(pz / CHUNK_SIZE);
+            const viewRadius = 2; const seed = activeWorldData.seed || 12345; const maxH = activeWorldData.height || 16;
+
+            for (let cx = playerChunkX - viewRadius; cx <= playerChunkX + viewRadius; cx++) {
+                for (let cz = playerChunkZ - viewRadius; cz <= playerChunkZ + viewRadius; cz++) {
+                    const chunkKey = `${cx},${cz}`;
+                    if (!loadedChunks[chunkKey]) {
+                        generateChunk(cx, cz, seed, maxH);
+                        loadedChunks[chunkKey] = true;
+                    }
+                }
+            }
+        }
+
+        function generateChunk(cx, cz, seed, maxH) {
+            const startX = cx * CHUNK_SIZE; const startZ = cz * CHUNK_SIZE;
+            const waterLevel = 4;
+
+            for (let x = startX; x < startX + CHUNK_SIZE; x++) {
+                for (let z = startZ; z < startZ + CHUNK_SIZE; z++) {
+                    
+                    if (currentDimension === 'crimson_void') {
+                        const waveVal = Math.sin((x + seed) * 0.2) * 2 + Math.cos((z - seed) * 0.2) * 2 + 6;
+                        const surfaceY = Math.floor(waveVal);
+                        for (let y = 0; y < maxH; y++) {
+                            const mKey = getGridKey(x, y, z);
+                            if (activeWorldData.modifiedBlocks && activeWorldData.modifiedBlocks[mKey] !== undefined) {
+                                const savedId = activeWorldData.modifiedBlocks[mKey];
+                                if (savedId > 0) createBlockMesh(x, y, z, savedId);
+                                continue;
+                            }
+                            if (y === surfaceY) createBlockMesh(x, y, z, 13);
+                            else if (y < surfaceY && y > surfaceY - 4) createBlockMesh(x, y, z, 4);
+                        }
+                        continue;
+                    }
+
+                    const waveVal = Math.sin((x + seed) * 0.1) * 3 + Math.cos((z - seed) * 0.1) * 3;
+                    const surfaceY = Math.floor(waveVal) + Math.floor(maxH / 2);
+
+                    for (let y = 0; y < maxH; y++) {
+                        const mKey = getGridKey(x, y, z);
+                        if (activeWorldData.modifiedBlocks && activeWorldData.modifiedBlocks[mKey] !== undefined) {
+                            const savedId = activeWorldData.modifiedBlocks[mKey];
+                            if (savedId > 0) createBlockMesh(x, y, z, savedId);
+                            continue;
+                        }
+
+                        if (isCave(x, y, z, seed)) continue;
+
+                        if (y < surfaceY - 3) {
+                            createBlockMesh(x, y, z, 4); // Stone
+                        } else if (y < surfaceY) {
+                            createBlockMesh(x, y, z, 2); // Dirt
+                        } else if (y === surfaceY) {
+                            if (surfaceY <= waterLevel + 1) {
+                                createBlockMesh(x, y, z, 8); // Sand beach
+                            } else {
+                                createBlockMesh(x, y, z, 1); // Grass
+                            }
+                        } else if (y <= waterLevel) {
+                            createBlockMesh(x, y, z, 11); // Water
+                        }
+                    }
+                    if (activeWorldData.trees && surfaceY > waterLevel + 1) {
+                        if (seededRandom(seed + x * 47 + z * 83) < 0.03) growProceduralTree(x, surfaceY + 1, z, seed);
+                    }
+                }
+            }
+        }
+
+        // --- GRAVITAČNÍ FYZIKA PRO PÍSEK (SAND GRAVITY TICK) ---
+        let lastGravityTick = 0;
+        const GRAVITY_TICK_RATE = 200; // tick každých 200ms
+
+        function updateGravityPhysics() {
+            const now = performance.now();
+            if (now - lastGravityTick < GRAVITY_TICK_RATE) return;
+            lastGravityTick = now;
+
+            // Najdeme všechny písečné bloky (ID 8) na scéně
+            const sandBlocks = [];
+            for (let key in worldGrid) {
+                if (worldGrid[key] === 8) {
+                    const [x, y, z] = key.split(',').map(Number);
+                    sandBlocks.push({ x, y, z, key });
+                }
+            }
+
+            // Seřadíme od nejnižších po nejvyšší, aby se sypaly správně odspodu
+            sandBlocks.sort((a, b) => a.y - b.y);
+
+            let playedSound = false;
+            sandBlocks.forEach(sand => {
+                const targetY = sand.y - 1;
+                if (targetY < 0) return;
+
+                const belowKey = getGridKey(sand.x, targetY, sand.z);
+                const blockBelow = worldGrid[belowKey];
+
+                // Písek propadává vzduchem (undefined) nebo skrze vodu (ID 11)
+                if (!blockBelow || blockBelow === 11) {
+                    removeBlockMesh(sand.x, sand.y, sand.z);
+                    if (activeWorldData.modifiedBlocks) activeWorldData.modifiedBlocks[sand.key] = 0;
+
+                    createBlockMesh(sand.x, targetY, sand.z, 8);
+                    const newKey = getGridKey(sand.x, targetY, sand.z);
+                    if (activeWorldData.modifiedBlocks) activeWorldData.modifiedBlocks[newKey] = 8;
+                    
+                    if (!playedSound) {
+                        AudioEngine.play('walk'); // jemný sypavý zvuk
+                        playedSound = true;
+                    }
+                }
+            });
+        }
+
+        // --- CESTOVÁNÍ DIMENZEMI (DIMENSION TELEPORT) ---
+        function toggleDimension() {
+            if (currentDimension === 'overworld') {
+                currentDimension = 'crimson_void';
+                document.getElementById('btn-dimension').innerText = "DIMENZE: VOID";
+                document.getElementById('btn-dimension').className = "px-3 py-2 text-[8px] retro-btn text-white bg-red-700 font-bold rounded text-center";
+                
+                // Červené podbarvení Voidu
+                scene.background = new THREE.Color('#1f0303');
+                dirLight.color = new THREE.Color('#ff2222');
+                ambientLight.color = new THREE.Color('#441111');
+                
+                // Port hráče nahoru na ostrov
+                player.position.set(12, 14, 12);
+                player.velocity.set(0,0,0);
+            } else {
+                currentDimension = 'overworld';
+                document.getElementById('btn-dimension').innerText = "DIMENZE: OVERWORLD";
+                document.getElementById('btn-dimension').className = "px-3 py-2 text-[8px] retro-btn text-white bg-blue-800 font-bold rounded text-center";
+                
+                // Modré podbarvení Overworldu
+                scene.background = new THREE.Color('#90b4fe');
+                dirLight.color = new THREE.Color('#ffffff');
+                ambientLight.color = new THREE.Color('#cccccc');
+                
+                player.position.set(12, 14, 12);
+                player.velocity.set(0,0,0);
+            }
+            applyAtmosFogConfig();
+            buildWorldTerrain();
+            AudioEngine.play('place');
+        }
+
+        document.getElementById('btn-dimension').addEventListener('click', toggleDimension);
+
+        // --- PLAYER, PHYSICS & CONTROLS ---
+        const player = {
+            position: new THREE.Vector3(12, 14, 12),
+            velocity: new THREE.Vector3(),
+            rotation: new THREE.Vector2(0, 0),
+            height: 1.6,
+            radius: 0.35,
+            onGround: false,
+            isFlying: false
+        };
+
+        const moveVector = { forward: 0, back: 0, left: 0, right: 0, jump: false };
+        const raycaster = new THREE.Raycaster();
+        const pointer = new THREE.Vector2(0, 0);
+
+        const outlineGeo = new THREE.BoxGeometry(1.02, 1.02, 1.02);
+        const outlineMat = new THREE.MeshBasicMaterial({ color: 0x000000, wireframe: true, transparent: true, opacity: 0.6 });
+        const outlineMesh = new THREE.Mesh(outlineGeo, outlineMat);
+        scene.add(outlineMesh);
+        outlineMesh.visible = false;
+
+        const crackingGeo = new THREE.BoxGeometry(1.03, 1.03, 1.03);
+        const crackingMat = new THREE.MeshBasicMaterial({ color: 0xff3333, wireframe: true, transparent: true, opacity: 0.0 });
+        const crackingMesh = new THREE.Mesh(crackingGeo, crackingMat);
+        scene.add(crackingMesh);
+        crackingMesh.visible = false;
+
+        let selectedHotbarIdx = 0;
+
+        function checkCollision(pos) {
+            const minX = Math.floor(pos.x - player.radius); const maxX = Math.floor(pos.x + player.radius);
+            const minY = Math.floor(pos.y - player.height); const maxY = Math.floor(pos.y + 0.1);
+            const minZ = Math.floor(pos.z - player.radius); const maxZ = Math.floor(pos.z + player.radius);
+
+            for (let x = minX; x <= maxX; x++) {
+                for (let y = minY; y <= maxY; y++) {
+                    for (let z = minZ; z <= maxZ; z++) {
+                        const key = getGridKey(x, y, z);
+                        if (worldGrid[key]) {
+                            const bId = worldGrid[key]; const config = BlockConfigs[bId];
+                            if (config && config.solid === false) continue;
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        const GRAVITY = 0.015; const WALK_SPEED = 0.08; const FLY_SPEED = 0.16; const JUMP_FORCE = 0.22;
+
+        function updatePlayerPhysics() {
+            const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), player.rotation.x).normalize();
+            const right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), player.rotation.x).normalize();
+
+            const moveDir = new THREE.Vector3();
+            if (moveVector.forward) moveDir.add(forward);
+            if (moveVector.back) moveDir.sub(forward);
+            if (moveVector.right) moveDir.add(right);
+            if (moveVector.left) moveDir.sub(right);
+            moveDir.normalize();
+
+            const speed = player.isFlying ? FLY_SPEED : WALK_SPEED;
+            player.velocity.x = moveDir.x * speed;
+            player.velocity.z = moveDir.z * speed;
+
+            if ((moveVector.forward || moveVector.back || moveVector.left || moveVector.right) && player.onGround && Math.random() < 0.06) {
+                AudioEngine.play('walk');
+            }
+
+            if (player.isFlying) {
+                player.velocity.y = 0;
+                if (moveVector.jump) player.velocity.y = FLY_SPEED;
+                if (moveVector.back && moveVector.jump) player.velocity.y = -FLY_SPEED;
+            } else {
+                player.velocity.y -= GRAVITY;
+                if (player.velocity.y < -0.4) player.velocity.y = -0.4;
+
+                if (moveVector.jump && player.onGround) {
+                    player.velocity.y = JUMP_FORCE;
+                    player.onGround = false;
+                    AudioEngine.play('jump');
+                    modCallbacks.onJump.forEach(cb => { try { cb(); } catch(e) {} });
+                }
+            }
+
+            player.position.x += player.velocity.x;
+            if (!player.isFlying && checkCollision(player.position)) { player.position.x -= player.velocity.x; player.velocity.x = 0; }
+
+            player.position.z += player.velocity.z;
+            if (!player.isFlying && checkCollision(player.position)) { player.position.z -= player.velocity.z; player.velocity.z = 0; }
+
+            player.position.y += player.velocity.y;
+            player.onGround = false;
+            if (!player.isFlying && checkCollision(player.position)) {
+                if (player.velocity.y < 0) player.onGround = true;
+                player.position.y -= player.velocity.y; player.velocity.y = 0;
+            }
+
+            if (player.position.y < -15) { player.position.set(12, 14, 12); player.velocity.set(0, 0, 0); }
+
+            camera.position.copy(player.position);
+            const target = new THREE.Vector3(0, 0, -1);
+            target.applyAxisAngle(new THREE.Vector3(1, 0, 0), player.rotation.y);
+            target.applyAxisAngle(new THREE.Vector3(0, 1, 0), player.rotation.x);
+            target.add(player.position);
+            camera.lookAt(target);
+
+            document.getElementById('pos-counter').innerText = `X: ${Math.floor(player.position.x)} Y: ${Math.floor(player.position.y - player.height)} Z: ${Math.floor(player.position.z)}`;
+        }
+
+        // --- INTERACTION SYSTEM ---
+        let targetBlockPos = null; 
+        let placeBlockPos = null;
+        let isHoldingAction = false;
+        let holdStartTime = 0;
+        let targetBlockHardness = 400;
+        let touchStartCoords = { x: 0, y: 0 };
+
+        function updateRaycast() {
+            raycaster.setFromCamera(pointer, camera);
+            const meshes = Object.values(blockMeshes);
+            const intersects = raycaster.intersectObjects(meshes);
+
+            if (intersects.length > 0 && intersects[0].distance < 6) {
+                const intersect = intersects[0]; const mesh = intersect.object;
+                const bx = Math.floor(mesh.position.x - 0.5); const by = Math.floor(mesh.position.y - 0.5); const bz = Math.floor(mesh.position.z - 0.5);
+                targetBlockPos = new THREE.Vector3(bx, by, bz);
+                placeBlockPos = targetBlockPos.clone().add(intersect.face.normal);
+                
+                outlineMesh.position.set(bx + 0.5, by + 0.5, bz + 0.5); outlineMesh.visible = true;
+                crackingMesh.position.copy(outlineMesh.position);
+            } else {
+                targetBlockPos = null; placeBlockPos = null; outlineMesh.visible = false;
+                crackingMesh.visible = false;
+                cancelHoldBreak();
+            }
+        }
+
+        function cancelHoldBreak() {
+            isHoldingAction = false;
+            document.getElementById('breaking-progress-container').classList.add('hidden');
+            crackingMesh.visible = false;
+        }
+
+        function handleHoldBreakTick() {
+            if (!isHoldingAction || !targetBlockPos) {
+                cancelHoldBreak();
+                return;
+            }
+
+            const key = getGridKey(targetBlockPos.x, targetBlockPos.y, targetBlockPos.z);
+            const blockId = worldGrid[key];
+            const config = BlockConfigs[blockId];
+            if (!config) {
+                cancelHoldBreak();
+                return;
+            }
+
+            targetBlockHardness = config.hardness || 400;
+            const elapsed = performance.now() - holdStartTime;
+            const progress = Math.min(1, elapsed / targetBlockHardness);
+
+            document.getElementById('breaking-progress-container').classList.remove('hidden');
+            document.getElementById('breaking-progress-bar').style.width = `${progress * 100}%`;
+
+            crackingMesh.visible = true;
+            crackingMesh.material.opacity = progress * 0.9;
+            
+            if (Math.random() < 0.15) {
+                spawnVoxelParticles(targetBlockPos, blockId, 2);
+                AudioEngine.play('walk');
+            }
+
+            if (progress >= 1) {
+                breakBlock();
+                cancelHoldBreak();
+            }
+        }
+
+        function breakBlock() {
+            if (targetBlockPos) {
+                const key = getGridKey(targetBlockPos.x, targetBlockPos.y, targetBlockPos.z);
+                const blockId = worldGrid[key];
+                if (BlockConfigs[blockId] && BlockConfigs[blockId].breakable === false) return;
+
+                const cfg = BlockConfigs[blockId];
+                AudioEngine.play('break', cfg ? cfg.breakSound : null);
+                spawnVoxelParticles(targetBlockPos, blockId, 16);
+
+                activeWorldData.modifiedBlocks[key] = 0;
+                removeBlockMesh(targetBlockPos.x, targetBlockPos.y, targetBlockPos.z);
+                updateRaycast();
+
+                modCallbacks.onBlockBreak.forEach(cb => { try { cb(targetBlockPos.x, targetBlockPos.y, targetBlockPos.z, blockId); } catch(e) {} });
+            }
+        }
+
+        // --- UPRAVENÁ FUNKCE POLOŽENÍ BLOKU SE SPÁVNOU SFX DELEGACÍ ---
+        function placeBlock() {
+            if (placeBlockPos) {
+                const equippedBlockId = activeWorldData.hotbar[selectedHotbarIdx];
+                if (!equippedBlockId) return;
+
+                const minX = player.position.x - player.radius; const maxX = player.position.x + player.radius;
+                const minY = player.position.y - player.height; const maxY = player.position.y + 0.1;
+                const minZ = player.position.z - player.radius; const maxZ = player.position.z + player.radius;
+
+                if (placeBlockPos.x >= Math.floor(minX) && placeBlockPos.x <= Math.floor(maxX) &&
+                    placeBlockPos.y >= Math.floor(minY) && placeBlockPos.y <= Math.floor(maxY) &&
+                    placeBlockPos.z >= Math.floor(minZ) && placeBlockPos.z <= Math.floor(maxZ) && !player.isFlying) {
+                    return;
+                }
+
+                const cfg = BlockConfigs[equippedBlockId];
+                AudioEngine.play('place', cfg ? cfg.placeSound : null);
+                spawnVoxelParticles(placeBlockPos, equippedBlockId, 6);
+
+                const key = getGridKey(placeBlockPos.x, placeBlockPos.y, placeBlockPos.z);
+                activeWorldData.modifiedBlocks[key] = equippedBlockId;
+                createBlockMesh(placeBlockPos.x, placeBlockPos.y, placeBlockPos.z, equippedBlockId);
+                updateRaycast();
+
+                modCallbacks.onBlockPlace.forEach(cb => { try { cb(placeBlockPos.x, placeBlockPos.y, placeBlockPos.z, equippedBlockId); } catch(e) {} });
+            }
+        }
+
+        // --- GESTA A DETEKCE KLIKNUTÍ ---
+        let isMouseDown = false;
+        let pointerMovedSig = false;
+        let isTouching = false;
+        let touchStartPos = { x: 0, y: 0 };
+        let lastMousePos = { x: 0, y: 0 };
+
+        window.addEventListener('touchstart', (e) => {
+            if (dragEditActive) return;
+            if (e.target.closest('button') || e.target.closest('.hotbar-slot') || e.target.closest('#main-menu') || e.target.closest('.absolute')) return;
+            isTouching = true; 
+            touchStartPos.x = e.touches[0].clientX; 
+            touchStartPos.y = e.touches[0].clientY;
+            touchStartCoords.x = e.touches[0].clientX;
+            touchStartCoords.y = e.touches[0].clientY;
+            pointerMovedSig = false;
+
+            if (targetBlockPos) {
+                isHoldingAction = true;
+                holdStartTime = performance.now();
+            }
+        }, { passive: true });
+
+        window.addEventListener('touchmove', (e) => {
+            if (!isTouching) return;
+            const cx = e.touches[0].clientX; const cy = e.touches[0].clientY;
+            
+            const dist = Math.hypot(cx - touchStartCoords.x, cy - touchStartCoords.y);
+            if (dist > 8) {
+                pointerMovedSig = true;
+                cancelHoldBreak();
+            }
+
+            player.rotation.x -= (cx - touchStartPos.x) * 0.005; 
+            player.rotation.y -= (cy - touchStartPos.y) * 0.005;
+            player.rotation.y = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, player.rotation.y));
+            
+            touchStartPos.x = cx; 
+            touchStartPos.y = cy;
+        }, { passive: true });
+
+        window.addEventListener('touchend', (e) => {
+            isTouching = false;
+            if (isHoldingAction && !pointerMovedSig) {
+                const elapsed = performance.now() - holdStartTime;
+                if (elapsed < 250) {
+                    placeBlock();
+                }
+            }
+            cancelHoldBreak();
+        });
+
+        window.addEventListener('mousedown', (e) => {
+            if (dragEditActive) return;
+            if (e.target.closest('button') || e.target.closest('.hotbar-slot') || e.target.closest('.absolute')) return;
+            isMouseDown = true;
+            pointerMovedSig = false;
+            touchStartCoords.x = e.clientX;
+            touchStartCoords.y = e.clientY;
+            lastMousePos.x = e.clientX;
+            lastMousePos.y = e.clientY;
+
+            if (targetBlockPos) {
+                isHoldingAction = true;
+                holdStartTime = performance.now();
+            }
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isMouseDown) return;
+            
+            const movementX = e.clientX - lastMousePos.x;
+            const movementY = e.clientY - lastMousePos.y;
+            lastMousePos.x = e.clientX;
+            lastMousePos.y = e.clientY;
+
+            const dist = Math.hypot(e.clientX - touchStartCoords.x, e.clientY - touchStartCoords.y);
+            if (dist > 5) {
+                pointerMovedSig = true;
+                cancelHoldBreak();
+            }
+            
+            player.rotation.x -= movementX * 0.003; 
+            player.rotation.y -= movementY * 0.003;
+            player.rotation.y = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, player.rotation.y));
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (isMouseDown && isHoldingAction && !pointerMovedSig) {
+                const elapsed = performance.now() - holdStartTime;
+                if (elapsed < 250) {
+                    placeBlock();
+                }
+            }
+            isMouseDown = false;
+            cancelHoldBreak();
+        });
+
+        function createPixelNoise(ctx, x, y, w, h, colors) {
+            for (let px = 0; px < w; px++) {
+                for (let py = 0; py < h; py++) {
+                    const color = colors[Math.floor(Math.random() * colors.length)];
+                    ctx.fillStyle = color;
+                    ctx.fillRect(x + px, y + py, 1, 1);
+                }
+            }
+        }
+
+        // --- KLÁVESNICE MAPPOVÁNÍ ---
+        window.addEventListener('keydown', (e) => {
+            if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+            
+            const binds = UIConfig.keybinds;
+            if (e.code === binds.forward) moveVector.forward = 1;
+            if (e.code === binds.back) moveVector.back = 1;
+            if (e.code === binds.left) moveVector.left = 1;
+            if (e.code === binds.right) moveVector.right = 1;
+            if (e.code === binds.jump) moveVector.jump = true;
+
+            if (e.code >= 'Digit1' && e.code <= 'Digit6') {
+                selectHotbarSlot(parseInt(e.code.replace('Digit', '')) - 1);
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            const binds = UIConfig.keybinds;
+            if (e.code === binds.forward) moveVector.forward = 0;
+            if (e.code === binds.back) moveVector.back = 0;
+            if (e.code === binds.left) moveVector.left = 0;
+            if (e.code === binds.right) moveVector.right = 0;
+            if (e.code === binds.jump) moveVector.jump = false;
+        });
+
+        function setupTouchButton(id, action) {
+            const btn = document.getElementById(id);
+            btn.addEventListener('touchstart', (e) => { e.preventDefault(); moveVector[action] = 1; });
+            btn.addEventListener('touchend', (e) => { e.preventDefault(); moveVector[action] = 0; });
+            btn.addEventListener('mousedown', () => { moveVector[action] = 1; });
+            btn.addEventListener('mouseup', () => { moveVector[action] = 0; });
+            btn.addEventListener('mouseleave', () => { moveVector[action] = 0; });
+        }
+        setupTouchButton('btn-forward', 'forward'); setupTouchButton('btn-back', 'back');
+        setupTouchButton('btn-left', 'left'); setupTouchButton('btn-right', 'right');
+        setupTouchButton('btn-jump', 'jump');
+
+        document.getElementById('btn-break').addEventListener('click', breakBlock);
+        document.getElementById('btn-place').addEventListener('click', placeBlock);
+
+        const btnFly = document.getElementById('btn-fly');
+        btnFly.addEventListener('click', () => {
+            player.isFlying = !player.isFlying;
+            btnFly.innerText = player.isFlying ? "MÓD: LÉTÁNÍ" : "MÓD: CHŮZE";
+            btnFly.className = player.isFlying ? "px-3 py-2 text-[8px] retro-btn text-white bg-purple-800 font-bold rounded" : "px-3 py-2 text-[8px] retro-btn text-white bg-gray-700 font-bold rounded";
+        });
+
+        // --- DYNAMICKÝ PIXEL PAINTER ---
+        let currentDrawColor = "#ffd700"; const editorPixelCells = [];
+
+        function initPixelPainterGrid() {
+            const grid = document.getElementById('editor-pixel-grid');
+            grid.innerHTML = ''; editorPixelCells.length = 0;
+            for (let i = 0; i < 256; i++) {
+                const cell = document.createElement('div');
+                cell.className = "w-1.5 h-1.5 border-[0.5px] border-gray-800 cursor-pointer";
+                cell.style.backgroundColor = "#ffffff";
+                cell.addEventListener('mousedown', () => cell.style.backgroundColor = currentDrawColor);
+                cell.addEventListener('touchstart', (e) => { e.preventDefault(); cell.style.backgroundColor = currentDrawColor; });
+                grid.appendChild(cell); editorPixelCells.push(cell);
+            }
+            const palette = document.querySelectorAll('#editor-palette > div');
+            palette.forEach(p => {
+                p.addEventListener('click', () => {
+                    palette.forEach(x => x.classList.remove('border-white')); p.classList.add('border-white');
+                    currentDrawColor = p.getAttribute('data-color');
+                });
+            });
+        }
+
+        // --- EDITOR BLOKŮ ---
+        let activeEditingBlockId = null;
+        let importedPngBase64 = null;
+
+        function openBlockEditor(blockId) {
+            const config = BlockConfigs[blockId]; if (!config) return;
+            activeEditingBlockId = blockId;
+            importedPngBase64 = localStorage.getItem(`voxel_texture_override_${blockId}`);
+
+            document.getElementById('block-editor-overlay').classList.remove('hidden');
+            document.getElementById('editing-block-title').innerText = `Editujete: ${config.name} (ID: ${blockId})`;
+            document.getElementById('edit-block-name').value = config.name;
+            document.getElementById('edit-block-hardness').value = config.hardness || 300;
+            document.getElementById('edit-block-solid').checked = config.solid !== false;
+            document.getElementById('edit-block-light').checked = config.light || false;
+            document.getElementById('edit-block-color').value = config.color || "#ffffff";
+
+            initPixelPainterGrid();
+        }
+
+        document.getElementById('btn-editor-save').addEventListener('click', () => {
+            if (activeEditingBlockId) {
+                const config = BlockConfigs[activeEditingBlockId];
+                config.name = document.getElementById('edit-block-name').value;
+                config.hardness = parseInt(document.getElementById('edit-block-hardness').value) || 300;
+                config.solid = document.getElementById('edit-block-solid').checked;
+                config.light = document.getElementById('edit-block-light').checked;
+                config.color = document.getElementById('edit-block-color').value;
+
+                if (!importedPngBase64) {
+                    const canvas = document.createElement('canvas'); canvas.width = 16; canvas.height = 16;
+                    const ctx = canvas.getContext('2d');
+                    editorPixelCells.forEach((cell, idx) => {
+                        ctx.fillStyle = cell.style.backgroundColor;
+                        ctx.fillRect(idx % 16, Math.floor(idx / 16), 1, 1);
+                    });
+                    importedPngBase64 = canvas.toDataURL('image/png');
+                }
+                
+                localStorage.setItem(`voxel_texture_override_${activeEditingBlockId}`, importedPngBase64);
+                saveBlockConfigs(); buildMaterials(); refreshInventory();
+                document.getElementById('block-editor-overlay').classList.add('hidden');
+            }
+        });
+
+        document.getElementById('btn-editor-reset').addEventListener('click', () => {
+            if (activeEditingBlockId) {
+                localStorage.removeItem(`voxel_texture_override_${activeEditingBlockId}`);
+                if(activeEditingBlockId > 13) delete BlockConfigs[activeEditingBlockId];
+                saveBlockConfigs(); location.reload();
+            }
+        });
+
+        document.getElementById('btn-editor-export').addEventListener('click', () => {
+            if (activeEditingBlockId) {
+                const config = BlockConfigs[activeEditingBlockId];
+                const blob = new Blob([JSON.stringify(config, null, 2)], { type: "application/json" });
+                const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+                a.download = `block_${config.name.toLowerCase()}_config.json`; a.click();
+            }
+        });
+
+        document.getElementById('btn-close-block-editor').addEventListener('click', () => {
+            document.getElementById('block-editor-overlay').classList.add('hidden');
+        });
+
+        document.getElementById('btn-add-new-custom-block').addEventListener('click', () => {
+            const nextId = Math.max(...Object.keys(BlockConfigs).map(Number)) + 1;
+            window.addBlock({ id: nextId, name: `Mod Block ${nextId}`, category: "Modded" });
+            openBlockEditor(nextId);
+        });
+
+        // --- RENDERING RETRO UI & PREVIEWS ---
+        let selectedCategory = "Basic";
+
+        function renderInventoryGrid() {
+            const grid = document.getElementById('inventory-grid'); grid.innerHTML = '';
+            const blocks = Object.values(BlockConfigs).filter(b => b.category === selectedCategory);
+
+            blocks.forEach(block => {
+                const card = document.createElement('div');
+                card.className = "pixel-border bg-[#444] p-2 rounded cursor-pointer flex flex-col items-center gap-1.5 hover:border-yellow-400";
+                
+                const canvas = document.createElement('canvas');
+                canvas.className = "w-10 h-10 bg-black rounded image-rendering: pixelated";
+                canvas.width = 16; canvas.height = 16;
+                drawBlockPreviewToCanvas(canvas, block.id);
+
+                card.appendChild(canvas);
+                const nameEl = document.createElement('span');
+                nameEl.className = "text-[6px] text-white font-bold truncate max-w-full"; nameEl.innerText = block.name;
+                card.appendChild(nameEl);
+
+                const btnEdit = document.createElement('button');
+                btnEdit.className = "py-0.5 px-1 bg-yellow-700 rounded text-[5px] text-white font-bold retro-btn w-full mt-1";
+                btnEdit.innerText = "UPRAVIT";
+                btnEdit.addEventListener('click', (e) => { e.stopPropagation(); openBlockEditor(block.id); });
+                card.appendChild(btnEdit);
+
+                card.addEventListener('click', () => {
+                    moveToHotbar(block.id, selectedHotbarIdx); renderInventoryGrid(); renderInventoryHotbarView();
+                });
+                grid.appendChild(card);
+            });
+        }
+
+        function renderInventoryHotbarView() {
+            const hView = document.getElementById('inv-hotbar-view'); hView.innerHTML = '';
+            for (let i = 0; i < 6; i++) {
+                const bId = activeWorldData ? activeWorldData.hotbar[i] : null; const config = BlockConfigs[bId];
+                const slot = document.createElement('div');
+                slot.className = `w-10 h-10 pixel-border flex flex-col items-center justify-center relative cursor-pointer ${i === selectedHotbarIdx ? 'border-yellow-400 border-2' : ''}`;
+                slot.innerHTML = `<span class="absolute bottom-0 right-0.5 text-[6px] text-white font-bold">${i + 1}</span>`;
+
+                if (config) {
+                    const canvas = document.createElement('canvas'); canvas.className = "w-6 h-6 rounded"; canvas.width = 16; canvas.height = 16;
+                    drawBlockPreviewToCanvas(canvas, bId);
+                    slot.appendChild(canvas);
+                }
+                slot.addEventListener('click', () => { selectedHotbarIdx = i; renderInventoryHotbarView(); });
+                hView.appendChild(slot);
+            }
+        }
+
+        function renderInGameHotbar() {
+            const bar = document.getElementById('game-hotbar'); bar.innerHTML = ''; if (!activeWorldData) return;
+            for (let i = 0; i < 6; i++) {
+                const bId = activeWorldData.hotbar[i]; const config = BlockConfigs[bId];
+                const slot = document.createElement('div');
+                slot.className = `w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center relative cursor-pointer ${i === selectedHotbarIdx ? 'pixel-border-active' : 'pixel-border'} hotbar-slot`;
+                slot.innerHTML = `<span class="absolute bottom-0.5 right-1 text-[7px] text-white font-bold">${i + 1}</span>`;
+
+                if (config) {
+                    const canvas = document.createElement('canvas'); canvas.className = "w-7 h-7 sm:w-8 sm:h-8 rounded"; canvas.width = 16; canvas.height = 16;
+                    drawBlockPreviewToCanvas(canvas, bId);
+                    slot.appendChild(canvas);
+                }
+                slot.addEventListener('click', () => selectHotbarSlot(i));
+                slot.addEventListener('touchstart', (e) => { e.preventDefault(); selectHotbarSlot(i); });
+                bar.appendChild(slot);
+            }
+        }
+
+        function selectHotbarSlot(idx) { selectedHotbarIdx = idx; renderInGameHotbar(); }
+
+        function renderWorldsList() {
+            const list = document.getElementById('worlds-list'); list.innerHTML = '';
+            worldsList.forEach(world => {
+                const item = document.createElement('div');
+                item.className = "bg-[#333] border border-gray-600 rounded p-2 flex justify-between items-center text-[8px] text-white";
+                item.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span class="text-base">${world.icon || '🌲'}</span>
+                        <div class="flex flex-col">
+                            <span class="font-bold text-yellow-400">${world.name}</span>
+                            <span class="text-gray-400 text-[6px]">Generátor: ${world.generator.toUpperCase()} | Seed: ${world.seed}</span>
+                        </div>
+                    </div>
+                    <div class="flex gap-1.5">
+                        <button class="btn-load-world px-2 py-1 bg-green-700 rounded text-white font-bold retro-btn" data-id="${world.id}">PLAY</button>
+                        <button class="btn-delete-world px-2 py-1 bg-red-800 rounded text-white font-bold retro-btn" data-id="${world.id}">SMAZAT</button>
+                    </div>
+                `;
+                item.querySelector('.btn-load-world').addEventListener('click', () => {
+                    activeWorldData = world; startActiveWorld();
+                    document.getElementById('worlds-overlay').classList.add('hidden'); document.getElementById('main-menu').classList.add('hidden');
+                });
+                item.querySelector('.btn-delete-world').addEventListener('click', () => {
+                    if (worldsList.length <= 1) return;
+                    worldsList = worldsList.filter(w => w.id !== world.id); saveWorldsToStorage(); renderWorldsList();
+                });
+                list.appendChild(item);
+            });
+        }
+
+        document.getElementById('btn-create-world').addEventListener('click', () => {
+            const name = document.getElementById('world-name').value || "Nový Svět";
+            const generator = document.getElementById('world-generator').value;
+            const seed = parseInt(document.getElementById('world-seed').value) || 12345;
+            const icon = document.getElementById('world-icon').value || '🗺️';
+            const maxH = parseInt(document.getElementById('gen-height').value) || 16;
+
+            const newWorld = {
+                id: 'world_' + Date.now(),
+                name: name, generator: generator, seed: seed, icon: icon, height: maxH,
+                trees: document.getElementById('gen-trees').checked,
+                fog: document.getElementById('gen-fog').checked,
+                playerPos: { x: 12, y: maxH + 1, z: 12 }, playerRot: { x: 0, y: 0 },
+                hotbar: [1, 8, 10, 9, 11, 13], modifiedBlocks: {}
+            };
+            worldsList.push(newWorld); saveWorldsToStorage(); renderWorldsList();
+        });
+
+        // --- ATMOSFÉRICKÝ MLHOVÝ SYSTÉM (PŘIZPŮSOBEN PRO CRIMSON VOID) ---
+        let activeFogMode = 'medium';
+
+        function applyAtmosFogConfig() {
+            if (!activeWorldData) return;
+            const sliderVal = parseInt(document.getElementById('fog-density-slider').value);
+            const density = sliderVal / 1000;
+
+            let fogColor = scene.background;
+            if (currentDimension === 'crimson_void') {
+                fogColor = new THREE.Color('#3a0202'); // Krvavá hustá mlha ve Voidu
+            }
+
+            if (activeFogMode === 'none') {
+                scene.fog = null;
+            } else if (activeFogMode === 'far') {
+                scene.fog = new THREE.FogExp2(fogColor, density * 0.4);
+            } else {
+                scene.fog = new THREE.FogExp2(fogColor, density);
+            }
+        }
+
+        document.getElementById('fog-preset-selector').addEventListener('change', (e) => {
+            const val = e.target.value;
+            let bgColor, lightColor;
+            
+            if (val === 'sunset') {
+                bgColor = '#d97706';
+                lightColor = '#fef08a';
+            } else if (val === 'night') {
+                bgColor = '#030712';
+                lightColor = '#1d4ed8';
+            } else if (val === 'swamp') {
+                bgColor = '#14532d';
+                lightColor = '#22c55e';
+            } else {
+                bgColor = '#90b4fe';
+                lightColor = '#ffffff';
+            }
+
+            if (currentDimension === 'overworld') {
+                scene.background = new THREE.Color(bgColor);
+                dirLight.color = new THREE.Color(lightColor);
+            }
+            
+            applyAtmosFogConfig();
+            AudioEngine.play('place');
+        });
+
+        document.getElementById('fog-none').addEventListener('click', () => { activeFogMode = 'none'; applyAtmosFogConfig(); AudioEngine.play('click'); });
+        document.getElementById('fog-medium').addEventListener('click', () => { activeFogMode = 'medium'; applyAtmosFogConfig(); AudioEngine.play('click'); });
+        document.getElementById('fog-far').addEventListener('click', () => { activeFogMode = 'far'; applyAtmosFogConfig(); AudioEngine.play('click'); });
+        document.getElementById('fog-density-slider').addEventListener('input', () => { applyAtmosFogConfig(); });
+
+        // --- STRUKTUROVANÝ IMPORT SOUBORŮ & SLOŽEK ---
+        document.getElementById('folder-picker').addEventListener('change', function(e) {
+            const files = e.target.files;
+            if (!files || files.length === 0) return;
+
+            let loadedPngs = 0;
+            let loadedMp3s = 0;
+            let loadedScripts = 0;
+
+            const consoleBox = document.getElementById('file-system-console');
+            consoleBox.innerHTML = '';
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const lowerName = file.name.toLowerCase();
+
+                if (lowerName.endsWith('.png')) {
+                    const r = new FileReader();
+                    r.onload = (evt) => {
+                        let matchedId = null;
+                        if (lowerName.includes('grass') || lowerName.includes('1')) matchedId = 1;
+                        else if (lowerName.includes('dirt') || lowerName.includes('2')) matchedId = 2;
+                        else if (lowerName.includes('wood') || lowerName.includes('3')) matchedId = 3;
+                        else if (lowerName.includes('stone') || lowerName.includes('4')) matchedId = 4;
+                        else if (lowerName.includes('leaves') || lowerName.includes('5')) matchedId = 5;
+                        else if (lowerName.includes('brick') || lowerName.includes('6')) matchedId = 6;
+                        else if (lowerName.includes('custom') || lowerName.includes('7')) matchedId = 7;
+                        else if (lowerName.includes('sand') || lowerName.includes('8')) matchedId = 8;
+                        else if (lowerName.includes('glass') || lowerName.includes('9')) matchedId = 9;
+                        else if (lowerName.includes('plank') || lowerName.includes('10')) matchedId = 10;
+                        else if (lowerName.includes('water') || lowerName.includes('11')) matchedId = 11;
+                        else if (lowerName.includes('untitled') || lowerName.includes('13')) matchedId = 13;
+
+                        if (matchedId) {
+                            localStorage.setItem(`voxel_texture_override_${matchedId}`, evt.target.result);
+                            consoleBox.innerHTML += `Uložena textura bloku ID ${matchedId}: ${file.name}<br>`;
+                        }
+                    };
+                    r.readAsDataURL(file);
+                    loadedPngs++;
+                }
+
+                if (lowerName.endsWith('.mp3') || lowerName.endsWith('.wav') || lowerName.endsWith('.ogg')) {
+                    const r = new FileReader();
+                    r.onload = (evt) => {
+                        let matchedSoundType = null;
+                        if (lowerName.includes('menu') || lowerName.includes('lobby') || lowerName.includes('theme')) {
+                            matchedSoundType = 'music_menu';
+                            localStorage.setItem('vc_custom_bgm_menu', evt.target.result);
+                        } else if (lowerName.includes('game') || lowerName.includes('overworld') || lowerName.includes('ambient')) {
+                            matchedSoundType = 'music_game';
+                            localStorage.setItem('vc_custom_bgm_game', evt.target.result);
+                        } else if (lowerName.includes('walk') || lowerName.includes('step')) matchedSoundType = 'walk';
+                        else if (lowerName.includes('break') || lowerName.includes('destroy')) matchedSoundType = 'break';
+                        else if (lowerName.includes('place') || lowerName.includes('build')) matchedSoundType = 'place';
+                        else if (lowerName.includes('jump')) matchedSoundType = 'jump';
+                        else if (lowerName.includes('click')) matchedSoundType = 'click';
+
+                        if (matchedSoundType) {
+                            AudioEngine.customSounds[matchedSoundType] = evt.target.result;
+                            consoleBox.innerHTML += `Uložen zvuk/BGM '${matchedSoundType}': ${file.name}<br>`;
+                            if (matchedSoundType.startsWith('music_') && AudioEngine.currentBgmType === matchedSoundType.split('_')[1]) {
+                                AudioEngine.playBGM(AudioEngine.currentBgmType);
+                            }
+                        }
+                    };
+                    r.readAsDataURL(file);
+                    loadedMp3s++;
+                }
+
+                if (lowerName.endsWith('.js')) {
+                    const r = new FileReader();
+                    r.onload = (evt) => {
+                        const cleanName = file.name.replace('.js', '');
+                        userMods.push({
+                            name: cleanName,
+                            version: '1.0.0',
+                            code: evt.target.result,
+                            enabled: true
+                        });
+                        localStorage.setItem('voxel_craft_mods', JSON.stringify(userMods));
+                        consoleBox.innerHTML += `Nahrán aktivní skript: ${file.name}<br>`;
+                        runModsHotReload();
+                    };
+                    r.readAsText(file);
+                    loadedScripts++;
+                }
+            }
+
+            document.getElementById('folder-import-status').innerText = `Status: Načteno ${loadedPngs}x PNG, ${loadedMp3s}x MP3, ${loadedScripts}x JS.`;
+            buildMaterials();
+            AudioEngine.play('place');
+        });
+
+        // --- NOVÝ ROZŠÍŘENÝ DRUHÝ AUDIO SYSTÉM PRO INTERAKTIVNÍ PREVIEW & STORNO ---
+        let tempAudioData = null;
+        let tempAudioName = "";
+        let tempAudioTarget = "";
+        let tempPreviewAudioNode = null;
+
+        document.getElementById('single-mp3-picker').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const targetSound = document.getElementById('file-import-sound-target').value;
+            if (!file) return;
+
+            tempAudioName = file.name;
+            tempAudioTarget = targetSound;
+
+            const r = new FileReader();
+            r.onload = function(evt) {
+                tempAudioData = evt.target.result;
+
+                // Stopnout jakýkoliv předchozí testovací náhled
+                stopTempPreview();
+
+                // Zobrazit panel s náhledem
+                const previewPanel = document.getElementById('audio-preview-panel');
+                previewPanel.classList.remove('hidden');
+
+                document.getElementById('audio-preview-info').innerText = 
+                    `SOUBOR: ${tempAudioName}\nCÍL VE HŘE: [${tempAudioTarget.toUpperCase()}]`;
+                document.getElementById('audio-preview-status').innerText = "Stav: Zvuk načten. Otestujte ho přehráním před uložením.";
+                document.getElementById('audio-preview-status').className = "text-[6px] text-cyan-400 font-mono";
+
+                // Vypíše do herního logu
+                document.getElementById('file-system-console').innerText = `Dočasný buffer načetl: ${tempAudioName}. Čeká se na akci.`;
+            };
+            r.readAsDataURL(file);
+        });
+
+        function stopTempPreview() {
+            if (tempPreviewAudioNode) {
+                tempPreviewAudioNode.pause();
+                tempPreviewAudioNode = null;
+            }
+        }
+
+        // Tlačítko přehrání testovací ukázky v panelu
+        document.getElementById('btn-audio-preview-play').addEventListener('click', () => {
+            if (!tempAudioData) return;
+            stopTempPreview();
+
+            try {
+                tempPreviewAudioNode = new Audio(tempAudioData);
+                tempPreviewAudioNode.volume = AudioEngine.sfxVolume;
+                tempPreviewAudioNode.play();
+                document.getElementById('audio-preview-status').innerText = "Stav: PŘEHRÁVÁM NÁHLED...";
+                document.getElementById('audio-preview-status').className = "text-[6px] text-yellow-400 font-mono animate-pulse";
+                
+                tempPreviewAudioNode.onended = () => {
+                    document.getElementById('audio-preview-status').innerText = "Stav: Konec přehrávání.";
+                    document.getElementById('audio-preview-status').className = "text-[6px] text-green-400 font-mono";
+                };
+            } catch(e) {
+                document.getElementById('audio-preview-status').innerText = "Stav: CHYBA PŘI PŘEHRÁVÁNÍ.";
+                document.getElementById('audio-preview-status').className = "text-[6px] text-red-500 font-mono";
+            }
+        });
+
+        // Tlačítko zastavení přehrávání testovací ukázky
+        document.getElementById('btn-audio-preview-stop').addEventListener('click', () => {
+            stopTempPreview();
+            document.getElementById('audio-preview-status').innerText = "Stav: Test zastaven.";
+            document.getElementById('audio-preview-status').className = "text-[6px] text-cyan-400 font-mono";
+        });
+
+        // TLAČÍTKO STORNO (CANCEL) - zahodí dočasná data
+        document.getElementById('btn-audio-preview-cancel').addEventListener('click', () => {
+            stopTempPreview();
+            tempAudioData = null;
+            tempAudioName = "";
+            tempAudioTarget = "";
+            document.getElementById('single-mp3-picker').value = ""; // Vynulovat input picker
+            document.getElementById('audio-preview-panel').classList.add('hidden');
+            
+            document.getElementById('file-system-console').innerText = "Nahrávání zrušeno. Žádné změny nebyly zapsány.";
+            AudioEngine.play('click');
+        });
+
+        // TLAČÍTKO ULOŽIT & POUŽÍT (SAVE TO STORAGE) - zapíše data
+        document.getElementById('btn-audio-preview-save').addEventListener('click', () => {
+            if (!tempAudioData || !tempAudioTarget) return;
+            stopTempPreview();
+
+            // Aplikovat do běžícího audio enginu
+            AudioEngine.customSounds[tempAudioTarget] = tempAudioData;
+
+            // Uložit do LocalStorage podle typu zvuku
+            if (tempAudioTarget === 'music_menu') {
+                localStorage.setItem('vc_custom_bgm_menu', tempAudioData);
+            } else if (tempAudioTarget === 'music_game') {
+                localStorage.setItem('vc_custom_bgm_game', tempAudioData);
+            } else {
+                localStorage.setItem('vc_custom_sfx_' + tempAudioTarget, tempAudioData);
+            }
+
+            document.getElementById('file-system-console').innerText = 
+                `ÚSPĚCH: Zvuk '${tempAudioTarget}' byl trvale zapsán do paměti.`;
+
+            // Hot reload běžící hudby v lobby nebo hře
+            if (tempAudioTarget === 'music_menu' && AudioEngine.currentBgmType === 'menu') {
+                AudioEngine.playBGM('menu');
+            } else if (tempAudioTarget === 'music_game' && AudioEngine.currentBgmType === 'game') {
+                AudioEngine.playBGM('game');
+            }
+
+            // Přehrát akustickou odezvu úspěchu
+            AudioEngine.play('place');
+
+            // Vyčistit a zavřít panel
+            tempAudioData = null;
+            tempAudioName = "";
+            tempAudioTarget = "";
+            document.getElementById('single-mp3-picker').value = "";
+            document.getElementById('audio-preview-panel').classList.add('hidden');
+        });
+
+        // TLAČÍTKO OBNOVIT VÝCHOZÍ STAV (RESET SOUND)
+        document.getElementById('btn-audio-reset-target').addEventListener('click', () => {
+            const targetSound = document.getElementById('file-import-sound-target').value;
+            AudioEngine.play('click');
+
+            if (targetSound === 'music_menu') {
+                localStorage.removeItem('vc_custom_bgm_menu');
+                AudioEngine.customSounds['music_menu'] = 'voxel_craft_theme.mp3';
+                if (AudioEngine.currentBgmType === 'menu') AudioEngine.playBGM('menu');
+            } else if (targetSound === 'music_game') {
+                localStorage.removeItem('vc_custom_bgm_game');
+                AudioEngine.customSounds['music_game'] = 'Overworld_welcome_voxel_full.mp3';
+                if (AudioEngine.currentBgmType === 'game') AudioEngine.playBGM('game');
+            } else {
+                localStorage.removeItem('vc_custom_sfx_' + targetSound);
+                // Navrátit interní procedurální generátor odstraněním override
+                delete AudioEngine.customSounds[targetSound];
+            }
+
+            document.getElementById('file-system-console').innerText = 
+                `Zvukový cíl '${targetSound}' byl úspěšně vrácen do výchozího chiptune stavu.`;
+        });
+
+        // --- EXPORT & LOAD WORLD STATE TO THREE.JS ---
+        function startActiveWorld() {
+            AudioEngine.init();
+            
+            // Spuštění herní hudby
+            AudioEngine.playBGM('game');
+
+            document.getElementById('main-menu').classList.add('hidden');
+            document.getElementById('game-container').classList.remove('hidden');
+            document.getElementById('crosshair').classList.remove('hidden');
+            document.getElementById('hud-overlay').classList.remove('hidden');
+
+            player.position.set(activeWorldData.playerPos.x, activeWorldData.playerPos.y, activeWorldData.playerPos.z);
+            player.rotation.set(activeWorldData.playerRot.x, activeWorldData.playerRot.y); player.velocity.set(0, 0, 0);
+
+            document.getElementById('world-info-label').innerText = `Svět: ${activeWorldData.name} (${activeWorldData.generator.toUpperCase()})`;
+
+            buildMaterials(); buildWorldTerrain(); renderInGameHotbar();
+
+            if (activeWorldData.fog) {
+                activeFogMode = 'medium';
+                applyAtmosFogConfig();
+            } else {
+                activeFogMode = 'none';
+                applyAtmosFogConfig();
+            }
+
+            modCallbacks.onGameStart.forEach(cb => { try { cb(); } catch(e) {} });
+        }
+
+        document.getElementById('btn-exit-world').addEventListener('click', () => {
+            saveActiveWorld();
+            cancelHoldBreak();
+            
+            AudioEngine.playBGM('menu');
+
+            document.getElementById('game-container').classList.add('hidden');
+            document.getElementById('crosshair').classList.add('hidden');
+            document.getElementById('hud-overlay').classList.add('hidden');
+            document.getElementById('main-menu').classList.remove('hidden');
+            activeWorldData = null;
+        });
+
+        // Slidery hlasitosti
+        document.getElementById('audio-sfx-volume').addEventListener('input', (e) => {
+            AudioEngine.sfxVolume = parseInt(e.target.value) / 100;
+        });
+
+        document.getElementById('audio-music-volume').addEventListener('input', (e) => {
+            AudioEngine.musicVolume = parseInt(e.target.value) / 100;
+            if (AudioEngine.currentBgm) {
+                AudioEngine.currentBgm.volume = AudioEngine.musicVolume;
+            }
+        });
+
+        // UI & Keybind Editor Uložení
+        document.getElementById('btn-save-ui-setup').addEventListener('click', () => {
+            UIConfig.showDpad = document.getElementById('ui-toggle-dpad').checked;
+            UIConfig.showActions = document.getElementById('ui-toggle-actions').checked;
+            UIConfig.showHotbar = document.getElementById('ui-toggle-hotbar').checked;
+            UIConfig.showInfo = document.getElementById('ui-toggle-info').checked;
+            UIConfig.hudScale = parseInt(document.getElementById('ui-scale-range').value);
+            UIConfig.hudOpacity = parseInt(document.getElementById('ui-opacity-range').value);
+
+            localStorage.setItem('vc_ui_config', JSON.stringify(UIConfig));
+            applyUIConfig();
+            document.getElementById('ui-editor-overlay').classList.add('hidden');
+            AudioEngine.play('place');
+        });
+
+        document.getElementById('ui-scale-range').addEventListener('input', (e) => {
+            UIConfig.hudScale = parseInt(e.target.value);
+            applyUIConfig();
+        });
+        document.getElementById('ui-opacity-range').addEventListener('input', (e) => {
+            UIConfig.hudOpacity = parseInt(e.target.value);
+            applyUIConfig();
+        });
+
+        document.getElementById('btn-toggle-sound').addEventListener('click', () => {
+            AudioEngine.toggleSound();
+        });
+
+        // --- KATEGORIE & MENU NAVIGACE ---
+        const menuTabs = [
+            { id: 'btn-menu-play', action: () => { if (worldsList.length > 0) { activeWorldData = worldsList[0]; startActiveWorld(); } }},
+            { id: 'btn-menu-worlds', action: () => { document.getElementById('worlds-overlay').classList.remove('hidden'); renderWorldsList(); }},
+            { id: 'btn-menu-inventory', action: () => { document.getElementById('inventory-overlay').classList.remove('hidden'); renderInventoryGrid(); renderInventoryHotbarView(); }},
+            { id: 'btn-menu-mods', action: () => { document.getElementById('mods-overlay').classList.remove('hidden'); renderModsList(); }},
+            { id: 'btn-menu-files', action: () => { document.getElementById('files-overlay').classList.remove('hidden'); }},
+            { id: 'btn-menu-settings', action: () => { document.getElementById('settings-overlay').classList.remove('hidden'); }},
+            { id: 'btn-menu-ui-editor', action: () => { document.getElementById('ui-editor-overlay').classList.remove('hidden'); }},
+            { id: 'btn-menu-exit', action: () => {
+                document.body.innerHTML = `
+                    <div class="w-screen h-screen bg-black flex flex-col items-center justify-center text-center p-4">
+                        <p class="text-yellow-500 text-xs sm:text-sm animate-pulse mb-4">JE BEZPEČNÉ RETRO POČÍTAČ VYPNOUT.</p>
+                        <button onclick="location.reload()" class="px-4 py-2 bg-red-800 text-white text-[8px] retro-btn font-bold rounded">RESTARTOVAT</button>
+                    </div>`;
+            }}
+        ];
+
+        menuTabs.forEach(t => { 
+            const el = document.getElementById(t.id); 
+            if (el) el.addEventListener('click', () => {
+                AudioEngine.play('click');
+                t.action();
+            }); 
+        });
+
+        document.querySelectorAll('.btn-back-to-menu').forEach(b => {
+            b.addEventListener('click', () => {
+                AudioEngine.play('click');
+                document.getElementById('worlds-overlay').classList.add('hidden'); document.getElementById('inventory-overlay').classList.add('hidden');
+                document.getElementById('mods-overlay').classList.add('hidden'); document.getElementById('settings-overlay').classList.add('hidden');
+                document.getElementById('ui-editor-overlay').classList.add('hidden'); document.getElementById('files-overlay').classList.add('hidden');
+            });
+        });
+
+        const categories = [
+            { id: 'cat-basic', name: 'Basic' }, { id: 'cat-nature', name: 'Nature' },
+            { id: 'cat-building', name: 'Building' }, { id: 'cat-modded', name: 'Modded' }
+        ];
+
+        categories.forEach(cat => {
+            const btn = document.getElementById(cat.id);
+            btn.addEventListener('click', () => {
+                AudioEngine.play('click');
+                categories.forEach(x => { const el = document.getElementById(x.id); el.classList.remove('bg-[#555]', 'text-white'); el.classList.add('bg-[#444]', 'text-gray-400'); });
+                btn.classList.add('bg-[#555]', 'text-white'); selectedCategory = cat.name; renderInventoryGrid();
+            });
+        });
+
+        // --- JS MODS (HOT RELOAD) ---
+        let userMods = [];
+        try {
+            const loaded = localStorage.getItem('voxel_craft_mods'); if (loaded) userMods = JSON.parse(loaded);
+        } catch(e) {}
+
+        let modCallbacks = { onGameStart: [], onBlockPlace: [], onBlockBreak: [], onJump: [] };
+
+        const VoxelAPI = {
+            registerBlock(config) { window.addBlock(config); },
+            removeBlock(id) { window.removeBlock(id); },
+            onGameStart(cb) { modCallbacks.onGameStart.push(cb); },
+            onBlockPlace(cb) { modCallbacks.onBlockPlace.push(cb); },
+            onBlockBreak(cb) { modCallbacks.onBlockBreak.push(cb); },
+            onJump(cb) { modCallbacks.onJump.push(cb); },
+            logConsole(msg) { document.getElementById('mod-console').innerText = "Mod Log: " + msg; }
+        };
+        Object.freeze(VoxelAPI);
+
+        function renderModsList() {
+            const container = document.getElementById('mods-list-container'); container.innerHTML = '';
+            userMods.forEach((mod, idx) => {
+                const item = document.createElement('div');
+                item.className = "p-1 bg-[#222] border border-gray-600 rounded flex justify-between items-center text-[7px] text-white cursor-pointer";
+                item.innerHTML = `
+                    <span>${mod.name} (${mod.version || '1.0'}) [${mod.enabled ? 'ZAP' : 'VYP'}]</span>
+                    <button class="px-1 bg-red-800 rounded retro-btn text-[6px]" onclick="deleteMod(${idx})">X</button>
+                `;
+                item.addEventListener('click', (e) => {
+                    if (e.target.tagName === 'BUTTON') return;
+                    document.getElementById('mod-name-input').value = mod.name;
+                    document.getElementById('mod-version-input').value = mod.version || "1.0.0";
+                    document.getElementById('mod-editor').value = mod.code;
+                    document.getElementById('mod-enabled-checkbox').checked = mod.enabled;
+                });
+                container.appendChild(item);
+            });
+        }
+
+        window.deleteMod = function(idx) {
+            userMods.splice(idx, 1); localStorage.setItem('voxel_craft_mods', JSON.stringify(userMods));
+            renderModsList(); runModsHotReload();
+        };
+
+        document.getElementById('btn-create-mod').addEventListener('click', () => {
+            userMods.push({ name: 'NovyMod', version: '1.0.0', code: `// Ukázka\nVoxelAPI.registerBlock({id: 14, name: "Mramor", category: "Modded"});\nVoxelAPI.onJump(() => { VoxelAPI.logConsole("Skok z modu!"); });`, enabled: true });
+            renderModsList();
+        });
+
+        document.getElementById('btn-save-mod').addEventListener('click', () => {
+            const name = document.getElementById('mod-name-input').value || "Mod";
+            const version = document.getElementById('mod-version-input').value || "1.0.0";
+            const code = document.getElementById('mod-editor').value;
+            const enabled = document.getElementById('mod-enabled-checkbox').checked;
+
+            const existingIdx = userMods.findIndex(m => m.name === name);
+            if (existingIdx !== -1) {
+                userMods[existingIdx] = { name, version, code, enabled };
+            } else {
+                userMods.push({ name, version, code, enabled });
+            }
+
+            localStorage.setItem('voxel_craft_mods', JSON.stringify(userMods));
+            renderModsList();
+            runModsHotReload();
+        });
+
+        function runModsHotReload() {
+            modCallbacks = { onGameStart: [], onBlockPlace: [], onBlockBreak: [], onJump: [] };
+            document.getElementById('mod-console').innerText = "Console: Žádné chyby.";
+            
+            userMods.forEach(mod => {
+                if (mod.enabled) {
+                    try {
+                        const sandboxFn = new Function('VoxelAPI', mod.code);
+                        sandboxFn(VoxelAPI);
+                    } catch(e) {
+                        document.getElementById('mod-console').innerText = `Chyba v [${mod.name}]: ` + e.message;
+                    }
+                }
+            });
+            buildMaterials();
+        }
+
+        // --- STORAGE CLEAR ---
+        document.getElementById('btn-clear-storage').addEventListener('click', () => { localStorage.clear(); location.reload(); });
+
+        // --- RETRO GAME LOOP ---
+        let lastTime = performance.now(); let frameCount = 0; let lastFpsUpdate = 0;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = performance.now(); frameCount++;
+            
+            if (time > lastFpsUpdate + 1000) {
+                const fps = Math.round((frameCount * 1000) / (time - lastFpsUpdate));
+                document.getElementById('fps-counter').innerText = `FPS: ${fps}`;
+                frameCount = 0; lastFpsUpdate = time;
+            }
+
+            if (activeWorldData) {
+                updatePlayerPhysics();
+                if (activeWorldData.generator === 'infinite') { updateInfiniteChunks(); }
+                updateRaycast(); 
+                
+                if (isHoldingAction) {
+                    handleHoldBreakTick();
+                }
+
+                // Gravitační padání písku
+                updateGravityPhysics();
+
+                updateVoxelParticles();
+
+                renderer.render(scene, camera);
+            }
+        }
+
+        window.onload = function() {
+            loadWorldsFromStorage();
+            loadUIConfig();
+            initDragEditor();
+            runModsHotReload();
+            
+            // Spustit menu hudbu při startu
+            AudioEngine.playBGM('menu');
+            
+            animate();
+        };
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }, false);
+    </script>
+</body>
+</html>

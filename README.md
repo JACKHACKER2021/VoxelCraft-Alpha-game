@@ -7,13 +7,13 @@
 **Kostičková hra pro Android s vlastním enginem v C++**
 *Hoppy_Hopsy21 · VoxelSoftworks · vytvořeno společně s Claude*
 
-![Verze](https://img.shields.io/badge/verze-2.1.0-2ea44f?style=for-the-badge)
-![Preview](https://img.shields.io/badge/preview-2.2.0-orange?style=for-the-badge)
+![Verze](https://img.shields.io/badge/verze-2.2.0-2ea44f?style=for-the-badge)
+![Preview](https://img.shields.io/badge/preview-2.3.0-orange?style=for-the-badge)
 ![Android](https://img.shields.io/badge/Android-arm64-3DDC84?style=for-the-badge&logo=android&logoColor=white)
 ![C++](https://img.shields.io/badge/C%2B%2B-17-00599C?style=for-the-badge&logo=cplusplus&logoColor=white)
 ![OpenGL ES](https://img.shields.io/badge/OpenGL%20ES-3.0-5586A4?style=for-the-badge&logo=opengl&logoColor=white)
 
-[⬇️ Stáhnout APK 2.1.0](release/VoxelCraft-2.1.0.apk) · [📦 Všechny verze](release/) · [🎬 Trailer (17 min)](trailers/t12_2.0.0.mp4) · [📜 Historie](docs/HISTORIE.md)
+[⬇️ Stáhnout APK 2.2.0](release/VoxelCraft-2.2.0.apk) · [📦 Všechny verze](release/) · [🎬 Trailer (17 min)](trailers/t12_2.0.0.mp4) · [📜 Historie](docs/HISTORIE.md)
 
 </div>
 
@@ -23,29 +23,30 @@
 
 ---
 
-## 🆕 v2.1.0 „Trains & Bronze“
+## 🆕 v2.2.0 „Cornerstone and Frost“
 
 | | Novinka | Co umí |
 |:-:|---|---|
-| 🚂 | **Vlaky** | lokomotiva, osobní a nákladní vagon – pevné, s dveřmi, dá se do nich vejít; `Nastoupit` · `Plyn ±` · `Brzda` · couvání |
-| 🛤️ | **3D koleje** | ze smrkových pražců a ocelových kolejnic; oblouky, výhybky, svahy, zarážedla, točna |
-| 🚦 | **Přejezd** | výstražník s blikajícími světly, závora, zvonek a houkačka u trati |
-| ⛏️ | **Vrtací vůz** | vlak s vrtákem vpředu razí tunel a pokládá za sebou kolej |
-| ⚡ | **Booster** | blok pod kolejí, který vlak zrychlí |
-| 🎨 | **Vzhled vlaků** | pixel-art textury, kostičkaté díly, kouř z komína, náklon na svahu |
-| 🟫 | **Bronzový update** | řezaný a zdobený bronz, bronzová mřížka, bronzová žárovka (přepíná se powerstonem) |
-| ⌨️ | **Psaní ve hře** | chat a všechny texty se píšou ve hře, bez okna Androidu |
-| 📋 | **Novinky v menu** | úvodní obrazovka a tlačítko *Novinky 2.1.0* |
+| 🪨 | **Cornerstone** | tři nové biomy: Pozlacený lom (terasy), Prizmatické pobřeží (solanky, rákosí) a Zarostlý monolit |
+| 🎨 | **Nové textury** | remaster dimenze Cornerstone a nové bloky biomů |
+| ❄️ | **Mráz** | praskající led, ledové cihly, sněhová vločka, suchý sníh, do kterého se propadneš; teplo a chlad |
+| ⛰️ | **Hlubší Overworld** | svět je o 64 bloků hlubší: hlubinný kámen, nová propastná skála, síně, láva a vzácné rudy |
+| 🛤️ | **Koleje v 8 směrech** | šikmé koleje, oblouky po 45°, mírné stoupání 1:4; kolej se při pokládání tvaruje sama |
+| 📢 | **Rozhlas** | blok, který přečte hlášení nahlas všem hráčům (vlastní hlas přes eSpeak NG, bez internetu) |
+| 🟫 | **Bronz** | stárne a rezaví, vosk ho chrání; bronzové schody, desky, dveře a poklopy |
+| 🛏️ | **Polštář** | sedák se dá položit na postel |
+| 🖥️ | **Vzhled** | zelené menu, panorama všech světů, nová tlačítka a písmo Tiny Caps, barvy textu |
+| ⌨️ | **Příkazy** | `/say`, `/age`, `/wax`, `/locate` |
 
-> [!TIP]
-> Koleje se vyrábějí z **ocelových ingotů a smrkových kmenů**. Vlaky a koleje najdeš ve složce **Speciální bloky**.
+## 🔮 Připravujeme ve 2.3.0 (Preview)
+- 🔀 výhybky v oblouku a křížení kolejí
+- 🏗️ betonová kolej, nástupiště a příhradový most
+- 🚇 metro: nový vůz s posuvnými dveřmi
+- 🏛️ bronzový dungeon (Bronzové síně) s pastmi, spawnery a lootem
+- 👾 noví tvorové v Cornerstone
 
-## 🔮 Připravujeme ve 2.2.0 (Preview)
-- 🧍 lepší animace hráče
-- 📻 rozhlas, který odpovídá na text
-- 🍂 padající listí, teplo a chlad
-- 🟫 stárnoucí bronz a voskování
-- 🌍 export světa do Minecraft Bedrock
+> [!NOTE]
+> Rozhlas používá **eSpeak NG** (GPL-3.0-or-later), zabudovaný v `third_party/espeak-ng`.
 
 ### Import světa z Minecraftu – jak se bloky převedou
 

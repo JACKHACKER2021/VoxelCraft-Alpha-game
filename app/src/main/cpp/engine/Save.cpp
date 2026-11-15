@@ -101,7 +101,7 @@ std::string createWorldFolder(const std::string& root) {
 
 bool saveLevel(const WorldInfo& info, const PlayerState& p) {
     std::ostringstream o;
-    o << "version=1\n";
+    o << "version=2\n";  // 2.2.0: heights of the deeper Overworld
     o << "name=" << oneLine(info.name) << "\n";
     o << "seed=" << info.seed << "\n";
     o << "mode=" << (int)info.mode << "\n";
@@ -159,6 +159,7 @@ bool loadLevel(const std::string& folder, WorldInfo& info, PlayerState& p) {
     p = PlayerState{};
     if (!kv.count("player.x")) return true;
     p.valid = true;
+    p.legacyHeight = num(kv, "version", 1) < 2;
     p.pos = Vec3(num(kv, "player.x", 0), num(kv, "player.y", 80), num(kv, "player.z", 0));
     p.spawn = Vec3(num(kv, "spawn.x", 0), num(kv, "spawn.y", 80), num(kv, "spawn.z", 0));
     p.yaw = num(kv, "yaw", 0);
@@ -340,6 +341,9 @@ Settings loadSettings(const std::string& path) {
     s.calmMode = flag("calmMode", false);
     s.seasonalEvents = flag("seasonalEvents", true);
     s.fallingLeaves = flag("fallingLeaves", true);
+    s.tinyCaps = flag("tinyCaps", true);
+    s.showFps = flag("showFps", false);
+    s.classicFog = std::clamp((int)num(kv, "classicFog", 1), 0, 2);
     s.tutorialStep = (int)num(kv, "tutorialStep", 0);
     s.mpPvp = flag("mpPvp", false);
     s.mpProtectSpawn = flag("mpProtectSpawn", true);
@@ -357,7 +361,7 @@ void saveSettings(const std::string& path, const Settings& s) {
       << "\ndevGodMode=" << s.devGodMode << "\ndevFly=" << s.devFly << "\ndevInstantMine=" << s.devInstantMine
       << "\ndevDebug=" << s.devDebug << "\ndevNoclip=" << s.devNoclip << "\ndevSpeed=" << s.devSpeed
       << "\nexpDayNight=" << s.expDayNight << "\nexpFastFurnace=" << s.expFastFurnace << "\nexpOreMap=" << s.expOreMap << "\nexpFastGrowth=" << s.expFastGrowth << "\nexpLowGravity=" << s.expLowGravity
-      << "\nexpBigBoom=" << s.expBigBoom << "\ncalmMode=" << s.calmMode << "\nseasonalEvents=" << s.seasonalEvents << "\nfallingLeaves=" << s.fallingLeaves << "\ntutorialStep=" << s.tutorialStep << "\nmpPvp=" << s.mpPvp << "\nmpProtectSpawn=" << s.mpProtectSpawn
+      << "\nexpBigBoom=" << s.expBigBoom << "\ncalmMode=" << s.calmMode << "\nseasonalEvents=" << s.seasonalEvents << "\nfallingLeaves=" << s.fallingLeaves << "\ntinyCaps=" << s.tinyCaps << "\nshowFps=" << s.showFps << "\nclassicFog=" << s.classicFog << "\ntutorialStep=" << s.tutorialStep << "\nmpPvp=" << s.mpPvp << "\nmpProtectSpawn=" << s.mpProtectSpawn
       << "\n";
     writeFileAtomic(path, o.str());
 }

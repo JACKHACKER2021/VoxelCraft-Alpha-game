@@ -28,6 +28,8 @@ public:
     bool inWater = false;
     bool inLava = false;
     bool inTar = false;      // 1.4.0: deep cave tar, very slow
+    bool inBrine = false;    // 2.2.0 preview: Aether Brine: lighter jumps, slow walking
+    bool inDriedSnow = false;  // 2.2.0: sinking slowly in powdery snow
     bool headInWater = false;  // eyes under the surface: underwater fog
     bool headInLava = false;
     bool headInTar = false;

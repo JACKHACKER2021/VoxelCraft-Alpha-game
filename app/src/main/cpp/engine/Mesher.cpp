@@ -17,11 +17,12 @@ constexpr float kTile = kTileUv;
 // 2.1.0 preview: rails as real 3D track: wooden sleepers across the track and two steel rails on top,
 // following the track's centre line (straight, a smooth quarter circle round a curve, or up a slope).
 struct RailPath {
-    int in, out, slope;  // slope: the side it rises towards, -1 flat
+    int in, out, slope;  // slope: the port it rises towards, -1 flat
+    float lo = 0, span = 1;
 };
 Vec3 railPoint(const RailPath& r, float t, Vec3& tan) {
     RailPos p;
-    p.in = r.in, p.out = r.out, p.t = t, p.slopeHigh = r.slope;
+    p.in = r.in, p.out = r.out, p.t = t, p.slopeHigh = r.slope, p.slopeLo = r.lo, p.slopeSpan = r.span;
     const Vec3 v = TrainSystem::pointOn(p, &tan);  // cell (0, 0, 0); the rail head at 1/16
     tan = Vec3(tan.x, 0, tan.z);
     const float l = std::sqrt(tan.x * tan.x + tan.z * tan.z);
@@ -53,12 +54,13 @@ void orientedBox(std::vector<Vertex>& out, Vec3 a, Vec3 b, float halfW, float y0
 float kDxF(int side) { static const float d[4] = {0, 1, 0, -1}; return d[side & 3]; }
 float kDzF(int side) { static const float d[4] = {-1, 0, 1, 0}; return d[side & 3]; }
 void meshRail(std::vector<Vertex>& out, const RailPath& r, int wx, int y, int wz, float light, float glow, bool dull) {
-    const bool curve = ((r.in + 2) & 3) != r.out;
+    const bool curve = ((r.out - r.in) & 7) != 4;  // build 12: ports (0..7)
+    const bool diagonal = !curve && (r.in & 1);
     const int segments = curve ? 8 : 1;
     const Vec3 base((float)wx, (float)y, (float)wz);
     const int sleeperTile = tileFor(SPRUCE_LOG, F_NORTH), railTile = tileFor(dull ? STONE : STEEL_BLOCK, F_TOP);
     // Sleepers: four per block along the track, across it.
-    const int sleepers = curve ? 3 : 4;
+    const int sleepers = curve ? 3 : diagonal ? 6 : 4;
     for (int i = 0; i < sleepers; ++i) {
         Vec3 tan;
         const float t = (i + 0.5f) / sleepers;
@@ -315,15 +317,33 @@ void buildChunkMesh(const World& world, const Chunk& chunk, ChunkMesh& out) {
                         orientedBox(out.opaque, Vec3((float)wx, (float)y, wz + 0.5f), Vec3(wx + 1.0f, (float)y, wz + 0.5f), 0.5f, 0, 0.05f, T_TURNTABLE, light, glowHere);
                     int a, b2;
                     if (TrainSystem::railSides(id, a, b2)) {
-                        meshRail(out.opaque, {a, b2, isRailSlope(id) ? id - RAIL_SLOPE : -1}, wx, y, wz, light, glowHere, false);
+                        {
+                            RailPos sp;
+                            TrainSystem::setSlope(sp, id);
+                            meshRail(out.opaque, {a, b2, sp.slopeHigh, sp.slopeLo, sp.slopeSpan}, wx, y, wz, light, glowHere, false);
+                        }
+                    } else if (isRailSwitch8(id)) {
+                        // 2.3.0: the flexible switch: the straight track and the 45-degree branch from the points,
+                        // the one not set dulled; a lever beside the points leans the way it is set.
+                        const int e = railSwitch8Entry(id), st = railSwitch8State(id);
+                        meshRail(out.opaque, {e, (e + 4) & 7, -1}, wx, y, wz, light, glowHere, st == 1);
+                        meshRail(out.opaque, {e, railSwitch8Branch(id), -1}, wx, y, wz, light, glowHere, st == 0);
+                        static const float pdx[8] = {0, 0.7f, 1, 0.7f, 0, -0.7f, -1, -0.7f}, pdz[8] = {-1, -0.7f, 0, 0.7f, 1, 0.7f, 0, -0.7f};
+                        const int side = (e + (railSwitch8Left(id) ? 2 : 6)) & 7;  // away from the branch
+                        const Vec3 at((float)wx + 0.5f + pdx[side] * 0.62f, (float)y, (float)wz + 0.5f + pdz[side] * 0.62f);
+                        orientedBox(out.opaque, at - Vec3(0.06f, 0, 0), at + Vec3(0.06f, 0, 0), 0.06f, 0, 0.12f, tileFor(STONE, F_TOP), light, glowHere);
+                        const int lean = st ? railSwitch8Branch(id) : (e + 4) & 7;
+                        const Vec3 tip = at + Vec3(pdx[lean] * 0.12f, 0, pdz[lean] * 0.12f);
+                        orientedBox(out.opaque, at, tip, 0.02f, 0.12f, 0.42f, tileFor(POWERSTONE_BLOCK, F_TOP), light, glowHere);
                     } else if (isRailSwitch(id)) {
                         const int k = railSwitchIndex(id), f = k / 2, st = k % 2;
-                        meshRail(out.opaque, {f, (f + 2) & 3, -1}, wx, y, wz, light, glowHere, st == 1);         // straight
-                        meshRail(out.opaque, {(f + 1) & 3, (f + 2) & 3, -1}, wx, y, wz, light, glowHere, st == 0);  // the branch
+                        meshRail(out.opaque, {f * 2, ((f + 2) & 3) * 2, -1}, wx, y, wz, light, glowHere, st == 1);         // straight
+                        meshRail(out.opaque, {railSwitchBranch(id) * 2, ((f + 2) & 3) * 2, -1}, wx, y, wz, light, glowHere, st == 0);  // the branch
                         // The lever beside the points, leaning the way the switch is set.
-                        const Vec3 at((float)wx + 0.5f + kDxF(f + 3) * 0.62f, (float)y, (float)wz + 0.5f + kDzF(f + 3) * 0.62f);
+                        const int leverSide = railSwitchLeft(id) ? f + 1 : f + 3;  // the lever stands on the side away from the branch
+                        const Vec3 at((float)wx + 0.5f + kDxF(leverSide) * 0.62f, (float)y, (float)wz + 0.5f + kDzF(leverSide) * 0.62f);
                         orientedBox(out.opaque, at - Vec3(0.06f, 0, 0), at + Vec3(0.06f, 0, 0), 0.06f, 0, 0.12f, tileFor(STONE, F_TOP), light, glowHere);
-                        const Vec3 tip = at + Vec3(kDxF(st ? f + 1 : f) * 0.12f, 0, kDzF(st ? f + 1 : f) * 0.12f);
+                        const Vec3 tip = at + Vec3(kDxF(st ? railSwitchBranch(id) : f) * 0.12f, 0, kDzF(st ? railSwitchBranch(id) : f) * 0.12f);
                         orientedBox(out.opaque, at, tip, 0.02f, 0.12f, 0.42f, tileFor(POWERSTONE_BLOCK, F_TOP), light, glowHere);
                     }
                     continue;

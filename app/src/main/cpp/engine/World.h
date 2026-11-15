@@ -18,7 +18,11 @@ namespace vc {
 
 // Same dimensions as the original Pocket Edition chunks.
 constexpr int kChunkSize = 16;
-constexpr int kChunkHeight = 128;
+constexpr int kChunkHeight = 192;
+// 2.2.0: the generators still build worlds 128 blocks high; the Overworld of the preview is then lifted by
+// kDeepShift blocks, and the room below it is filled with the deep layers (deepstone, abyssal rock).
+constexpr int kGenHeight = 128;
+constexpr int kDeepShift = 64;
 constexpr int kCaveLakeLevel = 11;  // cavern floors up to this height hold water or tar
 constexpr int kSeaLevel = 62;
 constexpr int kNetherLavaLevel = 31;
@@ -43,7 +47,7 @@ struct Chunk {
     Chunk(int cx, int cz) : cx(cx), cz(cz) {}
 
     // PE layout: x-major, then z, then y.
-    static int index(int x, int y, int z) { return (x << 11) | (z << 7) | y; }
+    static int index(int x, int y, int z) { return ((x << 4) | z) * kChunkHeight + y; }
     ItemId get(int x, int y, int z) const { return blocks[index(x, y, z)]; }
     void set(int x, int y, int z, ItemId id) {
         blocks[index(x, y, z)] = id;
@@ -65,7 +69,9 @@ public:
     World(uint32_t seed, Dimension dim, const GenConfig& config = GenConfig::defaults());
     Dimension dimension() const { return dim_; }
     const GenConfig& config() const { return config_; }
-    int seaLevel() const { return config_.overworld.seaLevel; }
+    int seaLevel() const { return config_.overworld.seaLevel + yShift(); }
+    // 2.2.0: how far the Overworld is lifted above the generator's heights (0 elsewhere and in the main edition).
+    int yShift() const { return deep_ ? kDeepShift : 0; }
     int lavaLevel() const { return config_.nether.lavaLevel; }
     // Biome at a column (overworld only, nullptr elsewhere).
     const BiomeDef* biomeAt(int x, int z) const;
@@ -112,6 +118,9 @@ public:
     // 1.5.1: the Powerstone Wasteland of the Cornerstone Dimension, and its forgotten villages
     // (the lamp column on the plaza; cy is the feet height there).
     bool wastelandAt(int x, int z) const;
+    // 2.2.0 preview: the new biomes of the Cornerstone Dimension (0 none, 1 Gilded Quarry,
+    // 2 Prismatide Coast, 3 Overgrown Monolith). The wasteland wins where both would be.
+    int cornerBiomeAt(int x, int z) const;
     bool forgottenVillageIn(int rx, int rz, int& cx, int& cy, int& cz) const;
     static constexpr int kForgottenRegion = 192;
     // Name of the place for the HUD and /pos (any dimension), a Czech key of LangTable.inc.
@@ -197,6 +206,14 @@ private:
 
     uint32_t seed_;
     Dimension dim_;
+    bool deep_ = false;  // 2.2.0: the lifted Overworld with the deep layers below
+    void deepenOverworld(Chunk& c);
+    void liftColumns(Chunk& c) const;
+    void stampBronzeHalls(Chunk& c);
+    ItemId bronzeHallsBlock(int lx, int ly, int lz, uint32_t seed) const;
+public:
+    bool bronzeHallsIn(int rx, int rz, int& ox, int& oz) const;  // 2.3.0: the Bronze Halls of a region
+private:
     GenConfig config_;
     Noise terrain_, detail_, caves_, temperature_, humidity_;
     std::unordered_map<int64_t, std::unique_ptr<Chunk>> chunks_;

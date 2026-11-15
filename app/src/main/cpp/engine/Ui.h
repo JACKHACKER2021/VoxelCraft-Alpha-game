@@ -18,6 +18,16 @@ enum UiTex { TexNone = 0, TexAtlas = 1, TexGui = 2, TexSkins = 3, TexMap = 4 };
 
 // Colours of the retro menu theme (dark wood panels, moss green highlights).
 namespace theme {
+#if 1  // 2.2.0: the green theme in both editions
+// 2.2.0 preview: the forest-green menus of the project's own design instead of the old brown.
+constexpr Color kBackdrop{0.09f, 0.15f, 0.1f, 0.85f};
+constexpr Color kPanel{0.14f, 0.23f, 0.16f, 1};
+constexpr Color kPanelInner{0.17f, 0.28f, 0.19f, 1};
+constexpr Color kBorder{0.11f, 0.17f, 0.12f, 1};
+constexpr Color kBorderDark{0.06f, 0.1f, 0.07f, 1};
+constexpr Color kButton{0.2f, 0.36f, 0.23f, 1};
+constexpr Color kButtonDown{0.25f, 0.43f, 0.28f, 1};
+#else
 constexpr Color kBackdrop{0.07f, 0.06f, 0.05f, 0.82f};
 constexpr Color kPanel{0.165f, 0.145f, 0.125f, 1};
 constexpr Color kPanelInner{0.21f, 0.19f, 0.165f, 1};
@@ -25,16 +35,26 @@ constexpr Color kBorder{0.43f, 0.4f, 0.35f, 1};
 constexpr Color kBorderDark{0.1f, 0.09f, 0.08f, 1};
 constexpr Color kButton{0.235f, 0.21f, 0.185f, 1};
 constexpr Color kButtonDown{0.3f, 0.27f, 0.235f, 1};
+#endif
 constexpr Color kGreen{0.165f, 0.31f, 0.04f, 1};
 constexpr Color kGreenDown{0.22f, 0.4f, 0.07f, 1};
 constexpr Color kGreenBorder{0.42f, 0.56f, 0.23f, 1};
 constexpr Color kAccent{0.36f, 0.5f, 0.17f, 1};
+#if 1  // 2.2.0: the green theme in both editions
+constexpr Color kText{0.88f, 0.84f, 0.68f, 1};
+constexpr Color kTextBright{0.96f, 0.9f, 0.7f, 1};
+constexpr Color kTextDim{0.62f, 0.66f, 0.55f, 1};
+constexpr Color kTitle{0.95f, 0.87f, 0.64f, 1};
+constexpr Color kSeparator{0.24f, 0.36f, 0.26f, 1};
+constexpr Color kField{0.06f, 0.1f, 0.07f, 1};
+#else
 constexpr Color kText{0.79f, 0.72f, 0.61f, 1};
 constexpr Color kTextBright{0.9f, 0.85f, 0.72f, 1};
 constexpr Color kTextDim{0.6f, 0.55f, 0.47f, 1};
 constexpr Color kTitle{0.76f, 0.66f, 0.53f, 1};
 constexpr Color kSeparator{0.29f, 0.27f, 0.24f, 1};
 constexpr Color kField{0.08f, 0.07f, 0.055f, 1};
+#endif
 constexpr Color kCode{0.5f, 0.75f, 0.42f, 1};
 constexpr Color kError{0.9f, 0.4f, 0.32f, 1};
 constexpr Color kGold{0.85f, 0.65f, 0.25f, 1};
@@ -82,7 +102,7 @@ public:
     float text(float x, float y, const std::string& s, Color c = {}, float scale = 1, bool shadow = true,
                float maxWidth = 0);
     void textCentered(float cx, float y, const std::string& s, Color c = {}, float scale = 1);
-    float textWidth(const std::string& s, float scale = 1) const { return font_.measure(tr(s)) * scale; }
+    float textWidth(const std::string& s, float scale = 1) const { return font_.measure(tr(s)) * scale * font_.sizeFactor(); }
     // Tests: when set, every drawn text (after translation) is appended here.
     static std::vector<std::string>* textLog;
     // 1.8.0: set while the "Pre-Alpha Style" pack is on: buttons, windows, slots and HUD buttons
@@ -103,11 +123,15 @@ public:
     bool menuButton(float x, float y, float w, float h, const std::string& label, Style style, int iconGlyph = -1, bool enabled = true);
     // A rounded dark glass panel with a light rim (the menus' new frame).
     void roundPanel(float x, float y, float w, float h);
+    // 2.2.0 preview: a pixel-art grain over a face: scattered 2-pixel specks, lighter and darker.
+    void pixelGrain(float x, float y, float w, float h, unsigned seed, float strength = 1);
     // A filled rectangle with rounded corners of radius r (0..4 GUI pixels).
     void roundRect(float x, float y, float w, float h, int r, Color c);
     // In-game touch button (D-pad, jump, pause...): dark glass panel with a block-style bevel.
     void hudButton(float x, float y, float w, float h, bool pressed);
     void hudGlyph(float x, float y, float w, float h, int glyph, float scale = 2);
+    // 2.2.0 preview: one of the designed HUD buttons (Font::HudButton), darker while pressed.
+    void hudPicture(float x, float y, float w, float h, int button, bool pressed);
     bool checkbox(float x, float y, bool& value);                  // 12x12
     bool themedSlider(float x, float y, float w, float& value);   // 10 tall, value in [0, 1]
     bool dropdown(float x, float y, float w, float h, const std::string& value);  // tapped = cycle the value
@@ -141,7 +165,7 @@ private:
         return px >= x && py >= y && px < x + w && py < y + h;
     }
     void addTri(UiTex tex, const UiVert& a, const UiVert& b, const UiVert& c);
-    float drawText(float x, float y, const std::string& s, Color c, float scale, float maxWidth);
+    float drawText(float x, float y, const std::string& s, Color c, float scale, float maxWidth, float codeShade = 1);
 
     const Font& font_;
     float w_ = 1, h_ = 1;

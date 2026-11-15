@@ -119,6 +119,7 @@ public class VoxelActivity extends NativeActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        unpackVoice();
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         getWindow().getAttributes().layoutInDisplayCutoutMode =
@@ -387,6 +388,51 @@ public class VoxelActivity extends NativeActivity {
 
     /** Called from native code (game thread). "px:name" asks for the synthesized sound. */
     @SuppressWarnings("unused")
+    /** 2.2.0: the data of the Rozhlas voice (eSpeak NG) goes from the APK to files/espeak-ng-data once per version. */
+    private void unpackVoice() {
+        java.io.File root = new java.io.File(getFilesDir(), "espeak-ng-data");
+        java.io.File marker = new java.io.File(root, ".unpacked-1.52.0");
+        if (marker.exists()) return;
+        try {
+            copyAssetDir("espeak-ng-data", root);
+            marker.createNewFile();
+        } catch (java.io.IOException e) {
+            // No voice then: the Rozhlas still writes to the chat.
+        }
+    }
+
+    private void copyAssetDir(String from, java.io.File to) throws java.io.IOException {
+        String[] names = getAssets().list(from);
+        if (names == null || names.length == 0) {
+            to.getParentFile().mkdirs();
+            try (java.io.InputStream in = getAssets().open(from); java.io.FileOutputStream out = new java.io.FileOutputStream(to)) {
+                byte[] buf = new byte[16384];
+                for (int n; (n = in.read(buf)) > 0;) out.write(buf, 0, n);
+            }
+            return;
+        }
+        to.mkdirs();
+        for (String n : names) copyAssetDir(from + "/" + n, new java.io.File(to, n));
+    }
+
+    /** 2.2.0: plays a WAV the game wrote (the Rozhlas voice, our own synthesis). */
+    private MediaPlayer radioPlayer;
+    @SuppressWarnings("unused")
+    public void playFile(final String path, final float volume) {
+        runOnUiThread(() -> {
+            try {
+                if (radioPlayer != null) radioPlayer.release();
+                radioPlayer = new MediaPlayer();
+                radioPlayer.setDataSource(path);
+                radioPlayer.setVolume(volume, volume);
+                radioPlayer.prepare();
+                radioPlayer.start();
+            } catch (Exception e) {
+                radioPlayer = null;
+            }
+        });
+    }
+
     public void playSound(String name, float volume) {
         ensureSounds();
         if (!soundsReady) return;  // still loading: silent rather than stuck

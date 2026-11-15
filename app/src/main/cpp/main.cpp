@@ -211,6 +211,13 @@ void android_main(android_app* android) {
                      [ms](JNIEnv* env, jobject obj, jmethodID m) { env->CallVoidMethod(obj, m, (jint)ms); });
     };
     app.game->onQuit = [android] { ANativeActivity_finish(android->activity); };
+    app.game->onPlayFile = [android](const std::string& path, float volume) {
+        callActivity(android, "playFile", "(Ljava/lang/String;F)V", [&](JNIEnv* env, jobject obj, jmethodID m) {
+            jstring p = toJavaString(env, path);
+            env->CallVoidMethod(obj, m, p, (jfloat)volume);
+            env->DeleteLocalRef(p);
+        });
+    };
     app.game->onPlaySound = [android](const std::string& name, float volume) {
         callActivity(android, "playSound", "(Ljava/lang/String;F)V", [&](JNIEnv* env, jobject obj, jmethodID m) {
             jstring n = toJavaString(env, name);

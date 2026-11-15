@@ -25,7 +25,10 @@ const CommandInfo kCommands[] = {
     {"/time [day|noon|evening|night|midnight|tiky]", "Denní doba", true},
     {"/weather <clear|rain>", "Počasí", true},
     {"/summon <pig|sheep|slime|forgotten|crimson|husking|...>", "Přivolá bytost", true},
-    {"/locate <fortress|arena>", "Najde pevnost (dimenze úhelného kamene) nebo arénu (Crimson Void)", false},
+    {"/locate <village|forgotten|mineshaft|fortress|arena|frame|temple>", "Najde nejbližší strukturu", false},
+    {"/say <text>", "Zpráva do chatu (barvy: &c, &l...)", false},
+    {"/age <0|1|2>", "Stáří bronzu v okruhu 8 bloků: lesklý, zašlý, rezavý", true},
+    {"/wax", "Navoskuje bronz v okruhu 8 bloků", true},
     {"/spawn", "Teleport na spawn", true},
     {"/heal", "Doplní zdraví a jídlo", true},
     {"/clear", "Vyprázdní inventář", true},
@@ -206,10 +209,60 @@ std::vector<std::string> runCommand(Session& s, const std::string& line, bool ch
         s.summon(type);
         return {trf("Přivoláno: {0}", {tr(mobInfo(type).name)})};
     }
+    if (cmd == "say") {
+        // 2.2.0: "&" works as the colour code sign here as well.
+        std::string text = line.size() > 5 ? line.substr(5) : "";
+        if (text.empty()) return usage();
+        for (size_t k = 0; k + 1 < text.size(); ++k)
+            if (text[k] == '&' && std::isxdigit((unsigned char)text[k + 1])) text.replace(k, 1, "\xC2\xA7");
+        return {"\xC2\xA7" "d[Say]\xC2\xA7" "r " + text};
+    }
+    if (cmd == "age" || cmd == "wax") {
+        int stage = 0;
+        if (cmd == "age") {
+            if (args.size() < 2 || args[1].size() != 1 || args[1][0] < '0' || args[1][0] > '2') return usage();
+            stage = args[1][0] - '0';
+        }
+        World& w = s.currentWorld();
+        const int px = (int)std::floor(p.pos.x), py = (int)std::floor(p.pos.y), pz = (int)std::floor(p.pos.z);
+        int changed = 0;
+        for (int dx = -8; dx <= 8; ++dx)
+            for (int dy = -8; dy <= 8; ++dy)
+                for (int dz = -8; dz <= 8; ++dz) {
+                    const ItemId b = w.getBlock(px + dx, py + dy, pz + dz);
+                    const int base = bronzeAgingBase(b);
+                    if (base < 0) continue;
+                    const ItemId to = cmd == "age" ? bronzeVariant(base, stage, bronzeWaxed(b)) : bronzeVariant(base, bronzeStage(b), true);
+                    if (to != b) w.setBlock(px + dx, py + dy, pz + dz, to), ++changed;
+                }
+        return {trf("Změněno bloků bronzu: {0}", {std::to_string(changed)})};
+    }
     if (cmd == "locate") {
-        int x, y, z;
-        if (!s.currentWorld().nearestStructure((int)std::floor(p.pos.x), (int)std::floor(p.pos.z), x, y, z))
-            return {tr("Pevnosti jsou v dimenzi úhelného kamene, aréna v Crimson Void")};
+        int x = 0, y = 0, z = 0;
+        World& w = s.currentWorld();
+        const int px = (int)std::floor(p.pos.x), pz = (int)std::floor(p.pos.z);
+        const std::string what = args.size() > 1 ? lower(args[1]) : "fortress";
+        bool found = false;
+        auto regions = [&](int size, auto test) {
+            // The nearest region (out to 4 regions away) that has one.
+            long best = -1;
+            const int rx0 = (int)std::floor((float)px / size), rz0 = (int)std::floor((float)pz / size);
+            for (int rx = rx0 - 4; rx <= rx0 + 4; ++rx)
+                for (int rz = rz0 - 4; rz <= rz0 + 4; ++rz) {
+                    int cx, cy, cz;
+                    if (!test(rx, rz, cx, cy, cz)) continue;
+                    const long d = (long)(cx - px) * (cx - px) + (long)(cz - pz) * (cz - pz);
+                    if (best < 0 || d < best) best = d, x = cx, y = cy, z = cz;
+                }
+            return best >= 0;
+        };
+        if (what == "village") found = regions(World::kVillageRegion, [&](int rx, int rz, int& a, int& b, int& c) { if (!w.villageIn(rx, rz, a, b, c)) return false; b += w.yShift(); return true; });
+        else if (what == "forgotten") found = regions(World::kForgottenRegion, [&](int rx, int rz, int& a, int& b, int& c) { return w.forgottenVillageIn(rx, rz, a, b, c); });
+        else if (what == "mineshaft") found = w.nearestMineshaft(px, pz, x, y, z);
+        else if (what == "frame") found = w.nearestCelestialFrame(px, pz, x, z), y = 0;
+        else if (what == "temple") found = regions(World::kTempleRegion, [&](int rx, int rz, int& a, int& b, int& c) { w.templeCentre(rx, rz, a, c); b = World::kTempleY; return true; });
+        else found = w.nearestStructure(px, pz, x, y, z);
+        if (!found) return {tr("Nic takového tu poblíž není (zkus jinou dimenzi)")};
         return {trf("Nejbližší: {0} {1} {2} ({3} bloků)", {std::to_string(x), std::to_string(y), std::to_string(z),
                                                          std::to_string((int)std::hypot(x - p.pos.x, z - p.pos.z))})};
     }

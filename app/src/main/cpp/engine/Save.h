@@ -42,6 +42,7 @@ struct WorldInfo {
 // Everything about the player that survives quitting the game.
 struct PlayerState {
     bool valid = false;  // false for a world that was never played
+    bool legacyHeight = false;  // 2.2.0: saved before the deeper Overworld (level version 1)
     Vec3 pos, spawn;
     float yaw = 0, pitch = 0;
     int dimension = 0;  // 0 overworld, 1 nether, 2 crimson void
@@ -120,6 +121,9 @@ struct Settings {
     // 1.9.0: seasonal events by the date (saved on/off; the season itself is filled in every frame).
     bool seasonalEvents = true;
     bool fallingLeaves = true;  // 1.9.0 build 2: leaves drift down from the trees
+    int classicFog = 1;         // Classic 0.0.3: 0 none, 1 normal, 2 far haze
+    bool showFps = false;       // Classic 0.0.3: FPS and position in the corner
+    bool tinyCaps = true;       // 2.2.0 preview: the Tiny Caps letters (preview edition only)
     Season season = Season::None;
 };
 

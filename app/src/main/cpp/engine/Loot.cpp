@@ -93,7 +93,15 @@ const std::vector<LootEntry>& table(ItemId chest, int& rollsMin, int& rollsMax) 
         {VOID_SHARD, 10, 3, 8},     {CRIMSONIUM, 4, 1, 2},       {RUBY, 5, 1, 3},            {ANCIENT_COIN, 6, 2, 5},
         {DARK_SANDSTONE, 5, 4, 10}, {POWERSTONE_RELIC, 2, 1, 1}, {HARDIUM, 2, 1, 2},         {DYE + 10, 4, 2, 5},
     };
+    // 2.3.0: the Bronze Halls deep under the Overworld: bronze in every shape, and the rare deep metals.
+    static const std::vector<LootEntry> kBronzeHalls = {
+        {BRONZE_INGOT, 10, 3, 8}, {BRONZE_BLOCK, 4, 1, 3},    {CUT_BRONZE, 5, 4, 10},      {CHISELED_BRONZE, 4, 2, 6},
+        {BRONZE_GRATE, 4, 2, 6},  {BRONZE_BULB, 3, 1, 3},     {BRONZE_DOOR_ITEM, 2, 1, 2}, {HONEY_BALL, 4, 1, 4},
+        {STEEL_INGOT, 6, 2, 5},   {RUBY, 4, 1, 3},            {HARDIUM, 3, 1, 3},          {BRONZE_PICKAXE, 2, 1, 1},
+        {STEEL_SWORD, 2, 1, 1},   {armorItem(2, 1), 2, 1, 1}, {RUBY_BLOCK, 1, 1, 1},
+    };
     switch (chest) {
+        case LOOT_CHEST_BRONZE: rollsMin = 5; rollsMax = 9; return kBronzeHalls;
         case LOOT_CHEST_SHRINE: rollsMin = 4; rollsMax = 7; return kShrine;
         case LOOT_CHEST_CHAMBER: rollsMin = 5; rollsMax = 9; return kChamber;
         case LOOT_BARREL_CAMP: rollsMin = 3; rollsMax = 6; return kCamp;

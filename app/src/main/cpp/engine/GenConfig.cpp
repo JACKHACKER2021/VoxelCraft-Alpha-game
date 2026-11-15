@@ -578,6 +578,32 @@ const char* kUpdate210 = R"({
   ]
 })";
 
+// 2.2.0 preview: the big Bronze Update.
+// 2.3.0 preview build 7: the subway.
+const char* kUpdate230 = R"({
+  "recipes": [
+    {"type": "shaped", "pattern": ["GGG", "SBS", "SPS"], "key": {"G": "glass", "S": "steel_ingot", "B": "steel_block", "P": "powerstone_dust"}, "result": "subway_locomotive"},
+    {"type": "shaped", "pattern": ["GGG", "S.S", "SSS"], "key": {"G": "glass", "S": "steel_ingot"}, "result": "subway_car"}
+  ]
+})";
+
+const char* kUpdate220 = R"({
+  "recipes": [
+    {"type": "shaped", "pattern": ["BB.", "BB.", "BB."], "key": {"B": "bronze_ingot"}, "result": "bronze_door", "count": 3},
+    {"type": "shaped", "pattern": ["BBB", "BBB"], "key": {"B": "bronze_ingot"}, "result": "bronze_trapdoor", "count": 2},
+    {"type": "shapeless", "ingredients": ["bronze_block", "honey_ball"], "result": "waxed_bronze_block"},
+    {"type": "shapeless", "ingredients": ["cut_bronze", "honey_ball"], "result": "waxed_cut_bronze"},
+    {"type": "shapeless", "ingredients": ["chiseled_bronze", "honey_ball"], "result": "waxed_chiseled_bronze"},
+    {"type": "shapeless", "ingredients": ["bronze_grate", "honey_ball"], "result": "waxed_bronze_grate"},
+    {"type": "shaped", "pattern": ["II", "II"], "key": {"I": "ice"}, "result": "ice_bricks", "count": 4},
+    {"type": "shaped", "pattern": ["S.S", ".S.", "S.S"], "key": {"S": "snow"}, "result": "snowflake_block", "count": 2},
+    {"type": "shaped", "pattern": ["CC", "CC"], "key": {"C": "netherrack"}, "result": "carved_cornerstone", "count": 4},
+    {"type": "shaped", "pattern": ["CBC", "BCB", "CBC"], "key": {"C": "netherrack", "B": "bronze_ingot"}, "result": "gilded_cobble", "count": 5},
+    {"type": "shaped", "pattern": ["III", "ISI", "IPI"], "key": {"I": "iron_ingot", "S": "sound_block", "P": "powerstone_dust"}, "result": "radio"},
+    {"type": "shaped", "pattern": ["R..", "RR.", "RRR"], "key": {"R": "rail"}, "result": "rail_gentle_slope", "count": 4}
+  ]
+})";
+
 const char* kUpdate180 = R"({
   // VoxelCraft 1.8.0 Concrete & Old World: concrete (dusty from sand and gravel, hardened in the
   // furnace), the gray wood of the Dappled Forest, and stairs and slabs of the new materials.
@@ -778,7 +804,8 @@ BiomeDef parseBiome(const Json& b, std::vector<std::string>* w) {
 }  // namespace
 
 const std::vector<std::pair<std::string, std::string>>& defaultPackFiles() {
-    static const std::vector<std::pair<std::string, std::string>> files = {
+    static const std::vector<std::pair<std::string, std::string>> files = [] {
+    std::vector<std::pair<std::string, std::string>> f = {
         {"manifest.json", kManifest},
         {"dimensions/overworld.json", kOverworld},
         {"dimensions/nether.json", kNether},
@@ -806,7 +833,11 @@ const std::vector<std::pair<std::string, std::string>>& defaultPackFiles() {
         {"recipes/update_1_7_2.json", kUpdate172},
         {"recipes/update_1_9_0.json", kUpdate190},
         {"recipes/update_2_1_0.json", kUpdate210},
+        {"recipes/update_2_2_0_preview.json", kFeatures220 ? kUpdate220 : R"({"recipes": []})"},
     };
+    if (kPreviewEdition) f.push_back({"recipes/update_2_3_0_preview.json", kUpdate230});  // 2.3.0 preview build 7: the subway
+    return f;
+    }();
     return files;
 }
 
