@@ -1,10 +1,26 @@
 # VoxelCraft – vydané verze (releases)
 
-Všechna APK VoxelCraftu od verze 1.0.0 po 2.0.0. Hra pro Android od Hoppy_Hopsy21 a VoxelSoftworks, vytvořená společně s Claude.
-Nejnovější je **2.0.0**. Starší verze jsou tu pro archiv; neoficiální fanouškovský projekt, bez obsahu od Mojangu.
+**[🇨🇿 Čeština](#cz)** · **[🇬🇧 English](#en)**
+
+<a id="cz"></a>
+Všechna APK VoxelCraftu. Hra pro Android od Hoppy_Hopsy21 a VoxelSoftworks, vytvořená společně s Claude.
+Nejnovější je **2.4.0**, náhled další verze je **2.5.0 Preview**. Neoficiální fanouškovský projekt, bez obsahu od Mojangu.
+
+> [!IMPORTANT]
+> Od verze **2.4.0** má hra nové ID (`cz.voxelsoftworks.voxelcraft`) a nový podpis. Nainstaluje se **vedle** starší verze.
+> Světy přeneseš přes *Export světa* ve staré aplikaci a *Import* v nové.
+> APK verzí 2.2.0 a 2.3.x tu nejsou: jejich sestavení se ztratilo; všechno z nich obsahuje 2.4.0.
+
+<a id="en"></a>
+All VoxelCraft APKs. Newest: **2.4.0**; the next version's preview: **2.5.0 Preview**. From 2.4.0 the app has a new id and a new
+signature, so it installs **next to** an older one (move worlds with *Export* / *Import*). The 2.2.0 and 2.3.x APKs were lost; 2.4.0 has all of them.
 
 | Verze | APK | Co přinesla |
 |---|---|---|
+| **2.5.0 Preview** | [VoxelCraft-2.5.0-preview-build2.apk](VoxelCraft-2.5.0-preview-build2.apk) | Preview: the subway network (four kinds of station, tunnels, cave-ins, floods), the automatic subway, the subway map, the lost underground city, the dead explorer's journals. Installs as its own app (VoxelCraft Preview). |
+| **2.4.0** | [VoxelCraft-2.4.0.apk](VoxelCraft-2.4.0.apk) | Subway with sliding doors and night lights, spinning wheels, stations (concrete track bed, platforms), lattice bridges, crossings, ruined stations, Bronze Halls, slab stairs in towers, villages that follow the land. |
+| Classic 0.0.3 | [VoxelCraft-Classic-0.0.3.apk](VoxelCraft-Classic-0.0.3.apk) | The old game as its own small app: the first textures, creative and survival, small inventory. |
+| 2.1.0 | [VoxelCraft-2.1.0.apk](VoxelCraft-2.1.0.apk) | Trains & Bronze: trains, 3D rails, level crossing, drill car, Bronze Update. |
 | 2.0.0 | [VoxelCraft-2.0.0.apk](VoxelCraft-2.0.0.apk) | Packs per world, Pre-Alpha look for every block, sounds by block type, new logo, 17-minute story trailer, Minecraft Bedrock world import (.mcworld), special blocks folder. |
 | 1.9.5 | [VoxelCraft-1.9.5.apk](VoxelCraft-1.9.5.apk) | Weather 2.0, temperature, Sky Guardian boss and wings, world types, honey and builder blocks. |
 | 1.9.0 | [VoxelCraft-1.9.0.apk](VoxelCraft-1.9.0.apk) | Celestial Reach and Seasons: celestium, fire and campfire, flowing liquids, How to craft?. |

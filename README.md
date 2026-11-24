@@ -7,15 +7,48 @@
 **Kostičková hra pro Android s vlastním enginem v C++**
 *Hoppy_Hopsy21 · VoxelSoftworks · vytvořeno společně s Claude*
 
-![Verze](https://img.shields.io/badge/verze-2.2.0-2ea44f?style=for-the-badge)
-![Preview](https://img.shields.io/badge/preview-2.3.0-orange?style=for-the-badge)
+![Verze](https://img.shields.io/badge/verze-2.4.0-2ea44f?style=for-the-badge)
+![Preview](https://img.shields.io/badge/preview-2.5.0-orange?style=for-the-badge)
 ![Android](https://img.shields.io/badge/Android-arm64-3DDC84?style=for-the-badge&logo=android&logoColor=white)
 ![C++](https://img.shields.io/badge/C%2B%2B-17-00599C?style=for-the-badge&logo=cplusplus&logoColor=white)
 ![OpenGL ES](https://img.shields.io/badge/OpenGL%20ES-3.0-5586A4?style=for-the-badge&logo=opengl&logoColor=white)
 
-[⬇️ Stáhnout APK 2.2.0](release/VoxelCraft-2.2.0.apk) · [📦 Všechny verze](release/) · [🎬 Trailer (17 min)](trailers/t12_2.0.0.mp4) · [📜 Historie](docs/HISTORIE.md)
+[⬇️ Stáhnout APK 2.4.0](release/VoxelCraft-2.4.0.apk) · [🧪 2.5.0 Preview](release/VoxelCraft-2.5.0-preview-build2.apk) · [📦 Všechny verze](release/) · [❓ FAQ](docs/FAQ.md) · [🎬 Trailer (17 min)](trailers/t12_2.0.0.mp4) · [📜 Historie](docs/HISTORIE.md)
+
+
+**[🇨🇿 Čeština](#cestina)** · **[🇬🇧 English](#english)**
 
 </div>
+
+<a id="english"></a>
+<details>
+<summary><b>🇬🇧 English</b> (click to open)</summary>
+
+**VoxelCraft** is a block-building game for Android with its own C++ engine, by Hoppy_Hopsy21 and VoxelSoftworks, made together with Claude.
+All code, textures, models and music are our own: **no textures, sounds, music or code from Mojang**, and it is not connected with Mojang or Microsoft.
+
+**⬇️ [VoxelCraft 2.4.0](release/VoxelCraft-2.4.0.apk)** · **🧪 [2.5.0 Preview](release/VoxelCraft-2.5.0-preview-build2.apk)** · **[📦 all versions](release/)** · **[❓ FAQ](docs/FAQ.md)**
+
+#### 🆕 2.4.0
+- 🚇 **Subway**: a fast train with sliding doors (they open on the platform side), lit at night; the driver can open the doors by hand
+- 🛞 **Wheels** that spin, bogies that steer into curves
+- 🚉 **Stations**: concrete track bed and platforms; 🌉 lattice girders for bridges; straight and diagonal **track crossings**
+- 🏚️ **Ruined stations** in the land, with a chest of railway parts and a marker on the map
+- 🏛️ **Bronze Halls**: a big underground bronze dungeon with a treasury
+- 🪜 slab stairs in the towers, villages that follow the land, clouds above the mountains
+
+#### 🧪 2.5.0 Preview – the underground
+- 🗺️ **The subway network**: east-west lines above, north-south below, tunnels between the stations
+- 🚏 four kinds of station: **stop**, **depot** with a workshop, **terminus** with a turning loop, two-level **interchange**
+- 🪨 cave-ins to dig through, 🌊 flooded tunnels, subway **tiles**, **station signs** you name yourself, **benches**
+- 🤖 the **automatic subway** (stops at every platform), 🗺️ the **subway map**
+- 🏙️ the **lost underground city** at the end of the line, and the **dead explorer's journals** in every kind of structure
+
+The rest of this page (history of every version, how to build) is in Czech.
+
+</details>
+
+<a id="cestina"></a>
 
 > [!NOTE]
 > Vlastní voxelový engine v C++, inspirovaný starými verzemi Pocket Edition. Kód je kompletně náš,
@@ -23,27 +56,29 @@
 
 ---
 
-## 🆕 v2.2.0 „Cornerstone and Frost“
+## 🆕 v2.4.0 – Metro a stanice
 
 | | Novinka | Co umí |
 |:-:|---|---|
-| 🪨 | **Cornerstone** | tři nové biomy: Pozlacený lom (terasy), Prizmatické pobřeží (solanky, rákosí) a Zarostlý monolit |
-| 🎨 | **Nové textury** | remaster dimenze Cornerstone a nové bloky biomů |
-| ❄️ | **Mráz** | praskající led, ledové cihly, sněhová vločka, suchý sníh, do kterého se propadneš; teplo a chlad |
-| ⛰️ | **Hlubší Overworld** | svět je o 64 bloků hlubší: hlubinný kámen, nová propastná skála, síně, láva a vzácné rudy |
-| 🛤️ | **Koleje v 8 směrech** | šikmé koleje, oblouky po 45°, mírné stoupání 1:4; kolej se při pokládání tvaruje sama |
-| 📢 | **Rozhlas** | blok, který přečte hlášení nahlas všem hráčům (vlastní hlas přes eSpeak NG, bez internetu) |
-| 🟫 | **Bronz** | stárne a rezaví, vosk ho chrání; bronzové schody, desky, dveře a poklopy |
-| 🛏️ | **Polštář** | sedák se dá položit na postel |
-| 🖥️ | **Vzhled** | zelené menu, panorama všech světů, nová tlačítka a písmo Tiny Caps, barvy textu |
-| ⌨️ | **Příkazy** | `/say`, `/age`, `/wax`, `/locate` |
+| 🚇 | **Metro** | rychlý vlak s posuvnými dveřmi; otevřou se na straně nástupiště, řidič je otevře i ručně; v noci svítí |
+| 🛞 | **Kola** | točí se a podvozky se natáčejí do oblouku |
+| 🚉 | **Stanice** | betonové kolejové lože a nástupiště |
+| 🌉 | **Mosty a křížení** | příhradový nosník, rovné i šikmé křížení kolejí |
+| 🏚️ | **Rozpadlé nádraží** | nová struktura s truhlou součástek, vidět na mapě (`/locate station`) |
+| 🏛️ | **Bronzové síně** | velký podzemní dungeon z bronzu s pokladnicí |
+| 🪜 | **Věže** | schody z půlbloků ve strážních věžích i věžích Crimson Void |
+| 🌍 | **Svět** | vesnice kopírují krajinu, mraky jsou nad horami |
 
-## 🔮 Připravujeme ve 2.3.0 (Preview)
-- 🔀 výhybky v oblouku a křížení kolejí
-- 🏗️ betonová kolej, nástupiště a příhradový most
-- 🚇 metro: nový vůz s posuvnými dveřmi
-- 🏛️ bronzový dungeon (Bronzové síně) s pastmi, spawnery a lootem
-- 👾 noví tvorové v Cornerstone
+## 🧪 2.5.0 Preview – Podzemí
+
+- 🗺️ **síť metra**: linky východ–západ nahoře, sever–jih dole, tunely mezi stanicemi
+- 🚏 **čtyři druhy stanic**: zastávka, depo s dílnou, konečná se smyčkou, přestupní uzel se dvěma patry
+- 🪨 **závaly** k prokopání, 🌊 **zatopené tunely**, **obklady**, **cedule stanic** (pojmenuješ si je) a **lavičky**
+- 🤖 **automatické metro** (staví u každého nástupiště), 🗺️ **mapa metra** s nalezenými stanicemi
+- 🏙️ **ztracené podzemní město** na konci linky (`/locate city`) a 📓 **deníky mrtvého průzkumníka** ve všech strukturách
+
+> [!TIP]
+> Otázky k vydání, číslování verzí, mincím (Voxel Bucks) a vzhledu najdeš ve **[❓ FAQ](docs/FAQ.md)**.
 
 > [!NOTE]
 > Rozhlas používá **eSpeak NG** (GPL-3.0-or-later), zabudovaný v `third_party/espeak-ng`.
