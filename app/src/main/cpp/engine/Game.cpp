@@ -40,7 +40,7 @@ namespace vc {
 namespace vc {
 
 namespace {
-const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.3.0 Preview build 6" : "VoxelCraft 2.2.0";
+const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.5.0 Preview build 1" : "VoxelCraft 2.4.0";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -1253,21 +1253,32 @@ void Game::presentsScreen(float dt) {
         y += 14;
     }
     y += 4;
-    static const char* const kNew[] = {
-        "Cornerstone: Pozlacený lom, Prizmatické pobřeží, Zarostlý monolit",
-        "Mráz: praskající led, suchý sníh, teplo a chlad",
-        "Hlubší Overworld: hlubinný kámen a propastná skála",
-        "Koleje v 8 směrech, oblouky po 45° a mírné stoupání",
-        "Rozhlas s hlasem, stárnoucí bronz a nové písmo",
+    // 2.4.0 in the normal edition; 2.5.0 in the preview.
+    static const char* const kNew240[] = {
+        "Metro: rychlý vlak s posuvnými dveřmi",
+        "Stanice: betonová kolej a nástupiště",
+        "Příhradové mosty a křížení kolejí",
+        "Rozpadlé nádraží: nová struktura s pokladem",
+        "Bronzové síně, kola, která se točí, a schody z půlbloků",
     };
-    static const char* const kNext[] = {
-        "Výhybky v oblouku a křížení kolejí",
-        "Betonová kolej, nástupiště a příhradový most",
-        "Metro: nový vůz s posuvnými dveřmi",
-        "Bronzové síně s pastmi a pokladem",
+    static const char* const kNext240[] = {
+        "Podzemní stanice a opuštěné metro",
+        "Deníky mrtvého průzkumníka ve strukturách",
         "Noví tvorové v Cornerstone",
     };
-    const int kNextCount = (int)(sizeof(kNext) / sizeof(kNext[0]));
+    static const char* const kNew250[] = {
+        "Podzemní stanice a opuštěné metro",
+        "Deníky mrtvého průzkumníka ve strukturách",
+    };
+    static const char* const kNext250[] = {
+        "Noví tvorové v Cornerstone",
+        "Rozhlas s lepším hlasem",
+    };
+    const char* const* kNew = kFeatures250 ? kNew250 : kNew240;
+    const int kNewCount = kFeatures250 ? 2 : 5;
+    const char* const* kNext = kFeatures250 ? kNext250 : kNext240;
+    const int kNextCount = kFeatures250 ? 2 : 3;
+    const char* nextTitle = kFeatures250 ? "PŘIPRAVUJEME VE 2.6.0" : "PŘIPRAVUJEME VE 2.5.0";
     // Long lines wrap at word boundaries (they used to be cut off). On a small screen the two lists
     // sit side by side.
     auto wrap = [&](const std::string& prefix, const char* source, float width) {
@@ -1292,10 +1303,10 @@ void Game::presentsScreen(float dt) {
     };
     const float room = H - 18 - y;
     float colW = std::min(W - 20, 520.0f);
-    const bool twoColumns = listHeight(kNew, 5, colW) + 5 + listHeight(kNext, kNextCount, colW) > room;
+    const bool twoColumns = listHeight(kNew, kNewCount, colW) + 5 + listHeight(kNext, kNextCount, colW) > room;
     if (twoColumns) colW = std::floor((std::min(W - 12, 760.0f) - 10) / 2);
     // Still too tall (a small screen): only the name of each point, the part before the colon.
-    const bool shortLines = twoColumns && std::max(listHeight(kNew, 5, colW), listHeight(kNext, kNextCount, colW)) > room;
+    const bool shortLines = twoColumns && std::max(listHeight(kNew, kNewCount, colW), listHeight(kNext, kNextCount, colW)) > room;
     const float x = std::floor(W / 2 - (twoColumns ? colW + 5 : colW / 2));
     auto drawList = [&](float lx, float ly, const char* title, const char* prefix, const char* const* items, int n, Color c, float start) {
         ui_.text(lx, ly, title, faded(gold, start), 1, false);
@@ -1311,9 +1322,9 @@ void Game::presentsScreen(float dt) {
         }
         return ly;
     };
-    const float afterNew = drawList(x, y, "CO JE V TÉTO VERZI", "+ ", kNew, 5, white, 0.9f);
-    if (twoColumns) drawList(x + colW + 10, y, "PŘIPRAVUJEME VE 2.3.0", "> ", kNext, kNextCount, dim, 2.0f);
-    else drawList(x, afterNew + 5, "PŘIPRAVUJEME VE 2.3.0", "> ", kNext, kNextCount, dim, 2.0f);
+    const float afterNew = drawList(x, y, "CO JE V TÉTO VERZI", "+ ", kNew, kNewCount, white, 0.9f);
+    if (twoColumns) drawList(x + colW + 10, y, nextTitle, "> ", kNext, kNextCount, dim, 2.0f);
+    else drawList(x, afterNew + 5, nextTitle, "> ", kNext, kNextCount, dim, 2.0f);
     if (t > 3.0f) ui_.textCentered(W / 2, H - 14, "Klepni pro pokračování", faded(green, 3.0f), 1);
     if (t > 0.8f && ui_.tapped(0, 0, W, H)) presentsDone_ = true;
 }
@@ -1815,7 +1826,7 @@ void Game::titleScreen() {
     // Build 6: what 2.1.0 brings, from a button under the menu.
     {
         const float nw = 150, ny = py + 4 * (bh + gap) + 18 + (now_ < toastUntil_ && !toast_.empty() ? 20 : 0);
-        if (ny + 20 < H - 12 && ui_.menuButton((W - nw) / 2, ny, nw, 20, "Novinky 2.2.0", St::Primary, Font::Star)) newsOpen_ = true;
+        if (ny + 20 < H - 12 && ui_.menuButton((W - nw) / 2, ny, nw, 20, kFeatures250 ? "Novinky 2.5.0" : "Novinky 2.4.0", St::Primary, Font::Star)) newsOpen_ = true;
     }
     if (newsOpen_) newsPanel();
     ui_.text(3, H - 10, kVersion, kText);
@@ -1834,22 +1845,28 @@ void Game::newsPanel() {
     const float pw = std::min(420.0f, W - 20), ph = std::min(260.0f, H - 20), px = (W - pw) / 2, py = (H - ph) / 2;
     ui_.roundPanel(px, py, pw, ph);
     const Color gold{1.0f, 0.82f, 0.43f, 1};
-    ui_.textCentered(W / 2, py + 8, "Co je nového ve VoxelCraftu 2.2.0", gold);
+    ui_.textCentered(W / 2, py + 8, kFeatures250 ? "Co je nového ve VoxelCraftu 2.5.0" : "Co je nového ve VoxelCraftu 2.4.0", gold);
     struct Row { const char* head; const char* text; };
-    static const Row rows[] = {
-        {"Cornerstone", "Tři nové biomy: Pozlacený lom, Prizmatické pobřeží a Zarostlý monolit"},
-        {"Nové textury", "Remaster dimenze Cornerstone a nové bloky biomů"},
-        {"Mráz", "Praskající led, ledové cihly, sněhová vločka, suchý sníh; teplo a chlad"},
-        {"Hloubka", "Overworld je o 64 bloků hlubší: hlubinný kámen, propastná skála, jeskyně"},
-        {"Koleje", "Šikmé koleje, oblouky po 45°, mírné stoupání; kolej se tvaruje sama"},
-        {"Rozhlas", "Blok, který přečte hlášení nahlas všem hráčům"},
-        {"Bronz", "Bronz stárne a rezaví, vosk ho chrání; schody, desky, dveře a poklopy"},
-        {"Vzhled", "Zelené menu, panorama všech světů, nová tlačítka a písmo Tiny Caps"},
-        {"Příkazy", "/say, /age, /wax a /locate; barvy a styly textu"},
+    static const Row rows250[] = {
+        {"Podzemí", "Podzemní stanice metra a velké opuštěné metro s tunely"},
+        {"Deníky", "V každé struktuře najdeš deník mrtvého průzkumníka; dohromady vyprávějí jeho příběh"},
+        {"Metro", "Dveře se otevírají na straně nástupiště, řidič je může otevřít i ručně"},
     };
+    static const Row rows240[] = {
+        {"Metro", "Rychlý vlak s posuvnými dveřmi, v noci svítí; kola se točí a podvozky zatáčí"},
+        {"Stanice", "Betonové kolejové lože a nástupiště; u nástupiště metro otevře dveře"},
+        {"Mosty", "Příhradový nosník na mosty, rovné i šikmé křížení kolejí"},
+        {"Nádraží", "Rozpadlé nádraží v krajině s truhlou součástek; je vidět na mapě"},
+        {"Bronzové síně", "Velký podzemní dungeon z bronzu s pokladnicí uprostřed"},
+        {"Věže", "Schody z půlbloků ve strážních věžích i věžích Crimson Void"},
+        {"Svět", "Vesnice kopírují krajinu, mraky jsou nad horami"},
+    };
+    const Row* rows = kFeatures250 ? rows250 : rows240;
+    const int rowCount = kFeatures250 ? 3 : 7;
     float y = py + 24;
     const float tw = pw - 114;
-    for (const Row& r : rows) {
+    for (int ri = 0; ri < rowCount; ++ri) {
+        const Row& r = rows[ri];
         ui_.text(px + 10, y, r.head, kTextBright, 1, false, 90);
         // Wrap the description onto as many lines as it needs.
         std::string line, word;

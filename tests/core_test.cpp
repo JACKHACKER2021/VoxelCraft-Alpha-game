@@ -17,6 +17,7 @@
 #include <vector>
 
 #include "engine/Blocks.h"
+#include "engine/Trains.h"
 #include "engine/Crafting.h"
 #include "engine/GenConfig.h"
 #include "engine/Json.h"
@@ -4275,10 +4276,49 @@ static int testStorage157() {
     return 0;
 }
 
+// 2.4.0: crossings pass trains straight on; the subway opens its doors on the platform's side only.
+static int testStations240() {
+    int out = -1;
+    CHECK(TrainSystem::nextSide(RAIL_CROSS, 0, out) && out == 4 && TrainSystem::nextSide(RAIL_CROSS, 6, out) && out == 2);
+    CHECK(!TrainSystem::nextSide(RAIL_CROSS, 1, out));
+    CHECK(TrainSystem::nextSide(RAIL_CROSS_DIAG, 1, out) && out == 5 && TrainSystem::nextSide(RAIL_CROSS_DIAG, 7, out) && out == 3);
+    CHECK(!TrainSystem::nextSide(RAIL_CROSS_DIAG, 0, out));
+    CHECK(isRail(RAIL_CROSS) && isRail(RAIL_CROSS_DIAG) && isNewBlock(PLATFORM) && !isOpaque(LATTICE) && isChest(LOOT_CHEST_STATION));
+    GenConfig flat = GenConfig::defaults();
+    flat.flat = true;
+    World w(9, Dimension::Overworld, flat);
+    w.ensureChunksAround(0, 0, 3, 100);
+    const int y = 4, x = 8;
+    for (int z = -40; z <= 8; ++z) w.setBlock(x, y, z, z == -20 ? RAIL_CROSS : RAIL_NS);
+    for (int z = -16; z <= -4; ++z) w.setBlock(x - 2, y, z, PLATFORM);  // the platform on the west side only
+    TrainSystem ts;
+    CHECK(ts.place(w, 0, CarKind::SubwayLocomotive, x, y, -10, 0));
+    Vec3 pos(0, 100, 0);
+    float yaw = 0;
+    for (int i = 0; i < 60; ++i) ts.update(w, 0, 1 / 30.0f, pos, yaw, false);
+    const Train& t = ts.trains()[0];
+    CHECK(t.doors > 0.9f);
+    CHECK(t.doorSides == 1 || t.doorSides == 2);  // one side only
+    // Away from any platform the doors stay shut unless the driver opens them.
+    TrainSystem ts2;
+    CHECK(ts2.place(w, 0, CarKind::SubwayLocomotive, x, y, -32, 0));
+    for (int i = 0; i < 60; ++i) ts2.update(w, 0, 1 / 30.0f, pos, yaw, false);
+    CHECK(ts2.trains()[0].doors == 0);
+    ts2.trains()[0].doorsWanted = true;
+    for (int i = 0; i < 60; ++i) ts2.update(w, 0, 1 / 30.0f, pos, yaw, false);
+    CHECK(ts2.trains()[0].doors > 0.9f && ts2.trains()[0].doorSides == 3);
+    // A train runs straight through the crossing.
+    ts2.trains()[0].doorsWanted = false;
+    ts2.trains()[0].throttle = 0.5f;
+    for (int i = 0; i < 240; ++i) ts2.update(w, 0, 1 / 30.0f, pos, yaw, false);
+    CHECK(std::fabs(ts2.trains()[0].cars[0].pos.x - (x + 0.5f)) < 0.05f);
+    return 0;
+}
+
 int main() {
     if (testOverworld() || testNether() || testPortal() || testTexturePacks() || testFontAndItems() || testSaves() ||
         testSurvivalSession() || testMenuFlow() || testCrafting() || testWorkbenchInSession() ||
-        testJsonAndPacks() || testSkinsStoreAudio() || testThirdPersonCamera() || testWaterEscape() || testLeavesMesh() || testPlants() || testDigParticles() || testDPad() || testStructures() || testInventoryAndHand() || testMetalsAndArmor() || testDeveloperAccess() || testEnglishEverywhere() || testMusic() || testDoorsChests() || testNewBiomes() || testWorldStructures() || testBoat() || testAchievements() || testLanGame() || testCommands() || testUpdate11() || testUpdate12() || testUpdate13() || testUpdate14() || testUpdate15() || testExperiments151() || testShaders155() || testPhysics157() || testWorld157() || testWorld159() || testCaves160() || testStorage157() || testSeasons190())
+        testJsonAndPacks() || testSkinsStoreAudio() || testThirdPersonCamera() || testWaterEscape() || testLeavesMesh() || testPlants() || testDigParticles() || testDPad() || testStructures() || testInventoryAndHand() || testMetalsAndArmor() || testDeveloperAccess() || testEnglishEverywhere() || testMusic() || testDoorsChests() || testNewBiomes() || testWorldStructures() || testBoat() || testAchievements() || testLanGame() || testCommands() || testUpdate11() || testUpdate12() || testUpdate13() || testUpdate14() || testUpdate15() || testExperiments151() || testShaders155() || testPhysics157() || testWorld157() || testWorld159() || testCaves160() || testStorage157() || testSeasons190() || testStations240())
         return 1;
     std::printf("all tests passed\n");
     return 0;

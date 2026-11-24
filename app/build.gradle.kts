@@ -11,8 +11,8 @@ android {
         applicationId = "cz.voxelcraft"
         minSdk = 30
         targetSdk = 36
-        versionCode = 31
-        versionName = "2.2.0"
+        versionCode = 33
+        versionName = "2.4.0"
     }
 
     externalNativeBuild {
