@@ -50,6 +50,10 @@ struct Train {
     bool brake = false;
     float drillTimer = 0;  // build 5: time until the drill cuts the next block of tunnel
     float boosted = 0;   // seconds the extra speed of a booster lasts
+    bool autoMode = false;   // 2.5.0: drives itself: stops at every platform, turns back at the end of the line
+    float autoDir = 1;       // the way it goes (1 forward, -1 back)
+    float dwell = 0;         // seconds left standing at a stop
+    float lastStopX = 1e9f, lastStopZ = 1e9f;  // where it last stopped (not the same platform twice)
     bool doorsWanted = false;  // 2.4.0: the driver opened the doors by hand (shut again on throttle)
     int doorSides = 3;   // 2.4.0: which sides open: 1 left (-x), 2 right (+x); at a station only the platform's side
     float doors = 0;     // 2.3.0: the subway's sliding doors, 0 shut .. 1 open (they open when it stands)

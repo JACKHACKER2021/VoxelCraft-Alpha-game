@@ -128,7 +128,8 @@ private:
         Book,                  // 1.5.7: book and quill
         Cutter,                // 1.7.2 build 2: the stonecutter
         Encyclopedia,          // 1.7.2 build 3
-        HowToCraft             // 1.9.0 build 3: every recipe, how and where to make it
+        HowToCraft,            // 1.9.0 build 3: every recipe, how and where to make it
+        MetroMap               // 2.5.0: the map of the subway
     };
 
     // A slot in any open container, so items can be moved between them.
@@ -218,6 +219,7 @@ private:
     void creditsScreen();       // 1.5.7
     void trailersScreen();      // 1.5.7
     void worldMapScreen();
+    void metroMapScreen();  // 2.5.0
     void chatScreen();
     void bookScreen();
     int bookId_ = 0, bookPage_ = 0;

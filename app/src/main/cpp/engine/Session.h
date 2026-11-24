@@ -140,6 +140,7 @@ public:
     Book& book(int id) { return books_[id]; }
     bool bookSigned(int id) const;
     void signBook(int id, const std::string& title, const std::string& author);
+    bool wantsMetroMap = false;  // 2.5.0: the subway map was opened
     int wantsDocument = -1;      // 1.5.0: an old document was read: its page (0..7) for the reading screen
     void readDocument(int page);
     FurnaceKey openChest;
@@ -324,7 +325,7 @@ private:
     struct TrainButtons {
         float x = 0, y = 0, w = 0, h = 0, gap = 0;
         int count = 0;
-        const char* labels[5] = {};
+        const char* labels[6] = {};
     };
     TrainButtons trainButtons() const;
     bool trainButtonTap(float x, float y);
@@ -389,7 +390,7 @@ private:
     void saveBlockTexts() const;
     void loadBlockTexts();
 public:
-    int wantsBlockEditor = 0;  // 1 command block, 2 structure block, 3 Rozhlas (Game opens the editor)
+    int wantsBlockEditor = 0;  // 1 command block, 2 structure block, 3 Rozhlas, 4 station sign (Game opens the editor)
     std::function<void(const std::string& text)> onRadio;  // 2.2.0: a Rozhlas reads out its text
     FurnaceKey blockEditorKey;
     std::string blockText(const FurnaceKey& key) const;

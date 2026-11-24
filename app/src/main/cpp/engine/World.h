@@ -227,6 +227,7 @@ public:
     MetroStation metroStation(bool row, int line, int region) const;
     ItemId metroLineBlock(bool row, int line, int a, int b, int y) const;
     bool nearestMetroStation(int x, int z, int& outX, int& outZ, int& kind) const;  // its entrance shaft
+    std::string metroStationName(int x, int z) const;  // the name of the station there (made up from the place)
     void stampMetro(Chunk& c);
 private:
     GenConfig config_;

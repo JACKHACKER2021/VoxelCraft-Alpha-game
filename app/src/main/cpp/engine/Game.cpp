@@ -1024,6 +1024,10 @@ void Game::frame(double time) {
                 tradeProfession_ = (int)session_->mobs().mobs()[tradeMob_].profession;
                 setScreen(Screen::Trade);
             }
+            else if (session_->wantsMetroMap) {
+                session_->wantsMetroMap = false;
+                setScreen(Screen::MetroMap);
+            }
             else if (session_->wantsDocument >= 0) {
                 documentPage_ = session_->wantsDocument;
                 setScreen(Screen::Document);
@@ -1035,7 +1039,9 @@ void Game::frame(double time) {
             if (session_->wantsBlockEditor && onTextPrompt) {
                 // 1.9.5 build 3: the editor of a command or structure block.
  const bool command = session_->wantsBlockEditor == 1;
-                if (session_->wantsBlockEditor == 3)
+                if (session_->wantsBlockEditor == 4)
+                    onTextPrompt(PromptBlockText, tr("Jméno stanice"), session_->blockText(session_->blockEditorKey));
+                else if (session_->wantsBlockEditor == 3)
                     onTextPrompt(PromptBlockText, tr("Rozhlas: text hlášení (přečte ho powerstone nebo klepnutí se skrčením)"),
                                  session_->blockText(session_->blockEditorKey));
                 else
@@ -1150,6 +1156,7 @@ void Game::frame(double time) {
         case Screen::Credits: creditsScreen(); break;
         case Screen::Trailers: trailersScreen(); break;
         case Screen::WorldMap: worldMapScreen(); break;
+        case Screen::MetroMap: metroMapScreen(); break;
         case Screen::Chat: chatScreen(); break;
         case Screen::Book: bookScreen(); break;
         case Screen::Cutter: cutterScreen(); break;
@@ -1951,6 +1958,60 @@ void Game::creditsScreen() {
     if (now_ - creditsStart_ > (H + total) / 18) setScreen(Screen::Trailers);
     if (ui_.button(W - 70, H - 26, 64, 20, "Přeskočit", true, true)) setScreen(Screen::Trailers);
     if (ui_.button(6, H - 26, 64, 20, "Zpět")) setScreen(Screen::Title);
+}
+
+void Game::metroMapScreen() {
+    // 2.5.0: the subway as a diagram: the east-west lines red, the north-south ones blue, the stations
+    // as dots (named once found), the player in the middle.
+    const float W = ui_.width(), H = ui_.height();
+    ui_.fill(0, 0, W, H, {0.05f, 0.06f, 0.09f, 0.94f});
+    const float pw = std::min(W - 16, 460.0f), ph = std::min(H - 16, 250.0f);
+    const float px = std::floor((W - pw) / 2), py = std::floor((H - ph) / 2);
+    ui_.fill(px, py, pw, ph, {0.93f, 0.91f, 0.85f, 1});
+    ui_.textCentered(px + pw / 2, py + 6, "Mapa metra", {0.15f, 0.15f, 0.2f, 1});
+    Session& s = *session_;
+    const World& w = s.currentWorld();
+    const Vec3 me = s.player().pos;
+    const int R = World::kMetroRegion;
+    const float scale = std::min(pw, ph - 30) / (5.5f * R);  // about two and a half regions each way
+    const float cx = px + pw / 2, cy = py + 18 + (ph - 30) / 2;
+    auto toX = [&](float x) { return cx + (x - me.x) * scale; };
+    auto toY = [&](float z) { return cy + (z - me.z) * scale; };
+    auto inside = [&](float x, float y) { return x > px + 2 && x < px + pw - 2 && y > py + 16 && y < py + ph - 14; };
+    const auto& visited = s.stats().metroVisited;
+    for (int pass = 0; pass < 2 && w.dimension() == Dimension::Overworld; ++pass) {
+        const bool row = pass == 0;
+        const Color lineColor = row ? Color{0.85f, 0.2f, 0.15f, 1} : Color{0.15f, 0.4f, 0.85f, 1};
+        const int along0 = (int)(row ? me.x : me.z), across0 = (int)(row ? me.z : me.x);
+        for (int line = floorDiv(across0, R) - 3; line <= floorDiv(across0, R) + 3; ++line)
+            for (int region = floorDiv(along0, R) - 3; region <= floorDiv(along0, R) + 3; ++region) {
+                const World::MetroStation st = w.metroStation(row, line, region);
+                if (!st.ok) continue;
+                const World::MetroStation next = w.metroStation(row, line, region + 1);
+                auto pt = [&](int along, int across, float& x, float& y) { x = toX(row ? along : across), y = toY(row ? across : along); };
+                float x0, y0;
+                pt(st.centre, st.across, x0, y0);
+                if (next.ok && !st.loopEast) {  // the stretch to the next station
+                    float x1, y1;
+                    pt(next.centre, next.across, x1, y1);
+                    const float lx = std::max(std::min(x0, x1), px + 2), rx = std::min(std::max(x0, x1), px + pw - 2);
+                    const float ty = std::max(std::min(y0, y1), py + 16), by = std::min(std::max(y0, y1), py + ph - 14);
+                    if (rx > lx || by > ty) ui_.fill(row ? lx : x0 - 1.5f, row ? y0 - 1.5f : ty, row ? rx - lx : 3, row ? 3 : by - ty, lineColor);
+                }
+                if (!inside(x0, y0)) continue;
+                const int ex = row ? st.centre - st.length / 2 + 6 : st.across - 11, ez = row ? st.across - 11 : st.centre - st.length / 2 + 6;
+                bool found = false;
+                for (const auto& v : visited) found = found || (v.first == ex && v.second == ez);
+                const float r = st.kind == World::MetroStation::Hub ? 4.5f : 3.0f;
+                ui_.fill(x0 - r - 1, y0 - r - 1, 2 * r + 2, 2 * r + 2, {0.1f, 0.1f, 0.12f, 1});
+                ui_.fill(x0 - r, y0 - r, 2 * r, 2 * r, found ? Color{1, 1, 1, 1} : Color{0.6f, 0.6f, 0.6f, 1});
+                if (found) ui_.text(x0 + r + 2, y0 - 4, w.metroStationName(ex, ez), {0.1f, 0.1f, 0.15f, 1}, 1, false);
+            }
+    }
+    // The player.
+    ui_.fill(cx - 2.5f, cy - 2.5f, 5, 5, {1, 0.75f, 0.1f, 1});
+    ui_.text(px + 8, py + ph - 12, trf("Nalezené stanice: {0}", {std::to_string(visited.size())}), {0.2f, 0.2f, 0.25f, 1}, 1, false);
+    if (ui_.button(px + pw - 70, py + ph - 24, 64, 20, "Zavřít", true, true)) setScreen(Screen::Playing);
 }
 
 void Game::worldMapScreen() {

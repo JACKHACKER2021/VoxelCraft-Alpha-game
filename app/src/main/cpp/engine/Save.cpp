@@ -129,6 +129,10 @@ bool saveLevel(const WorldInfo& info, const PlayerState& p) {
         if (p.hasShowcase) o << "\nshowcase=" << p.showcaseX << ":" << p.showcaseY << ":" << p.showcaseZ;
         if (p.documentsRead) o << "\npages=" << p.documentsRead;
         if (p.journalsRead) o << "\njournals=" << p.journalsRead;
+        if (!p.metroVisited.empty()) {
+            o << "\nmetro=";
+            for (size_t i = 0; i < p.metroVisited.size(); ++i) o << (i ? "," : "") << p.metroVisited[i].first << ":" << p.metroVisited[i].second;
+        }
         o << "\narmor=";
         for (int i = 0; i < 4; ++i) o << (i ? "," : "") << (int)p.armor[i].id << ":" << (int)p.armor[i].count << ":" << p.armor[i].damage;
         if (!p.offhand.empty()) o << "\noffhand=" << (int)p.offhand.id << ":" << (int)p.offhand.count << ":" << p.offhand.damage;
@@ -186,6 +190,14 @@ bool loadLevel(const std::string& folder, WorldInfo& info, PlayerState& p) {
     p.bossesDefeated = std::max(0, (int)num(kv, "bosses", 0));
     p.documentsRead = std::clamp((int)num(kv, "pages", 0), 0, 255);
     p.journalsRead = std::clamp((int)num(kv, "journals", 0), 0, 4095);
+    if (kv.count("metro")) {
+        std::istringstream in(kv["metro"]);
+        std::string item;
+        while (std::getline(in, item, ',')) {
+            int a, b;
+            if (std::sscanf(item.c_str(), "%d:%d", &a, &b) == 2 && p.metroVisited.size() < 512) p.metroVisited.emplace_back(a, b);
+        }
+    }
     if (kv.count("showcase") && std::sscanf(kv["showcase"].c_str(), "%d:%d:%d", &p.showcaseX, &p.showcaseY, &p.showcaseZ) == 3)
         p.hasShowcase = true;
     std::istringstream arenas(kv["arenas"]);

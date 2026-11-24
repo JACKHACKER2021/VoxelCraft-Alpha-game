@@ -839,6 +839,15 @@ void World::stampMetro(Chunk& c) {
     }
 }
 
+std::string World::metroStationName(int x, int z) const {
+    // A made-up but steady name: the region of the place picks two words.
+    static const char* const kFirst[] = {"Staré", "Horní", "Dolní", "Nové", "Zlaté", "Hluboké", "Tiché", "Kamenné", "Bronzové", "Mlžné", "Lesní", "Severní"};
+    static const char* const kSecond[] = {"Údolí", "Náměstí", "Pole", "Nádraží", "Jezero", "Skály", "Město", "Křižovatka", "Brány", "Doly", "Mosty", "Louky"};
+    const int R = kMetroRegion;
+    const uint32_t h = hash3(floorDiv(x, R), 2510, floorDiv(z, R), seed_ ^ 0x3E93u);
+    return std::string(kFirst[h % 12]) + " " + kSecond[(h >> 8) % 12];
+}
+
 bool World::nearestMetroStation(int x, int z, int& outX, int& outZ, int& kind) const {
     long best = -1;
     for (int pass = 0; pass < 2; ++pass) {

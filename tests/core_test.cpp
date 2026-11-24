@@ -4312,6 +4312,25 @@ static int testStations240() {
     ts2.trains()[0].throttle = 0.5f;
     for (int i = 0; i < 240; ++i) ts2.update(w, 0, 1 / 30.0f, pos, yaw, false);
     CHECK(std::fabs(ts2.trains()[0].cars[0].pos.x - (x + 0.5f)) < 0.05f);
+    if (kFeatures250) {
+        // 2.5.0: the automatic subway stops at a platform, stands with its doors open, then goes on.
+        World w2(11, Dimension::Overworld, flat);
+        w2.ensureChunksAround(0, -6, 7, 1000);
+        for (int z = -200; z <= 8; ++z) w2.setBlock(x, y, z, RAIL_NS);
+        for (int z = -110; z <= -90; ++z) w2.setBlock(x + 2, y, z, PLATFORM);
+        TrainSystem ts3;
+        CHECK(ts3.place(w2, 0, CarKind::SubwayLocomotive, x, y, -10, 0));
+        ts3.trains()[0].autoMode = true;
+        bool stoppedThere = false, wentOn = false;
+        for (int i = 0; i < 30 * 40; ++i) {
+            ts3.update(w2, 0, 1 / 30.0f, pos, yaw, false);
+            const Train& t3 = ts3.trains()[0];
+            const float cz = t3.cars[0].pos.z;
+            if (std::fabs(t3.speed) < 0.01f && t3.doors > 0.9f && cz < -85 && cz > -115) stoppedThere = true;
+            if (stoppedThere && cz < -125) wentOn = true;
+        }
+        CHECK(stoppedThere && wentOn);
+    }
     return 0;
 }
 

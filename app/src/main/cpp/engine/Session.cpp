@@ -1320,6 +1320,7 @@ std::string Session::setBlockText(const FurnaceKey& key, const std::string& text
     blockTexts_[key] = text;
     World& w = worldAt(key.dim);
     if (w.getBlock(key.x, key.y, key.z) == RADIO) return trf("Rozhlas nastaven: {0}", {text});
+    if (w.getBlock(key.x, key.y, key.z) == STATION_SIGN) return trf("Stanice pojmenována: {0}", {text});
     if (w.getBlock(key.x, key.y, key.z) != STRUCTURE_BLOCK) return trf("Příkaz uložen: {0}", {text});
     std::istringstream in(text);
     std::string mode, name;
@@ -2802,6 +2803,21 @@ void Session::useItem(const RayHit& hit) {
             hand_.use();
             return;
         }
+        if (block == STATION_SIGN) {
+            // 2.5.0: a station's name board: a tap reads the name, a sneaking tap writes a new one.
+            const FurnaceKey key{dimIndex(), hit.x, hit.y, hit.z};
+            if (player_.sneaking) {
+                wantsBlockEditor = 4;
+                blockEditorKey = key;
+            } else if (onMessage) {
+                std::string name = blockText(key);
+                if (name.empty()) name = world_->metroStationName(hit.x, hit.z);
+                onMessage(trf("Stanice: {0}", {name}));
+            }
+            sound(Sound::Click);
+            hand_.use();
+            return;
+        }
         if (block == RADIO) {
             // 2.2.0: Rozhlas. A tap writes its announcement; a sneaking tap reads it out now.
             const FurnaceKey key{dimIndex(), hit.x, hit.y, hit.z};
@@ -2883,6 +2899,12 @@ void Session::useItem(const RayHit& hit) {
         }
     }
     if (held.empty()) return;
+    if (held.id == METRO_MAP) {  // 2.5.0: the subway map
+        wantsMetroMap = true;
+        hand_.use();
+        sound(Sound::Page);
+        return;
+    }
     if (isJournal(held.id)) {  // 2.5.0: the dead explorer's journal
         wantsDocument = 100 + (held.id - JOURNAL);
         state_.journalsRead |= 1 << (held.id - JOURNAL);
@@ -3570,6 +3592,19 @@ void Session::travelThroughPortal() {
 // ---------------------------------------------------------------- frame
 
 void Session::update(float dt, double time, float guiW, float guiH, const Settings& settings) {
+    if (kFeatures250 && world_ == &overworld_ && (int)(time * 2) != (int)((time - dt) * 2)) {
+        // 2.5.0: a subway station the player stands in (deep down near its entrance) counts as found.
+        int ex, ez, kind;
+        if (player_.pos.y < World::kMetroY + 12 && overworld_.nearestMetroStation((int)player_.pos.x, (int)player_.pos.z, ex, ez, kind) &&
+            std::hypot(ex - player_.pos.x, ez - player_.pos.z) < 50) {
+            bool known = false;
+            for (const auto& v : state_.metroVisited) known = known || (v.first == ex && v.second == ez);
+            if (!known) {
+                state_.metroVisited.emplace_back(ex, ez);
+                if (onMessage) onMessage(trf("Nová stanice metra: {0}", {overworld_.metroStationName(ex, ez)}));
+            }
+        }
+    }
     guiW_ = guiW;
     guiH_ = guiH;
     fov_ = settings.fov;
@@ -4451,6 +4486,7 @@ Session::TrainButtons Session::trainButtons() const {
             b.labels[b.count++] = "Plyn -";
             b.labels[b.count++] = "Brzda";
             if (isSubwayCar(trains_.trains()[(size_t)trainSeatTrain_].cars[(size_t)trainSeatCar_].kind)) b.labels[b.count++] = "Dveře";
+            if (kFeatures250 && isSubwayCar(trains_.trains()[(size_t)trainSeatTrain_].cars[(size_t)trainSeatCar_].kind)) b.labels[b.count++] = "Automat";
         }
         b.labels[b.count++] = "Vystoupit";
     } else {
@@ -4500,6 +4536,13 @@ bool Session::trainButtonTap(float x, float y) {
             if (what == "Plyn +") t.throttle = std::min(1.0f, t.throttle + 0.25f), t.brake = false;
             if (what == "Plyn -") t.throttle = std::max(-0.5f, t.throttle - 0.25f), t.brake = false;
             if (what == "Brzda") t.brake = !t.brake, t.throttle = 0;
+            if (what == "Automat") {  // 2.5.0: the automatic subway
+                t.autoMode = !t.autoMode;
+                t.autoDir = t.throttle < 0 ? -1.0f : 1.0f;
+                t.dwell = 0, t.lastStopX = t.lastStopZ = 1e9f;
+                if (!t.autoMode) t.throttle = 0;
+                if (onMessage) onMessage(tr(t.autoMode ? "Automatické metro zapnuto: zastaví u každého nástupiště" : "Automatické metro vypnuto"));
+            }
             if (what == "Dveře") {  // 2.4.0: the driver opens and shuts the doors by hand (when standing)
                 t.doorsWanted = !t.doorsWanted && std::fabs(t.speed) < 0.05f;
                 if (t.doorsWanted) t.throttle = 0, t.doors = 0;  // reopen on both sides
@@ -4541,7 +4584,8 @@ void Session::drawHud(Ui& ui) const {
         if (trainSeatTrain_ >= 0 && b.count > 1) {
             const Train& t = trains_.trains()[(size_t)trainSeatTrain_];
             ui.textCentered(b.x + b.w / 2 - 20, b.y + b.count * (b.h + b.gap) + 2,
-                            trf("{0} km/h  ·  plyn {1} %", {std::to_string((int)std::lround(std::fabs(t.speed) * 3.6f)),
+                            t.autoMode ? trf("{0} km/h  ·  automat", {std::to_string((int)std::lround(std::fabs(t.speed) * 3.6f))})
+                                       : trf("{0} km/h  ·  plyn {1} %", {std::to_string((int)std::lround(std::fabs(t.speed) * 3.6f)),
                                                             std::to_string((int)std::lround(t.throttle * 100))}),
                             Color{1, 1, 0.8f, 1});
         }

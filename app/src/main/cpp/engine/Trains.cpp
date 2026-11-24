@@ -430,6 +430,35 @@ void TrainSystem::update(const World& world, int dim, float dt, Vec3& playerPos,
             tr.doors = 0;
         }
         const float top = subway ? kSubwaySpeed : kMaxSpeed, accel = subway ? kSubwayAccel : kAccel;
+        if (tr.autoMode && hasEngine) {
+            // 2.5.0: the automatic subway. A platform close ahead: slow down; beside the train: stop,
+            // stand a while (the doors open by themselves), then go on.
+            const TrainCar& lead = tr.autoDir > 0 ? tr.cars.front() : tr.cars.back();
+            auto platformAt = [&](float px, float pz, int reach) {
+                const int bx = (int)std::floor(px), bz = (int)std::floor(pz), by = (int)std::floor(lead.pos.y);
+                for (int dx = -reach; dx <= reach; ++dx)
+                    for (int dz = -reach; dz <= reach; ++dz)
+                        for (int dy = -1; dy <= 1; ++dy)
+                            if (world.getBlock(bx + dx, by + dy, bz + dz) == PLATFORM) return true;
+                return false;
+            };
+            const float fx = -std::sin(lead.yaw) * tr.autoDir, fz = std::cos(lead.yaw) * tr.autoDir;
+            const float sinceStop = std::hypot(lead.pos.x - tr.lastStopX, lead.pos.z - tr.lastStopZ);
+            if (tr.dwell > 0) {
+                tr.dwell -= dt;
+                tr.throttle = 0, tr.brake = false;
+                if (tr.dwell <= 0) tr.throttle = 0.6f * tr.autoDir, tr.lastStopX = lead.pos.x, tr.lastStopZ = lead.pos.z;
+            } else if (sinceStop > 30 && platformAt(lead.pos.x - fx * carHalf(lead.kind) * kScale, lead.pos.z - fz * carHalf(lead.kind) * kScale, 4)) {
+                // The whole first car is beside the platform: stop.
+                tr.throttle = 0, tr.brake = true;
+                if (std::fabs(tr.speed) < 0.05f) tr.brake = false, tr.dwell = 7.0f, tr.lastStopX = lead.pos.x, tr.lastStopZ = lead.pos.z;
+            } else {
+                bool ahead = false;
+                for (int k = 6; k <= 36 && !ahead && sinceStop > 30; k += 6) ahead = platformAt(lead.pos.x + fx * k, lead.pos.z + fz * k, 4);
+                tr.brake = false;
+                tr.throttle = (ahead ? 0.15f : 0.6f) * tr.autoDir;
+            }
+        }
         const float target = hasEngine && tr.doors <= 0.0f ? tr.throttle * top : 0;
         if (tr.brake) {
             const float s = std::max(0.0f, std::fabs(tr.speed) - kBrake * dt);
@@ -501,6 +530,7 @@ void TrainSystem::update(const World& world, int dim, float dt, Vec3& playerPos,
             }
         } else if (!ok) {
             tr.speed = 0, tr.throttle = 0;  // the end of the track: the train stops
+            if (tr.autoMode) tr.autoDir = -tr.autoDir, tr.dwell = 5.0f;  // 2.5.0: and an automatic one turns back
         }
         for (TrainCar& c : tr.cars) {
             refresh(c), pose(world, c);
