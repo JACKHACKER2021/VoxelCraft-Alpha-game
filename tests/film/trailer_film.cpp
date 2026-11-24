@@ -7007,3 +7007,33 @@ SHOT(z02_city) {
     view("z02_square", Vec3(ox + 54.5f, fy + 4, oz + 61.5f), Vec3(ox + 54.5f, fy + 3, oz + 54.5f));
     view("z02_ramp", Vec3(rampX - 3.5f, World::kMetroY + 2.0f, oz + World::kCitySize / 2 + 0.5f), Vec3(rampX + 30.5f, (float)World::kMetroY - 6, oz + World::kCitySize / 2 + 0.5f));
 }
+
+// 2.5.0 preview: rusted train wrecks in the land, and every structure on the map.
+SHOT(z03_wrecks) {
+    Director d(out, "z03");
+    d.openWorld("Wrecks", 961, GameMode::Creative);
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    p.flying = true;
+    int shots = 0;
+    for (const World::FoundStructure& f : w.structuresNear((int)p.pos.x, (int)p.pos.z, 1200)) {
+        if (f.type != (int)WorldStructure::TrainWreck || shots >= 3) continue;
+        w.ensureChunksAround(floorDiv(f.x, 16), floorDiv(f.z, 16), 2, 100000);
+        const int y = w.surfaceHeight(f.x, f.z);
+        std::printf("wreck at %d %d\n", f.x, f.z);
+        d.settings().hideGui = true;
+        p.pos = Vec3(f.x + 9.5f, y + 5.0f, f.z + 8.5f);
+        d.idle(30);
+        d.lookNow(Vec3(f.x + 0.5f, y + 1.0f, f.z + 0.5f));
+        const std::string name = "z03_wreck" + std::to_string(++shots);
+        d.shot(name);
+        d.seconds(0.2f, [&](float) { d.lookNow(Vec3(f.x + 0.5f, y + 1.0f, f.z + 0.5f)); });
+    }
+    // The minimap with the marks of the structures around.
+    d.settings().hideGui = false;
+    p.pos = Vec3(0.5f, w.surfaceHeight(0, 0) + 30.0f, 0.5f);
+    d.idle(60);
+    d.shot("z03_map");
+    d.seconds(0.3f);
+}

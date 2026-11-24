@@ -233,6 +233,14 @@ public:
     // the abyssal rock with streets, houses, lamps and a treasure on the square. `x0, z0`: its corner.
     bool lostCityOf(int line, int region, int& rampX, int& x0, int& z0) const;
     void stampLostCity(Chunk& c);
+    // 2.5.0: where the generator puts a structure of kind `ki` in a region (shared with the map), and
+    // the structures around a place (their kind, a WorldStructure, and their middle) for the map.
+    struct FoundStructure {
+        int type, x, z;
+    };
+    bool structurePlacement(int ki, int rx, int rz, int& ox, int& oy, int& oz, const Structure*& sp);
+    static bool structureOnSurface(int type);
+    std::vector<FoundStructure> structuresNear(int x, int z, int radius);
     static constexpr int kCitySize = 90, kCityFloor = 8, kCityHeight = 24;
 private:
     GenConfig config_;

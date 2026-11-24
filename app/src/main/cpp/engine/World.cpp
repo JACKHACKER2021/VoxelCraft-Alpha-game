@@ -625,7 +625,7 @@ ItemId lineRail(bool row) { return row ? (ItemId)RAIL_EW : (ItemId)RAIL_NS; }
 
 int World::metroLineCoord(bool row, int line, bool& exists) const {
     const uint32_t h = hash3(row ? 0 : line, row ? 2505 : 2506, row ? line : 0, seed_ ^ 0x3E7Fu);
-    exists = h % 3 != 0;
+    exists = h % (row ? 7u : 9u) == 0;  // rare: only now and then a line (the land is not a subway map)
     return line * kMetroR + 120 + (int)((h >> 8) % 208u);
 }
 
@@ -783,6 +783,12 @@ ItemId World::metroLineBlock(bool row, int line, int a, int b, int y) const {
     const uint32_t hp = hash3(piece, line, row ? 1 : 2, seed_ ^ 0x3E92u);
     const bool caveIn = hp % 9 == 0 && (b < 0) == ((hp >> 4) & 1) && a - piece * 24 >= 8 && a - piece * 24 < 12;
     if (caveIn && y <= 4) return GRAVEL;
+    // 2.5.0: now and then a wrecked subway car left in the tube: rusted panels, dig through or around it.
+    const bool wreck = hp % 13 == 2 && (b < 0) != ((hp >> 4) & 1) && a - piece * 24 >= 6 && a - piece * 24 < 16;
+    if (wreck && y >= 1 && y <= 3) {
+        if (ab == 3 && y == 2) return AIR;  // its gutted inside
+        return r % 5 == 0 ? (ItemId)GRAVEL : r % 3 == 0 ? bronzeVariant(0, 2, false) : (ItemId)STEEL_BLOCK;
+    }
     if (y == 1 && ab == 3) return r % 7 == 0 ? (ItemId)AIR : lineRail(row);
     if (!row && hp % 6 == 1 && y <= 3) return WATER;  // a flooded stretch
     return AIR;
@@ -1240,94 +1246,141 @@ bool World::nearestMineshaft(int x, int z, int& outX, int& outY, int& outZ) {
     return best >= 0;
 }
 
+namespace {
+struct StructKind {
+    WorldStructure type;
+    int region;      // one chance per region of this many blocks
+    int percent;     // chance that the region has one
+    int maxSize;     // blueprint size bound, to know which regions can reach this chunk
+};
+const StructKind kStructKinds[] = {
+    {WorldStructure::Ruin, 160, 70, 8},
+    {WorldStructure::Shipwreck, 128, 85, 14},
+    {WorldStructure::Dungeon, 128, 45, 10},
+    {WorldStructure::Mineshaft, 288, 65, 97},
+    {WorldStructure::DesertTemple, 240, 65, 15},
+    {WorldStructure::Igloo, 200, 60, 9},
+    {WorldStructure::Watchtower, 224, 50, 7},
+    {WorldStructure::Village, World::kVillageRegion, 80, kVillageSize},
+    {WorldStructure::DrownedRuins, 176, 60, kDrownedRuinsSize},
+    {WorldStructure::BrokenPortal, 240, 60, kBrokenPortalSize},
+    {WorldStructure::RuinedVillage, 400, 45, kVillageSize},  // 1.5.9 (generation 3)
+    {WorldStructure::CaveDungeon, 72, 55, 11},               // 1.6.0 (generation 4)
+    {WorldStructure::Camp, 112, 70, 11},                     // 1.7.2 build 3 (generation 5)
+    {WorldStructure::RuinedStation, World::kStationRegion, 45, 23},  // 2.4.0 (generation 7)
+    {WorldStructure::TrainWreck, 208, 50, 12},               // 2.5.0 preview (generation 7)
+};
+constexpr int kStructKindCount = (int)(sizeof(kStructKinds) / sizeof(kStructKinds[0]));
+}  // namespace
+
+// Whether the region (rx, rz) has a structure of kind `ki`, and where it stands: the same choice
+// for the generator and for the map.
+bool World::structurePlacement(int ki, int rx, int rz, int& ox, int& oy, int& oz, const Structure*& sp) {
+    const StructKind& k = kStructKinds[ki];
+    if (!config_.overworld.structures || dim_ != Dimension::Overworld) return false;
+    if (k.type == WorldStructure::RuinedVillage && config_.generation < 3) return false;
+    if (k.type == WorldStructure::CaveDungeon && config_.generation < 4) return false;
+    if (k.type == WorldStructure::Camp && config_.generation < 5) return false;
+    if (k.type == WorldStructure::RuinedStation && (config_.generation < 7 || !kFeatures240)) return false;
+    if (k.type == WorldStructure::TrainWreck && (config_.generation < 7 || !kFeatures250)) return false;
+    const int sea = config_.overworld.seaLevel;
+    uint32_t h = hash3(rx, (int)k.type * 977 + 13, rz, seed_ ^ 0x57A7u);
+    if ((int)(h % 100) >= k.percent) return false;
+    ox = rx * k.region + (int)((h >> 8) % (uint32_t)(k.region - k.maxSize));
+    oz = rz * k.region + (int)((h >> 16) % (uint32_t)(k.region - k.maxSize));
+    const uint64_t key = ((uint64_t)(uint32_t)rx << 34) ^ ((uint64_t)(uint32_t)rz << 4) ^ (uint64_t)k.type;
+    auto it = blueprints_.find(key);
+    if (it == blueprints_.end()) {
+        if (blueprints_.size() > 48) blueprints_.clear();
+        Structure s = buildWorldStructure(k.type, h * 2654435761u);
+        // Villages keep their layout (their doors face the paths).
+        const int turns = k.type == WorldStructure::Village || k.type == WorldStructure::RuinedVillage || k.type == WorldStructure::RuinedStation ? 0 : (int)(h >> 28);
+        it = blueprints_.emplace(key, std::make_shared<Structure>(s.rotated(turns))).first;
+    }
+    const Structure& s = *it->second;
+    sp = it->second.get();
+    Column middle = column(ox + s.sx / 2, oz + s.sz / 2);
+    const BiomeDef* mb = middle.biome;
+    const bool desert = mb && (mb->cactusDensity > 0 || mb->id == "desert");
+    const bool snowy = mb && (mb->freeze || mb->id == "snowy_taiga" || mb->id == "ice_plains");
+    if (structureOnSurface((int)k.type)) {
+        if (k.type == WorldStructure::Camp && !(mb && mb->id == "dappled_forest") && (h >> 5) % 6 != 0) return false;
+        if (middle.height <= sea + 1 || !mb || mb->peakBlock) return false;
+        if (k.type == WorldStructure::DesertTemple && !desert) return false;
+        if (k.type == WorldStructure::Igloo && !snowy) return false;
+        if ((k.type == WorldStructure::Watchtower || k.type == WorldStructure::Village || k.type == WorldStructure::RuinedVillage) && (desert || snowy))
+            return false;
+        oy = middle.height + (k.type == WorldStructure::Ruin ? 0 : 1);
+        if (k.type == WorldStructure::BrokenPortal) oy = middle.height - ((h >> 6) % 3 == 0 ? 3 : 0);
+        if (k.type == WorldStructure::TrainWreck) oy = middle.height;  // half sunk into the ground
+    } else if (k.type == WorldStructure::Shipwreck) {
+        if (middle.height > sea - 5) return false;
+        oy = middle.height;
+    } else if (k.type == WorldStructure::DrownedRuins) {
+        if (middle.height > sea - 4) return false;
+        oy = middle.height - 1;
+    } else if (k.type == WorldStructure::Dungeon) {
+        oy = 10 + (int)((h >> 4) % 24);
+        if (middle.height < oy + s.sy + 6) return false;
+    } else if (k.type == WorldStructure::CaveDungeon) {
+        oy = 8 + (int)((h >> 4) % 30);
+        if (middle.height < oy + s.sy + 10) return false;
+    } else {
+        oy = 16 + (int)((h >> 4) % 14);
+        if (middle.height < oy + s.sy + 8) return false;
+    }
+    return true;
+}
+
+bool World::structureOnSurface(int type) {
+    const WorldStructure t = (WorldStructure)type;
+    return t == WorldStructure::Ruin || t == WorldStructure::DesertTemple || t == WorldStructure::Igloo || t == WorldStructure::Watchtower ||
+           t == WorldStructure::Village || t == WorldStructure::BrokenPortal || t == WorldStructure::RuinedVillage || t == WorldStructure::Camp ||
+           t == WorldStructure::RuinedStation || t == WorldStructure::TrainWreck;
+}
+
+std::vector<World::FoundStructure> World::structuresNear(int x, int z, int radius) {
+    std::vector<FoundStructure> out;
+    if (dim_ != Dimension::Overworld) return out;
+    for (int ki = 0; ki < kStructKindCount; ++ki) {
+        const StructKind& k = kStructKinds[ki];
+        for (int rx = floorDiv(x - radius, k.region); rx <= floorDiv(x + radius, k.region); ++rx)
+            for (int rz = floorDiv(z - radius, k.region); rz <= floorDiv(z + radius, k.region); ++rz) {
+                int ox, oy, oz;
+                const Structure* sp = nullptr;
+                if (!structurePlacement(ki, rx, rz, ox, oy, oz, sp) || !sp) continue;
+                const int cx = ox + sp->sx / 2, cz = oz + sp->sz / 2;
+                if (std::abs(cx - x) <= radius && std::abs(cz - z) <= radius) out.push_back({(int)k.type, cx, cz});
+            }
+    }
+    return out;
+}
+
 void World::stampStructures(Chunk& c) {
     if (!config_.overworld.structures) return;
-    struct Kind {
-        WorldStructure type;
-        int region;      // one chance per region of this many blocks
-        int percent;     // chance that the region has one
-        int maxSize;     // blueprint size bound, to know which regions can reach this chunk
-    };
-    static const Kind kinds[] = {
-        {WorldStructure::Ruin, 160, 70, 8},
-        {WorldStructure::Shipwreck, 128, 85, 14},
-        {WorldStructure::Dungeon, 128, 45, 10},
-        {WorldStructure::Mineshaft, 288, 65, 97},
-        {WorldStructure::DesertTemple, 240, 65, 15},
-        {WorldStructure::Igloo, 200, 60, 9},
-        {WorldStructure::Watchtower, 224, 50, 7},
-        {WorldStructure::Village, kVillageRegion, 80, kVillageSize},
-        {WorldStructure::DrownedRuins, 176, 60, kDrownedRuinsSize},
-        {WorldStructure::BrokenPortal, 240, 60, kBrokenPortalSize},
-        {WorldStructure::RuinedVillage, 400, 45, kVillageSize},  // 1.5.9 (generation 3)
-        {WorldStructure::CaveDungeon, 72, 55, 11},               // 1.6.0 (generation 4)
-        {WorldStructure::Camp, 112, 70, 11},                     // 1.7.2 build 3 (generation 5)
-        {WorldStructure::RuinedStation, kStationRegion, 45, 23},            // 2.4.0 (generation 7)
-    };
     const int sea = config_.overworld.seaLevel;
     const int x0 = c.cx * kChunkSize, z0 = c.cz * kChunkSize, x1 = x0 + kChunkSize - 1, z1 = z0 + kChunkSize - 1;
-    for (const Kind& k : kinds) {
-        if (k.type == WorldStructure::RuinedVillage && config_.generation < 3) continue;
-        if (k.type == WorldStructure::CaveDungeon && config_.generation < 4) continue;
-        if (k.type == WorldStructure::Camp && config_.generation < 5) continue;
-        if (k.type == WorldStructure::RuinedStation && (config_.generation < 7 || !kFeatures240)) continue;
+    for (int ki = 0; ki < kStructKindCount; ++ki) {
+        const StructKind& k = kStructKinds[ki];
         for (int rx = floorDiv(x0 - k.maxSize, k.region); rx <= floorDiv(x1, k.region); ++rx)
             for (int rz = floorDiv(z0 - k.maxSize, k.region); rz <= floorDiv(z1, k.region); ++rz) {
-                uint32_t h = hash3(rx, (int)k.type * 977 + 13, rz, seed_ ^ 0x57A7u);
-                if ((int)(h % 100) >= k.percent) continue;
-                // Where in the region, and how it stands.
-                int ox = rx * k.region + (int)((h >> 8) % (uint32_t)(k.region - k.maxSize));
-                int oz = rz * k.region + (int)((h >> 16) % (uint32_t)(k.region - k.maxSize));
-                const uint64_t key = ((uint64_t)(uint32_t)rx << 34) ^ ((uint64_t)(uint32_t)rz << 4) ^ (uint64_t)k.type;
-                auto it = blueprints_.find(key);
-                if (it == blueprints_.end()) {
-                    if (blueprints_.size() > 48) blueprints_.clear();
-                    Structure s = buildWorldStructure(k.type, h * 2654435761u);
-                    // Villages keep their layout (their doors face the paths).
-                    const int turns = k.type == WorldStructure::Village || k.type == WorldStructure::RuinedVillage || k.type == WorldStructure::RuinedStation ? 0 : (int)(h >> 28);
-                    it = blueprints_.emplace(key, std::make_shared<Structure>(s.rotated(turns))).first;
+                int ox, oy, oz;
+                const Structure* sp = nullptr;
+                // Cheap first: does the region's spot reach this chunk at all?
+                {
+                    const uint32_t h0 = hash3(rx, (int)k.type * 977 + 13, rz, seed_ ^ 0x57A7u);
+                    if ((int)(h0 % 100) >= k.percent) continue;
+                    const int ox0 = rx * k.region + (int)((h0 >> 8) % (uint32_t)(k.region - k.maxSize));
+                    const int oz0 = rz * k.region + (int)((h0 >> 16) % (uint32_t)(k.region - k.maxSize));
+                    if (ox0 > x1 || oz0 > z1 || ox0 + k.maxSize < x0 || oz0 + k.maxSize < z0) continue;
                 }
-                const Structure& s = *it->second;
+                if (!structurePlacement(ki, rx, rz, ox, oy, oz, sp)) continue;
+                const Structure& s = *sp;
                 if (ox > x1 || oz > z1 || ox + s.sx <= x0 || oz + s.sz <= z0) continue;
-                // The height decides whether it belongs here at all.
+                const uint32_t h = hash3(rx, (int)k.type * 977 + 13, rz, seed_ ^ 0x57A7u);
+                (void)h;
                 Column middle = column(ox + s.sx / 2, oz + s.sz / 2);
-                int oy;
-                const BiomeDef* mb = middle.biome;
-                const bool desert = mb && (mb->cactusDensity > 0 || mb->id == "desert");
-                const bool snowy = mb && (mb->freeze || mb->id == "snowy_taiga" || mb->id == "ice_plains");
-                const bool surface = k.type == WorldStructure::Ruin || k.type == WorldStructure::DesertTemple ||
-                                     k.type == WorldStructure::Igloo || k.type == WorldStructure::Watchtower ||
-                                     k.type == WorldStructure::Village || k.type == WorldStructure::BrokenPortal ||
-                                     k.type == WorldStructure::RuinedVillage || k.type == WorldStructure::Camp || k.type == WorldStructure::RuinedStation;
-                if (surface) {
-                    // Camps stand mostly in the Dappled Forest; elsewhere only now and then.
-                    if (k.type == WorldStructure::Camp && !(mb && mb->id == "dappled_forest") && (h >> 5) % 6 != 0) continue;
-                    if (middle.height <= sea + 1 || !mb || mb->peakBlock) continue;
-                    if (k.type == WorldStructure::DesertTemple && !desert) continue;
-                    if (k.type == WorldStructure::Igloo && !snowy) continue;
-                    if ((k.type == WorldStructure::Watchtower || k.type == WorldStructure::Village || k.type == WorldStructure::RuinedVillage) &&
-                        (desert || snowy))
-                        continue;
-                    oy = middle.height + (k.type == WorldStructure::Ruin ? 0 : 1);
-                    // Some portal ruins are half buried.
-                    if (k.type == WorldStructure::BrokenPortal) oy = middle.height - ((h >> 6) % 3 == 0 ? 3 : 0);
-                } else if (k.type == WorldStructure::Shipwreck) {
-                    if (middle.height > sea - 5) continue;  // needs deep water
-                    oy = middle.height;
-                } else if (k.type == WorldStructure::DrownedRuins) {
-                    if (middle.height > sea - 4) continue;  // under a lake or the sea
-                    oy = middle.height - 1;
-                } else if (k.type == WorldStructure::Dungeon) {
-                    oy = 10 + (int)((h >> 4) % 24);
-                    if (middle.height < oy + s.sy + 6) continue;
-                } else if (k.type == WorldStructure::CaveDungeon) {
-                    // Deep in the rock, under solid ground, often beside a cave.
-                    oy = 8 + (int)((h >> 4) % 30);
-                    if (middle.height < oy + s.sy + 10) continue;
-                } else {
-                    oy = 16 + (int)((h >> 4) % 14);
-                    if (middle.height < oy + s.sy + 8) continue;
-                }
+                const bool surface = structureOnSurface((int)k.type);
                 // 2.4.0 (generation 7): a village no longer lays a round flat plate of grass over the land (on
                 // a hill it stood up as a raised disc with cliffs). Open ground keeps the land as it is, a path
                 // is laid into the ground where it lies; only houses, the well and the fields stand on the plan.

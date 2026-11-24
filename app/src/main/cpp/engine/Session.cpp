@@ -4352,6 +4352,29 @@ void Session::saveWorlds() {
     void_.saveModifiedChunks();
 }
 
+namespace {
+// 2.5.0: the colour of a structure's mark on the map, by its kind.
+Color foundColor(int type) {
+    switch ((WorldStructure)type) {
+        case WorldStructure::Village: return {0.45f, 0.9f, 0.35f, 1};
+        case WorldStructure::RuinedVillage: case WorldStructure::Ruin: return {0.65f, 0.65f, 0.55f, 1};
+        case WorldStructure::Watchtower: return {0.85f, 0.75f, 0.5f, 1};
+        case WorldStructure::DesertTemple: return {1, 0.85f, 0.45f, 1};
+        case WorldStructure::Igloo: return {0.8f, 0.95f, 1, 1};
+        case WorldStructure::Shipwreck: case WorldStructure::DrownedRuins: return {0.35f, 0.6f, 1, 1};
+        case WorldStructure::Mineshaft: case WorldStructure::Dungeon: case WorldStructure::CaveDungeon: return {0.6f, 0.45f, 0.35f, 1};
+        case WorldStructure::BrokenPortal: return {0.75f, 0.4f, 1, 1};
+        case WorldStructure::Camp: return {1, 0.55f, 0.3f, 1};
+        case WorldStructure::RuinedStation: return {1, 0.6f, 0.25f, 1};
+        case WorldStructure::TrainWreck: return {0.8f, 0.4f, 0.25f, 1};
+        default: break;
+    }
+    if (type == 100) return {0.95f, 0.65f, 0.3f, 1};  // the Bronze Halls
+    if (type == 101) return {0.4f, 1, 0.8f, 1};       // the lost city
+    return {0.6f, 0.9f, 1, 1};
+}
+}  // namespace
+
 std::vector<MapMarker> Session::mapMarkers() const {
     std::vector<MapMarker> m;
     if (world_ != &overworld_) return m;  // the places are all in the overworld
@@ -4369,6 +4392,29 @@ std::vector<MapMarker> Session::mapMarkers() const {
         // 2.5.0: the entrances of the abandoned subway nearby.
         int mx, mz, kind;
         if (world_->nearestMetroStation(px, pz, mx, mz, kind) && std::abs(mx - px) < 300 && std::abs(mz - pz) < 300) m.push_back({MapMarker::Station, mx, mz});
+        if (kFeatures250) {
+            // 2.5.0: every structure around shows on the map (worked out again only when the player moves on).
+            const int cx = floorDiv(px, 64), cz = floorDiv(pz, 64);
+            if (cx != foundCX_ || cz != foundCZ_) {
+                foundCX_ = cx, foundCZ_ = cz;
+                foundMarkers_.clear();
+                for (const World::FoundStructure& f : const_cast<World&>(overworld_).structuresNear(px, pz, 300))
+                    foundMarkers_.push_back({MapMarker::Found, f.x, f.z, f.type});
+                const int R = 400;  // the Bronze Halls' regions (kHallRegion)
+                for (int rx = floorDiv(px, R) - 1; rx <= floorDiv(px, R) + 1; ++rx)
+                    for (int rz = floorDiv(pz, R) - 1; rz <= floorDiv(pz, R) + 1; ++rz) {
+                        int hx, hz;
+                        if (overworld_.bronzeHallsIn(rx, rz, hx, hz)) foundMarkers_.push_back({MapMarker::Found, hx + 49, hz + 49, 100});
+                    }
+                const int M = World::kMetroRegion;
+                for (int line = floorDiv(pz, M) - 2; line <= floorDiv(pz, M) + 2; ++line)
+                    for (int region = floorDiv(px, M) - 2; region <= floorDiv(px, M) + 2; ++region) {
+                        int rampX, ox, oz;
+                        if (overworld_.lostCityOf(line, region, rampX, ox, oz)) foundMarkers_.push_back({MapMarker::Found, ox + 45, oz + 45, 101});
+                    }
+            }
+            m.insert(m.end(), foundMarkers_.begin(), foundMarkers_.end());
+        }
     }
     return m;
 }
@@ -4893,7 +4939,8 @@ void Session::drawHud(Ui& ui) const {
             float fz = std::clamp((mk.z - minimap_.originZ() + 0.5f) * k, 3.0f, ms - 3);
             int glyph = mk.kind == MapMarker::Spawn ? Font::Home : mk.kind == MapMarker::Death ? Font::Skull : Font::House;
             Color c = mk.kind == MapMarker::Spawn ? Color{1, 0.9f, 0.3f, 1} : mk.kind == MapMarker::Death ? Color{1, 0.35f, 0.3f, 1}
-                      : mk.kind == MapMarker::Station ? Color{1, 0.6f, 0.25f, 1} : Color{0.6f, 0.9f, 1, 1};
+                      : mk.kind == MapMarker::Station ? Color{1, 0.6f, 0.25f, 1}
+                      : mk.kind == MapMarker::Found ? foundColor(mk.type) : Color{0.6f, 0.9f, 1, 1};
             ui.icon(mx + fx - 4, my + fz - 4, glyph, {0, 0, 0, 0.7f});
             ui.icon(mx + fx - 4.5f, my + fz - 4.5f, glyph, c);
         }

@@ -505,6 +505,69 @@ Structure ruinedStation(Rng& r) {
     return s;
 }
 
+// 2.5.0: a wreck lying in the land, half sunk: a rusted subway car (silver panels, a blue stripe, broken
+// windows, a chest of parts inside) or a rusted steam locomotive (round boiler, cab, chimney, big wheels).
+// Pieces have fallen off; vines and moss grow over it.
+Structure trainWreck(Rng& r) {
+    const bool subway = r.chance(50);
+    const int L = 12, Wd = 5, Hh = 6;
+    Structure s = box(L, Hh, Wd);
+    auto rust = [&](int pct) { return r.chance(pct) ? bronzeVariant(0, 2, false) : r.chance(30) ? bronzeVariant(1, 2, false) : (ItemId)STEEL_BLOCK; };
+    auto put = [&](int x, int y, int z, ItemId id) {
+        if (r.chance(14)) return;  // broken off
+        s.at(x, y, z) = id;
+    };
+    if (subway) {
+        for (int x = 0; x < L; ++x)
+            for (int z = 0; z < Wd; ++z)
+                for (int y = 0; y < 5; ++y) {
+                    const bool wall = z == 0 || z == Wd - 1 || x == 0 || x == L - 1 || y == 0 || y == 4;
+                    if (!wall) {
+                        s.at(x, y, z) = AIR;
+                        continue;
+                    }
+                    ItemId id = rust(35);
+                    if (y == 1 && (z == 0 || z == Wd - 1)) id = (ItemId)(CONCRETE + 11);       // the blue stripe
+                    if (y == 2 && (z == 0 || z == Wd - 1) && x % 3 != 0) id = r.chance(60) ? (ItemId)AIR : (ItemId)GLASS;  // windows
+                    if ((x == 3 || x == 8) && (z == 0 || z == Wd - 1) && y >= 1 && y <= 3) id = AIR;  // the doorways
+                    if (y == 0) id = (ItemId)STEEL_BLOCK;
+                    put(x, y, z, id);
+                }
+        s.at(6, 1, 2) = LOOT_CHEST_METRO;
+        s.at(4, 1, 2) = GRAVEL;
+        for (int x = 1; x < L - 1; x += 3)
+            if (r.chance(60)) s.at(x, 5, 2) = VINES;
+    } else {
+        // The steam locomotive: cab at the back (x 0..3), boiler forward, chimney at the front.
+        for (int x = 0; x < L; ++x)
+            for (int z = 0; z < Wd; ++z)
+                for (int y = 0; y < Hh; ++y) {
+                    const bool cab = x <= 3;
+                    if (cab) {
+                        const bool wall = x == 0 || x == 3 || z == 0 || z == Wd - 1 || y == 0 || y == 4;
+                        if (y > 4) continue;
+                        if (!wall) { s.at(x, y, z) = AIR; continue; }
+                        ItemId id = rust(55);
+                        if (y == 2 && (z == 0 || z == Wd - 1) && (x == 1 || x == 2)) id = AIR;  // cab windows
+                        if (x == 0 && z == 2 && (y == 1 || y == 2)) id = AIR;                   // the way in
+                        put(x, y, z, id);
+                        continue;
+                    }
+                    // The boiler: a rounded box (corners off), black smokebox at the front.
+                    const bool corner = (z == 0 || z == Wd - 1) && (y == 1 || y == 3);
+                    if (y >= 1 && y <= 3 && z >= 0 && z < Wd && !corner && x < L - 1) put(x, y, z, x >= L - 3 ? (ItemId)OBSIDIAN : rust(70));
+                    if (y == 0 && (z == 1 || z == 3)) put(x, y, z, (ItemId)STEEL_BLOCK);           // the frame
+                }
+        for (int y = 4; y <= 5; ++y) put(L - 3, y, 2, (ItemId)OBSIDIAN);  // the chimney
+        // Big wheels along both sides.
+        for (int wx : {5, 7, 9})
+            for (int z : {0, Wd - 1}) s.at(wx, 0, z) = r.chance(80) ? (ItemId)OBSIDIAN : (ItemId)AIR;
+        s.at(2, 1, 2) = LOOT_CHEST_STATION;
+        if (r.chance(60)) s.at(5, 4, 2) = VINES;
+    }
+    return s;
+}
+
 Structure camp(Rng& r) {
     Structure s = box(11, 5, 11);
     const ItemId tent = woolBlock(r.chance(50) ? 14 : r.chance(50) ? 1 : 0);  // red, orange or white
@@ -969,6 +1032,7 @@ Structure buildWorldStructure(WorldStructure kind, uint32_t seed) {
         case WorldStructure::RuinedVillage: return ruinedVillage(r);
         case WorldStructure::Camp: return camp(r);
         case WorldStructure::RuinedStation: return ruinedStation(r);
+        case WorldStructure::TrainWreck: return trainWreck(r);
         case WorldStructure::CaveDungeon: return caveDungeon(r);
         default: return mineshaft(r);
     }

@@ -222,6 +222,8 @@ public:
     void refreshMapTexture() { mapChanged_ = true; }
     bool showingPaperMap() const { return paperShown_; }
     std::vector<MapMarker> mapMarkers() const;
+    mutable std::vector<MapMarker> foundMarkers_;  // 2.5.0: the structures around, for the map
+    mutable int foundCX_ = 1 << 30, foundCZ_ = 1 << 30;
 
     // VCStructures (creative): places `s` in front of the player, on the face the
     // crosshair points at or two blocks ahead, never overlapping the player. The

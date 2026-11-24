@@ -9,8 +9,9 @@ namespace vc {
 
 // A place shown on the minimap.
 struct MapMarker {
-    enum Kind { Spawn, Death, Structure, Station } kind;
+    enum Kind { Spawn, Death, Structure, Station, Found } kind;
     int x, z;
+    int type = -1;  // 2.5.0: for Found: the WorldStructure (or 100 Bronze Halls, 101 the lost city)
 };
 
 // Top-down map of the blocks around the player (north up), coloured from the

@@ -27,6 +27,7 @@ enum class WorldStructure {
     CaveDungeon,  // 1.6.0: a small room in the rock with a monster spawner and loot
     Camp,         // 1.7.2 build 3: a travellers' camp: a wool tent, a fire pit, a loot barrel
     RuinedStation,  // 2.4.0: an abandoned railway station: a broken platform, a rusty lattice roof, old track
+    TrainWreck,     // 2.5.0: a rusted, broken-down subway car or steam locomotive lying in the land
     Count
 };
 
