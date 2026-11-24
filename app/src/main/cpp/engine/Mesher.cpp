@@ -53,12 +53,12 @@ void orientedBox(std::vector<Vertex>& out, Vec3 a, Vec3 b, float halfW, float y0
 }
 float kDxF(int side) { static const float d[4] = {0, 1, 0, -1}; return d[side & 3]; }
 float kDzF(int side) { static const float d[4] = {-1, 0, 1, 0}; return d[side & 3]; }
-void meshRail(std::vector<Vertex>& out, const RailPath& r, int wx, int y, int wz, float light, float glow, bool dull) {
+void meshRail(std::vector<Vertex>& out, const RailPath& r, int wx, int y, int wz, float light, float glow, bool dull, bool concrete = false) {
     const bool curve = ((r.out - r.in) & 7) != 4;  // build 12: ports (0..7)
     const bool diagonal = !curve && (r.in & 1);
     const int segments = curve ? 8 : 1;
     const Vec3 base((float)wx, (float)y, (float)wz);
-    const int sleeperTile = tileFor(SPRUCE_LOG, F_NORTH), railTile = tileFor(dull ? STONE : STEEL_BLOCK, F_TOP);
+    const int sleeperTile = concrete ? tileFor(HARDENED_CONCRETE, F_TOP) : tileFor(SPRUCE_LOG, F_NORTH), railTile = tileFor(dull ? STONE : STEEL_BLOCK, F_TOP);
     // Sleepers: four per block along the track, across it.
     const int sleepers = curve ? 3 : diagonal ? 6 : 4;
     for (int i = 0; i < sleepers; ++i) {
@@ -316,11 +316,16 @@ void buildChunkMesh(const World& world, const Chunk& chunk, ChunkMesh& out) {
                     if (isTurntable(id))
                         orientedBox(out.opaque, Vec3((float)wx, (float)y, wz + 0.5f), Vec3(wx + 1.0f, (float)y, wz + 0.5f), 0.5f, 0, 0.05f, T_TURNTABLE, light, glowHere);
                     int a, b2;
-                    if (TrainSystem::railSides(id, a, b2)) {
+                    const bool concrete = y > 0 && chunk.get(x, y - 1, z) == TRACK_BED;  // 2.4.0: concrete sleepers
+                    if (isRailCross(id)) {  // 2.4.0: two straight tracks through the middle
+                        const int p0 = id == RAIL_CROSS ? 0 : 1;
+                        meshRail(out.opaque, {p0, p0 + 4, -1}, wx, y, wz, light, glowHere, false, concrete);
+                        meshRail(out.opaque, {p0 + 2, (p0 + 6) & 7, -1}, wx, y, wz, light, glowHere, false, concrete);
+                    } else if (TrainSystem::railSides(id, a, b2)) {
                         {
                             RailPos sp;
                             TrainSystem::setSlope(sp, id);
-                            meshRail(out.opaque, {a, b2, sp.slopeHigh, sp.slopeLo, sp.slopeSpan}, wx, y, wz, light, glowHere, false);
+                            meshRail(out.opaque, {a, b2, sp.slopeHigh, sp.slopeLo, sp.slopeSpan}, wx, y, wz, light, glowHere, false, concrete);
                         }
                     } else if (isRailSwitch8(id)) {
                         // 2.3.0: the flexible switch: the straight track and the 45-degree branch from the points,

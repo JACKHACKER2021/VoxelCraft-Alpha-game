@@ -259,6 +259,7 @@ std::vector<std::string> runCommand(Session& s, const std::string& line, bool ch
         if (what == "village") found = regions(World::kVillageRegion, [&](int rx, int rz, int& a, int& b, int& c) { if (!w.villageIn(rx, rz, a, b, c)) return false; b += w.yShift(); return true; });
         else if (what == "forgotten") found = regions(World::kForgottenRegion, [&](int rx, int rz, int& a, int& b, int& c) { return w.forgottenVillageIn(rx, rz, a, b, c); });
         else if (what == "mineshaft") found = w.nearestMineshaft(px, pz, x, y, z);
+        else if (what == "station") found = regions(World::kStationRegion, [&](int rx, int rz, int& a, int& b, int& c) { if (!w.ruinedStationIn(rx, rz, a, c)) return false; b = w.surfaceHeight(a, c); return true; });
         else if (what == "frame") found = w.nearestCelestialFrame(px, pz, x, z), y = 0;
         else if (what == "temple") found = regions(World::kTempleRegion, [&](int rx, int rz, int& a, int& b, int& c) { w.templeCentre(rx, rz, a, c); b = World::kTempleY; return true; });
         else found = w.nearestStructure(px, pz, x, y, z);

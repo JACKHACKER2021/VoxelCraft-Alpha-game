@@ -143,6 +143,8 @@ public:
     static constexpr int kFortressRegion = 176, kArenaRegion = 640, kVoidLavaLevel = 57, kVillageRegion = 384;
     // The village of an overworld region, if it has one: the well in the middle (feet height).
     bool villageIn(int rx, int rz, int& cx, int& cy, int& cz) const;
+    bool ruinedStationIn(int rx, int rz, int& cx, int& cz) const;  // 2.4.0: the ruined station of a region (for the map)
+    static constexpr int kStationRegion = 272;
 
     // Persistence: modified chunks are stored as files in this directory and
     // loaded instead of generated. Empty = nothing is saved (menu background).

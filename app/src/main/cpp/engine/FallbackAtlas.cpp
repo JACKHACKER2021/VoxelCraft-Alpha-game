@@ -2013,6 +2013,32 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
                 }
             for (int py = 3; py < 9; ++py)
                 for (int px = 15 - (8 - py) / 2; px < 16; ++px) a.clear(T_SUBWAY_LOCO_ITEM, px, py);
+            // 2.4.0: concrete track bed, the platform, the lattice girder and the crossings' icons.
+            for (int py = 0; py < 16; ++py)
+                for (int px = 0; px < 16; ++px) {
+                    const uint32_t hh = (uint32_t)(px * 73856093u ^ py * 19349663u ^ 0x2400u);
+                    const int nz = (int)((hh >> 5) % 13) - 6;
+                    const Rgb conc = Rgb{150, 150, 146}.plus(nz);
+                    a.put(T_TRACK_BED, px, py, (px >= 4 && px <= 11 && (hh >> 9) % 3 != 0) ? Rgb{96, 92, 88}.plus(nz) : conc);
+                    const bool edge = px <= 1 || px >= 14 || py <= 1 || py >= 14;
+                    const bool line = !edge && (px == 2 || px == 13 || py == 2 || py == 13);
+                    a.put(T_PLATFORM_TOP, px, py, edge ? Rgb{120, 120, 116}.plus(nz) : line ? ((px + py) % 2 ? Rgb{230, 196, 40} : Rgb{200, 166, 30}) : (px == 8 || py == 8) ? Rgb{128, 128, 124} : conc);
+                    a.put(T_PLATFORM_SIDE, px, py, py <= 1 ? Rgb{230, 196, 40} : py <= 3 ? Rgb{110, 110, 106} : conc.scaled(0.9f));
+                    const bool frame = px <= 1 || px >= 14 || py <= 1 || py >= 14;
+                    const bool brace = std::abs(px - py) <= 1 || std::abs(px + py - 15) <= 1;
+                    if (frame || brace) a.put(T_LATTICE, px, py, frame ? Rgb{86, 92, 100}.plus(nz / 2) : Rgb{110, 116, 124}.plus(nz / 2));
+                    else a.clear(T_LATTICE, px, py);
+                    const bool rail = px == 5 || px == 10 || py == 5 || py == 10;
+                    const bool tie = (px % 4 == 1 && (py >= 3 && py <= 12)) || (py % 4 == 1 && (px >= 3 && px <= 12));
+                    if (rail) a.put(T_RAIL_CROSS, px, py, Rgb{170, 174, 180});
+                    else if (tie) a.put(T_RAIL_CROSS, px, py, Rgb{110, 76, 44});
+                    else a.clear(T_RAIL_CROSS, px, py);
+                    const bool drail = std::abs(px - py) == 2 || std::abs(px + py - 15) == 2;
+                    const bool dtie = (std::abs(px - py) <= 3 || std::abs(px + py - 15) <= 3) && (px + py) % 4 == 0;
+                    if (drail) a.put(T_RAIL_CROSS_DIAG, px, py, Rgb{170, 174, 180});
+                    else if (dtie) a.put(T_RAIL_CROSS_DIAG, px, py, Rgb{110, 76, 44});
+                    else a.clear(T_RAIL_CROSS_DIAG, px, py);
+                }
             // Build 5: the drill car: a yellow machine on a frame with a stepped grey drill in front.
             icon(T_DRILL_CAR_ITEM, Rgb{230, 180, 30}, Rgb{60, 62, 68}, false);
             for (int py = 4; py < 12; ++py)

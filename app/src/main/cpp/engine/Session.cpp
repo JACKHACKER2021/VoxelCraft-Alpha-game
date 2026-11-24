@@ -3067,6 +3067,8 @@ void Session::useItem(const RayHit& hit) {
             int piece = 0;
             if (isRailGentle(behind) && (behind - RAIL_GENTLE) / 4 == look && (behind - RAIL_GENTLE) % 4 < 3) piece = (behind - RAIL_GENTLE) % 4 + 1;
             place = (ItemId)(RAIL_GENTLE + look * 4 + piece);
+        } else if (isRailCross(held.id)) {
+            place = held.id;  // 2.4.0: a crossing stays a crossing
         } else if (isRailSwitch(held.id)) {
             place = shapeSwitch(x, y, z, look);
         } else {
@@ -3976,7 +3978,8 @@ void Session::render(Renderer& renderer, Ui& ui, const Settings& settings, bool 
         renderer.setBrightness(settings.brightness * (sky.light + lightningFlash_ * 0.9f));
         dayLight_ = sky.light;
         buildSkyObjects(camera_.eye(), (float)std::fmod(state_.dayTime, kDayTicks), sunMoonVerts_, starVerts_);
-        if (settings.clouds) buildClouds(camera_.eye(), clock_, sky.clouds, cloudVerts_);
+        if (settings.clouds)  // 2.4.0: above the raised land of deep worlds (the highest peaks reach 182)
+            buildClouds(camera_.eye(), clock_, sky.clouds, cloudVerts_, world_->yShift() > 0 ? 186.0f : kCloudHeight);
         else cloudVerts_.clear();
         renderer.setSky(sunMoonVerts_, starVerts_, sky.stars, cloudVerts_);
         // 1.5.5: shadows from the sun by day and, fainter, from the moon at night; none in heavy rain.
@@ -4313,6 +4316,15 @@ std::vector<MapMarker> Session::mapMarkers() const {
     m.push_back({MapMarker::Spawn, (int)std::floor(state_.spawn.x), (int)std::floor(state_.spawn.z)});
     if (state_.hasDeath) m.push_back({MapMarker::Death, state_.deathX, state_.deathZ});
     for (auto& [x, z] : state_.structures) m.push_back({MapMarker::Structure, x, z});
+    if (world_ == &overworld_) {
+        // 2.4.0: ruined stations nearby (within about 300 blocks) are shown on the map.
+        const int px = (int)std::floor(player_.pos.x), pz = (int)std::floor(player_.pos.z), R = World::kStationRegion;
+        for (int rx = floorDiv(px, R) - 1; rx <= floorDiv(px, R) + 1; ++rx)
+            for (int rz = floorDiv(pz, R) - 1; rz <= floorDiv(pz, R) + 1; ++rz) {
+                int cx, cz;
+                if (world_->ruinedStationIn(rx, rz, cx, cz) && std::abs(cx - px) < 300 && std::abs(cz - pz) < 300) m.push_back({MapMarker::Station, cx, cz});
+            }
+    }
     return m;
 }
 
@@ -4428,6 +4440,7 @@ Session::TrainButtons Session::trainButtons() const {
             b.labels[b.count++] = "Plyn +";
             b.labels[b.count++] = "Plyn -";
             b.labels[b.count++] = "Brzda";
+            if (isSubwayCar(trains_.trains()[(size_t)trainSeatTrain_].cars[(size_t)trainSeatCar_].kind)) b.labels[b.count++] = "Dveře";
         }
         b.labels[b.count++] = "Vystoupit";
     } else {
@@ -4456,6 +4469,17 @@ bool Session::trainButtonTap(float x, float y) {
             trainSeatTrain_ = tr, trainSeatCar_ = car;
             trainSeat_ = (int)(hash3((int)clock_, tr, car, 7) % (unsigned)trains_.seatCount(c.kind));
             if (isEngineCar(c.kind)) trainSeat_ = 0;
+            {
+                // 2.4.0: sit facing the right way: the driver ahead, a passenger across the aisle.
+                const float sn = std::sin(c.yaw), cs = std::cos(c.yaw);
+                float fx = -sn, fz = cs;  // the car's front
+                if (trainSeat_ != 0 || !isEngineCar(c.kind)) {
+                    const Vec3 sp = trains_.seatPos(c, trainSeat_) - c.pos;
+                    const float lx = sp.x * cs + sp.z * sn;  // across the car
+                    if (isSubwayCar(c.kind) && std::fabs(lx) > 0.2f) fx = lx > 0 ? -cs : cs, fz = lx > 0 ? -sn : sn;
+                }
+                player_.yaw = std::atan2(fx, -fz);
+            }
             player_.flying = false;
             seated_ = false;
             sound(Sound::Door);
@@ -4466,6 +4490,10 @@ bool Session::trainButtonTap(float x, float y) {
             if (what == "Plyn +") t.throttle = std::min(1.0f, t.throttle + 0.25f), t.brake = false;
             if (what == "Plyn -") t.throttle = std::max(-0.5f, t.throttle - 0.25f), t.brake = false;
             if (what == "Brzda") t.brake = !t.brake, t.throttle = 0;
+            if (what == "Dveře") {  // 2.4.0: the driver opens and shuts the doors by hand (when standing)
+                t.doorsWanted = !t.doorsWanted && std::fabs(t.speed) < 0.05f;
+                if (t.doorsWanted) t.throttle = 0, t.doors = 0;  // reopen on both sides
+            }
             sound(Sound::Click);
         }
         return true;
@@ -4811,7 +4839,7 @@ void Session::drawHud(Ui& ui) const {
             float fz = std::clamp((mk.z - minimap_.originZ() + 0.5f) * k, 3.0f, ms - 3);
             int glyph = mk.kind == MapMarker::Spawn ? Font::Home : mk.kind == MapMarker::Death ? Font::Skull : Font::House;
             Color c = mk.kind == MapMarker::Spawn ? Color{1, 0.9f, 0.3f, 1} : mk.kind == MapMarker::Death ? Color{1, 0.35f, 0.3f, 1}
-                                                                                                         : Color{0.6f, 0.9f, 1, 1};
+                      : mk.kind == MapMarker::Station ? Color{1, 0.6f, 0.25f, 1} : Color{0.6f, 0.9f, 1, 1};
             ui.icon(mx + fx - 4, my + fz - 4, glyph, {0, 0, 0, 0.7f});
             ui.icon(mx + fx - 4.5f, my + fz - 4.5f, glyph, c);
         }

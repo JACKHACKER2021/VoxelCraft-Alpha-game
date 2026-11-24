@@ -369,6 +369,33 @@ Structure bossArena(Rng& r) {
 }
 
 // A spiral of single blocks up the inside of a round wall: something to climb without ladders.
+// 2.3.0: a winding stair of slabs, half a block per step (a bottom half, then a top half), so it is
+// walked up without jumping. Each step clears the two blocks above it for the head.
+void slabSpiral(Structure& s, int cx, int cz, int radius, int y0, int y1, int material) {
+    const int ring[][2] = {{0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1}};
+    for (int k = 0; y0 + k / 2 <= y1; ++k) {
+        const int x = cx + ring[k % 8][0] * radius, z = cz + ring[k % 8][1] * radius, y = y0 + k / 2;
+        s.at(x, y, z) = slabId(material, k % 2);
+    }
+}
+// 2.4.0: the same along a wide ring (the cells between radius 3 and the wall), for the big towers.
+void slabRing(Structure& s, int cx, int cz, int y0, int y1, int material) {
+    std::vector<std::pair<float, std::pair<int, int>>> cells;
+    for (int dz = -3; dz <= 3; ++dz)
+        for (int dx = -3; dx <= 3; ++dx) {
+            const int d2 = dx * dx + dz * dz;
+            if (d2 >= 9 && d2 < 17) cells.push_back({std::atan2((float)dx, (float)-dz), {dx, dz}});
+        }
+    std::sort(cells.begin(), cells.end());
+    for (int k = 0; y0 + k / 2 <= y1; ++k) {
+        const auto& c = cells[(size_t)k % cells.size()].second;
+        const int x = cx + c.first, z = cz + c.second, y = y0 + k / 2;
+        s.at(x, y, z) = slabId(material, k % 2);
+        for (int h = 1; h <= 2 && y + h < s.sy; ++h)
+            if (s.at(x, y + h, z) != AIR && !isSlab(s.at(x, y + h, z))) s.at(x, y + h, z) = AIR;
+    }
+}
+
 void spiral(Structure& s, int cx, int cz, int radius, int y0, int y1, ItemId block) {
     const int ring[][2] = {{0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1}};
     for (int y = y0, k = 0; y <= y1; ++y, ++k) {
@@ -408,7 +435,6 @@ Structure voidTower(Rng& r) {
                                      : (y == 0 ? (ItemId)VOID_STONE_BRICKS : (ItemId)AIR);
             }
     s.at(c, 1, 0) = s.at(c, 2, 0) = AIR;  // the door
-    spiral(s, c, c, 3, 1, h - 4, VOID_STONE_BRICKS);
     // Floors with a hole where the spiral passes.
     for (int fy : {12, h - 4}) {
         for (int z = 1; z < n - 1; ++z)
@@ -419,6 +445,8 @@ Structure voidTower(Rng& r) {
         s.at(c + 1, fy + 1, c + 1) = LOOT_CHEST_VOID;
         s.at(c, fy + 3, c) = POWERSTONE_LIGHT;
     }
+    // 2.4.0: the stair is void brick slabs, half a block a step, cut through the floors.
+    slabRing(s, c, c, 1, h - 4, 11);
     // Battlements with glowing eyes.
     for (int z = 0; z < n; ++z)
         for (int x = 0; x < n; ++x) {
@@ -445,6 +473,38 @@ Structure desertTemple(Rng& r) {
 // A snow dome with a bed, a crafting table and a chest.
 // 1.7.2 build 3: a travellers' camp: an A-frame tent of coloured wool over carpet, a fire pit
 // (a ring of cobblestone round netherrack that burns), logs to sit on and a barrel of supplies.
+// 2.4.0: a ruined station: a cracked platform along an old concrete-bedded track, the lattice frame of
+// its roof half fallen in, a bench, a lost chest of railway parts. The track runs east-west (not turned).
+Structure ruinedStation(Rng& r) {
+    const int L = 23;
+    Structure s = box(L, 7, 7);
+    for (int x = 0; x < L; ++x) {
+        const bool end = x < 2 || x > L - 3;
+        s.at(x, 0, 4) = r.chance(15) ? (ItemId)GRAVEL : (ItemId)TRACK_BED;
+        s.at(x, 1, 4) = r.chance(end ? 60 : 18) ? (ItemId)AIR : (ItemId)RAIL_EW;
+        s.at(x, 1, 3) = s.at(x, 1, 5) = AIR;
+        s.at(x, 2, 4) = s.at(x, 2, 3) = AIR;
+        for (int z = 0; z <= 2; ++z) {
+            if (end && r.chance(55)) continue;
+            s.at(x, 0, z) = r.chance(20) ? (ItemId)MOSSY_COBBLESTONE : (ItemId)HARDENED_CONCRETE;
+            s.at(x, 1, z) = r.chance(z == 2 ? 10 : 16) ? (ItemId)(r.chance(50) ? GRAVEL : COBBLESTONE) : (ItemId)PLATFORM;
+            for (int y = 2; y < 7; ++y) s.at(x, y, z) = AIR;
+        }
+    }
+    for (int px : {4, 11, 18}) {
+        const int top = r.chance(25) ? 3 + r.next(2) : 5;
+        for (int y = 2; y <= top; ++y) s.at(px, y, 0) = LATTICE;
+    }
+    for (int x = 3; x <= 19; ++x)
+        for (int z = 0; z <= 2; ++z)
+            if (!r.chance(40)) s.at(x, 6, z) = (z == 1 || x % 2 == 0) ? (ItemId)LATTICE : (ItemId)slabId(5, 0);
+    s.at(8, 2, 1) = LATTICE;
+    s.at(14, 2, 0) = s.at(15, 2, 0) = slabId(1, 0);
+    s.at(16, 2, 0) = LOOT_CHEST_STATION;
+    if (r.chance(50)) s.at(7, 2, 0) = VINES;
+    return s;
+}
+
 Structure camp(Rng& r) {
     Structure s = box(11, 5, 11);
     const ItemId tent = woolBlock(r.chance(50) ? 14 : r.chance(50) ? 1 : 0);  // red, orange or white
@@ -501,9 +561,16 @@ Structure watchtower(Rng& r) {
                                                : (y % 4 == 2 && (x == c || z == c)) ? (ItemId)AIR : (ItemId)COBBLESTONE;
             }
     s.at(c, 1, 1) = s.at(c, 2, 1) = AIR;
-    spiral(s, c, c, 1, 1, h - 5, SPRUCE_PLANKS);
+    // 2.3.0: the stair is spruce slabs, half a block a step, not whole blocks to jump up.
+    slabSpiral(s, c, c, 1, 1, h - 5, 1);
     fill(s, 0, h - 4, 0, n - 1, h - 4, n - 1, SPRUCE_PLANKS);  // the lookout
     s.at(c, h - 4, c) = AIR;                                  // the way up
+    {
+        // The hole in the lookout floor above the last steps of the stair.
+        const int ring[][2] = {{0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1}};
+        const int last = 2 * (h - 5 - 1) + 1;
+        for (int k = last - 1; k <= last + 1; ++k) s.at(c + ring[(k + 8) % 8][0], h - 4, c + ring[(k + 8) % 8][1]) = AIR;
+    }
     for (int k = 0; k < n; ++k) {
         s.at(k, h - 3, 0) = s.at(k, h - 3, n - 1) = FENCE;
         s.at(0, h - 3, k) = s.at(n - 1, h - 3, k) = FENCE;
@@ -901,6 +968,7 @@ Structure buildWorldStructure(WorldStructure kind, uint32_t seed) {
         case WorldStructure::VoidWatchtower: return voidWatchtower(r);
         case WorldStructure::RuinedVillage: return ruinedVillage(r);
         case WorldStructure::Camp: return camp(r);
+        case WorldStructure::RuinedStation: return ruinedStation(r);
         case WorldStructure::CaveDungeon: return caveDungeon(r);
         default: return mineshaft(r);
     }

@@ -9,7 +9,7 @@ namespace vc {
 
 // A place shown on the minimap.
 struct MapMarker {
-    enum Kind { Spawn, Death, Structure } kind;
+    enum Kind { Spawn, Death, Structure, Station } kind;
     int x, z;
 };
 

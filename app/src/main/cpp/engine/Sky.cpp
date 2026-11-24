@@ -100,9 +100,9 @@ void buildSkyObjects(const Vec3& eye, float ticks, std::vector<Vertex>& sunMoon,
     }
 }
 
-void buildClouds(const Vec3& eye, float seconds, float brightness, std::vector<Vertex>& out) {
+void buildClouds(const Vec3& eye, float seconds, float brightness, std::vector<Vertex>& out, float height) {
     out.clear();
-    const float cell = 12, shift = seconds * 1.2f, y0 = kCloudHeight, y1 = kCloudHeight + 4;
+    const float cell = 12, shift = seconds * 1.2f, y0 = height, y1 = height + 4;
     const int span = 9;
     const int cx0 = (int)std::floor((eye.x + shift) / cell), cz0 = (int)std::floor(eye.z / cell);
     auto cloudy = [](int i, int k) {

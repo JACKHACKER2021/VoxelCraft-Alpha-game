@@ -24,6 +24,12 @@ constexpr bool kClassicEdition = false;
 #endif
 // 2.2.0 "Cornerstone and Frost" is out: its features are in both editions (the preview moves on to 2.3.0).
 constexpr bool kFeatures220 = true;
+// 2.3.0 is finished: the normal edition has its features too (the subway, the Bronze Halls).
+constexpr bool kFeatures230 = !kClassicEdition;
+// 2.4.0 is finished too: concrete track, platforms, lattice bridges, crossings, ruined stations.
+constexpr bool kFeatures240 = !kClassicEdition;
+// 2.5.0 (the preview edition): what comes next.
+constexpr bool kFeatures250 = kPreviewEdition;
 constexpr int kModIdBase = 2000;     // blocks and items of VoxelCraft Mods (see Mods.h) start here
 // 2.0.0: the engine's own ids above the mods (the ids under 2000 are all taken): 60000..64999.
 constexpr int kExtIdBase = 60000;
@@ -317,6 +323,12 @@ enum BlockId : uint16_t {
     LOOT_CHEST_BRONZE = 60211,
     SUBWAY_LOCOMOTIVE = 60244,   // 2.3.0 preview build 7: the subway (items, past the blocks' range)
     SUBWAY_CAR = 60245,
+    TRACK_BED = 60246,           // 2.4.0: concrete track bed: rails on it get concrete sleepers
+    PLATFORM = 60247,            // 2.4.0: a station platform (the subway opens its doors on that side)
+    LATTICE = 60248,             // 2.4.0: a steel lattice girder for bridges (see-through)
+    RAIL_CROSS = 60249,          // 2.4.0: two tracks crossing at right angles
+    RAIL_CROSS_DIAG = 60250,     // 2.4.0: two diagonal tracks crossing
+    LOOT_CHEST_STATION = 60251,  // 2.4.0: the chest of a ruined station
     RAIL_SWITCH8 = 60212,        // 60212..60243: 2.3.0 the flexible switch: entry port * 4 + left * 2 + state   // 2.3.0: a chest of the Bronze Halls
     RAIL_SWITCH_L = 60203,       // 60203..60210: 2.3.0 the mirrored switch, its branch to the left (facing * 2 + state)
     RAIL_GENTLE = 60187,         // 60187..60202: a gentle slope, 4 pieces per block of height: facing * 4 + piece
@@ -600,7 +612,7 @@ inline bool isRailSlope(ItemId id) { return id >= RAIL_SLOPE && id < RAIL_SLOPE 
 inline bool isCrossingSignal(ItemId id) { return id >= CROSSING_SIGNAL && id < CROSSING_SIGNAL + 12; }
 inline bool isCrossingGate(ItemId id) { return id >= CROSSING_GATE && id < CROSSING_GATE + 8; }
 inline bool isTurntable(ItemId id) { return id == TURNTABLE || id == TURNTABLE + 1; }
-constexpr int kExtLastBlock = RAIL_SWITCH8 + 31;
+constexpr int kExtLastBlock = LOOT_CHEST_STATION;
 inline bool isRailGentle(ItemId id) { return id >= RAIL_GENTLE && id < RAIL_GENTLE + 16; }
 inline bool isRailDiag(ItemId id) { return id == RAIL_DIAG || id == RAIL_DIAG + 1; }
 inline bool isRailBend(ItemId id) { return id >= RAIL_BEND && id < RAIL_BEND + 8; }
@@ -612,7 +624,8 @@ inline int railSwitch8Entry(ItemId id) { return (id - RAIL_SWITCH8) / 4; }
 inline bool railSwitch8Left(ItemId id) { return ((id - RAIL_SWITCH8) / 2) & 1; }
 inline int railSwitch8State(ItemId id) { return (id - RAIL_SWITCH8) & 1; }
 inline int railSwitch8Branch(ItemId id) { return (railSwitch8Entry(id) + 4 + (railSwitch8Left(id) ? -1 : 1)) & 7; }
-inline bool isRail(ItemId id) { return isRailSwitch8(id) || isRailGentle(id) || isRailDiag(id) || isRailBend(id) || isRailSlope(id) || isTurntable(id) || id == RAIL_NS || id == RAIL_EW || (id >= RAIL_CURVE && id < RAIL_CURVE + 4) || isRailSwitch(id); }
+inline bool isRailCross(ItemId id) { return id == RAIL_CROSS || id == RAIL_CROSS_DIAG; }
+inline bool isRail(ItemId id) { return isRailCross(id) || isRailSwitch8(id) || isRailGentle(id) || isRailDiag(id) || isRailBend(id) || isRailSlope(id) || isTurntable(id) || id == RAIL_NS || id == RAIL_EW || (id >= RAIL_CURVE && id < RAIL_CURVE + 4) || isRailSwitch(id); }
 // Blocks with ids from 1000 up (everything else up there is an item).
 inline bool isBalloon(ItemId id) { return id >= BALLOON && id < BALLOON + 3; }
 inline bool isPaintedPlanks(ItemId id) { return id >= PAINTED_PLANKS && id < PAINTED_PLANKS + 4; }
@@ -626,7 +639,7 @@ bool modIsTransparent(ItemId id);
 bool modIsEmissive(ItemId id);
 int modFood(ItemId id);
 inline bool isNewBlock(ItemId id) {
-    if (id >= kExtIdBase && id <= kExtLastBlock && !(id >= LOCOMOTIVE && id <= FREIGHT_WAGON) && id != DRILL_CAR && id != STARBERRIES) return true;  // the engine's own range
+    if (id >= kExtIdBase && id <= kExtLastBlock && !(id >= LOCOMOTIVE && id <= FREIGHT_WAGON) && id != DRILL_CAR && id != STARBERRIES && id != SUBWAY_LOCOMOTIVE && id != SUBWAY_CAR) return true;  // the engine's own range
     if (isModId(id)) return modIsBlock(id);
     return isStairs(id) || isSlab(id) || (id >= TAR && id <= SNOW_LAYER) || isStainedGlass(id) || (id >= WALL_CABLE && id < WALL_CABLE + 8) || (id >= WALL_SWITCH && id < WALL_SWITCH + 8) ||
            (id >= ANNIV_LOGO && id <= PAINTED_PLANKS + 3) || (id >= POWERSTONE_BRICKS && id <= COMMAND_BLOCK && id != 1518 && id != 1519) || (id >= SOUND_BLOCK && id <= RAIL_CURVE + 3) || (id >= RAIL_SWITCH && id < BUFFER_STOP + 4) || isRailSlope(id) ||
@@ -747,6 +760,7 @@ enum Tile : uint16_t {
     T_BRONZE_AGED, T_BRONZE_AGED_LAST = T_BRONZE_AGED + 7,  // 2.2.0: base * 2 + (0 tarnished, 1 rusty)
     T_BRONZE_DOOR_LOWER, T_BRONZE_DOOR_UPPER, T_BRONZE_TRAPDOOR, T_BRONZE_DOOR_ITEM,
     T_SUBWAY_LOCO_ITEM, T_SUBWAY_CAR_ITEM,
+    T_TRACK_BED, T_PLATFORM_TOP, T_PLATFORM_SIDE, T_LATTICE, T_RAIL_CROSS, T_RAIL_CROSS_DIAG,  // 2.4.0
     T_TRAIN_TEX2, T_TRAIN_TEX2_LAST = T_TRAIN_TEX2 + 15,  // 2.3.0 preview build 7: more train colours (the subway)
     T_COUNT
 };
@@ -766,7 +780,7 @@ inline ItemId trapdoorBase(ItemId id) { return id >= BRONZE_TRAPDOOR ? (ItemId)B
 inline bool isChest(ItemId id) {
     return id == CHEST || (id >= LOOT_CHEST_RUIN && id <= LOOT_CHEST_MINE) || id == LOOT_CHEST_FORTRESS ||
            (id >= LOOT_CHEST_VOID && id <= LOOT_CHEST_TOWER) || (id >= LOOT_CHEST_FORGOTTEN && id <= LOOT_CHEST_PORTAL) ||
-           id == LOOT_CHEST_SHRINE || id == LOOT_CHEST_CHAMBER || id == LOOT_CHEST_BRONZE;
+           id == LOOT_CHEST_SHRINE || id == LOOT_CHEST_CHAMBER || id == LOOT_CHEST_BRONZE || id == LOOT_CHEST_STATION;
 }
 inline bool isSapling(ItemId id) { return (id >= OAK_SAPLING && id <= NETHERPERK_SAPLING) || id == GRAY_SAPLING || id == CELESTIAL_SAPLING; }
 inline bool isWallCable(ItemId id) { return id >= WALL_CABLE && id < WALL_CABLE + 8; }
@@ -859,7 +873,7 @@ inline bool isSolid(ItemId id) { return id != AIR && !isLiquid(id) && !isPortal(
 inline bool isTargetable(ItemId id) { return isSolid(id) || isPlant(id) || id == DRIED_SNOW; }  // 2.2.0: dried snow can be dug
 // Opaque blocks fully hide the faces of their neighbours.
 inline bool isOpaque(ItemId id) {
-    return isSolid(id) && !isLeaves(id) && id != GLASS && id != POWERSTONE_GLASS && bronzeAgingBase(id) != 3 && !isShaped(id) && !isStainedGlass(id) && id != BARRIER &&
+    return isSolid(id) && !isLeaves(id) && id != GLASS && id != POWERSTONE_GLASS && bronzeAgingBase(id) != 3 && id != LATTICE && !isShaped(id) && !isStainedGlass(id) && id != BARRIER &&
            id != HONEY_BLOCK && id != AMBER_RESIN &&
            !(isModId(id) && modIsTransparent(id));
 }
@@ -1103,6 +1117,11 @@ inline int tileFor(ItemId id, Face face) {
                 case SNOWFLAKE_BLOCK: return T_SNOWFLAKE_BLOCK;
                 case DRIED_SNOW: return T_DRIED_SNOW;
                 case ABYSSAL_ROCK: return T_ABYSSAL_ROCK;
+                case TRACK_BED: return T_TRACK_BED;
+                case PLATFORM: return face == F_TOP ? T_PLATFORM_TOP : face == F_BOTTOM ? T_TRACK_BED : T_PLATFORM_SIDE;
+                case LATTICE: return T_LATTICE;
+                case RAIL_CROSS: return T_RAIL_CROSS;
+                case RAIL_CROSS_DIAG: return T_RAIL_CROSS_DIAG;
                 case RADIO: return face == F_TOP || face == F_BOTTOM ? T_RADIO_TOP : T_RADIO;
                 default: break;
             }

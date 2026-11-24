@@ -9,6 +9,7 @@ namespace vc {
 namespace {
 
 #include "TrainModels.inc"
+#include "TrainPalette.inc"
 
 // Build 12: a cell has eight ports: the middles of its sides (even: 0 N, 2 E, 4 S, 6 W) and its corners
 // (odd: 1 NE, 3 SE, 5 SW, 7 NW). Leaving by port p goes to the neighbour that way, in by port p + 4.
@@ -21,7 +22,7 @@ constexpr float kHalfPi = 1.57079633f;
 struct CarBox {
     float x0, y0, z0, x1, y1, z1;
 };
-int carBoxes(CarKind kind, CarBox out[16], float doors = 0) {
+int carBoxes(CarKind kind, CarBox out[24], float doors = 0, int doorSides = 3) {
     int n = 0;
     if (isSubwayCar(kind)) {
         // 2.3.0: the subway: a long body with two doorways each side (z -1.4..-0.6 and 0.6..1.4);
@@ -30,7 +31,7 @@ int carBoxes(CarKind kind, CarBox out[16], float doors = 0) {
         out[n++] = {-w, 0.2f, -len, w, 0.5f, len};
         for (float side : {-1.0f, 1.0f}) {
             const float x0 = side < 0 ? -w : w - t, x1 = side < 0 ? -w + t : w;
-            if (doors > 0.6f) {
+            if (doors > 0.6f && (doorSides & (side < 0 ? 1 : 2))) {
                 out[n++] = {x0, 0.5f, -len, x1, top, -1.4f};
                 out[n++] = {x0, 0.5f, -0.6f, x1, top, 0.6f};
                 out[n++] = {x0, 0.5f, 1.4f, x1, top, len};
@@ -43,6 +44,13 @@ int carBoxes(CarKind kind, CarBox out[16], float doors = 0) {
         out[n++] = {-w, 0.5f, -len, w, top, -len + t};
         out[n++] = {-w, 0.5f, len - t, w, top, len};
         out[n++] = {-w, top, -len, w, top + 0.08f, len};
+        // 2.4.0: the seats are solid (no walking through them); the aisle between them stays free.
+        auto bench = [&](float z0, float z1) {
+            out[n++] = {-w + 0.08f, 0.5f, z0, -0.48f, 1.0f, z1};
+            out[n++] = {0.48f, 0.5f, z0, w - 0.08f, 1.0f, z1};
+        };
+        if (kind == CarKind::SubwayCar) bench(-2.1f, -1.45f), bench(-0.5f, 0.5f), bench(1.45f, 2.1f);
+        else bench(-2.1f, -1.45f), out[n++] = {-0.3f, 0.5f, 1.45f, 0.3f, 1.0f, 1.95f};  // the driver's seat
         return n;
     }
     const float w = 0.72f, t = 0.08f, len = 2.0f;
@@ -166,6 +174,14 @@ bool TrainSystem::nextSide(ItemId id, int in, int& out) {
         if (in == e) return out = railSwitch8State(id) ? branch : straight, true;
         if (in == straight || in == branch) return out = e, true;
         return false;
+    }
+    if (id == RAIL_CROSS) {  // 2.4.0: straight on through, north-south or east-west
+        if (in & 1) return false;
+        return out = (in + 4) & 7, true;
+    }
+    if (id == RAIL_CROSS_DIAG) {  // 2.4.0: straight on through, along either diagonal
+        if (!(in & 1)) return false;
+        return out = (in + 4) & 7, true;
     }
     if (isBufferStop(id)) {
         const int g = (id - BUFFER_STOP) * 2;  // the plate's side: trains come in from the other one
@@ -297,7 +313,12 @@ void TrainSystem::pose(const World& world, TrainCar& car) const {
     flip(back);
     advance(world, back, kHalf, moved);
     const float bm = moved;
-    const Vec3 f = pointOn(front), b = pointOn(back);
+    Vec3 tf, tb;
+    const Vec3 f = pointOn(front, &tf), b = pointOn(back, &tb);
+    // 2.3.0: the bogies follow the track under each end, so the wheels turn into a curve.
+    auto wrap = [](float a) { while (a > 3.14159265f) a -= 6.2831853f; while (a < -3.14159265f) a += 6.2831853f; return a; };
+    car.bogie[1] = fm > 0.5f ? std::clamp(wrap(std::atan2(-tf.x, tf.z) - car.yaw), -0.8f, 0.8f) : 0;
+    car.bogie[0] = bm > 0.5f ? std::clamp(wrap(std::atan2(tb.x, -tb.z) - car.yaw), -0.8f, 0.8f) : 0;
     const float horiz = std::sqrt((f.x - b.x) * (f.x - b.x) + (f.z - b.z) * (f.z - b.z));
     if (fm + bm < 0.5f || horiz < 0.2f) {
         car.pitch = 0;
@@ -345,6 +366,16 @@ bool TrainSystem::place(const World& world, int dim, CarKind kind, int x, int y,
         at.out = railSwitch8Entry(here);
         auto off = [&](int q) { const int d = (q - look) & 7; return std::min(d, 8 - d); };
         if (off(at.in) < off(at.out)) flip(at);
+    } else if (isRailCross(here)) {
+        // 2.4.0: on a crossing, along the track the player looks down.
+        const bool diag = here == RAIL_CROSS_DIAG;
+        int best = diag ? 1 : 0, bd = 9;
+        for (int q = diag ? 1 : 0; q < 8; q += 2) {
+            const int d = std::min((q - look) & 7, (look - q) & 7);
+            if (d < bd) bd = d, best = q;
+        }
+        at.out = best;
+        at.in = (best + 4) & 7;
     } else {
         const int k = railSwitchIndex(here), f = k / 2;
         at.in = ((f + 2) & 3) * 2;
@@ -369,10 +400,31 @@ void TrainSystem::update(const World& world, int dim, float dt, Vec3& playerPos,
         if (tr.dim != dim || tr.cars.empty()) continue;
         // Build 5: the locomotive may be anywhere in the train (behind a drill car that leads).
         bool hasEngine = false, subway = false;
-        for (const TrainCar& c : tr.cars) hasEngine = hasEngine || isEngineCar(c.kind), subway = subway || c.kind == CarKind::SubwayLocomotive;
+        for (const TrainCar& c : tr.cars) hasEngine = hasEngine || isEngineCar(c.kind), subway = subway || isSubwayCar(c.kind);
         // 2.3.0: the subway's doors open when it stands with no throttle, and shut before it leaves.
         if (subway) {
-            const bool open = std::fabs(tr.speed) < 0.05f && std::fabs(tr.throttle) < 0.01f;
+            if (std::fabs(tr.throttle) > 0.01f) tr.doorsWanted = false;
+            bool open = std::fabs(tr.speed) < 0.05f && std::fabs(tr.throttle) < 0.01f;
+            if (open && tr.doors <= 0 && kFeatures240) {
+                // 2.4.0: at a station the doors open on the platform's side only; elsewhere only when the
+                // driver opens them by hand (then both sides).
+                int sides = 0;
+                for (const TrainCar& c : tr.cars) {
+                    const float cs = std::cos(-c.yaw), sn = std::sin(-c.yaw);
+                    for (int dx = -4; dx <= 4; ++dx)
+                        for (int dz = -4; dz <= 4; ++dz)
+                            for (int dy = -1; dy <= 1; ++dy) {
+                                const int bx = (int)std::floor(c.pos.x) + dx, by = (int)std::floor(c.pos.y) + dy, bz = (int)std::floor(c.pos.z) + dz;
+                                if (world.getBlock(bx, by, bz) != PLATFORM) continue;
+                                const float ox = bx + 0.5f - c.pos.x, oz = bz + 0.5f - c.pos.z;
+                                const float lx = ox * cs - oz * sn, lz = ox * sn + oz * cs;
+                                if (std::fabs(lz) < carHalf(c.kind) * kScale) sides |= lx < 0 ? 1 : 2;
+                            }
+                }
+                if (tr.doorsWanted) sides = 3;
+                tr.doorSides = sides ? sides : 3;
+                open = sides != 0;
+            }
             tr.doors = open ? std::min(1.0f, tr.doors + dt * 1.25f) : std::max(0.0f, tr.doors - dt * 1.5f);
         } else {
             tr.doors = 0;
@@ -450,7 +502,11 @@ void TrainSystem::update(const World& world, int dim, float dt, Vec3& playerPos,
         } else if (!ok) {
             tr.speed = 0, tr.throttle = 0;  // the end of the track: the train stops
         }
-        for (TrainCar& c : tr.cars) refresh(c), pose(world, c);
+        for (TrainCar& c : tr.cars) {
+            refresh(c), pose(world, c);
+            c.roll += (fwd ? 1.0f : -1.0f) * moved / (0.17f * kScale);  // 2.3.0: the wheels roll
+            if (std::fabs(c.roll) > 1000.0f) c.roll = std::fmod(c.roll, 6.2831853f);
+        }
         if (carried >= 0) {
             const TrainCar& c = tr.cars[(size_t)carried];
             const float cs = std::cos(c.yaw), sn = std::sin(c.yaw);
@@ -470,8 +526,8 @@ bool TrainSystem::collide(int dim, Vec3& pos, Vec3& vel) const {
             if (d.x * d.x + d.z * d.z > 64 || d.y < -3 || d.y > 6) continue;
             const float cs = std::cos(-c.yaw), sn = std::sin(-c.yaw);
             Vec3 l(d.x * cs - d.z * sn, d.y, d.x * sn + d.z * cs);
-            CarBox boxes[16];
-            const int n = carBoxes(c.kind, boxes, tr.doors);
+            CarBox boxes[24];
+            const int n = carBoxes(c.kind, boxes, tr.doors, tr.doorSides);
             bool moved = false;
             for (int i = 0; i < n; ++i) {
                 const CarBox& b0 = boxes[i];
@@ -599,6 +655,22 @@ struct Mesh {
     size_t count;
 };
 #define VC_MESH(arr) Mesh{arr, sizeof(arr) / sizeof(int16_t) / 7}
+struct Axles {
+    const int16_t* data;
+    const float (*info)[4];
+    int count;
+};
+#define VC_AXLES(n) Axles{kTrainAxles_##n, kTrainAxleInfo_##n, kTrainAxleCount_##n}
+Axles carAxles(CarKind k) {
+    switch (k) {
+        case CarKind::Locomotive: return VC_AXLES(locomotive);
+        case CarKind::Passenger: return VC_AXLES(passenger);
+        case CarKind::Drill: return VC_AXLES(drill);
+        case CarKind::SubwayLocomotive: return VC_AXLES(subway_locomotive);
+        case CarKind::SubwayCar: return VC_AXLES(subway_car);
+        default: return VC_AXLES(freight);
+    }
+}
 Mesh carMesh(CarKind k) {
     switch (k) {
         case CarKind::Locomotive: return VC_MESH(kTrain_locomotive);
@@ -617,19 +689,50 @@ void TrainSystem::buildVertices(int dim, std::vector<Vertex>& out) const {
         for (const TrainCar& c : tr.cars) {
             const float cs = std::cos(c.yaw), sn = std::sin(c.yaw), k = kScale / 2048.0f;
             const float pc = std::cos(c.pitch), ps = std::sin(c.pitch);
-            auto emit = [&](const Mesh& m, float dz) {
+            auto emitT = [&](const Mesh& m, auto&& place) {
                 for (size_t i = 0; i < m.count; ++i) {
                     const int16_t* v = m.data + i * 7;
-                    const float lx = v[0] * k, ly0 = v[1] * k, lz0 = v[2] * k + dz;
+                    float lx = v[0] * k, ly0 = v[1] * k, lz0 = v[2] * k;
+                    place(lx, ly0, lz0);
                     const float ly = ly0 * pc + lz0 * ps, lz = lz0 * pc - ly0 * ps;  // build 5: tilted on slopes
                     // Build 4: each colour has its own pixel-art tile; u, v are inside it (half a pixel in from the edges).
                     const int tile = trainTexTile(v[3]);
                     const float u = ((tile % kAtlasCols) + (0.5f + v[5] / 255.0f * 15.0f) / 16.0f) * kTile;
                     const float vv = ((tile / kAtlasCols) + (0.5f + v[6] / 255.0f * 15.0f) / 16.0f) * kTile;
-                    out.push_back({c.pos.x + lx * cs - lz * sn, c.pos.y + ly, c.pos.z + lx * sn + lz * cs, u, vv, v[4] / 255.0f});
+                    // 2.4.0: the subway is lit inside at night; its lamps shine at full brightness.
+                    float glow = 0;
+                    if (isSubwayCar(c.kind)) {
+                        const uint8_t* pcol = kTrainPalette[v[3]];
+                        glow = (pcol[0] > 240 && pcol[1] > 220 && pcol[2] < 170) ? 1.0f : 0.7f * v[4] / 255.0f;
+                    }
+                    out.push_back({c.pos.x + lx * cs - lz * sn, c.pos.y + ly, c.pos.z + lx * sn + lz * cs, u, vv, v[4] / 255.0f, glow});
                 }
             };
-            emit(carMesh(c.kind), 0);
+            auto emit = [&](const Mesh& m, float dz) {
+                // 2.4.0: only the leaves on the open side(s) slide.
+                emitT(m, [&](float& x, float&, float& z) { if (tr.doorSides & (x < 0 ? 1 : 2)) z += dz; });
+            };
+            emitT(carMesh(c.kind), [](float&, float&, float&) {});
+            // 2.3.0: the wheels spin as the car rolls (the subway's boxy bogies only turn), and each
+            // bogie turns with the track under it.
+            const Axles ax = carAxles(c.kind);
+            const float pivot = (isSubwayCar(c.kind) ? 1.6f : 1.3f) * kScale;
+            const float spin = isSubwayCar(c.kind) ? 0.0f : c.roll;
+            const float rc = std::cos(spin), rs = std::sin(spin);
+            for (int a = 0; a < ax.count; ++a) {
+                const float cy = ax.info[a][0] * kScale, cz = ax.info[a][1] * kScale;
+                const int side = cz > 0 ? 1 : 0;
+                const float zp = side ? pivot : -pivot, ba = c.bogie[side], bc = std::cos(ba), bs = std::sin(ba);
+                const Mesh m{ax.data + (size_t)ax.info[a][2] * 7, (size_t)ax.info[a][3]};
+                emitT(m, [&](float& x, float& y, float& z) {
+                    const float y1 = y * rc - z * rs, z1 = y * rs + z * rc;
+                    const float dz = z1 + cz - zp;
+                    y = y1 + cy;
+                    const float x2 = x * bc - dz * bs;
+                    z = x * bs + dz * bc + zp;
+                    x = x2;
+                });
+            }
             // 2.3.0: the subway's door leaves slide apart along the side as the doors open.
             const float slide = 0.38f * kScale * tr.doors;
             if (c.kind == CarKind::SubwayLocomotive) emit(VC_MESH(kTrainDoorsNeg_subway_locomotive), -slide), emit(VC_MESH(kTrainDoorsPos_subway_locomotive), slide);

@@ -37,6 +37,8 @@ struct TrainCar {
     Vec3 pos;        // world position of the middle at rail-head level (updated from `at`)
     float yaw = 0;   // the model's front (+z) points along the travel direction
     float pitch = 0; // build 5: nose up (+) or down on slopes, from the track under both ends
+    float roll = 0;  // 2.3.0: how far the wheels have turned (radians)
+    float bogie[2] = {0, 0};  // 2.3.0: the back and front bogies' turn against the body on curves
 };
 
 struct Train {
@@ -48,6 +50,8 @@ struct Train {
     bool brake = false;
     float drillTimer = 0;  // build 5: time until the drill cuts the next block of tunnel
     float boosted = 0;   // seconds the extra speed of a booster lasts
+    bool doorsWanted = false;  // 2.4.0: the driver opened the doors by hand (shut again on throttle)
+    int doorSides = 3;   // 2.4.0: which sides open: 1 left (-x), 2 right (+x); at a station only the platform's side
     float doors = 0;     // 2.3.0: the subway's sliding doors, 0 shut .. 1 open (they open when it stands)
 };
 

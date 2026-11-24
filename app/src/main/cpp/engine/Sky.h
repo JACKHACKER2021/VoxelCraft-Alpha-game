@@ -36,7 +36,7 @@ Vec3 sunDirectionAt(float ticks);
 void buildSkyObjects(const Vec3& eye, float ticks, std::vector<Vertex>& sunMoon, std::vector<Vertex>& stars);
 // A layer of blocky clouds drifting east at y = kCloudHeight.
 constexpr float kCloudHeight = 116;
-void buildClouds(const Vec3& eye, float seconds, float brightness, std::vector<Vertex>& out);
+void buildClouds(const Vec3& eye, float seconds, float brightness, std::vector<Vertex>& out, float height = kCloudHeight);
 
 // Rain and snow fall in the open columns around the camera.
 enum class Precipitation { None, Rain, Snow };

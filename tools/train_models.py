@@ -34,7 +34,7 @@ def quat_rot(q, v):
     return (vx + w * tx + (y * tz - z * ty), vy + w * ty + (z * tx - x * tz), vz + w * tz + (x * ty - y * tx))
 
 
-def load(path, skip=()):
+def load(path, skip=(), only=None):
     d = open(path, "rb").read()
     jl = struct.unpack("<I", d[12:16])[0]
     j = json.loads(d[20:20 + jl])
@@ -61,7 +61,10 @@ def load(path, skip=()):
     ln = math.sqrt(sum(c * c for c in light))
     light = tuple(c / ln for c in light)
     for node in j["nodes"]:
-        if "mesh" not in node or node.get("name", "") in skip:
+        nm = node.get("name", "")
+        if "mesh" not in node or nm in skip or ("wheel" in skip and nm.startswith("wheel")):
+            continue
+        if only is not None and nm != only:
             continue
         t = node.get("translation", [0, 0, 0])
         r = node.get("rotation", [0, 0, 0, 1])
@@ -380,8 +383,34 @@ with open(OUT, "w") as o:
     o.write("// voxelcraft_rails gen_models.py). Do not edit by hand.\n")
     o.write("// A vertex: x, y, z in 1/2048 of a model unit, colour index, shade 0..255, u, v 0..255 inside the colour\'s tile.\n")
     for name, f in CARS + [DRILL]:
-        tris, ex = load(SRC + "/" + f, skip=("cargo",) if name == "drill" else ())
+        tris, ex = load(SRC + "/" + f, skip=("cargo", "wheel") if name == "drill" else ("wheel",))
         ex = dict(ex)
+        if name in SUBWAY:
+            # 2.3.0: the subway models face -z; the game's cars face +z (the cab leads).
+            tris = [[(-v[0], v[1], -v[2]) + tuple(v[3:]) for v in t] for t in tris]
+            if ex.get("seat_pos"):
+                ex["seat_pos"] = [[-sp[0], sp[1], -sp[2]] for sp in ex["seat_pos"]]
+        # 2.3.0: the wheels come apart from the body: they spin, and turn with the track on curves.
+        axles = []  # (y, z, triangles)
+        jf = open(SRC + "/" + f, "rb").read()
+        jj = json.loads(jf[20:20 + struct.unpack("<I", jf[12:16])[0]])
+        for node in jj["nodes"]:
+            if "mesh" in node and node.get("name", "").startswith("wheel"):
+                wt, _ = load(SRC + "/" + f, only=node["name"])
+                axles.append((sum(v[1] for t in wt for v in t) / (3 * len(wt)), sum(v[2] for t in wt for v in t) / (3 * len(wt)), wt))
+        if name in SUBWAY:
+            wheel_ci = palette.index((40, 40, 44, 255))
+            low = [t for t in tris if t[0][3] == wheel_ci and max(v[1] for v in t) < 0.45]
+            tris = [t for t in tris if not (t[0][3] == wheel_ci and max(v[1] for v in t) < 0.45)]
+            groups = []
+            for t in sorted(low, key=lambda t: sum(v[2] for v in t)):
+                cz = sum(v[2] for v in t) / 3
+                if groups and cz - groups[-1][-1][0] < 0.3:
+                    groups[-1].append((cz, t))
+                else:
+                    groups.append([(cz, t)])
+            for g in groups:
+                axles.append((0.16, sum(c for c, _ in g) / len(g), [t for _, t in g]))
         if name == "drill":
             tris = tris + drill_head()
         tris = blocky(tris)
@@ -396,21 +425,45 @@ with open(OUT, "w") as o:
             def sliding(t):
                 cz = abs(sum(v[2] for v in t) / 3)
                 return t[0][3] == dc and 0.4 < cz < 2.0
-            leaves = [t for t in tris if sliding(t)]
-            tris = [t for t in tris if not sliding(t)]
-            for side in (-1, 1):
-                mine = [t for t in leaves if (sum(v[0] for v in t) > 0) == (side > 0)]
-                zs = sorted((min(v[2] for v in t), max(v[2] for v in t)) for t in mine)
-                spans = []
-                for z0, z1 in zs:
-                    if spans and z0 <= spans[-1][1] + 0.05:
-                        spans[-1][1] = max(spans[-1][1], z1)
-                    else:
-                        spans.append([z0, z1])
-                for t in mine:
-                    cz = sum(v[2] for v in t) / 3
-                    span = min(spans, key=lambda sp: 0 if sp[0] - 0.01 <= cz <= sp[1] + 0.01 else 9)
-                    doors[-1 if cz < (span[0] + span[1]) / 2 else 1].append(t)
+            zs = sorted((min(v[2] for v in t), max(v[2] for v in t)) for t in tris if sliding(t))
+            spans = []
+            for z0, z1 in zs:
+                if spans and z0 <= spans[-1][1] + 0.05:
+                    spans[-1][1] = max(spans[-1][1], z1)
+                else:
+                    spans.append([z0, z1])
+            Y0, Y1 = 0.5, 1.75
+
+            def piece(t, lims):
+                poly = [tuple(v) for v in t]
+                for axis, lo, hi in lims:
+                    poly = clip(poly, axis, lo, hi)
+                    if not poly:
+                        return []
+                return [[poly[0], poly[k], poly[k + 1]] for k in range(1, len(poly) - 1)]
+
+            # Triangles are cut exactly at the doorway and at its middle, so a leaf never drags a long
+            # stripe or wall triangle with it (that tore the body apart), and the stripe on a leaf moves too.
+            body = []
+            for t in tris:
+                cx = sum(v[0] for v in t) / 3
+                if not (sliding(t) or abs(cx) > 0.8):
+                    body.append(t)
+                    continue
+                rest = [t]
+                for z0, z1 in spans:
+                    mid = (z0 + z1) / 2
+                    nxt = []
+                    for r in rest:
+                        ylim = [] if sliding(r) else [(1, Y0, Y1)]
+                        doors[-1] += piece(r, [(2, z0 + 0.01, mid)] + ylim)
+                        doors[1] += piece(r, [(2, mid, z1 - 0.01)] + ylim)
+                        nxt += piece(r, [(2, -99, z0 + 0.01)]) + piece(r, [(2, z1 - 0.01, 99)])
+                        if ylim:
+                            nxt += piece(r, [(2, z0 + 0.01, z1 - 0.01), (1, -99, Y0)]) + piece(r, [(2, z0 + 0.01, z1 - 0.01), (1, Y1, 99)])
+                    rest = nxt
+                body += rest
+            tris = body
             print(name, "door leaves", len(doors[-1]), len(doors[1]))
             if not ex.get("seat_pos"):
                 ex["seat_pos"] = [[sx, 0.95, sz] for sz in (-1.9, 1.9, -0.1) for sx in (-0.55, 0.55)] if name == "subway_car" else [[0.0, 0.95, -1.6]]
@@ -420,6 +473,20 @@ with open(OUT, "w") as o:
                 for v in [v for t in doors[sign] for v in t] or [(0, 0, 0, 0, 0, 0, 0)] * 3:
                     o.write("%d,%d,%d,%d,%d,%d,%d,\n" % (round(v[0] * 2048), round(v[1] * 2048), round(v[2] * 2048), v[3], round(v[4] * 255), round(v[5] * 255), round(v[6] * 255)))
                 o.write("};\n")
+        o.write("static const int16_t kTrainAxles_%s[] = {\n" % name)
+        info, first = [], 0
+        for cy, cz, wt in axles:
+            wt = separate(texture(blocky([[(v[0], v[1] - cy, v[2] - cz) + tuple(v[3:]) for v in t] for t in wt])))
+            for v in [v for t in wt for v in t]:
+                o.write("%d,%d,%d,%d,%d,%d,%d,\n" % (round(v[0] * 2048), round(v[1] * 2048), round(v[2] * 2048), v[3], round(v[4] * 255), round(v[5] * 255), round(v[6] * 255)))
+            info.append((cy, cz, first, len(wt) * 3))
+            first += len(wt) * 3
+        if not axles:
+            o.write("0,0,0,0,0,0,0,\n")
+        o.write("};\n")
+        o.write("static const float kTrainAxleInfo_%s[][4] = {%s};\n" % (name, ", ".join("{%.4ff, %.4ff, %d, %d}" % a for a in info) or "{0, 0, 0, 0}"))
+        o.write("static const int kTrainAxleCount_%s = %d;\n" % (name, len(info)))
+        print(name, "axles", len(info))
         verts = [v for t in tris for v in t]
         o.write("static const int16_t kTrain_%s[] = {\n" % name)
         for v in verts:

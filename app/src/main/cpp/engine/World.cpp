@@ -596,7 +596,7 @@ void World::deepenOverworld(Chunk& c) {
     placeOres(c, ore, 0xD31Bu);
     ore.block = STEEL_ORE, ore.veins = 1, ore.size = 4, ore.minY = 4, ore.maxY = kDeepShift - 2;
     placeOres(c, ore, 0xD31Cu);
-    if (kPreviewEdition) stampBronzeHalls(c);  // 2.3.0 preview
+    if (kFeatures230) stampBronzeHalls(c);  // 2.3.0
 }
 
 // 2.3.0: the Bronze Halls, a big dungeon in the deep layers: 25 halls of bronze in a 5 x 5 grid joined by
@@ -912,6 +912,7 @@ void World::stampStructures(Chunk& c) {
         {WorldStructure::RuinedVillage, 400, 45, kVillageSize},  // 1.5.9 (generation 3)
         {WorldStructure::CaveDungeon, 72, 55, 11},               // 1.6.0 (generation 4)
         {WorldStructure::Camp, 112, 70, 11},                     // 1.7.2 build 3 (generation 5)
+        {WorldStructure::RuinedStation, kStationRegion, 45, 23},            // 2.4.0 (generation 7)
     };
     const int sea = config_.overworld.seaLevel;
     const int x0 = c.cx * kChunkSize, z0 = c.cz * kChunkSize, x1 = x0 + kChunkSize - 1, z1 = z0 + kChunkSize - 1;
@@ -919,6 +920,7 @@ void World::stampStructures(Chunk& c) {
         if (k.type == WorldStructure::RuinedVillage && config_.generation < 3) continue;
         if (k.type == WorldStructure::CaveDungeon && config_.generation < 4) continue;
         if (k.type == WorldStructure::Camp && config_.generation < 5) continue;
+        if (k.type == WorldStructure::RuinedStation && (config_.generation < 7 || !kFeatures240)) continue;
         for (int rx = floorDiv(x0 - k.maxSize, k.region); rx <= floorDiv(x1, k.region); ++rx)
             for (int rz = floorDiv(z0 - k.maxSize, k.region); rz <= floorDiv(z1, k.region); ++rz) {
                 uint32_t h = hash3(rx, (int)k.type * 977 + 13, rz, seed_ ^ 0x57A7u);
@@ -932,7 +934,7 @@ void World::stampStructures(Chunk& c) {
                     if (blueprints_.size() > 48) blueprints_.clear();
                     Structure s = buildWorldStructure(k.type, h * 2654435761u);
                     // Villages keep their layout (their doors face the paths).
-                    const int turns = k.type == WorldStructure::Village || k.type == WorldStructure::RuinedVillage ? 0 : (int)(h >> 28);
+                    const int turns = k.type == WorldStructure::Village || k.type == WorldStructure::RuinedVillage || k.type == WorldStructure::RuinedStation ? 0 : (int)(h >> 28);
                     it = blueprints_.emplace(key, std::make_shared<Structure>(s.rotated(turns))).first;
                 }
                 const Structure& s = *it->second;
@@ -946,7 +948,7 @@ void World::stampStructures(Chunk& c) {
                 const bool surface = k.type == WorldStructure::Ruin || k.type == WorldStructure::DesertTemple ||
                                      k.type == WorldStructure::Igloo || k.type == WorldStructure::Watchtower ||
                                      k.type == WorldStructure::Village || k.type == WorldStructure::BrokenPortal ||
-                                     k.type == WorldStructure::RuinedVillage || k.type == WorldStructure::Camp;
+                                     k.type == WorldStructure::RuinedVillage || k.type == WorldStructure::Camp || k.type == WorldStructure::RuinedStation;
                 if (surface) {
                     // Camps stand mostly in the Dappled Forest; elsewhere only now and then.
                     if (k.type == WorldStructure::Camp && !(mb && mb->id == "dappled_forest") && (h >> 5) % 6 != 0) continue;
@@ -976,6 +978,33 @@ void World::stampStructures(Chunk& c) {
                     oy = 16 + (int)((h >> 4) % 14);
                     if (middle.height < oy + s.sy + 8) continue;
                 }
+                // 2.4.0 (generation 7): a village no longer lays a round flat plate of grass over the land (on
+                // a hill it stood up as a raised disc with cliffs). Open ground keeps the land as it is, a path
+                // is laid into the ground where it lies; only houses, the well and the fields stand on the plan.
+                const bool village = config_.generation >= 7 && (k.type == WorldStructure::Village || k.type == WorldStructure::RuinedVillage);
+                auto openColumn = [&](int x, int z, bool& path) {
+                    path = false;
+                    for (int y = 0; y < s.sy; ++y) {
+                        const ItemId id = s.at(x, y, z);
+                        if (id == Structure::kVoid || id == AIR || isPlant(id)) continue;
+                        if (y == 0 && (id == GRASS || id == GRAVEL)) { path = id == GRAVEL; continue; }
+                        return false;
+                    }
+                    return true;
+                };
+                if (village)
+                    for (int z = std::max(0, z0 - oz); z < s.sz && oz + z <= z1; ++z)
+                        for (int x = std::max(0, x0 - ox); x < s.sx && ox + x <= x1; ++x) {
+                            bool path;
+                            if (!openColumn(x, z, path) || !path) continue;
+                            const int lx = ox + x - x0, lz = oz + z - z0;
+                            int g = std::min(kGenHeight - 2, oy + 4);
+                            while (g > 1 && (c.get(lx, g, lz) == AIR || isPlant(c.get(lx, g, lz)) || isLeaves(c.get(lx, g, lz)) || isLog(c.get(lx, g, lz)))) --g;
+                            if (std::abs(g - (oy - 1)) <= 5 && c.get(lx, g, lz) != WATER) {
+                                c.set(lx, g, lz, GRAVEL);
+                                if (isPlant(c.get(lx, g + 1, lz))) c.set(lx, g + 1, lz, AIR);
+                            }
+                        }
                 // Copy the part inside this chunk.
                 for (int y = 0; y < s.sy; ++y) {
                     const int wy = oy + y;
@@ -984,6 +1013,8 @@ void World::stampStructures(Chunk& c) {
                         for (int x = std::max(0, x0 - ox); x < s.sx && ox + x <= x1; ++x) {
                             ItemId id = s.at(x, y, z);
                             if (id == Structure::kVoid) continue;
+                            bool pathCol;
+                            if (village && openColumn(x, z, pathCol)) continue;
                             const int lx = ox + x - x0, lz = oz + z - z0;
                             if (c.get(lx, wy, lz) == BEDROCK || c.get(lx, wy, lz) == WORLD_END) continue;
                             if (id == AIR && wy <= sea && (k.type == WorldStructure::Shipwreck || k.type == WorldStructure::DrownedRuins)) id = WATER;
@@ -1288,7 +1319,24 @@ void World::generateNether(Chunk& c) {
             int vx, vy, vz;
             if (!forgottenVillageIn(rx, rz, vx, vy, vz)) continue;
             const uint32_t h = hash3(rx, 7777, rz, seed_ ^ 0xF06Fu);
-            const Structure& s = blueprint((int)WorldStructure::ForgottenVillage, rx, rz, h);
+            const Structure& s0 = blueprint((int)WorldStructure::ForgottenVillage, rx, rz, h);
+            // 2.4.0 (generation 7): open ground of the plan is left out, so the village sits in the land
+            // instead of on a round plate standing on pillars of netherrack.
+            Structure open;
+            if (config_.generation >= 7) {
+                open = s0;
+                for (int z = 0; z < open.sz; ++z)
+                    for (int x = 0; x < open.sx; ++x) {
+                        bool built = false;
+                        for (int y = 0; y < open.sy && !built; ++y) {
+                            const ItemId id = open.at(x, y, z);
+                            built = !(id == Structure::kVoid || id == AIR || isPlant(id) || (y == 0 && (id == WASTELAND_GRASS || id == DEBRIS_GRAVEL || id == GRAVEL)));
+                        }
+                        if (!built)
+                            for (int y = 0; y < open.sy; ++y) open.at(x, y, z) = Structure::kVoid;
+                    }
+            }
+            const Structure& s = config_.generation >= 7 ? open : s0;
             const int ox = vx - half, oy = vy - 1, oz = vz - half;
             stampBlueprint(c, s, ox, oy, oz, false);
             // Foundations of cornerstone down to the ground, so no house hangs over the lava.
@@ -1465,6 +1513,19 @@ std::string World::placeName(int x, int z) const {
             return b ? b->name : "";
         }
     }
+}
+
+bool World::ruinedStationIn(int rx, int rz, int& cx, int& cz) const {
+    // The same choice stampStructures makes for WorldStructure::RuinedStation.
+    if (dim_ != Dimension::Overworld || !config_.overworld.structures || config_.generation < 7 || !kFeatures240) return false;
+    const uint32_t h = hash3(rx, (int)WorldStructure::RuinedStation * 977 + 13, rz, seed_ ^ 0x57A7u);
+    if ((int)(h % 100) >= 45) return false;
+    const int ox = rx * kStationRegion + (int)((h >> 8) % (uint32_t)(kStationRegion - 23));
+    const int oz = rz * kStationRegion + (int)((h >> 16) % (uint32_t)(kStationRegion - 23));
+    Column middle = column(ox + 11, oz + 3);
+    if (!middle.biome || middle.biome->peakBlock || middle.height <= config_.overworld.seaLevel + 1) return false;
+    cx = ox + 11, cz = oz + 3;
+    return true;
 }
 
 bool World::villageIn(int rx, int rz, int& cx, int& cy, int& cz) const {

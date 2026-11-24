@@ -100,8 +100,15 @@ const std::vector<LootEntry>& table(ItemId chest, int& rollsMin, int& rollsMax) 
         {STEEL_INGOT, 6, 2, 5},   {RUBY, 4, 1, 3},            {HARDIUM, 3, 1, 3},          {BRONZE_PICKAXE, 2, 1, 1},
         {STEEL_SWORD, 2, 1, 1},   {armorItem(2, 1), 2, 1, 1}, {RUBY_BLOCK, 1, 1, 1},
     };
+    // 2.4.0: a ruined station: railway parts left behind, now and then a whole subway car.
+    static const std::vector<LootEntry> kStation = {
+        {RAIL_NS, 10, 4, 12},     {TRACK_BED, 8, 3, 8},        {PLATFORM, 6, 2, 6},         {LATTICE, 6, 2, 6},
+        {STEEL_INGOT, 6, 2, 5},   {IRON_INGOT, 6, 2, 6},       {RAIL_CROSS, 2, 1, 1},       {BUFFER_STOP, 2, 1, 1},
+        {TRAIN_BOOSTER, 2, 1, 2}, {SUBWAY_CAR, 1, 1, 1},       {SUBWAY_LOCOMOTIVE, 1, 1, 1}, {BREAD, 4, 1, 3},
+    };
     switch (chest) {
         case LOOT_CHEST_BRONZE: rollsMin = 5; rollsMax = 9; return kBronzeHalls;
+        case LOOT_CHEST_STATION: rollsMin = 4; rollsMax = 7; return kStation;
         case LOOT_CHEST_SHRINE: rollsMin = 4; rollsMax = 7; return kShrine;
         case LOOT_CHEST_CHAMBER: rollsMin = 5; rollsMax = 9; return kChamber;
         case LOOT_BARREL_CAMP: rollsMin = 3; rollsMax = 6; return kCamp;
