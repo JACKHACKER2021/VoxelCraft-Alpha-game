@@ -6922,3 +6922,42 @@ SHOT(c06_frost) {
     d.shot("c06_frost");
     d.seconds(4.0f);
 }
+
+// 2.5.0 preview: the abandoned subway: the station hall, a tunnel and the way up.
+SHOT(z01_metro) {
+    Director d(out, "z01");
+    d.openWorld("Metro", 2121, GameMode::Creative);
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    int ox = 0, oz = 0;
+    bool big = false, found = false;
+    for (int r = 0; r < 4 && !found; ++r)
+        for (int rx = -r; rx <= r && !found; ++rx)
+            for (int rz = -r; rz <= r && !found; ++rz) found = w.metroIn(rx, rz, ox, oz, big) && big;
+    if (!found)
+        for (int r = 0; r < 4 && !found; ++r)
+            for (int rx = -r; rx <= r && !found; ++rx)
+                for (int rz = -r; rz <= r && !found; ++rz) found = w.metroIn(rx, rz, ox, oz, big);
+    std::printf("metro at %d %d big %d\n", ox, oz, (int)big);
+    w.ensureChunksAround(floorDiv(ox + 40, 16), floorDiv(oz + 10, 16), 6, 100000);
+    const int fy = World::kMetroY + 1;  // the platforms' level
+    std::printf("platform at y %d\n", fy);
+    if (fy < 0) return;
+    p.flying = true;
+    d.settings().hideGui = true;
+    auto view = [&](const char* name, Vec3 at, Vec3 look) {
+        p.pos = at;
+        d.idle(60);
+        d.lookNow(look);
+        d.shot(name);
+        d.seconds(0.2f, [&](float) { d.lookNow(look); });
+    };
+    const int W = big ? 29 : 17;
+    view("z01_hall", Vec3(ox + 3.5f, fy + 3.5f, oz + W / 2.0f), Vec3(ox + 40.5f, fy + 1.0f, oz + W / 2.0f));
+    view("z01_platform", Vec3(ox + 20.5f, fy + 2.0f, oz + 2.5f), Vec3(ox + 30.5f, fy + 1.5f, oz + 8.5f));
+    view("z01_tunnel", Vec3(ox - 3.5f, fy + 1.6f, oz + 5.5f), Vec3(ox - 30.5f, fy + 1.0f, oz + 5.5f));
+    view("z01_shaft", Vec3(ox + 6.5f, fy + 2.5f, oz + 2.5f), Vec3(ox + 6.5f, fy + 4.0f, oz - 3.0f));
+    const int top = w.surfaceHeight(ox + 6, oz - 3);
+    view("z01_entrance", Vec3(ox + 12.5f, top + 4.0f, oz - 10.5f), Vec3(ox + 6.5f, top + 1.0f, oz - 3.0f));
+}

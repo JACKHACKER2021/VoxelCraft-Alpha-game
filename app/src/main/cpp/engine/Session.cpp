@@ -2883,6 +2883,13 @@ void Session::useItem(const RayHit& hit) {
         }
     }
     if (held.empty()) return;
+    if (isJournal(held.id)) {  // 2.5.0: the dead explorer's journal
+        wantsDocument = 100 + (held.id - JOURNAL);
+        state_.journalsRead |= 1 << (held.id - JOURNAL);
+        hand_.use();
+        sound(Sound::Page);
+        return;
+    }
     if (isDocument(held.id)) {
         readDocument(held.id - OLD_DOCUMENT);
         return;
@@ -4323,6 +4330,14 @@ std::vector<MapMarker> Session::mapMarkers() const {
             for (int rz = floorDiv(pz, R) - 1; rz <= floorDiv(pz, R) + 1; ++rz) {
                 int cx, cz;
                 if (world_->ruinedStationIn(rx, rz, cx, cz) && std::abs(cx - px) < 300 && std::abs(cz - pz) < 300) m.push_back({MapMarker::Station, cx, cz});
+            }
+        // 2.5.0: the entrances of the abandoned subway nearby.
+        const int M = World::kMetroRegion;
+        for (int rx = floorDiv(px, M) - 1; rx <= floorDiv(px, M) + 1; ++rx)
+            for (int rz = floorDiv(pz, M) - 1; rz <= floorDiv(pz, M) + 1; ++rz) {
+                int ox, oz;
+                bool big;
+                if (world_->metroIn(rx, rz, ox, oz, big) && std::abs(ox + 6 - px) < 300 && std::abs(oz - 3 - pz) < 300) m.push_back({MapMarker::Station, ox + 6, oz - 3});
             }
     }
     return m;

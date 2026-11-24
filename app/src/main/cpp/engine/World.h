@@ -215,6 +215,11 @@ private:
     ItemId bronzeHallsBlock(int lx, int ly, int lz, uint32_t seed) const;
 public:
     bool bronzeHallsIn(int rx, int rz, int& ox, int& oz) const;  // 2.3.0: the Bronze Halls of a region
+    // 2.5.0: the abandoned subway: a station hall deep under a region (big: four tracks), tunnels to
+    // both sides and a shaft up to the land. `ox, oz` is the hall's corner, `big` its size.
+    bool metroIn(int rx, int rz, int& ox, int& oz, bool& big) const;
+    static constexpr int kMetroRegion = 448, kMetroY = 34;
+    void stampMetro(Chunk& c);
 private:
     GenConfig config_;
     Noise terrain_, detail_, caves_, temperature_, humidity_;

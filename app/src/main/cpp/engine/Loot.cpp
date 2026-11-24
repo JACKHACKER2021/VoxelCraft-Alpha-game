@@ -106,9 +106,16 @@ const std::vector<LootEntry>& table(ItemId chest, int& rollsMin, int& rollsMax) 
         {STEEL_INGOT, 6, 2, 5},   {IRON_INGOT, 6, 2, 6},       {RAIL_CROSS, 2, 1, 1},       {BUFFER_STOP, 2, 1, 1},
         {TRAIN_BOOSTER, 2, 1, 2}, {SUBWAY_CAR, 1, 1, 1},       {SUBWAY_LOCOMOTIVE, 1, 1, 1}, {BREAD, 4, 1, 3},
     };
+    // 2.5.0: the abandoned subway: tools of its workers and parts of its trains.
+    static const std::vector<LootEntry> kMetro = {
+        {RAIL_NS, 8, 4, 12},          {TRACK_BED, 6, 3, 8},     {PLATFORM, 5, 2, 6},        {LATTICE, 5, 2, 6},
+        {STEEL_INGOT, 6, 2, 6},       {POWERSTONE_LIGHT, 4, 1, 3}, {TORCH, 6, 4, 12},       {STEEL_PICKAXE, 2, 1, 1},
+        {SUBWAY_CAR, 2, 1, 1},        {SUBWAY_LOCOMOTIVE, 2, 1, 1}, {RAIL_CROSS, 2, 1, 1},  {BREAD, 3, 1, 3},
+    };
     switch (chest) {
         case LOOT_CHEST_BRONZE: rollsMin = 5; rollsMax = 9; return kBronzeHalls;
         case LOOT_CHEST_STATION: rollsMin = 4; rollsMax = 7; return kStation;
+        case LOOT_CHEST_METRO: rollsMin = 5; rollsMax = 8; return kMetro;
         case LOOT_CHEST_SHRINE: rollsMin = 4; rollsMax = 7; return kShrine;
         case LOOT_CHEST_CHAMBER: rollsMin = 5; rollsMax = 9; return kChamber;
         case LOOT_BARREL_CAMP: rollsMin = 3; rollsMax = 6; return kCamp;
@@ -203,6 +210,26 @@ ChestContents generateLoot(ItemId chestBlock, uint32_t seed) {
     if (chestBlock == LOOT_CHEST_PORTAL) put((ItemId)(OLD_DOCUMENT + 3 + rnd(3)));         // IV-VI
     if (chestBlock == LOOT_CHEST_DROWNED) put((ItemId)(OLD_DOCUMENT + 5 + rnd(3)));        // VI-VIII
     if (chestBlock == LOOT_CHEST_FORTRESS && rnd(3) == 0) put((ItemId)(OLD_DOCUMENT + 5 + rnd(2)));
+    // 2.5.0: the dead explorer left a page of his journal in every kind of place he passed.
+    if (kFeatures250) {
+        int page = -1;
+        switch (chestBlock) {
+            case LOOT_CHEST_RUIN: page = 0; break;
+            case LOOT_CHEST_SHIP: page = 1; break;
+            case LOOT_CHEST_DUNGEON: page = 2; break;
+            case LOOT_CHEST_MINE: page = 3; break;
+            case LOOT_CHEST_TEMPLE: page = 4; break;
+            case LOOT_CHEST_IGLOO: page = 5; break;
+            case LOOT_CHEST_TOWER: page = 6; break;
+            case LOOT_BARREL_CAMP: page = 7; break;
+            case LOOT_CHEST_STATION: page = 8; break;
+            case LOOT_CHEST_BRONZE: page = 9; break;
+            case LOOT_CHEST_FORTRESS: page = 10; break;
+            case LOOT_CHEST_METRO: page = 11; break;
+            default: break;
+        }
+        if (page >= 0) put((ItemId)(JOURNAL + page));
+    }
     // Broken portal ruins: the compass that finds a Nether fortress, always.
     if (chestBlock == LOOT_CHEST_PORTAL) put(FORTRESS_COMPASS);
     return out;

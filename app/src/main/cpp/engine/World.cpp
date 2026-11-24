@@ -597,6 +597,7 @@ void World::deepenOverworld(Chunk& c) {
     ore.block = STEEL_ORE, ore.veins = 1, ore.size = 4, ore.minY = 4, ore.maxY = kDeepShift - 2;
     placeOres(c, ore, 0xD31Cu);
     if (kFeatures230) stampBronzeHalls(c);  // 2.3.0
+    if (kFeatures250) stampMetro(c);  // 2.5.0
 }
 
 // 2.3.0: the Bronze Halls, a big dungeon in the deep layers: 25 halls of bronze in a 5 x 5 grid joined by
@@ -607,6 +608,128 @@ void World::deepenOverworld(Chunk& c) {
 namespace {
 constexpr int kHallRegion = 400, kHallCell = 21, kHallRoom = 15, kHallGrid = 5, kHallSize = kHallCell * (kHallGrid - 1) + kHallRoom;
 constexpr int kHallFloor = 14, kHallHeight = 10;
+}
+
+namespace {
+// 2.5.0: the shape of a metro station. Along x: the hall [0, L), tunnels T blocks out of each end.
+// Across z: walls at 0 and W - 1, platforms of 3 and track trenches of 3 in turn (rails in the middle).
+struct MetroShape {
+    int L, T, tracks, W;
+    explicit MetroShape(bool big) : L(big ? 90 : 56), T(big ? 64 : 48), tracks(big ? 4 : 2), W(5 + 6 * (big ? 4 : 2)) {}
+    bool trench(int z) const { const int m = (z - 1) % 6; return z >= 1 && z < W - 1 && (m == 3 || m == 4 || m == 5) && (z - 1) / 6 < tracks; }
+    bool rail(int z) const { return trench(z) && (z - 1) % 6 == 4; }
+};
+// The block of the metro at hall-local (x, y, z) (y 0 = floor), or kVoid where it leaves the rock alone.
+ItemId metroBlock(const MetroShape& m, int x, int y, int z, uint32_t seed) {
+    constexpr ItemId kVoid = Structure::kVoid;
+    if (z < -6 || z >= m.W || y < 0 || y > 8 || x < -m.T || x >= m.L + m.T) return kVoid;
+    const uint32_t r = hash3(x, y, z, seed);
+    // The entrance shaft beside the hall (x 5..7, z -5..-1): handled with the land above in stampMetro.
+    if (z < 0) {
+        if (x >= 4 && x <= 8 && z >= -5) {
+            const bool core = x >= 5 && x <= 7 && z >= -4 && z <= -2;
+            if (y == 0) return STONE_BRICKS;
+            if (core) return (z == -4 && x == 6 && y >= 2) ? (ItemId)VINES : (ItemId)AIR;
+            if (x == 6 && z == -1 && (y == 2 || y == 3)) return AIR;  // the doorway into the shaft
+            return STONE_BRICKS;
+        }
+        return kVoid;
+    }
+    if (x >= 0 && x < m.L) {
+        // The hall.
+        const bool wall = z == 0 || z == m.W - 1;
+        if (wall) {
+            if (x == 6 && z == 0 && (y == 2 || y == 3)) return AIR;  // the way to the shaft
+            if (y == 4) return (ItemId)(CONCRETE + 11);               // a blue stripe on the tiles
+            return r % 11 == 0 ? (ItemId)COBBLESTONE : r % 7 == 0 ? (ItemId)MOSSY_COBBLESTONE : (ItemId)STONE_BRICKS;
+        }
+        if (y == 8) {
+            const bool lamp = x % 7 == 3 && !m.trench(z) && (z - 1) % 6 == 1;
+            if (lamp) return r % 10 < 3 ? (ItemId)AIR : (ItemId)POWERSTONE_LIGHT;  // some lamps fell down
+            return STONE_BRICKS;
+        }
+        if (y == 0) return m.trench(z) ? (ItemId)TRACK_BED : (ItemId)HARDENED_CONCRETE;
+        if (y == 1) {
+            if (m.rail(z)) return r % 9 == 0 ? (ItemId)GRAVEL : (ItemId)RAIL_EW;
+            if (m.trench(z)) return AIR;
+            return r % 13 == 0 ? (ItemId)HARDENED_CONCRETE : (ItemId)PLATFORM;
+        }
+        // Lattice pillars on the platforms between the tracks, rubble here and there.
+        if (!m.trench(z) && (z - 1) % 6 == 1 && x % 9 == 4 && z > 1 && z < m.W - 2) return LATTICE;
+        if (y == 2 && !m.trench(z) && r % 37 == 0) return GRAVEL;
+        if (y == 7 && r % 23 == 0) return VINES;
+        return AIR;
+    }
+    // The tunnels: one tube per track, collapsed at the far end.
+    const int dist = x < 0 ? -x : x - m.L + 1;
+    const int k = (z - 1) % 6;
+    const int t = (z - 1) / 6;
+    if (z < 1 || t >= m.tracks) return kVoid;
+    const bool tube = k == 3 || k == 4 || k == 5;
+    const bool side = k == 2 || k == 0;
+    if (!tube && !side) return kVoid;
+    if (dist > m.T - 6) return y <= 5 ? (ItemId)(tube ? GRAVEL : STONE_BRICKS) : kVoid;  // the cave-in
+    if (side) return y <= 5 ? (ItemId)STONE_BRICKS : kVoid;
+    if (y == 0) return TRACK_BED;
+    if (y == 1 && k == 4) return r % 6 == 0 ? (ItemId)AIR : (ItemId)RAIL_EW;
+    if (y == 5) return dist % 12 == 6 && k == 4 && r % 3 ? (ItemId)POWERSTONE_LIGHT : (ItemId)STONE_BRICKS;
+    if (y > 5) return kVoid;
+    return AIR;
+}
+}  // namespace
+
+bool World::metroIn(int rx, int rz, int& ox, int& oz, bool& big) const {
+    if (!kFeatures250 || dim_ != Dimension::Overworld || !config_.overworld.structures || config_.generation < 7) return false;
+    const uint32_t h = hash3(rx, 2505, rz, seed_ ^ 0x3E7Fu);
+    if (h % 100 >= 55) return false;
+    big = (h >> 7) % 3 == 0;
+    const MetroShape m(big);
+    ox = rx * kMetroRegion + m.T + 8 + (int)((h >> 9) % (uint32_t)(kMetroRegion - m.L - 2 * m.T - 16));
+    oz = rz * kMetroRegion + 16 + (int)((h >> 19) % (uint32_t)(kMetroRegion - m.W - 32));
+    // The shaft must come up on dry land (not in a lake or the sea, nor on a peak).
+    const Column top = column(ox + 6, oz - 3);
+    if (!top.biome || top.biome->peakBlock || top.height <= config_.overworld.seaLevel + 1) return false;
+    return true;
+}
+
+void World::stampMetro(Chunk& c) {
+    const int x0 = c.cx * kChunkSize, z0 = c.cz * kChunkSize;
+    for (int rx = floorDiv(x0, kMetroRegion) - 1; rx <= floorDiv(x0 + 15, kMetroRegion); ++rx)
+        for (int rz = floorDiv(z0, kMetroRegion) - 1; rz <= floorDiv(z0 + 15, kMetroRegion); ++rz) {
+            int ox, oz;
+            bool big;
+            if (!metroIn(rx, rz, ox, oz, big)) continue;
+            const MetroShape m(big);
+            if (ox + m.L + m.T < x0 || ox - m.T > x0 + 15 || oz + m.W < z0 || oz - 6 > z0 + 15) continue;
+            const uint32_t seed = hash3(rx, 77, rz, seed_ ^ 0x3E80u);
+            for (int x = 0; x < kChunkSize; ++x)
+                for (int z = 0; z < kChunkSize; ++z) {
+                    const int lx = x0 + x - ox, lz = z0 + z - oz;
+                    for (int y = 0; y <= 8; ++y) {
+                        ItemId id = metroBlock(m, lx, y, lz, seed);
+                        if (id == Structure::kVoid) continue;
+                        const ItemId old = c.get(x, kMetroY + y, z);
+                        if (old == BEDROCK || old == WORLD_END) continue;
+                        c.set(x, kMetroY + y, z, id);
+                    }
+                    // The chests on the side platforms (two in the big one).
+                    for (int k = 0; k < (big ? 2 : 1); ++k) {
+                        const int cxL = m.L / 2 + k * 20 - 10 * k, czL = k ? m.W - 3 : 2;
+                        if (lx == cxL && lz == czL) c.set(x, kMetroY + 2, z, LOOT_CHEST_METRO);
+                    }
+                    // The shaft up to the land, with a little stone entrance on top.
+                    if (lx >= 4 && lx <= 8 && lz >= -5 && lz <= -1) {
+                        const bool core = lx >= 5 && lx <= 7 && lz >= -4 && lz <= -2;
+                        const int top = column(x0 + x, z0 + z).height + kDeepShift;  // (stamped after the lift)
+                        for (int y = kMetroY + 9; y <= top + 3 && y < kChunkHeight - 1; ++y) {
+                            ItemId id = core ? (ItemId)((lz == -4 && lx == 6) ? VINES : AIR) : (ItemId)STONE_BRICKS;
+                            if (!core && y > top && lx == 6 && lz == -1 && y <= top + 2) id = AIR;  // the door
+                            if (y == top + 3) id = core ? (ItemId)STONE_BRICKS : (ItemId)slabId(6, 0);
+                            c.set(x, y, z, id);
+                        }
+                    }
+                }
+        }
 }
 
 bool World::bronzeHallsIn(int rx, int rz, int& ox, int& oz) const {

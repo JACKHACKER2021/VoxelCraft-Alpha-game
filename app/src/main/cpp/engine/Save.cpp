@@ -128,6 +128,7 @@ bool saveLevel(const WorldInfo& info, const PlayerState& p) {
         for (size_t i = 0; i < p.bossArenas.size(); ++i) o << (i ? "," : "") << p.bossArenas[i].first << ":" << p.bossArenas[i].second;
         if (p.hasShowcase) o << "\nshowcase=" << p.showcaseX << ":" << p.showcaseY << ":" << p.showcaseZ;
         if (p.documentsRead) o << "\npages=" << p.documentsRead;
+        if (p.journalsRead) o << "\njournals=" << p.journalsRead;
         o << "\narmor=";
         for (int i = 0; i < 4; ++i) o << (i ? "," : "") << (int)p.armor[i].id << ":" << (int)p.armor[i].count << ":" << p.armor[i].damage;
         if (!p.offhand.empty()) o << "\noffhand=" << (int)p.offhand.id << ":" << (int)p.offhand.count << ":" << p.offhand.damage;
@@ -184,6 +185,7 @@ bool loadLevel(const std::string& folder, WorldInfo& info, PlayerState& p) {
     p.weatherTimer = std::clamp((float)num(kv, "weatherTimer", 600), 1.0f, 3600.0f);
     p.bossesDefeated = std::max(0, (int)num(kv, "bosses", 0));
     p.documentsRead = std::clamp((int)num(kv, "pages", 0), 0, 255);
+    p.journalsRead = std::clamp((int)num(kv, "journals", 0), 0, 4095);
     if (kv.count("showcase") && std::sscanf(kv["showcase"].c_str(), "%d:%d:%d", &p.showcaseX, &p.showcaseY, &p.showcaseZ) == 3)
         p.hasShowcase = true;
     std::istringstream arenas(kv["arenas"]);

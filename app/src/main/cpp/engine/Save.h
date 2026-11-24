@@ -67,6 +67,7 @@ struct PlayerState {
     int showcaseX = 0, showcaseY = 0, showcaseZ = 0;
     // 1.5.0: which pages of the old documents the player has read (bit per page).
     int documentsRead = 0;
+    int journalsRead = 0;  // 2.5.0: the dead explorer's journal pages read (bits)
 };
 
 struct Settings {

@@ -3179,6 +3179,33 @@ void Game::offlineGuideScreen() {
 }
 
 // The story of the forgotten powerstone kingdom, one page per old document.
+const char* const kJournalTexts[kJournalPages][2] = {
+    {"Deník I: Odchod",
+     "Odcházím z vesnice. Starci vyprávějí o kolejích, které vedou pod zem, a o vlaku, který jednou odjel a už se nevrátil. Chci ho najít."},
+    {"Deník II: Vrak",
+     "Na pobřeží ležel vrak lodi. V podpalubí byly bedny s železnými kolejnicemi. Kdo je vezl a kam?"},
+    {"Deník III: Sklep",
+     "V kobce pod zemí jsem našel mapu se zakreslenými stanicemi. Všechny čáry se sbíhají do jednoho místa hluboko v kameni."},
+    {"Deník IV: Štola",
+     "Ve staré štole jsou koleje ještě rovné. Někdo tu kopal mnohem hlouběji, než bylo potřeba. Slyšel jsem zdola vzdálené dunění."},
+    {"Deník V: Pyramida",
+     "V pouštním chrámu je na zdi vyryt vlak. Tak staré, a přesto ho znali. Možná metro postavili dřív, než jsme si mysleli."},
+    {"Deník VI: Iglú",
+     "Mráz. Přespal jsem v iglú a zahřál se. Někdo tu přede mnou nechal stejnou mapu jako já. Nejsem první, kdo hledá."},
+    {"Deník VII: Věž",
+     "Z vrcholu strážní věže je vidět krajina na míle daleko. Tam, kde se louka propadá, vede dolů šachta. Zítra tam půjdu."},
+    {"Deník VIII: Tábor",
+     "Poslední noc u ohně. Zabalil jsem pochodně a chleba na tři dny. Kdyby mě někdo hledal, jdu po kolejích na západ."},
+    {"Deník IX: Nádraží",
+     "Rozpadlé nádraží. Na nástupišti ještě visí jízdní řád: poslední vlak do hloubky. Hodiny se zastavily."},
+    {"Deník X: Bronz",
+     "Bronzové síně. Jejich stavitelé uměli kov, který nerezaví. Z něj byly i koleje metra. Pokladnice je prázdná, někdo byl rychlejší."},
+    {"Deník XI: Pevnost",
+     "V Cornerstone je pevnost, odkud vedou koleje pod zem přes celou dimenzi. Metro nespojovalo jen vesnice, spojovalo světy."},
+    {"Deník XII: Poslední zápis",
+     "Jsem v opuštěném metru. Tunel za mnou se zavalil a světla zhasínají jedno po druhém. Nechávám tu deník. Kdo ho najde, ať dokončí cestu."},
+};
+
 const char* const kLorePages[kDocumentPages][2] = {
     {"Kronika powerstonového lidu",
      "Jsme lid powerstonu. Kámen, který svítí a dává sílu, jsme našli v suché zemi na jihu. Postavili jsme z něj domy, cesty "
@@ -3208,6 +3235,29 @@ const char* const kLorePages[kDocumentPages][2] = {
 
 void Game::documentScreen() {
     // An old sheet of parchment: the page's title, its text, and how many pages were found.
+    if (documentPage_ >= 100) {  // 2.5.0: a page of the dead explorer's journal
+        const int jp = std::clamp(documentPage_ - 100, 0, kJournalPages - 1);
+        const float W = ui_.width(), H = ui_.height();
+        ui_.fill(0, 0, W, H, {0, 0, 0, 0.5f});
+        const float pw = std::min(W - 20, 340.0f), ph = std::min(H - 16, 200.0f);
+        const float px = std::floor((W - pw) / 2), py = std::floor((H - ph) / 2);
+        const Color ink{0.2f, 0.16f, 0.12f, 1}, paper{0.86f, 0.84f, 0.76f, 1}, edge{0.3f, 0.22f, 0.15f, 1};
+        ui_.fill(px + 3, py + 3, pw, ph, {0, 0, 0, 0.4f});
+        ui_.fill(px, py, pw, ph, edge);
+        ui_.fill(px + 2, py + 2, pw - 4, ph - 4, paper);
+        ui_.textCentered(px + pw / 2, py + 10, kJournalTexts[jp][0], {0.35f, 0.22f, 0.12f, 1});
+        float ty = py + 30;
+        for (const std::string& line : wrapText(kJournalTexts[jp][1], pw - 24)) {
+            ui_.text(px + 12, ty, line, ink, 1, false);
+            ty += 11;
+        }
+        int read = 0;
+        for (int k = 0; k < kJournalPages; ++k) read += (session_->stats().journalsRead >> k) & 1;
+        ui_.text(px + 12, py + ph - 20, trf("Nalezené stránky deníku: {0} z {1}", {std::to_string(read), std::to_string(kJournalPages)}),
+                 {0.35f, 0.22f, 0.12f, 1}, 1, false);
+        if (ui_.button(px + pw - 82, py + ph - 26, 74, 22, "Zavřít", true, true)) setScreen(Screen::Playing);
+        return;
+    }
     const int page = std::clamp(documentPage_, 0, kDocumentPages - 1);
     const float W = ui_.width(), H = ui_.height();
     ui_.fill(0, 0, W, H, {0, 0, 0, 0.5f});

@@ -329,6 +329,8 @@ enum BlockId : uint16_t {
     RAIL_CROSS = 60249,          // 2.4.0: two tracks crossing at right angles
     RAIL_CROSS_DIAG = 60250,     // 2.4.0: two diagonal tracks crossing
     LOOT_CHEST_STATION = 60251,  // 2.4.0: the chest of a ruined station
+    LOOT_CHEST_METRO = 60252,    // 2.5.0: a chest of the abandoned subway
+    JOURNAL = 60253,             // 60253..60264: 2.5.0 the dead explorer's journals (items)
     RAIL_SWITCH8 = 60212,        // 60212..60243: 2.3.0 the flexible switch: entry port * 4 + left * 2 + state   // 2.3.0: a chest of the Bronze Halls
     RAIL_SWITCH_L = 60203,       // 60203..60210: 2.3.0 the mirrored switch, its branch to the left (facing * 2 + state)
     RAIL_GENTLE = 60187,         // 60187..60202: a gentle slope, 4 pieces per block of height: facing * 4 + piece
@@ -612,7 +614,9 @@ inline bool isRailSlope(ItemId id) { return id >= RAIL_SLOPE && id < RAIL_SLOPE 
 inline bool isCrossingSignal(ItemId id) { return id >= CROSSING_SIGNAL && id < CROSSING_SIGNAL + 12; }
 inline bool isCrossingGate(ItemId id) { return id >= CROSSING_GATE && id < CROSSING_GATE + 8; }
 inline bool isTurntable(ItemId id) { return id == TURNTABLE || id == TURNTABLE + 1; }
-constexpr int kExtLastBlock = LOOT_CHEST_STATION;
+constexpr int kExtLastBlock = LOOT_CHEST_METRO;
+constexpr int kJournalPages = 12;
+inline bool isJournal(ItemId id) { return id >= JOURNAL && id < JOURNAL + kJournalPages; }
 inline bool isRailGentle(ItemId id) { return id >= RAIL_GENTLE && id < RAIL_GENTLE + 16; }
 inline bool isRailDiag(ItemId id) { return id == RAIL_DIAG || id == RAIL_DIAG + 1; }
 inline bool isRailBend(ItemId id) { return id >= RAIL_BEND && id < RAIL_BEND + 8; }
@@ -780,7 +784,7 @@ inline ItemId trapdoorBase(ItemId id) { return id >= BRONZE_TRAPDOOR ? (ItemId)B
 inline bool isChest(ItemId id) {
     return id == CHEST || (id >= LOOT_CHEST_RUIN && id <= LOOT_CHEST_MINE) || id == LOOT_CHEST_FORTRESS ||
            (id >= LOOT_CHEST_VOID && id <= LOOT_CHEST_TOWER) || (id >= LOOT_CHEST_FORGOTTEN && id <= LOOT_CHEST_PORTAL) ||
-           id == LOOT_CHEST_SHRINE || id == LOOT_CHEST_CHAMBER || id == LOOT_CHEST_BRONZE || id == LOOT_CHEST_STATION;
+           id == LOOT_CHEST_SHRINE || id == LOOT_CHEST_CHAMBER || id == LOOT_CHEST_BRONZE || id == LOOT_CHEST_STATION || id == LOOT_CHEST_METRO;
 }
 inline bool isSapling(ItemId id) { return (id >= OAK_SAPLING && id <= NETHERPERK_SAPLING) || id == GRAY_SAPLING || id == CELESTIAL_SAPLING; }
 inline bool isWallCable(ItemId id) { return id >= WALL_CABLE && id < WALL_CABLE + 8; }
@@ -1274,7 +1278,7 @@ inline int tileFor(ItemId id, Face face) {
                 case POWERSTONE_RELIC: return T_POWERSTONE_RELIC;
                 case POTTERY_SHARD: return T_POTTERY_SHARD;
                 default:
-                    if (isDocument(id)) return T_DOCUMENT;
+                    if (isDocument(id) || isJournal(id)) return T_DOCUMENT;
                     if (isTorch(id)) return T_TORCH;
                     if (isSkeletonHead(id)) {
                         static const Face kFront[4] = {F_SOUTH, F_WEST, F_NORTH, F_EAST};
