@@ -40,7 +40,7 @@ namespace vc {
 namespace vc {
 
 namespace {
-const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.5.0 Preview build 1" : "VoxelCraft 2.4.0";
+const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.5.0 Preview build 2" : "VoxelCraft 2.4.0";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -1274,7 +1274,10 @@ void Game::presentsScreen(float dt) {
         "Noví tvorové v Cornerstone",
     };
     static const char* const kNew250[] = {
-        "Podzemní stanice a opuštěné metro",
+        "Síť metra: linky, tunely a čtyři druhy stanic",
+        "Automatické metro, mapa metra a cedule stanic",
+        "Ztracené podzemní město na konci linky",
+        "Zavalené a zatopené tunely, obklady a lavičky",
         "Deníky mrtvého průzkumníka ve strukturách",
     };
     static const char* const kNext250[] = {
@@ -1282,7 +1285,7 @@ void Game::presentsScreen(float dt) {
         "Rozhlas s lepším hlasem",
     };
     const char* const* kNew = kFeatures250 ? kNew250 : kNew240;
-    const int kNewCount = kFeatures250 ? 2 : 5;
+    const int kNewCount = 5;
     const char* const* kNext = kFeatures250 ? kNext250 : kNext240;
     const int kNextCount = kFeatures250 ? 2 : 3;
     const char* nextTitle = kFeatures250 ? "PŘIPRAVUJEME VE 2.6.0" : "PŘIPRAVUJEME VE 2.5.0";
@@ -1855,7 +1858,12 @@ void Game::newsPanel() {
     ui_.textCentered(W / 2, py + 8, kFeatures250 ? "Co je nového ve VoxelCraftu 2.5.0" : "Co je nového ve VoxelCraftu 2.4.0", gold);
     struct Row { const char* head; const char* text; };
     static const Row rows250[] = {
-        {"Podzemí", "Podzemní stanice metra a velké opuštěné metro s tunely"},
+        {"Síť metra", "Linky východ-západ nahoře a sever-jih dole, tunely mezi stanicemi"},
+        {"Stanice", "Zastávka, depo s dílnou, konečná se smyčkou a přestupní uzel se dvěma patry"},
+        {"Automat", "Metro jezdí samo, staví u každého nástupiště a na konci linky se otočí"},
+        {"Mapa", "Mapa metra ukáže linky a nalezené stanice; cedule stanice si pojmenuješ"},
+        {"Město", "Ztracené podzemní město v propastné skále, kam vede poslední linka"},
+        {"Tunely", "Závaly, které musíš prokopat, a zatopené úseky dole; obklady a lavičky"},
         {"Deníky", "V každé struktuře najdeš deník mrtvého průzkumníka; dohromady vyprávějí jeho příběh"},
         {"Metro", "Dveře se otevírají na straně nástupiště, řidič je může otevřít i ručně"},
     };
@@ -1869,7 +1877,7 @@ void Game::newsPanel() {
         {"Svět", "Vesnice kopírují krajinu, mraky jsou nad horami"},
     };
     const Row* rows = kFeatures250 ? rows250 : rows240;
-    const int rowCount = kFeatures250 ? 3 : 7;
+    const int rowCount = kFeatures250 ? 8 : 7;
     float y = py + 24;
     const float tw = pw - 114;
     for (int ri = 0; ri < rowCount; ++ri) {

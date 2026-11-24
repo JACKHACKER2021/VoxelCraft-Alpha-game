@@ -229,6 +229,11 @@ public:
     bool nearestMetroStation(int x, int z, int& outX, int& outZ, int& kind) const;  // its entrance shaft
     std::string metroStationName(int x, int z) const;  // the name of the station there (made up from the place)
     void stampMetro(Chunk& c);
+    // 2.5.0: the lost city at the end of some lines: a ramp down from a terminus' loop into a huge cave in
+    // the abyssal rock with streets, houses, lamps and a treasure on the square. `x0, z0`: its corner.
+    bool lostCityOf(int line, int region, int& rampX, int& x0, int& z0) const;
+    void stampLostCity(Chunk& c);
+    static constexpr int kCitySize = 90, kCityFloor = 8, kCityHeight = 24;
 private:
     GenConfig config_;
     Noise terrain_, detail_, caves_, temperature_, humidity_;

@@ -259,6 +259,20 @@ std::vector<std::string> runCommand(Session& s, const std::string& line, bool ch
         if (what == "village") found = regions(World::kVillageRegion, [&](int rx, int rz, int& a, int& b, int& c) { if (!w.villageIn(rx, rz, a, b, c)) return false; b += w.yShift(); return true; });
         else if (what == "forgotten") found = regions(World::kForgottenRegion, [&](int rx, int rz, int& a, int& b, int& c) { return w.forgottenVillageIn(rx, rz, a, b, c); });
         else if (what == "mineshaft") found = w.nearestMineshaft(px, pz, x, y, z);
+        else if (what == "city") {
+            // 2.5.0: the lost city: its ramp starts at the loop of a terminus.
+            long best = -1;
+            const int R = World::kMetroRegion;
+            for (int line = (int)std::floor((float)pz / R) - 4; line <= (int)std::floor((float)pz / R) + 4; ++line)
+                for (int region = (int)std::floor((float)px / R) - 4; region <= (int)std::floor((float)px / R) + 4; ++region) {
+                    int rampX, ox, oz;
+                    if (!w.lostCityOf(line, region, rampX, ox, oz)) continue;
+                    const int cx = ox + World::kCitySize / 2, cz = oz + World::kCitySize / 2;
+                    const long d = (long)(cx - px) * (cx - px) + (long)(cz - pz) * (cz - pz);
+                    if (best < 0 || d < best) best = d, x = cx, y = World::kCityFloor + 1, z = cz;
+                }
+            found = best >= 0;
+        }
         else if (what == "metro") {
             int kind = 0;
             found = w.nearestMetroStation(px, pz, x, z, kind);

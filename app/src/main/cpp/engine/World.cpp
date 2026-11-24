@@ -597,7 +597,7 @@ void World::deepenOverworld(Chunk& c) {
     ore.block = STEEL_ORE, ore.veins = 1, ore.size = 4, ore.minY = 4, ore.maxY = kDeepShift - 2;
     placeOres(c, ore, 0xD31Cu);
     if (kFeatures230) stampBronzeHalls(c);  // 2.3.0
-    if (kFeatures250) stampMetro(c);  // 2.5.0
+    if (kFeatures250) stampMetro(c), stampLostCity(c);  // 2.5.0
 }
 
 // 2.3.0: the Bronze Halls, a big dungeon in the deep layers: 25 halls of bronze in a 5 x 5 grid joined by
@@ -837,6 +837,99 @@ void World::stampMetro(Chunk& c) {
                 }
         }
     }
+}
+
+bool World::lostCityOf(int line, int region, int& rampX, int& x0, int& z0) const {
+    // The east terminus of every third stretch of an east-west line leads down to a city.
+    const MetroStation s = metroStation(true, line, region);
+    if (!s.ok || s.kind != MetroStation::Terminus || !s.loopEast) return false;
+    if (hash3(line, 2511, region, seed_ ^ 0x3E94u) % 3 != 0) return false;
+    rampX = s.centre - s.length / 2 + s.length + 8;  // just past the loop's end wall
+    x0 = rampX + 2 * (kMetroY - kCityFloor) + 2;
+    z0 = s.across - kCitySize / 2;
+    return true;
+}
+
+void World::stampLostCity(Chunk& c) {
+    if (!kFeatures250 || config_.generation < 7) return;
+    const int cx0 = c.cx * kChunkSize, cz0 = c.cz * kChunkSize;
+    for (int line = floorDiv(cz0, kMetroR) - 1; line <= floorDiv(cz0 + 15, kMetroR) + 1; ++line)
+        for (int region = floorDiv(cx0, kMetroR) - 1; region <= floorDiv(cx0 + 15, kMetroR); ++region) {
+            int rampX, ox, oz;
+            if (!lostCityOf(line, region, rampX, ox, oz)) continue;
+            bool e;
+            const int lc = metroLineCoord(true, line, e);
+            if (cx0 + 15 < rampX - 1 || cx0 > ox + kCitySize || cz0 + 15 < oz || cz0 > oz + kCitySize) continue;
+            const uint32_t seed = hash3(line, 2512, region, seed_ ^ 0x3E95u);
+            for (int x = 0; x < kChunkSize; ++x)
+                for (int z = 0; z < kChunkSize; ++z) {
+                    const int wx = cx0 + x, wz = cz0 + z;
+                    // The ramp: half a block down per block east, from the loop down to the city's floor.
+                    if (wx >= rampX - 1 && wx < ox && std::abs(wz - lc) <= 2) {
+                        const int k = wx - rampX;  // 0.. steps
+                        const int ab = std::abs(wz - lc);
+                        if (k < 0) {  // the opening in the loop's end wall
+                            if (ab <= 1) for (int y = kMetroY + 1; y <= kMetroY + 3; ++y) c.set(x, y, z, AIR);
+                            continue;
+                        }
+                        const int fy = kMetroY - (k + 1) / 2;
+                        for (int y = fy - 1; y <= fy + 4; ++y) {
+                            ItemId id = AIR;
+                            if (ab == 2 || y == fy + 4) id = (y == fy + 4 && k % 10 == 5 && ab == 0) ? (ItemId)POWERSTONE_LIGHT : (ItemId)DEEPSTONE_BRICKS;
+                            else if (y == fy - 1) id = DEEPSTONE_BRICKS;
+                            else if (y == fy) id = (k % 2) ? (ItemId)slabId(15, 0) : (ItemId)AIR;  // half steps
+                            if (y == fy && k % 2 == 0) id = AIR;
+                            if (y == fy - 1 && k % 2 == 0) id = DEEPSTONE_BRICKS;
+                            c.set(x, y, z, id);
+                        }
+                        continue;
+                    }
+                    const int lx = wx - ox, lz = wz - oz;
+                    if (lx < 0 || lz < 0 || lx >= kCitySize || lz >= kCitySize) continue;
+                    // The cave: rounded at the corners, a floor of bricks, streets every 15 blocks.
+                    const int ex = std::min(lx, kCitySize - 1 - lx), ez = std::min(lz, kCitySize - 1 - lz);
+                    if (ex + ez < 6) continue;  // the rock rounds the corners
+                    const bool street = lx % 15 < 3 || lz % 15 < 3;
+                    const int bx = lx / 15, bz = lz / 15;
+                    const bool square = bx == 3 && bz == 3;  // the middle lot (45..59): the square
+                    const uint32_t hb = hash3(bx, 2513, bz, seed);
+                    const int bh = 5 + (int)(hb % 9);  // the house's height
+                    const int ix = lx % 15 - 3, iz = lz % 15 - 3;  // inside the lot (0..11)
+                    for (int y = 0; y <= kCityHeight; ++y) {
+                        const int wy = kCityFloor + y;
+                        const uint32_t r = hash3(wx, wy, wz, seed);
+                        ItemId id = AIR;
+                        if (y == 0) {
+                            id = street ? (r % 6 == 0 ? (ItemId)GRAVEL : (ItemId)DUSTY_CONCRETE) : square ? (ItemId)CHISELED_POWERSTONE_BRICKS : (ItemId)DEEPSTONE_BRICKS;
+                        } else if (y == kCityHeight) {
+                            id = r % 9 == 0 ? (ItemId)POWERSTONE_LIGHT : (ItemId)ABYSSAL_ROCK;  // glowing stones in the ceiling
+                        } else if (street) {
+                            // Lamp posts at the crossings.
+                            if (lx % 15 == 1 && lz % 15 == 1 && y <= 4) id = y == 4 ? (ItemId)POWERSTONE_LIGHT : (ItemId)LATTICE;
+                        } else if (square) {
+                            // The square: a monument in the middle and the city's treasure before it.
+                            const int mx = ix - 6, mz = iz - 6;
+                            if (std::abs(mx) <= 1 && std::abs(mz) <= 1 && y <= 7) id = y == 7 ? (ItemId)POWERSTONE_LIGHT : (ItemId)CHISELED_POWERSTONE_BRICKS;
+                            if (mx == 0 && mz == 3 && y == 1) id = LOOT_CHEST_BRONZE;
+                        } else if (ix >= 1 && ix <= 10 && iz >= 1 && iz <= 10 && y <= bh) {
+                            // A house: walls with windows and a door, a flat roof, sometimes fallen in.
+                            const bool wall = ix == 1 || ix == 10 || iz == 1 || iz == 10;
+                            if (y == bh) id = (hb >> 5) % 4 == 0 && r % 3 == 0 ? (ItemId)AIR : (ItemId)DEEPSTONE_BRICKS;
+                            else if (wall) {
+                                const bool door = iz == 1 && (ix == 5 || ix == 6) && y <= 2;
+                                const bool window = y % 3 == 2 && (ix % 3 == 0 || iz % 3 == 0) && !(ix == 1 && iz == 1);
+                                id = door ? (ItemId)AIR : window ? (ItemId)(r % 4 ? GLASS : AIR) : r % 5 == 0 ? (ItemId)CRACKED_DEEPSTONE_BRICKS : r % 7 == 0 ? (ItemId)MOSSY_DEEPSTONE_BRICKS : (ItemId)DEEPSTONE_BRICKS;
+                            } else if (y == 1 && ix == 8 && iz == 8 && (hb >> 9) % 3 == 0) {
+                                id = LOOT_CHEST_METRO;
+                            } else if (y == 1 && r % 31 == 0) {
+                                id = GRAVEL;
+                            }
+                        }
+                        if (id == AIR && y >= kCityHeight - 3 && r % 29 == 0) id = VINES;
+                        c.set(x, wy, z, id);
+                    }
+                }
+        }
 }
 
 std::string World::metroStationName(int x, int z) const {

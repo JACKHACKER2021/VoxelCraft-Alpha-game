@@ -6977,3 +6977,33 @@ SHOT(z01_metro) {
         }
     }
 }
+
+// 2.5.0 preview: the lost city at the end of the line.
+SHOT(z02_city) {
+    Director d(out, "z02");
+    d.openWorld("City", 961, GameMode::Creative);
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    int rampX = 0, ox = 0, oz = 0;
+    bool found = false;
+    for (int line = -4; line <= 4 && !found; ++line)
+        for (int region = -4; region <= 4 && !found; ++region) found = w.lostCityOf(line, region, rampX, ox, oz);
+    std::printf("city at %d %d (ramp %d)\n", ox, oz, rampX);
+    if (!found) return;
+    w.ensureChunksAround(floorDiv(ox + 45, 16), floorDiv(oz + 45, 16), 5, 100000);
+    p.flying = true;
+    d.settings().hideGui = true;
+    auto view = [&](const char* name, Vec3 at, Vec3 look) {
+        p.pos = at;
+        d.idle(40);
+        d.lookNow(look);
+        d.shot(name);
+        d.seconds(0.2f, [&](float) { d.lookNow(look); });
+    };
+    const float fy = World::kCityFloor;
+    view("z02_overview", Vec3(ox + 8.5f, fy + 18, oz + 8.5f), Vec3(ox + 52.5f, fy + 2, oz + 52.5f));
+    view("z02_street", Vec3(ox + 8.5f, fy + 2.6f, oz + 17.5f), Vec3(ox + 80.5f, fy + 3, oz + 17.5f));
+    view("z02_square", Vec3(ox + 54.5f, fy + 4, oz + 61.5f), Vec3(ox + 54.5f, fy + 3, oz + 54.5f));
+    view("z02_ramp", Vec3(rampX - 3.5f, World::kMetroY + 2.0f, oz + World::kCitySize / 2 + 0.5f), Vec3(rampX + 30.5f, (float)World::kMetroY - 6, oz + World::kCitySize / 2 + 0.5f));
+}
