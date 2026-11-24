@@ -8,7 +8,7 @@ android {
     ndkVersion = "27.2.12479018"
 
     defaultConfig {
-        applicationId = "cz.voxelcraft"
+        applicationId = "cz.voxelsoftworks.voxelcraft"  // 2.4.0: new id and a lasting signing key (the old key was lost)
         minSdk = 30
         targetSdk = 36
         versionCode = 33
@@ -35,6 +35,8 @@ android {
         create("preview") {
             dimension = "edition"
             applicationIdSuffix = ".preview"
+            versionName = "2.5.0"  // the preview runs ahead of the normal edition
+            versionCode = 34
             versionNameSuffix = "-preview"
             resValue("string", "app_name", "VoxelCraft Preview")
             ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
