@@ -331,6 +331,12 @@ enum BlockId : uint16_t {
     LOOT_CHEST_STATION = 60251,  // 2.4.0: the chest of a ruined station
     LOOT_CHEST_METRO = 60252,    // 2.5.0: a chest of the abandoned subway
     JOURNAL = 60253,             // 60253..60264: 2.5.0 the dead explorer's journals (items)
+    METRO_TILE = 60265,          // 2.5.0: white wall tiles of the subway
+    METRO_TILE_BLUE = 60266,     // 2.5.0: blue tiles (the stripe along the walls)
+    METRO_TILE_CRACKED = 60267,  // 2.5.0: old cracked tiles
+    STATION_SIGN = 60268,        // 2.5.0: a station's name board (tap it to read or write the name)
+    BENCH = 60269,               // 2.5.0: a bench to sit on
+    METRO_MAP = 60270,           // 2.5.0: the map of the subway (an item)
     RAIL_SWITCH8 = 60212,        // 60212..60243: 2.3.0 the flexible switch: entry port * 4 + left * 2 + state   // 2.3.0: a chest of the Bronze Halls
     RAIL_SWITCH_L = 60203,       // 60203..60210: 2.3.0 the mirrored switch, its branch to the left (facing * 2 + state)
     RAIL_GENTLE = 60187,         // 60187..60202: a gentle slope, 4 pieces per block of height: facing * 4 + piece
@@ -614,7 +620,7 @@ inline bool isRailSlope(ItemId id) { return id >= RAIL_SLOPE && id < RAIL_SLOPE 
 inline bool isCrossingSignal(ItemId id) { return id >= CROSSING_SIGNAL && id < CROSSING_SIGNAL + 12; }
 inline bool isCrossingGate(ItemId id) { return id >= CROSSING_GATE && id < CROSSING_GATE + 8; }
 inline bool isTurntable(ItemId id) { return id == TURNTABLE || id == TURNTABLE + 1; }
-constexpr int kExtLastBlock = LOOT_CHEST_METRO;
+constexpr int kExtLastBlock = BENCH;
 constexpr int kJournalPages = 12;
 inline bool isJournal(ItemId id) { return id >= JOURNAL && id < JOURNAL + kJournalPages; }
 inline bool isRailGentle(ItemId id) { return id >= RAIL_GENTLE && id < RAIL_GENTLE + 16; }
@@ -643,7 +649,7 @@ bool modIsTransparent(ItemId id);
 bool modIsEmissive(ItemId id);
 int modFood(ItemId id);
 inline bool isNewBlock(ItemId id) {
-    if (id >= kExtIdBase && id <= kExtLastBlock && !(id >= LOCOMOTIVE && id <= FREIGHT_WAGON) && id != DRILL_CAR && id != STARBERRIES && id != SUBWAY_LOCOMOTIVE && id != SUBWAY_CAR) return true;  // the engine's own range
+    if (id >= kExtIdBase && id <= kExtLastBlock && !(id >= LOCOMOTIVE && id <= FREIGHT_WAGON) && id != DRILL_CAR && id != STARBERRIES && id != SUBWAY_LOCOMOTIVE && id != SUBWAY_CAR && !(id >= JOURNAL && id < JOURNAL + 12)) return true;  // the engine's own range
     if (isModId(id)) return modIsBlock(id);
     return isStairs(id) || isSlab(id) || (id >= TAR && id <= SNOW_LAYER) || isStainedGlass(id) || (id >= WALL_CABLE && id < WALL_CABLE + 8) || (id >= WALL_SWITCH && id < WALL_SWITCH + 8) ||
            (id >= ANNIV_LOGO && id <= PAINTED_PLANKS + 3) || (id >= POWERSTONE_BRICKS && id <= COMMAND_BLOCK && id != 1518 && id != 1519) || (id >= SOUND_BLOCK && id <= RAIL_CURVE + 3) || (id >= RAIL_SWITCH && id < BUFFER_STOP + 4) || isRailSlope(id) ||
@@ -764,6 +770,7 @@ enum Tile : uint16_t {
     T_BRONZE_AGED, T_BRONZE_AGED_LAST = T_BRONZE_AGED + 7,  // 2.2.0: base * 2 + (0 tarnished, 1 rusty)
     T_BRONZE_DOOR_LOWER, T_BRONZE_DOOR_UPPER, T_BRONZE_TRAPDOOR, T_BRONZE_DOOR_ITEM,
     T_SUBWAY_LOCO_ITEM, T_SUBWAY_CAR_ITEM,
+    T_METRO_TILE, T_METRO_TILE_BLUE, T_METRO_TILE_CRACKED, T_STATION_SIGN, T_BENCH, T_METRO_MAP,  // 2.5.0
     T_TRACK_BED, T_PLATFORM_TOP, T_PLATFORM_SIDE, T_LATTICE, T_RAIL_CROSS, T_RAIL_CROSS_DIAG,  // 2.4.0
     T_TRAIN_TEX2, T_TRAIN_TEX2_LAST = T_TRAIN_TEX2 + 15,  // 2.3.0 preview build 7: more train colours (the subway)
     T_COUNT
@@ -858,7 +865,7 @@ inline bool isBed(ItemId id) { return id >= BED && id < BED + 8; }
 inline bool isShaped(ItemId id) {
     return isDoor(id) || isTrapdoor(id) || isChest(id) || isFence(id) || isSkeletonHead(id) || id == CACTUS || isBed(id) || isCable(id) ||
            isSwitch(id) || id == CAKE || id == FARMLAND || isStairs(id) || (isSlab(id) && !isDoubleSlab(id)) ||
-           isBalloon(id) || id == PARTY_LANTERN || id == SNOW_LAYER || isTorch(id) || isCarpet(id) || id == CAMPFIRE || id == LEAF_LITTER || isRail(id) || id == CUSHION || isBufferStop(id) || isCrossingSignal(id) || isCrossingGate(id);
+           isBalloon(id) || id == PARTY_LANTERN || id == SNOW_LAYER || isTorch(id) || isCarpet(id) || id == CAMPFIRE || id == LEAF_LITTER || isRail(id) || id == CUSHION || id == BENCH || isBufferStop(id) || isCrossingSignal(id) || isCrossingGate(id);
 }
 inline bool isLeaves(ItemId id) { return id == LEAVES || id == SPRUCE_LEAVES || id == VOID_LEAVES || id == NETHERPERK_CAP || id == CELESTIAL_LEAVES ||
                                          (id >= RED_LEAVES && id <= YELLOW_LEAVES) || id == CRIMSONIUM_LEAVES || id == GLOWCAP_LEAVES; }
@@ -1121,6 +1128,12 @@ inline int tileFor(ItemId id, Face face) {
                 case SNOWFLAKE_BLOCK: return T_SNOWFLAKE_BLOCK;
                 case DRIED_SNOW: return T_DRIED_SNOW;
                 case ABYSSAL_ROCK: return T_ABYSSAL_ROCK;
+                case METRO_TILE: return T_METRO_TILE;
+                case METRO_TILE_BLUE: return T_METRO_TILE_BLUE;
+                case METRO_TILE_CRACKED: return T_METRO_TILE_CRACKED;
+                case STATION_SIGN: return face == F_TOP || face == F_BOTTOM ? T_METRO_TILE : T_STATION_SIGN;
+                case BENCH: return T_BENCH;
+                case METRO_MAP: return T_METRO_MAP;
                 case TRACK_BED: return T_TRACK_BED;
                 case PLATFORM: return face == F_TOP ? T_PLATFORM_TOP : face == F_BOTTOM ? T_TRACK_BED : T_PLATFORM_SIDE;
                 case LATTICE: return T_LATTICE;

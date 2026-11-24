@@ -4332,13 +4332,8 @@ std::vector<MapMarker> Session::mapMarkers() const {
                 if (world_->ruinedStationIn(rx, rz, cx, cz) && std::abs(cx - px) < 300 && std::abs(cz - pz) < 300) m.push_back({MapMarker::Station, cx, cz});
             }
         // 2.5.0: the entrances of the abandoned subway nearby.
-        const int M = World::kMetroRegion;
-        for (int rx = floorDiv(px, M) - 1; rx <= floorDiv(px, M) + 1; ++rx)
-            for (int rz = floorDiv(pz, M) - 1; rz <= floorDiv(pz, M) + 1; ++rz) {
-                int ox, oz;
-                bool big;
-                if (world_->metroIn(rx, rz, ox, oz, big) && std::abs(ox + 6 - px) < 300 && std::abs(oz - 3 - pz) < 300) m.push_back({MapMarker::Station, ox + 6, oz - 3});
-            }
+        int mx, mz, kind;
+        if (world_->nearestMetroStation(px, pz, mx, mz, kind) && std::abs(mx - px) < 300 && std::abs(mz - pz) < 300) m.push_back({MapMarker::Station, mx, mz});
     }
     return m;
 }

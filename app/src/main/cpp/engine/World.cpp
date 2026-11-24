@@ -610,126 +610,251 @@ constexpr int kHallRegion = 400, kHallCell = 21, kHallRoom = 15, kHallGrid = 5, 
 constexpr int kHallFloor = 14, kHallHeight = 10;
 }
 
+// ---------------------------------------------------------------- 2.5.0: the subway network
+// Lines east-west (rows of regions, the upper level) and north-south (columns, the lower level) run in
+// stretches of up to five regions. Every region a line passes has a station: a small stop, a depot
+// with a workshop, a terminus with a turning loop at the ends of a stretch, or an interchange where
+// both lines meet (one hall above the other, a ladder of vines between). Tunnels join the stations;
+// some have caved in, the lower ones are flooded here and there. Every station has a shaft up to
+// the land (where the land is dry).
 namespace {
-// 2.5.0: the shape of a metro station. Along x: the hall [0, L), tunnels T blocks out of each end.
-// Across z: walls at 0 and W - 1, platforms of 3 and track trenches of 3 in turn (rails in the middle).
-struct MetroShape {
-    int L, T, tracks, W;
-    explicit MetroShape(bool big) : L(big ? 90 : 56), T(big ? 64 : 48), tracks(big ? 4 : 2), W(5 + 6 * (big ? 4 : 2)) {}
-    bool trench(int z) const { const int m = (z - 1) % 6; return z >= 1 && z < W - 1 && (m == 3 || m == 4 || m == 5) && (z - 1) / 6 < tracks; }
-    bool rail(int z) const { return trench(z) && (z - 1) % 6 == 4; }
-};
-// The block of the metro at hall-local (x, y, z) (y 0 = floor), or kVoid where it leaves the rock alone.
-ItemId metroBlock(const MetroShape& m, int x, int y, int z, uint32_t seed) {
+constexpr int kMetroR = World::kMetroRegion;
+// The rail running along a line (rows run east-west) and the curves of a turning loop.
+ItemId lineRail(bool row) { return row ? (ItemId)RAIL_EW : (ItemId)RAIL_NS; }
+}  // namespace
+
+int World::metroLineCoord(bool row, int line, bool& exists) const {
+    const uint32_t h = hash3(row ? 0 : line, row ? 2505 : 2506, row ? line : 0, seed_ ^ 0x3E7Fu);
+    exists = h % 3 != 0;
+    return line * kMetroR + 120 + (int)((h >> 8) % 208u);
+}
+
+bool World::metroActive(bool row, int line, int region, bool* first, bool* last) const {
+    bool exists;
+    metroLineCoord(row, line, exists);
+    if (!exists) return false;
+    const int seg = floorDiv(region, 5);
+    const uint32_t hs = hash3(row ? seg : line, row ? 2507 : 2508, row ? line : seg, seed_ ^ 0x3E81u);
+    const int a = seg * 5 + (int)(hs % 2), b = seg * 5 + 4 - (int)((hs >> 3) % 2);
+    if (first) *first = region == a;
+    if (last) *last = region == b;
+    return region >= a && region <= b;
+}
+
+World::MetroStation World::metroStation(bool row, int line, int region) const {
+    MetroStation s;
+    if (!kFeatures250 || dim_ != Dimension::Overworld || !config_.overworld.structures || config_.generation < 7) return s;
+    bool first = false, last = false;
+    if (!metroActive(row, line, region, &first, &last)) return s;
+    s.ok = true;
+    s.row = row, s.line = line, s.region = region;
+    bool e;
+    s.across = metroLineCoord(row, line, e);
+    // Where the other kind of line crosses this region, the station is an interchange right there.
+    bool crossExists;
+    const int cross = metroLineCoord(!row, region, crossExists);
+    const uint32_t h = hash3(row ? region : line, 2509, row ? line : region, seed_ ^ 0x3E82u);
+    if (crossExists && metroActive(!row, region, line, nullptr, nullptr)) {
+        s.kind = MetroStation::Hub, s.centre = cross, s.length = 64;
+    } else if (first || last) {
+        s.kind = MetroStation::Terminus, s.centre = region * kMetroR + 150 + (int)((h >> 4) % 150u), s.length = 44;
+    } else if (h % 4 == 0) {
+        s.kind = MetroStation::Depot, s.centre = region * kMetroR + 150 + (int)((h >> 4) % 150u), s.length = 48;
+    } else {
+        s.kind = MetroStation::Stop, s.centre = region * kMetroR + 150 + (int)((h >> 4) % 150u), s.length = 40;
+    }
+    s.loopWest = first, s.loopEast = last;
+    s.y = row ? kMetroY : kMetroLowY;
+    return s;
+}
+
+// The block of a line at along-position a, across-offset b (from the line) and height y (0 = floor), or
+// kVoid where the rock is left alone.
+ItemId World::metroLineBlock(bool row, int line, int a, int b, int y) const {
     constexpr ItemId kVoid = Structure::kVoid;
-    if (z < -6 || z >= m.W || y < 0 || y > 8 || x < -m.T || x >= m.L + m.T) return kVoid;
-    const uint32_t r = hash3(x, y, z, seed);
-    // The entrance shaft beside the hall (x 5..7, z -5..-1): handled with the land above in stampMetro.
-    if (z < 0) {
-        if (x >= 4 && x <= 8 && z >= -5) {
-            const bool core = x >= 5 && x <= 7 && z >= -4 && z <= -2;
+    if (y < 0 || y > 8 || b < -16 || b > 16) return kVoid;
+    const int region = floorDiv(a, kMetroR);
+    MetroStation st[3];
+    for (int k = 0; k < 3; ++k) st[k] = metroStation(row, line, region - 1 + k);
+    const uint32_t r = hash3(a, y, b, seed_ ^ (row ? 0x3E90u : 0x3E91u));
+    const int ab = std::abs(b);
+    // Inside a station hall (or its loop, workshop or the way to its shaft)?
+    for (const MetroStation& s : st) {
+        if (!s.ok) continue;
+        const int a0 = s.centre - s.length / 2, la = a - a0;
+        // The turning loop beyond a terminus' far end: the two tracks join in a U.
+        const bool loopW = s.loopWest && la >= -8 && la < 0, loopE = s.loopEast && la >= s.length && la < s.length + 8;
+        if (loopW || loopE) {
+            if (ab > 8) continue;
+            const int aE = loopW ? -7 : s.length + 6;  // the cell where the tracks turn
+            if (ab == 8 || y == 6 || (loopW ? la == -8 : la == s.length + 7)) return y <= 6 ? (ItemId)STONE_BRICKS : kVoid;
+            if (y > 6) return kVoid;
+            if (y == 0) return ab >= 2 && ab <= 4 ? (ItemId)TRACK_BED : (ItemId)HARDENED_CONCRETE;
+            if (y != 1) return y == 5 && la % 4 == 0 && ab == 3 ? (ItemId)POWERSTONE_LIGHT : (ItemId)AIR;
+            if (la == aE && ab <= 3) {
+                // Rows: west loop turns from the east into north/south; columns the same turned.
+                if (ab < 3) return row ? (ItemId)RAIL_NS : (ItemId)RAIL_EW;
+                const bool neg = b < 0;
+                int k;
+                if (row) k = loopW ? (neg ? 1 : 0) : (neg ? 2 : 3);
+                else k = loopW ? (neg ? 1 : 2) : (neg ? 0 : 3);
+                return (ItemId)(RAIL_CURVE + k);
+            }
+            if (ab == 3 && (loopW ? la > aE : la < aE)) return lineRail(row);
+            return AIR;
+        }
+        if (la < 0 || la >= s.length) continue;
+        const bool wall = ab == 8;
+        // The depot's workshop beside the hall (the -b side, la 10..29).
+        if (s.kind == MetroStation::Depot && b <= -9 && b >= -15 && la >= 10 && la < 30) {
+            if (b == -15 || la == 10 || la == 29 || y == 0 || y == 6) return y <= 6 ? (ItemId)STONE_BRICKS : kVoid;
+            if (y > 6) return kVoid;
+            if (b == -9) return (la == 20 && (y == 2 || y == 3)) ? (ItemId)AIR : (ItemId)STONE_BRICKS;
+            if (y == 1) return HARDENED_CONCRETE;
+            if (y == 2 && b == -14) return la == 12 ? (ItemId)CRAFTING_TABLE : la == 13 || la == 14 ? (ItemId)FURNACE : la == 16 ? (ItemId)LOOT_CHEST_METRO : la == 18 ? (ItemId)BARREL : (ItemId)AIR;
+            if (y == 5 && la % 6 == 3 && b == -12) return POWERSTONE_LIGHT;
+            return AIR;
+        }
+        // The passage to the entrance shaft (the -b side, la 5..7) and the shaft's foot.
+        if (b <= -9 && b >= -13 && la >= 4 && la <= 8) {
+            if (s.kind == MetroStation::Hub && !row) continue;  // the lower hall of an interchange: up through the upper one
+            const bool core = la >= 5 && la <= 7 && b >= -12 && b <= -10;
             if (y == 0) return STONE_BRICKS;
-            if (core) return (z == -4 && x == 6 && y >= 2) ? (ItemId)VINES : (ItemId)AIR;
-            if (x == 6 && z == -1 && (y == 2 || y == 3)) return AIR;  // the doorway into the shaft
+            if (core) return (b == -12 && la == 6 && y >= 2) ? (ItemId)VINES : (ItemId)AIR;
+            if (la == 6 && b == -9 && (y == 2 || y == 3)) return AIR;
             return STONE_BRICKS;
         }
-        return kVoid;
-    }
-    if (x >= 0 && x < m.L) {
-        // The hall.
-        const bool wall = z == 0 || z == m.W - 1;
+        if (ab > 8) continue;
+        // An interchange: a ladder of vines between the halls (at offset +6, +6 from the crossing).
+        if (s.kind == MetroStation::Hub && la == s.length / 2 + 6 && b == 6) {
+            if (row) return y <= 1 ? (ItemId)VINES : (y == 8 ? (ItemId)STONE_BRICKS : (ItemId)AIR);
+            return y >= 2 ? (ItemId)VINES : (ItemId)PLATFORM;
+        }
         if (wall) {
-            if (x == 6 && z == 0 && (y == 2 || y == 3)) return AIR;  // the way to the shaft
-            if (y == 4) return (ItemId)(CONCRETE + 11);               // a blue stripe on the tiles
-            return r % 11 == 0 ? (ItemId)COBBLESTONE : r % 7 == 0 ? (ItemId)MOSSY_COBBLESTONE : (ItemId)STONE_BRICKS;
+            if (la == 6 && b == -8 && (y == 2 || y == 3) && !(s.kind == MetroStation::Hub && !row)) return AIR;  // to the shaft
+            if (s.kind == MetroStation::Depot && b == -8 && la == 20 && (y == 2 || y == 3)) return AIR;   // to the workshop
+            if (y == 0 || y == 8) return STONE_BRICKS;
+            if (y == 3 && la % 16 == 8) return STATION_SIGN;
+            if (y == 4) return METRO_TILE_BLUE;
+            return r % 9 == 0 ? (ItemId)METRO_TILE_CRACKED : (ItemId)METRO_TILE;
+        }
+        // The hall's ends are open where the tunnels leave, walled elsewhere.
+        const bool tube = ab >= 2 && ab <= 4;
+        if ((la == 0 && !s.loopWest) || (la == s.length - 1 && !s.loopEast)) {
+            if (!(tube && y >= 1 && y <= 4)) return y == 4 ? (ItemId)METRO_TILE_BLUE : (ItemId)METRO_TILE;
         }
         if (y == 8) {
-            const bool lamp = x % 7 == 3 && !m.trench(z) && (z - 1) % 6 == 1;
-            if (lamp) return r % 10 < 3 ? (ItemId)AIR : (ItemId)POWERSTONE_LIGHT;  // some lamps fell down
+            const bool lamp = la % 7 == 3 && (ab == 6 || ab == 0);
+            if (lamp) return r % 10 < 3 ? (ItemId)AIR : (ItemId)POWERSTONE_LIGHT;  // some lamps have fallen
             return STONE_BRICKS;
         }
-        if (y == 0) return m.trench(z) ? (ItemId)TRACK_BED : (ItemId)HARDENED_CONCRETE;
+        if (y == 0) return tube ? (ItemId)TRACK_BED : (ItemId)HARDENED_CONCRETE;
         if (y == 1) {
-            if (m.rail(z)) return r % 9 == 0 ? (ItemId)GRAVEL : (ItemId)RAIL_EW;
-            if (m.trench(z)) return AIR;
-            return r % 13 == 0 ? (ItemId)HARDENED_CONCRETE : (ItemId)PLATFORM;
+            if (ab == 3) return r % 11 == 0 ? (ItemId)GRAVEL : lineRail(row);
+            if (tube) return AIR;
+            return r % 17 == 0 ? (ItemId)HARDENED_CONCRETE : (ItemId)PLATFORM;
         }
-        // Lattice pillars on the platforms between the tracks, rubble here and there.
-        if (!m.trench(z) && (z - 1) % 6 == 1 && x % 9 == 4 && z > 1 && z < m.W - 2) return LATTICE;
-        if (y == 2 && !m.trench(z) && r % 37 == 0) return GRAVEL;
+        if (!tube) {
+            if (ab == 0 && la % 9 == 4) return LATTICE;  // pillars on the island platform
+            if (y == 2 && ab == 7 && la % 10 == 5) return BENCH;
+            if (y == 2 && b == -7 && la == s.length / 2 && s.kind != MetroStation::Depot) return LOOT_CHEST_METRO;
+            if (y == 2 && r % 41 == 0) return GRAVEL;
+        }
         if (y == 7 && r % 23 == 0) return VINES;
         return AIR;
     }
-    // The tunnels: one tube per track, collapsed at the far end.
-    const int dist = x < 0 ? -x : x - m.L + 1;
-    const int k = (z - 1) % 6;
-    const int t = (z - 1) / 6;
-    if (z < 1 || t >= m.tracks) return kVoid;
-    const bool tube = k == 3 || k == 4 || k == 5;
-    const bool side = k == 2 || k == 0;
-    if (!tube && !side) return kVoid;
-    if (dist > m.T - 6) return y <= 5 ? (ItemId)(tube ? GRAVEL : STONE_BRICKS) : kVoid;  // the cave-in
-    if (side) return y <= 5 ? (ItemId)STONE_BRICKS : kVoid;
-    if (y == 0) return TRACK_BED;
-    if (y == 1 && k == 4) return r % 6 == 0 ? (ItemId)AIR : (ItemId)RAIL_EW;
-    if (y == 5) return dist % 12 == 6 && k == 4 && r % 3 ? (ItemId)POWERSTONE_LIGHT : (ItemId)STONE_BRICKS;
+    // A tunnel: between two stations of the same stretch.
+    int left = -1, right = -1;
+    for (int k = 0; k < 3; ++k) {
+        if (!st[k].ok) continue;
+        const int a0 = st[k].centre - st[k].length / 2, a1 = a0 + st[k].length;
+        if (a1 <= a && (left < 0 || st[k].centre > st[left].centre)) left = k;
+        if (a0 > a && (right < 0 || st[k].centre < st[right].centre)) right = k;
+    }
+    if (left < 0 || right < 0 || st[left].loopEast || st[right].loopWest || st[right].region != st[left].region + 1) return kVoid;
+    if (ab > 5) return kVoid;
+    const bool tube = ab >= 2 && ab <= 4;
+    if (!tube) return y <= 5 ? (ItemId)STONE_BRICKS : kVoid;
     if (y > 5) return kVoid;
+    if (y == 5) return a % 12 == 6 && ab == 3 && r % 3 ? (ItemId)POWERSTONE_LIGHT : (ItemId)STONE_BRICKS;
+    if (y == 0) return TRACK_BED;
+    // Damage, piece by piece (24 blocks): a cave-in to dig through; water in the lower tunnels.
+    const int piece = floorDiv(a, 24);
+    const uint32_t hp = hash3(piece, line, row ? 1 : 2, seed_ ^ 0x3E92u);
+    const bool caveIn = hp % 9 == 0 && (b < 0) == ((hp >> 4) & 1) && a - piece * 24 >= 8 && a - piece * 24 < 12;
+    if (caveIn && y <= 4) return GRAVEL;
+    if (y == 1 && ab == 3) return r % 7 == 0 ? (ItemId)AIR : lineRail(row);
+    if (!row && hp % 6 == 1 && y <= 3) return WATER;  // a flooded stretch
     return AIR;
-}
-}  // namespace
-
-bool World::metroIn(int rx, int rz, int& ox, int& oz, bool& big) const {
-    if (!kFeatures250 || dim_ != Dimension::Overworld || !config_.overworld.structures || config_.generation < 7) return false;
-    const uint32_t h = hash3(rx, 2505, rz, seed_ ^ 0x3E7Fu);
-    if (h % 100 >= 55) return false;
-    big = (h >> 7) % 3 == 0;
-    const MetroShape m(big);
-    ox = rx * kMetroRegion + m.T + 8 + (int)((h >> 9) % (uint32_t)(kMetroRegion - m.L - 2 * m.T - 16));
-    oz = rz * kMetroRegion + 16 + (int)((h >> 19) % (uint32_t)(kMetroRegion - m.W - 32));
-    // The shaft must come up on dry land (not in a lake or the sea, nor on a peak).
-    const Column top = column(ox + 6, oz - 3);
-    if (!top.biome || top.biome->peakBlock || top.height <= config_.overworld.seaLevel + 1) return false;
-    return true;
 }
 
 void World::stampMetro(Chunk& c) {
+    if (!kFeatures250 || config_.generation < 7) return;
     const int x0 = c.cx * kChunkSize, z0 = c.cz * kChunkSize;
-    for (int rx = floorDiv(x0, kMetroRegion) - 1; rx <= floorDiv(x0 + 15, kMetroRegion); ++rx)
-        for (int rz = floorDiv(z0, kMetroRegion) - 1; rz <= floorDiv(z0 + 15, kMetroRegion); ++rz) {
-            int ox, oz;
-            bool big;
-            if (!metroIn(rx, rz, ox, oz, big)) continue;
-            const MetroShape m(big);
-            if (ox + m.L + m.T < x0 || ox - m.T > x0 + 15 || oz + m.W < z0 || oz - 6 > z0 + 15) continue;
-            const uint32_t seed = hash3(rx, 77, rz, seed_ ^ 0x3E80u);
+    for (int pass = 0; pass < 2; ++pass) {
+        const bool row = pass == 0;
+        // Lines whose band (16 either side) can reach this chunk.
+        const int across0 = row ? z0 : x0;
+        for (int line = floorDiv(across0, kMetroR) - 1; line <= floorDiv(across0 + 15, kMetroR) + 1; ++line) {
+            bool exists;
+            const int lc = metroLineCoord(row, line, exists);
+            if (!exists || lc + 16 < across0 || lc - 16 > across0 + 15) continue;
+            const int baseY = row ? kMetroY : kMetroLowY;
             for (int x = 0; x < kChunkSize; ++x)
                 for (int z = 0; z < kChunkSize; ++z) {
-                    const int lx = x0 + x - ox, lz = z0 + z - oz;
+                    const int wx = x0 + x, wz = z0 + z;
+                    const int a = row ? wx : wz, b = (row ? wz : wx) - lc;
+                    if (b < -16 || b > 16) continue;
+                    bool any = false;
                     for (int y = 0; y <= 8; ++y) {
-                        ItemId id = metroBlock(m, lx, y, lz, seed);
+                        const ItemId id = metroLineBlock(row, line, a, b, y);
                         if (id == Structure::kVoid) continue;
-                        const ItemId old = c.get(x, kMetroY + y, z);
+                        any = true;
+                        const ItemId old = c.get(x, baseY + y, z);
                         if (old == BEDROCK || old == WORLD_END) continue;
-                        c.set(x, kMetroY + y, z, id);
+                        c.set(x, baseY + y, z, id);
                     }
-                    // The chests on the side platforms (two in the big one).
-                    for (int k = 0; k < (big ? 2 : 1); ++k) {
-                        const int cxL = m.L / 2 + k * 20 - 10 * k, czL = k ? m.W - 3 : 2;
-                        if (lx == cxL && lz == czL) c.set(x, kMetroY + 2, z, LOOT_CHEST_METRO);
-                    }
-                    // The shaft up to the land, with a little stone entrance on top.
-                    if (lx >= 4 && lx <= 8 && lz >= -5 && lz <= -1) {
-                        const bool core = lx >= 5 && lx <= 7 && lz >= -4 && lz <= -2;
-                        const int top = column(x0 + x, z0 + z).height + kDeepShift;  // (stamped after the lift)
-                        for (int y = kMetroY + 9; y <= top + 3 && y < kChunkHeight - 1; ++y) {
-                            ItemId id = core ? (ItemId)((lz == -4 && lx == 6) ? VINES : AIR) : (ItemId)STONE_BRICKS;
-                            if (!core && y > top && lx == 6 && lz == -1 && y <= top + 2) id = AIR;  // the door
+                    if (!any || b > -9 || b < -13) continue;
+                    // The shaft up to the land, with a little stone entrance on top (only on dry land).
+                    const int region = floorDiv(a, kMetroR);
+                    for (int k = -1; k <= 1; ++k) {
+                        const MetroStation s = metroStation(row, line, region + k);
+                        if (!s.ok || (s.kind == MetroStation::Hub && !row)) continue;
+                        const int la = a - (s.centre - s.length / 2);
+                        if (la < 4 || la > 8) continue;
+                        const int ex = row ? s.centre - s.length / 2 + 6 : lc - 11, ez = row ? lc - 11 : s.centre - s.length / 2 + 6;
+                        const Column top0 = column(ex, ez);
+                        if (!top0.biome || top0.biome->peakBlock || top0.height <= config_.overworld.seaLevel + 1) continue;
+                        const bool core = la >= 5 && la <= 7 && b >= -12 && b <= -10;
+                        const int top = column(wx, wz).height + kDeepShift;  // (stamped after the lift)
+                        for (int y = baseY + 9; y <= top + 3 && y < kChunkHeight - 1; ++y) {
+                            ItemId id = core ? (ItemId)((b == -12 && la == 6) ? VINES : AIR) : (ItemId)STONE_BRICKS;
+                            if (!core && y > top && la == 6 && b == -9 && y <= top + 2) id = AIR;  // the door
                             if (y == top + 3) id = core ? (ItemId)STONE_BRICKS : (ItemId)slabId(6, 0);
                             c.set(x, y, z, id);
                         }
                     }
                 }
         }
+    }
+}
+
+bool World::nearestMetroStation(int x, int z, int& outX, int& outZ, int& kind) const {
+    long best = -1;
+    for (int pass = 0; pass < 2; ++pass) {
+        const bool row = pass == 0;
+        const int along = row ? x : z, across = row ? z : x;
+        for (int line = floorDiv(across, kMetroR) - 3; line <= floorDiv(across, kMetroR) + 3; ++line)
+            for (int region = floorDiv(along, kMetroR) - 3; region <= floorDiv(along, kMetroR) + 3; ++region) {
+                const MetroStation s = metroStation(row, line, region);
+                if (!s.ok) continue;
+                const int ea = s.centre - s.length / 2 + 6, eb = s.across - 11;  // the entrance shaft
+                const int ex = row ? ea : eb, ez = row ? eb : ea;
+                const long d = (long)(ex - x) * (ex - x) + (long)(ez - z) * (ez - z);
+                if (best < 0 || d < best) best = d, outX = ex, outZ = ez, kind = s.kind;
+            }
+    }
+    return best >= 0;
 }
 
 bool World::bronzeHallsIn(int rx, int rz, int& ox, int& oz) const {

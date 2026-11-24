@@ -6923,41 +6923,57 @@ SHOT(c06_frost) {
     d.seconds(4.0f);
 }
 
-// 2.5.0 preview: the abandoned subway: the station hall, a tunnel and the way up.
+// 2.5.0 preview: the subway network: stations of every kind, a tunnel, a turning loop, an interchange.
 SHOT(z01_metro) {
     Director d(out, "z01");
-    d.openWorld("Metro", 2121, GameMode::Creative);
+    d.openWorld("Metro", 961, GameMode::Creative);
     Session& s = d.s();
     World& w = s.currentWorld();
     Player& p = s.player();
-    int ox = 0, oz = 0;
-    bool big = false, found = false;
-    for (int r = 0; r < 4 && !found; ++r)
-        for (int rx = -r; rx <= r && !found; ++rx)
-            for (int rz = -r; rz <= r && !found; ++rz) found = w.metroIn(rx, rz, ox, oz, big) && big;
-    if (!found)
-        for (int r = 0; r < 4 && !found; ++r)
-            for (int rx = -r; rx <= r && !found; ++rx)
-                for (int rz = -r; rz <= r && !found; ++rz) found = w.metroIn(rx, rz, ox, oz, big);
-    std::printf("metro at %d %d big %d\n", ox, oz, (int)big);
-    w.ensureChunksAround(floorDiv(ox + 40, 16), floorDiv(oz + 10, 16), 6, 100000);
-    const int fy = World::kMetroY + 1;  // the platforms' level
-    std::printf("platform at y %d\n", fy);
-    if (fy < 0) return;
     p.flying = true;
     d.settings().hideGui = true;
-    auto view = [&](const char* name, Vec3 at, Vec3 look) {
+    // The nearest station of each kind on the east-west lines.
+    World::MetroStation found[4];
+    for (int line = -3; line <= 3; ++line)
+        for (int region = -4; region <= 4; ++region) {
+            const World::MetroStation st = w.metroStation(true, line, region);
+            if (st.ok && !found[st.kind].ok) found[st.kind] = st;
+        }
+    const char* names[4] = {"z01_stop", "z01_depot", "z01_terminus", "z01_hub"};
+    for (int k = 0; k < 4; ++k) {
+        const World::MetroStation& st = found[k];
+        if (!st.ok) continue;
+        const int a0 = st.centre - st.length / 2, y = World::kMetroY + 2;
+        std::printf("%s at x %d..%d z %d\n", names[k], a0, a0 + st.length, st.across);
+        w.ensureChunksAround(floorDiv(st.centre, 16), floorDiv(st.across, 16), 4, 100000);
+        const Vec3 at(a0 + 3.5f, y + 2.0f, st.across + 0.5f), look(a0 + st.length * 0.7f, (float)y, st.across + 0.5f);
         p.pos = at;
         d.idle(60);
         d.lookNow(look);
-        d.shot(name);
+        d.shot(names[k]);
         d.seconds(0.2f, [&](float) { d.lookNow(look); });
-    };
-    const int W = big ? 29 : 17;
-    view("z01_hall", Vec3(ox + 3.5f, fy + 3.5f, oz + W / 2.0f), Vec3(ox + 40.5f, fy + 1.0f, oz + W / 2.0f));
-    view("z01_platform", Vec3(ox + 20.5f, fy + 2.0f, oz + 2.5f), Vec3(ox + 30.5f, fy + 1.5f, oz + 8.5f));
-    view("z01_tunnel", Vec3(ox - 3.5f, fy + 1.6f, oz + 5.5f), Vec3(ox - 30.5f, fy + 1.0f, oz + 5.5f));
-    view("z01_shaft", Vec3(ox + 6.5f, fy + 2.5f, oz + 2.5f), Vec3(ox + 6.5f, fy + 4.0f, oz - 3.0f));
-    const int top = w.surfaceHeight(ox + 6, oz - 3);
-    view("z01_entrance", Vec3(ox + 12.5f, top + 4.0f, oz - 10.5f), Vec3(ox + 6.5f, top + 1.0f, oz - 3.0f));
+        if (k == 2) {  // the turning loop
+            const float lx = st.loopWest ? a0 - 1.5f : a0 + st.length + 0.5f, tx = st.loopWest ? a0 - 7.5f : a0 + st.length + 6.5f;
+            p.pos = Vec3(lx, y + 2.5f, st.across + 0.5f);
+            d.idle(20);
+            d.lookNow(Vec3(tx, (float)y - 1, st.across + 0.5f));
+            d.shot("z01_loop");
+            d.seconds(0.2f, [&](float) { d.lookNow(Vec3(tx, (float)y - 1, st.across + 0.5f)); });
+        }
+        if (k == 0) {  // the tunnel out of the east end
+            p.pos = Vec3(a0 + st.length + 2.5f, y + 0.6f, st.across + 3.5f);
+            d.idle(20);
+            d.lookNow(Vec3(a0 + st.length + 40.5f, (float)y, st.across + 3.5f));
+            d.shot("z01_tunnel");
+            d.seconds(0.2f, [&](float) { d.lookNow(Vec3(a0 + st.length + 40.5f, (float)y, st.across + 3.5f)); });
+        }
+        if (k == 3) {  // the lower hall of the interchange
+            const int ly = World::kMetroLowY + 2;
+            p.pos = Vec3(st.centre + 0.5f, ly + 2.0f, st.across - 25.5f);
+            d.idle(20);
+            d.lookNow(Vec3(st.centre + 0.5f, (float)ly, st.across + 10.5f));
+            d.shot("z01_hub_low");
+            d.seconds(0.2f, [&](float) { d.lookNow(Vec3(st.centre + 0.5f, (float)ly, st.across + 10.5f)); });
+        }
+    }
 }

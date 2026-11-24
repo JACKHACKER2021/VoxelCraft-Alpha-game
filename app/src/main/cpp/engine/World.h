@@ -215,10 +215,18 @@ private:
     ItemId bronzeHallsBlock(int lx, int ly, int lz, uint32_t seed) const;
 public:
     bool bronzeHallsIn(int rx, int rz, int& ox, int& oz) const;  // 2.3.0: the Bronze Halls of a region
-    // 2.5.0: the abandoned subway: a station hall deep under a region (big: four tracks), tunnels to
-    // both sides and a shaft up to the land. `ox, oz` is the hall's corner, `big` its size.
-    bool metroIn(int rx, int rz, int& ox, int& oz, bool& big) const;
-    static constexpr int kMetroRegion = 448, kMetroY = 34;
+    // 2.5.0: the subway network (see World.cpp): lines of regions, a station in every region a line passes.
+    struct MetroStation {
+        enum Kind { Stop, Depot, Terminus, Hub };
+        bool ok = false, row = true, loopWest = false, loopEast = false;
+        int line = 0, region = 0, kind = Stop, centre = 0, across = 0, length = 40, y = 0;
+    };
+    static constexpr int kMetroRegion = 448, kMetroY = 34, kMetroLowY = 18;
+    int metroLineCoord(bool row, int line, bool& exists) const;
+    bool metroActive(bool row, int line, int region, bool* first, bool* last) const;
+    MetroStation metroStation(bool row, int line, int region) const;
+    ItemId metroLineBlock(bool row, int line, int a, int b, int y) const;
+    bool nearestMetroStation(int x, int z, int& outX, int& outZ, int& kind) const;  // its entrance shaft
     void stampMetro(Chunk& c);
 private:
     GenConfig config_;

@@ -579,6 +579,18 @@ const char* kUpdate210 = R"({
 })";
 
 // 2.2.0 preview: the big Bronze Update.
+// 2.5.0 preview: the subway's tiles, signs, benches and map.
+const char* kUpdate250 = R"({
+  "recipes": [
+    {"type": "shaped", "pattern": ["CC", "CC"], "key": {"C": "hardened_concrete"}, "result": "metro_tile", "count": 4},
+    {"type": "shapeless", "ingredients": ["metro_tile", "blue_dye"], "result": "metro_tile_blue"},
+    {"type": "shapeless", "ingredients": ["metro_tile", "gravel"], "result": "metro_tile_cracked"},
+    {"type": "shaped", "pattern": ["TTT", "TBT"], "key": {"T": "metro_tile", "B": "blue_dye"}, "result": "station_sign", "count": 2},
+    {"type": "shaped", "pattern": ["SSS", "P.P"], "key": {"S": "spruce_slab", "P": "spruce_planks"}, "result": "bench", "count": 2},
+    {"type": "shapeless", "ingredients": ["map", "rail"], "result": "metro_map"}
+  ]
+})";
+
 // 2.4.0: stations and bridges.
 const char* kUpdate240 = R"({
   "recipes": [
@@ -848,6 +860,7 @@ const std::vector<std::pair<std::string, std::string>>& defaultPackFiles() {
     };
     if (kFeatures230) f.push_back({"recipes/update_2_3_0.json", kUpdate230});  // 2.3.0: the subway
     if (kFeatures240) f.push_back({"recipes/update_2_4_0.json", kUpdate240});  // 2.4.0: stations and bridges
+    if (kFeatures250) f.push_back({"recipes/update_2_5_0_preview.json", kUpdate250});  // 2.5.0 preview: the subway network
     return f;
     }();
     return files;

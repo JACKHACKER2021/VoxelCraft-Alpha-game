@@ -91,6 +91,10 @@ int itemBoxes(ItemId id, Box out[kItemBoxes]) {
         out[0] = {3 / 16.0f, 0, 3 / 16.0f, 13 / 16.0f, 13 / 16.0f, 13 / 16.0f};
         return 1;
     }
+    if (id == BENCH) {  // 2.5.0: a bench: the seat on a low base
+        out[0] = {0, 0, 3 / 16.0f, 1, 8 / 16.0f, 13 / 16.0f};
+        return 1;
+    }
     if (id == CUSHION) {  // 2.0.0: the cushion as it lies on the floor
         out[0] = {1 / 16.0f, 0, 1 / 16.0f, 15 / 16.0f, 6 / 16.0f, 15 / 16.0f};
         return 1;
@@ -265,6 +269,10 @@ int blockBoxes(const World& world, int x, int y, int z, ItemId id, bool collisio
     if (id == CUSHION && isBed(world.getBlock(x, y - 1, z))) {
         // 2.2.0: on a bed the cushion is a pillow lying on the mattress (the bed is 9/16 high).
         out[0] = {2 / 16.0f, -7 / 16.0f, 2 / 16.0f, 14 / 16.0f, -3 / 16.0f, 14 / 16.0f};
+        return 1;
+    }
+    if (id == BENCH) {  // 2.5.0: a bench
+        out[0] = {0, 0, 3 / 16.0f, 1, 8 / 16.0f, 13 / 16.0f};
         return 1;
     }
     if (id == CUSHION) {  // 2.0.0: a soft cushion to sit on

@@ -2013,6 +2013,28 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
                 }
             for (int py = 3; py < 9; ++py)
                 for (int px = 15 - (8 - py) / 2; px < 16; ++px) a.clear(T_SUBWAY_LOCO_ITEM, px, py);
+            // 2.5.0: subway tiles, the station sign, the bench and the subway map.
+            for (int py = 0; py < 16; ++py)
+                for (int px = 0; px < 16; ++px) {
+                    const uint32_t hh = (uint32_t)(px * 73856093u ^ py * 19349663u ^ 0x2500u);
+                    const int nz = (int)((hh >> 5) % 7) - 3;
+                    const bool grout = px % 8 == 0 || py % 4 == 0;
+                    a.put(T_METRO_TILE, px, py, grout ? Rgb{170, 170, 166} : Rgb{232, 232, 226}.plus(nz));
+                    a.put(T_METRO_TILE_BLUE, px, py, grout ? Rgb{40, 70, 120} : Rgb{50, 100, 190}.plus(nz));
+                    const bool crack = std::abs(px - 3 - py / 2) == 0 || (py > 8 && std::abs(px - 12 + (py - 8)) == 0);
+                    a.put(T_METRO_TILE_CRACKED, px, py, crack ? Rgb{90, 90, 86} : grout ? Rgb{150, 150, 144} : Rgb{205, 202, 190}.plus(nz * 2));
+                    // The sign: a blue board with a white "M" and a white frame.
+                    const bool frame = px == 1 || px == 14 || py == 3 || py == 12;
+                    const bool m = py >= 5 && py <= 10 && (px == 4 || px == 11 || (std::abs(px - 7.5f) < 4 && py - 5 == std::abs(px - 7.5f) - 0.5f + 0 && px > 4 && px < 11) || ((px == 5 || px == 10) && py == 6) || ((px == 6 || px == 9) && py == 7) || ((px == 7 || px == 8) && py == 8));
+                    a.put(T_STATION_SIGN, px, py, py < 3 || py > 12 ? Rgb{232, 232, 226} : frame || m ? Rgb{245, 245, 245} : Rgb{40, 80, 170});
+                    // The bench: dark wooden slats.
+                    a.put(T_BENCH, px, py, py % 4 == 3 ? Rgb{60, 40, 24} : Rgb{120, 80, 46}.plus(nz));
+                    // The map: paper with coloured lines and station dots.
+                    const bool line1 = py == 6 && px > 1 && px < 14, line2 = px == 9 && py > 1 && py < 14;
+                    const bool dot = (py == 6 && (px == 4 || px == 12)) || (px == 9 && (py == 3 || py == 11)) || (px == 9 && py == 6);
+                    const bool edge = px == 0 || px == 15 || py == 0 || py == 15;
+                    a.put(T_METRO_MAP, px, py, edge ? Rgb{150, 130, 90} : dot ? Rgb{250, 250, 250} : line1 ? Rgb{220, 60, 50} : line2 ? Rgb{40, 110, 210} : Rgb{232, 220, 186});
+                }
             // 2.4.0: concrete track bed, the platform, the lattice girder and the crossings' icons.
             for (int py = 0; py < 16; ++py)
                 for (int px = 0; px < 16; ++px) {
