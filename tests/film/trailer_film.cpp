@@ -7,6 +7,7 @@
 
 #include <thread>
 
+#include "engine/Commands.h"
 #include "engine/Multiplayer.h"
 #include "engine/Skin.h"
 #include "engine/BlockShapes.h"
@@ -7113,7 +7114,11 @@ SHOT(z06_mobs) {
     d.settings().hideGui = true;
     static const std::pair<MobType, const char*> kMobs[] = {
         {MobType::CornerstoneGolem, "golem"}, {MobType::MossLurker, "lurker"}, {MobType::Sporeling, "sporeling"},
-        {MobType::EmberMoth, "moth"}, {MobType::AshFox, "ashfox"}, {MobType::Fox, "fox"}};
+        {MobType::EmberMoth, "moth"}, {MobType::AshFox, "ashfox"}, {MobType::Fox, "fox"}, {MobType::Ghost, "ghost"}, {MobType::Snowman, "snowman"}};
+    if (const char* o = std::getenv("VC_MOB"); o && std::string(o) == "ghost") {
+        d.game->toolProfile().owned.insert("addon:halloween");
+        runCommand(s, "/time night", true);
+    }
     const char* only = std::getenv("VC_MOB");  // film just one of them
     for (const auto& [type, name] : kMobs) {
         if (only && std::string(only) != name) continue;
@@ -7129,7 +7134,7 @@ SHOT(z06_mobs) {
         d.lookNow(look);
         d.shot(std::string("z06_") + name + "_idle");
         d.seconds(0.4f, [&](float) { d.lookNow(look); s.mobs().mobs().back().wanderTimer = 999; });
-        if (type != MobType::EmberMoth) {
+        if (type != MobType::EmberMoth && type != MobType::Ghost && type != MobType::Snowman) {
             s.mobs().mobs().back().sitting = true;
             s.mobs().mobs().back().sitTimer = 99;
             d.seconds(0.6f, [&](float) { d.lookNow(look); });

@@ -582,6 +582,22 @@ const char* kUpdate210 = R"({
 // 2.5.0 preview: the subway's tiles, signs, benches and map.
 // 2.6.0 preview: the Cornerstone's own ores melt into the same ingots.
 const char* kUpdate260 = R"({
+  "recipes": [
+    {"type": "shapeless", "ingredients": ["pumpkin", "torch"], "result": "jack_o_lantern"},
+    {"type": "shapeless", "ingredients": ["pumpkin", "torch", "coal"], "result": "jack_o_lantern_grin"},
+    {"type": "shapeless", "ingredients": ["pumpkin", "torch", "powerstone_dust"], "result": "jack_o_lantern_scary"},
+    {"type": "shapeless", "ingredients": ["pumpkin", "torch", "stick"], "result": "jack_o_lantern_surprised"},
+    {"type": "shaped", "pattern": ["S.S", ".S.", "S.S"], "key": {"S": "string"}, "result": "cobweb"},
+    {"type": "shaped", "pattern": [".C.", "CCC", "CCC"], "key": {"C": "cobblestone"}, "result": "gravestone", "count": 2},
+    {"type": "shapeless", "ingredients": ["black_wool", "torch"], "result": "bat_lantern", "count": 2},
+    {"type": "shapeless", "ingredients": ["honey_ball", "stick"], "result": "lollipop", "count": 2},
+    {"type": "shapeless", "ingredients": ["honey_ball", "honey_ball"], "result": "caramel", "count": 3},
+    {"type": "shaped", "pattern": [".D.", "LLL", "LLL"], "key": {"D": "dandelion", "L": "spruce_leaves"}, "result": "christmas_tree"},
+    {"type": "shapeless", "ingredients": ["string", "torch", "powerstone_dust"], "result": "string_lights", "count": 4},
+    {"type": "shapeless", "ingredients": ["red_wool", "white_wool"], "result": "christmas_stocking"},
+    {"type": "shapeless", "ingredients": ["wheat", "honey_ball"], "result": "gingerbread", "count": 2},
+    {"type": "shaped", "pattern": ["P.P", "PPP", "I.I"], "key": {"P": "planks", "I": "iron_ingot"}, "result": "sled"}
+  ],
   "smelting": [
     {"input": "cornerstone_iron_ore", "output": "iron_ingot"},
     {"input": "cornerstone_bronze_ore", "output": "bronze_ingot"},

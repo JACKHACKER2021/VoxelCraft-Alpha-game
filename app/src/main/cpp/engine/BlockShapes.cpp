@@ -91,6 +91,18 @@ int itemBoxes(ItemId id, Box out[kItemBoxes]) {
         out[0] = {3 / 16.0f, 0, 3 / 16.0f, 13 / 16.0f, 13 / 16.0f, 13 / 16.0f};
         return 1;
     }
+    if (id == GRAVESTONE) {  // 2.6.0
+        out[0] = {2 / 16.0f, 0, 6 / 16.0f, 14 / 16.0f, 13 / 16.0f, 10 / 16.0f};
+        return 1;
+    }
+    if (id == BAT_LANTERN) {
+        out[0] = {4 / 16.0f, 2 / 16.0f, 4 / 16.0f, 12 / 16.0f, 14 / 16.0f, 12 / 16.0f};
+        return 1;
+    }
+    if (id == STOCKING) {
+        out[0] = {5 / 16.0f, 1 / 16.0f, 7 / 16.0f, 11 / 16.0f, 14 / 16.0f, 9 / 16.0f};
+        return 1;
+    }
     if (id == BENCH) {  // 2.5.0: a bench: the seat on a low base
         out[0] = {0, 0, 3 / 16.0f, 1, 8 / 16.0f, 13 / 16.0f};
         return 1;
@@ -313,6 +325,18 @@ int blockBoxes(const World& world, int x, int y, int z, ItemId id, bool collisio
     }
     if (id == PARTY_LANTERN) {
         out[0] = {4 / 16.0f, 0, 4 / 16.0f, 12 / 16.0f, 10 / 16.0f, 12 / 16.0f};
+        return 1;
+    }
+    if (id == GRAVESTONE) {  // 2.6.0
+        out[0] = {2 / 16.0f, 0, 6 / 16.0f, 14 / 16.0f, 13 / 16.0f, 10 / 16.0f};
+        return 1;
+    }
+    if (id == BAT_LANTERN) {
+        out[0] = {4 / 16.0f, 2 / 16.0f, 4 / 16.0f, 12 / 16.0f, 14 / 16.0f, 12 / 16.0f};
+        return 1;
+    }
+    if (id == STOCKING) {
+        out[0] = {5 / 16.0f, 1 / 16.0f, 7 / 16.0f, 11 / 16.0f, 14 / 16.0f, 9 / 16.0f};
         return 1;
     }
     if (id == CAMPFIRE) {

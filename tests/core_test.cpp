@@ -614,7 +614,7 @@ static int testJsonAndPacks() {
     std::vector<std::string> warn;
     GenConfig round = GenConfig::fromJson(def.toJson(), &warn);
     CHECK(warn.empty() && round.biomes.size() == 8 && round.biomes[2].surface == def.biomes[2].surface);
-    CHECK(RecipeBook::defaults().shaped.size() == 12 + 35 + 6 + 2 + 16 + 6 + 24 + 16 + 3 + 10 + 12 + 5 + 3 + 8 + 7 + 1 + 10 + 33 + 16 + 11 + 7 + 18 + 8 + 2 + 5 + (kFeatures250 ? 3 : 0) && RecipeBook::defaults().shapeless.size() == 2 + 4 + 1 + 1 + 6 + 1 + 1 + 3 + 1 + 3 + 3 + 1 + 2 + 49 + 1 + 1 + 4 + (kFeatures250 ? 3 : 0));  // 1.8.0: concrete, gray planks, 10 stairs and slabs  // 1.5.7: + book and quill; 1.6.0: + 3: torch, shield, lamp; crimson planks  // 1.5.1: no planks from Eye Logs
+    CHECK(RecipeBook::defaults().shaped.size() == 12 + 35 + 6 + 2 + 16 + 6 + 24 + 16 + 3 + 10 + 12 + 5 + 3 + 8 + 7 + 1 + 10 + 33 + 16 + 11 + 7 + 18 + 8 + 2 + 5 + (kFeatures250 ? 3 : 0) + (kFeatures260 ? 4 : 0) && RecipeBook::defaults().shapeless.size() == 2 + 4 + 1 + 1 + 6 + 1 + 1 + 3 + 1 + 3 + 3 + 1 + 2 + 49 + 1 + 1 + 4 + (kFeatures250 ? 3 : 0) + (kFeatures260 ? 10 : 0));  // 1.8.0: concrete, gray planks, 10 stairs and slabs  // 1.5.7: + book and quill; 1.6.0: + 3: torch, shield, lamp; crimson planks  // 1.5.1: no planks from Eye Logs
 
     // Biomes really show up in the world: deserts are sandy, forests have trees.
     World w(1234, Dimension::Overworld);

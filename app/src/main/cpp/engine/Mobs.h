@@ -26,6 +26,7 @@ enum class MobType : uint8_t {
     SkyGuardian,                           // 1.9.5: the boss of the Celestial Temple
     // 2.6.0: the creatures of the Cornerstone, and the fox of the snowy and dappled forests.
     CornerstoneGolem, MossLurker, Sporeling, EmberMoth, AshFox, Fox,
+    Ghost, Snowman,  // 2.6.0: Halloween's ghost over the graves; the snowman a player builds
     Count
 };
 
@@ -74,7 +75,7 @@ struct Mob {
 constexpr float kBossDeathTime = 3.5f;
 
 struct MobEvent {
-    enum Kind { HitPlayer, Died, BossRoar, Explode, TarSpread, Fireball, Barter, BossWave, BossSummon, Teleport, Spores } kind;  // 2.6.0: spores  // 1.6.0: wave, summon; 1.9.5 teleport
+    enum Kind { HitPlayer, Died, BossRoar, Explode, TarSpread, Fireball, Barter, BossWave, BossSummon, Teleport, Spores, Snowball } kind;  // 2.6.0: spores, a snowman's snowball (pos: where it hits)  // 1.6.0: wave, summon; 1.9.5 teleport
     MobType type;
     Vec3 pos;
     float damage = 0;

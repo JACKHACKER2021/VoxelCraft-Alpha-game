@@ -342,6 +342,18 @@ enum BlockId : uint16_t {
     CS_BRONZE_ORE = 60272,
     CS_STEEL_ORE = 60273,
     EMBER_DUST = 60274,          // 2.6.0: glowing dust of the ember moth (an item)
+    // 2.6.0: Halloween and Christmas (the addons, or the season).
+    JACK_LANTERN = 60275,        // 60275..60278: a carved pumpkin that glows, four faces
+    COBWEB = 60279,              // slows everyone in it
+    GRAVESTONE = 60280,
+    BAT_LANTERN = 60281,         // a paper lantern shaped like a bat
+    XMAS_TREE = 60282,           // a decorated spruce; a present under it every day
+    STRING_LIGHTS = 60283,       // coloured lights that glow at night
+    STOCKING = 60284,            // hung by the fire: a present in it every morning
+    LOLLIPOP = 60285,            // (items from here on)
+    CARAMEL = 60286,
+    GINGERBREAD = 60287,
+    SLED = 60288,                // held on snow or ice: the player slides fast
     RAIL_SWITCH8 = 60212,        // 60212..60243: 2.3.0 the flexible switch: entry port * 4 + left * 2 + state   // 2.3.0: a chest of the Bronze Halls
     RAIL_SWITCH_L = 60203,       // 60203..60210: 2.3.0 the mirrored switch, its branch to the left (facing * 2 + state)
     RAIL_GENTLE = 60187,         // 60187..60202: a gentle slope, 4 pieces per block of height: facing * 4 + piece
@@ -625,7 +637,7 @@ inline bool isRailSlope(ItemId id) { return id >= RAIL_SLOPE && id < RAIL_SLOPE 
 inline bool isCrossingSignal(ItemId id) { return id >= CROSSING_SIGNAL && id < CROSSING_SIGNAL + 12; }
 inline bool isCrossingGate(ItemId id) { return id >= CROSSING_GATE && id < CROSSING_GATE + 8; }
 inline bool isTurntable(ItemId id) { return id == TURNTABLE || id == TURNTABLE + 1; }
-constexpr int kExtLastBlock = CS_STEEL_ORE;
+constexpr int kExtLastBlock = STOCKING;
 constexpr int kJournalPages = 12;
 inline bool isJournal(ItemId id) { return id >= JOURNAL && id < JOURNAL + kJournalPages; }
 inline bool isRailGentle(ItemId id) { return id >= RAIL_GENTLE && id < RAIL_GENTLE + 16; }
@@ -654,7 +666,7 @@ bool modIsTransparent(ItemId id);
 bool modIsEmissive(ItemId id);
 int modFood(ItemId id);
 inline bool isNewBlock(ItemId id) {
-    if (id >= kExtIdBase && id <= kExtLastBlock && !(id >= LOCOMOTIVE && id <= FREIGHT_WAGON) && id != DRILL_CAR && id != STARBERRIES && id != SUBWAY_LOCOMOTIVE && id != SUBWAY_CAR && id != METRO_MAP && !(id >= JOURNAL && id < JOURNAL + 12)) return true;  // the engine's own range
+    if (id >= kExtIdBase && id <= kExtLastBlock && !(id >= LOCOMOTIVE && id <= FREIGHT_WAGON) && id != DRILL_CAR && id != STARBERRIES && id != SUBWAY_LOCOMOTIVE && id != SUBWAY_CAR && id != METRO_MAP && id != EMBER_DUST && !(id >= JOURNAL && id < JOURNAL + 12)) return true;  // the engine's own range
     if (isModId(id)) return modIsBlock(id);
     return isStairs(id) || isSlab(id) || (id >= TAR && id <= SNOW_LAYER) || isStainedGlass(id) || (id >= WALL_CABLE && id < WALL_CABLE + 8) || (id >= WALL_SWITCH && id < WALL_SWITCH + 8) ||
            (id >= ANNIV_LOGO && id <= PAINTED_PLANKS + 3) || (id >= POWERSTONE_BRICKS && id <= COMMAND_BLOCK && id != 1518 && id != 1519) || (id >= SOUND_BLOCK && id <= RAIL_CURVE + 3) || (id >= RAIL_SWITCH && id < BUFFER_STOP + 4) || isRailSlope(id) ||
@@ -780,6 +792,8 @@ enum Tile : uint16_t {
     T_CS_IRON_ORE, T_CS_BRONZE_ORE, T_CS_STEEL_ORE, T_MOSSY_CORNERSTONE_TOP,  // 2.6.0
     T_GOLEM_SKIN, T_GOLEM_FACE, T_LURKER_SKIN, T_LURKER_FACE, T_SPORELING_SKIN, T_SPORELING_FACE,  // 2.6.0: the new creatures
     T_MOTH_BODY, T_MOTH_WING, T_MOTH_GLOW, T_FOX_FUR, T_FOX_FACE, T_FOX_WHITE, T_FOX_DARK, T_ASHFOX_FUR, T_ASHFOX_FACE, T_EMBER_DUST,
+    T_JACK_FACE, T_JACK_FACE_LAST = T_JACK_FACE + 3, T_COBWEB, T_GRAVESTONE, T_BAT_LANTERN, T_XMAS_TREE, T_STRING_LIGHTS, T_STOCKING,  // 2.6.0
+    T_LOLLIPOP, T_CARAMEL, T_GINGERBREAD, T_SLED, T_GHOST, T_GHOST_FACE, T_SNOWMAN_FACE,
     T_TRAIN_TEX2, T_TRAIN_TEX2_LAST = T_TRAIN_TEX2 + 15,  // 2.3.0 preview build 7: more train colours (the subway)
     T_COUNT
 };
@@ -873,7 +887,8 @@ inline bool isBed(ItemId id) { return id >= BED && id < BED + 8; }
 inline bool isShaped(ItemId id) {
     return isDoor(id) || isTrapdoor(id) || isChest(id) || isFence(id) || isSkeletonHead(id) || id == CACTUS || isBed(id) || isCable(id) ||
            isSwitch(id) || id == CAKE || id == FARMLAND || isStairs(id) || (isSlab(id) && !isDoubleSlab(id)) ||
-           isBalloon(id) || id == PARTY_LANTERN || id == SNOW_LAYER || isTorch(id) || isCarpet(id) || id == CAMPFIRE || id == LEAF_LITTER || isRail(id) || id == CUSHION || id == BENCH || isBufferStop(id) || isCrossingSignal(id) || isCrossingGate(id);
+           isBalloon(id) || id == PARTY_LANTERN || id == SNOW_LAYER || isTorch(id) || isCarpet(id) || id == CAMPFIRE || id == LEAF_LITTER || isRail(id) || id == CUSHION || id == BENCH || isBufferStop(id) || isCrossingSignal(id) || isCrossingGate(id) ||
+           id == GRAVESTONE || id == BAT_LANTERN || id == STOCKING;
 }
 inline bool isLeaves(ItemId id) { return id == LEAVES || id == SPRUCE_LEAVES || id == VOID_LEAVES || id == NETHERPERK_CAP || id == CELESTIAL_LEAVES ||
                                          (id >= RED_LEAVES && id <= YELLOW_LEAVES) || id == CRIMSONIUM_LEAVES || id == GLOWCAP_LEAVES; }
@@ -885,7 +900,7 @@ inline bool isPortal(ItemId id) { return id == PORTAL || id == VOID_PORTAL || id
 inline bool isPlant(ItemId id) {
     return id == TALL_GRASS || id == DANDELION || id == POPPY || id == NETHER_SPROUTS || id == CRIMSON_ROOTS || isSapling(id) ||
            isCrop(id) || isDripstoneSpike(id) || id == DRY_GRASS || id == GRASSER_FLOWER || id == FERN || id == VINES || id == SHARD_CLUSTER || id == FIRE ||
-           id == COPPER_MOSS || id == GLASS_REEDS || id == STARBERRY_BUSH || id == VOID_TRUFFLE;
+           id == COPPER_MOSS || id == GLASS_REEDS || id == STARBERRY_BUSH || id == VOID_TRUFFLE || id == COBWEB || id == XMAS_TREE || id == STRING_LIGHTS;
 }
 inline bool isSolid(ItemId id) { return id != AIR && !isLiquid(id) && !isPortal(id) && !isPlant(id); }
 // What a tap or a mining finger can hit.
@@ -901,8 +916,12 @@ inline bool isEmissive(ItemId id) {
     return id == LAVA || isPortal(id) || id == LIT_FURNACE || id == EYE_LOG || id == POWERSTONE_LIGHT ||
            id == POWERSTONE_LAMP_ON || bronzeBulbLit(id) || id == NETHERPERK_CAP || cableOn(id) || id == POWERSTONE_BLOCK ||
            id == PARTY_LANTERN || id == ANNIV_LOGO || id == VOID_BRICK_EYE || isTorch(id) || id == FUNGAL_DEEPSTONE || id == VOID_SHARD_BLOCK || id == SHARD_CLUSTER || id == FIRE || id == CAMPFIRE || id == PALE_CRYSTAL ||
-           id == AMBER_RESIN || id == PRISMATIDE_PILLAR || id == LUMINOUS_SALT || id == AETHER_BRINE || id == GLOWCAP_LEAVES || id == COPPER_MOSS || (isModId(id) && modIsEmissive(id));
+           id == AMBER_RESIN || id == PRISMATIDE_PILLAR || id == LUMINOUS_SALT || id == AETHER_BRINE || id == GLOWCAP_LEAVES || id == COPPER_MOSS ||
+           (id >= JACK_LANTERN && id <= JACK_LANTERN + 3) || id == BAT_LANTERN || id == STRING_LIGHTS || (isModId(id) && modIsEmissive(id));
 }
+// 2.6.0: the things of the Halloween and Christmas addons (or seasons).
+inline bool halloweenItem(ItemId id) { return (id >= JACK_LANTERN && id <= JACK_LANTERN + 3) || id == COBWEB || id == GRAVESTONE || id == BAT_LANTERN || id == LOLLIPOP || id == CARAMEL; }
+inline bool christmasItem(ItemId id) { return id == XMAS_TREE || id == STRING_LIGHTS || id == STOCKING || id == GINGERBREAD || id == SLED; }
 inline bool isFurnace(ItemId id) { return id == FURNACE || id == LIT_FURNACE || id == POWERSTONE_FURNACE || id == POWERSTONE_FURNACE_ON; }
 inline bool isPowerstoneFurnace(ItemId id) { return id == POWERSTONE_FURNACE || id == POWERSTONE_FURNACE_ON; }
 // How far a block lights up its surroundings (0..15), day and night.
@@ -912,6 +931,10 @@ inline int lightLevel(ItemId id) {
         case PALE_CRYSTAL: case AMBER_RESIN: case PRISMATIDE_PILLAR: return 11;
         case LUMINOUS_SALT: case GLOWCAP_LEAVES: return 9;
         case AETHER_BRINE: return 7;
+        case JACK_LANTERN: case JACK_LANTERN + 1: case JACK_LANTERN + 2: case JACK_LANTERN + 3: return 15;  // 2.6.0
+        case BAT_LANTERN: return 12;
+        case STRING_LIGHTS: return 9;
+        case XMAS_TREE: return 7;
         case COPPER_MOSS: return 5;
         case LAVA: return 14;
         case TORCH: case TORCH_WALL: case TORCH_WALL + 1: case TORCH_WALL + 2: case TORCH_WALL + 3: return 14;
@@ -935,7 +958,8 @@ inline bool isArmor(ItemId id) {
 inline bool isTranslucent(ItemId id) { return id == WATER || isPortal(id) || isStainedGlass(id) || id == HONEY_BLOCK || id == AMBER_RESIN || id == AETHER_BRINE; }  // 1.7.0: ice is solid (no see-through grid)
 inline bool isFood(ItemId id) {
     return id == APPLE || (id >= RAW_PORK && id <= COOKED_MUTTON) || id == CANDY_CANE || id == BREAD || id == HONEY_BALL ||
-           (id >= RAW_CHICKEN && id <= STEAK) || id == MILK_BUCKET || id == STARBERRIES || id == VOID_TRUFFLE || (isModId(id) && modFood(id) > 0);
+           (id >= RAW_CHICKEN && id <= STEAK) || id == MILK_BUCKET || id == STARBERRIES || id == VOID_TRUFFLE || id == LOLLIPOP || id == CARAMEL || id == GINGERBREAD ||
+           (isModId(id) && modFood(id) > 0);
 }
 // Old saves (chunk format VCC1) still hold the Nether blocks removed in 1.2.0, whose ids 1.3.0 reuses.
 inline ItemId upgradeLegacyBlock(ItemId id) {
@@ -1134,6 +1158,18 @@ inline int tileFor(ItemId id, Face face) {
                 case CS_BRONZE_ORE: return T_CS_BRONZE_ORE;
                 case CS_STEEL_ORE: return T_CS_STEEL_ORE;
                 case EMBER_DUST: return T_EMBER_DUST;
+                case JACK_LANTERN: case JACK_LANTERN + 1: case JACK_LANTERN + 2: case JACK_LANTERN + 3:
+                    return face == F_TOP || face == F_BOTTOM ? T_PUMPKIN_TOP : T_JACK_FACE + (id - JACK_LANTERN);
+                case COBWEB: return T_COBWEB;
+                case GRAVESTONE: return T_GRAVESTONE;
+                case BAT_LANTERN: return T_BAT_LANTERN;
+                case XMAS_TREE: return T_XMAS_TREE;
+                case STRING_LIGHTS: return T_STRING_LIGHTS;
+                case STOCKING: return T_STOCKING;
+                case LOLLIPOP: return T_LOLLIPOP;
+                case CARAMEL: return T_CARAMEL;
+                case GINGERBREAD: return T_GINGERBREAD;
+                case SLED: return T_SLED;
                 case GLOWCAP_LEAVES: return T_GLOWCAP_LEAVES;
                 case STARBERRY_BUSH: return T_STARBERRY_BUSH;
                 case VOID_TRUFFLE: return T_VOID_TRUFFLE;

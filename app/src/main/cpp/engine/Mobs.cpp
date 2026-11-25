@@ -44,6 +44,8 @@ const MobInfo kInfo[] = {
     {"Žhavá můra", 0.7f, 0.5f, 4, 2.2f, 0, false, false},      // flies round, glows
     {"Popelavý lišák", 0.6f, 0.75f, 12, 2.6f, 0, false, false},  // the Cornerstone's fox, tamed with raw meat
     {"Lišák", 0.6f, 0.75f, 12, 2.6f, 0, false, false},          // the fox of the snowy and dappled forests
+    {"Duch", 0.6f, 1.5f, 10, 1.6f, 0, false, false},             // floats at night, flees from light
+    {"Sněhulák", 0.7f, 1.8f, 20, 0.0f, 0, false, false},         // stands guard, throws snowballs at monsters
 };
 static_assert(sizeof(kInfo) / sizeof(kInfo[0]) == (size_t)MobType::Count, "info for every mob");
 
@@ -220,6 +222,27 @@ void MobSystem::update(const World& world, int dim, const Vec3& target, bool hun
             }
             canHunt = huntable || prey >= 0;
         }
+        // 2.6.0: the snowman throws snowballs at the nearest monster.
+        if (m.type == MobType::Snowman) {
+            int best = -1;
+            float bd = 11;
+            for (size_t j = 0; j < mobs_.size(); ++j) {
+                const Mob& o = mobs_[j];
+                if (j == i || o.dim != dim || !o.alive() || !mobInfo(o.type).hostile) continue;
+                const float d = (o.pos - m.pos).length();
+                if (d < bd) bd = d, best = (int)j;
+            }
+            if (best >= 0) {
+                m.yaw = turnTo(m.yaw, yawTo(m.pos, mobs_[(size_t)best].pos), dt * 6);
+                if (m.attackCooldown <= 0) {
+                    m.attackCooldown = 1.4f;
+                    m.attackAnim = 1;
+                    events.push_back({MobEvent::Snowball, m.type, mobs_[(size_t)best].pos + Vec3(0, 0.8f, 0), 0, {}});
+                    hurt(best, 3, m.pos);
+                }
+            }
+            m.vel.x = m.vel.z = 0;
+        }
         // 2.6.0: a tamed fox goes for monsters near its player.
         const bool fox = m.type == MobType::AshFox || m.type == MobType::Fox;
         if (fox && m.tamed && !m.sitting) {
@@ -238,6 +261,7 @@ void MobSystem::update(const World& world, int dim, const Vec3& target, bool hun
         bool hunting = info.hostile && canHunt && dist < (info.boss ? 40.0f : 22.0f) && std::fabs(toPlayer.y) < 12;
         // 2.6.0: the golem hunts only while angry; the moss lurker waits until the player comes close.
         if (m.angry > 0) m.angry -= dt;
+        if (m.type == MobType::Villager && m.calm > 0) m.calm -= dt;  // 2.6.0: sweets again the next night
         if (m.type == MobType::CornerstoneGolem) hunting = m.angry > 0 && canHunt && dist < 24 && std::fabs(toPlayer.y) < 8;
         if (m.type == MobType::MossLurker) {
             if (hunting && dist < 5) m.angry = 8;
@@ -355,7 +379,7 @@ void MobSystem::update(const World& world, int dim, const Vec3& target, bool hun
             if ((m.wanderTimer -= dt) <= 0) {
                 m.wandering = random() < 0.6f;
                 // 2.6.0: the new creatures sit down to rest now and then.
-                if (!m.wandering && m.type >= MobType::CornerstoneGolem && m.type != MobType::EmberMoth && random() < 0.5f)
+                if (!m.wandering && m.type >= MobType::CornerstoneGolem && m.type <= MobType::Fox && m.type != MobType::EmberMoth && random() < 0.5f)
                     m.sitting = true, m.sitTimer = 4 + random() * 6;
                 m.wanderTimer = 3 + random() * 5;
                 float a = random() * 2 * kPi, r = 3 + random() * 6;
@@ -389,7 +413,13 @@ void MobSystem::update(const World& world, int dim, const Vec3& target, bool hun
             m.vel.x += (fwd.x * want - m.vel.x) * std::min(1.0f, accel * dt);
             m.vel.z += (fwd.z * want - m.vel.z) * std::min(1.0f, accel * dt);
             if (m.onGround && want > 0 && std::fmod(m.age, 1.3f) < dt) m.vel.y = 4.0f;
-        } else if (m.type == MobType::Bat || m.type == MobType::EmberMoth) {
+        } else if (m.type == MobType::Bat || m.type == MobType::EmberMoth || m.type == MobType::Ghost) {
+            if (m.type == MobType::Ghost && m.panic > 0) {
+                // 2.6.0: light scares the ghost: it flies away from the player.
+                const Vec3 away = Vec3(m.pos.x - target.x, 0.3f, m.pos.z - target.z).normalized();
+                m.target = m.pos + away * 6.0f;
+                m.wandering = true;
+            }
             if (!m.wandering || (m.target - m.pos).length() < 0.6f) {
                 float a = random() * 2 * kPi;
                 m.target = m.pos + Vec3(std::cos(a) * 4, random() * 3 - 1.4f, std::sin(a) * 4);
@@ -415,7 +445,7 @@ void MobSystem::update(const World& world, int dim, const Vec3& target, bool hun
 
         // Water carries mobs up; gravity everywhere else.
         ItemId inside = world.getBlock((int)std::floor(m.pos.x), (int)std::floor(m.pos.y + 0.3f), (int)std::floor(m.pos.z));
-        if (m.type == MobType::Bat || m.type == MobType::SkyDrifter || m.type == MobType::EmberMoth) {}  // flies
+        if (m.type == MobType::Bat || m.type == MobType::SkyDrifter || m.type == MobType::EmberMoth || m.type == MobType::Ghost) {}  // flies
         else if (m.dim == 3) m.vel.y -= kGravity * 0.45f * dt;  // 1.9.5: low gravity in the Celestial Reach
         else if (inside == WATER) m.vel.y = std::min(m.vel.y + 30 * dt, 2.5f);
         else if (inside == TAR) m.vel.y = std::max(m.vel.y - 6 * dt, -1.0f);  // sinks slowly
@@ -446,7 +476,7 @@ void MobSystem::update(const World& world, int dim, const Vec3& target, bool hun
             }
             m.vel.y = 0;
         }
-        if (blocked && (m.type == MobType::Bat || m.type == MobType::SkyDrifter || m.type == MobType::EmberMoth)) m.wandering = false;  // turn around at walls
+        if (blocked && (m.type == MobType::Bat || m.type == MobType::SkyDrifter || m.type == MobType::EmberMoth || m.type == MobType::Ghost)) m.wandering = false;  // turn around at walls
         else if (blocked && want > 0 && m.type == MobType::Spider) m.vel.y = 3.5f;  // spiders climb walls
         else if (blocked && m.onGround && want > 0 && m.type != MobType::PumpkinSlime) m.vel.y = info.boss ? 10.5f : 8.2f;
         if (p.y < -30) p.y = -30;
@@ -800,7 +830,9 @@ void MobSystem::buildVertices(int dim, float time, std::vector<Vertex>& out) con
             case MobType::Sporeling:
             case MobType::EmberMoth:
             case MobType::AshFox:
-            case MobType::Fox: {
+            case MobType::Fox:
+            case MobType::Ghost:
+            case MobType::Snowman: {
                 const float sit = m.sit, breathe = std::sin(time * 2.0f + m.age) * 0.4f, P = 1 / 16.0f;
                 auto bx = [&](float x0, float y0, float z0, float x1, float y1, float z1, const int tl[6], float pitch = 0, Vec3 piv = {}, float rl = 0) {
                     b.box({x0 * P, y0 * P, z0 * P}, {x1 * P, y1 * P, z1 * P}, tl, pitch, piv * P, rl);
@@ -857,6 +889,38 @@ void MobSystem::buildVertices(int dim, float time, std::vector<Vertex>& out) con
                     bx(-5, 13 - drop + bob, -1, -4, 15 - drop + bob, 0, w6);
                     bx(3, 12 - drop + bob, 2, 4, 14 - drop + bob, 3, w6);
                     bx(0, 13 - drop + bob, 3, 1, 15.5f - drop + bob, 4, w6);
+                } else if (m.type == MobType::Ghost) {
+                    // A sheet with a face, bobbing in the air, its hem in waves.
+                    const float bob = std::sin(time * 2.0f + m.age) * 1.2f;
+                    tilesAll(T_GHOST, a6);
+                    tilesAll(T_GHOST, f6);
+                    f6[2] = T_GHOST_FACE;
+                    const float keep = b.light;
+                    b.light = std::max(keep, 3.2f);  // it glows pale in the dark
+                    bx(-4, 8 + bob, -4, 4, 20 + bob, 4, f6);
+                    for (int k = 0; k < 4; ++k) {
+                        const float hx = -4 + k * 2, wave = std::sin(time * 4.0f + k) * 1.2f;
+                        bx(hx, 4 + bob + wave, -4, hx + 2, 8 + bob, 4, a6);
+                    }
+                    bx(-6, 12 + bob, -1, -4, 16 + bob, 1, a6, 0, {-4, 15 + bob, 0}, 0.4f + std::sin(time * 3.0f) * 0.2f);
+                    bx(4, 12 + bob, -1, 6, 16 + bob, 1, a6, 0, {4, 15 + bob, 0}, -0.4f - std::sin(time * 3.0f) * 0.2f);
+                    b.light = keep;
+                } else if (m.type == MobType::Snowman) {
+                    // Three balls of snow, a face with a carrot nose, a black hat; it throws with an arm.
+                    tilesAll(T_SNOW, a6);
+                    bx(-5, 0, -5, 5, 9, 5, a6);
+                    bx(-4, 9, -4, 4, 16, 4, a6);
+                    tilesAll(T_SNOW, f6);
+                    f6[2] = T_SNOWMAN_FACE;
+                    bx(-3.5f, 16, -3.5f, 3.5f, 23, 3.5f, f6);
+                    int hat6[6];
+                    tilesAll(T_FOX_DARK, hat6);
+                    bx(-4.5f, 23, -4.5f, 4.5f, 24, 4.5f, hat6);
+                    bx(-3, 24, -3, 3, 28, 3, hat6);
+                    int stick6[6];
+                    tilesAll(T_LOG_SIDE, stick6);
+                    bx(4, 12, -0.5f, 9, 13, 0.5f, stick6, 0, {4, 12.5f, 0}, -0.4f - m.attackAnim * 1.2f);
+                    bx(-9, 12, -0.5f, -4, 13, 0.5f, stick6, 0, {-4, 12.5f, 0}, 0.4f);
                 } else if (m.type == MobType::EmberMoth) {
                     tilesAll(T_MOTH_BODY, a6);
                     bx(-2, 6, -5, 2, 10, 5, a6);
@@ -1100,6 +1164,8 @@ std::vector<std::pair<ItemId, int>> mobDrops(MobType type, float roll) {
         case MobType::EmberMoth: return {{EMBER_DUST, 1 + (int)(roll * 2)}};
         case MobType::AshFox:
         case MobType::Fox: return {};
+        case MobType::Ghost: return {{CARAMEL, 1}};
+        case MobType::Snowman: return {{SNOW_BLOCK, 2}};
         case MobType::CrimsonMan:
             // 1.7.0 preview: his twelve heads, which open the Celestial portal, and the compass to it.
             return {{CRIMSON_HEAD, 12}, {CELESTIAL_COMPASS, 1}};

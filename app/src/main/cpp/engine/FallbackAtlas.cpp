@@ -2587,6 +2587,66 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
                     put(T_EMBER_DUST, x, y, hash3(x, y, 613, 3) % 3 == 0 ? Rgb{255, 232, 120} : Rgb{238, 120, 36});
                 }
         }
+        // 2.6.0: Halloween and Christmas: blocks, items and the ghost and snowman faces, drawn from patterns.
+        {
+            static const char* const kJack0[16] = {"................", "................", "...KK......KK...", "..KYYK....KYYK..", "..KYYK....KYYK..", "...KK......KK...", "................", ".......KK.......", "................", "..KYYYYYYYYYYK..", "..KYKYYKKYYKYK..", "...KYYYYYYYYK...", "....KKKKKKKK....", "................", "................", "................"};
+            static const char* const kJack1[16] = {"................", "................", "..KKKK....KKKK..", "..KYYK....KYYK..", "...KK......KK...", "................", "................", "..K..........K..", "..KYK......KYK..", "..KYYKKKKKKYYK..", "...KYYYYYYYYK...", "....KKYYYYKK....", "......KKKK......", "................", "................", "................"};
+            static const char* const kJack2[16] = {"................", "..K..........K..", "..KK........KK..", "..KYK......KYK..", "..KYYK....KYYK..", "..KKKK....KKKK..", "................", "......KYYK......", "................", ".KYKYKYKYKYKYK..", ".KYYYYYYYYYYYK..", "..KYKYKYKYKYK...", "...K.K.K.K.K....", "................", "................", "................"};
+            static const char* const kJack3[16] = {"................", "................", "...KKK....KKK...", "..KYYYK..KYYYK..", "..KYKYK..KYKYK..", "..KYYYK..KYYYK..", "...KKK....KKK...", "................", "......KKKK......", ".....KYYYYK.....", ".....KYYYYK.....", ".....KYYYYK.....", "......KKKK......", "................", "................", "................"};
+            static const char* const kCobweb[16] = {"W.......W.......", ".W......W......W", "..W.....W.....W.", "...W..WWWWW..W..", "....WW..W..WW...", "...W.W..W..W.W..", "..W...WWWWW...W.", "WWWWWWWW.WWWWWWW", "..W...WWWWW...W.", "...W.W..W..W.W..", "....WW..W..WW...", "...W..WWWWW..W..", "..W.....W.....W.", ".W......W......W", "W.......W.......", "................"};
+            static const char* const kGravestone[16] = {"....SSSSSSSS....", "...SSSSSSSSSS...", "..SSSSSSSSSSSS..", "..SSSSSssSSSSS..", "..SSSSSssSSSSS..", "..SSSssssssSSS..", "..SSSSSssSSSSS..", "..SSSSSssSSSSS..", "..SSSSSSSSSSSS..", "..SsSSSSSSSSsS..", "..SSSSSsSSSSSS..", "..SSSSSSSSsSSS..", "..SSSsSSSSSSSS..", "..SSSSSSSSSSSS..", "..SSSSSSSSSSSS..", "..SSSSSSSSSSSS.."};
+            static const char* const kBatlantern[16] = {"KK............KK", "KKK....KK....KKK", "KKKK..KKKK..KKKK", "KKKKKKKKKKKKKKKK", ".KKKOOOOOOOOKKK.", "..KOOYYYYYYOOK..", "..KOYYYYYYYYOK..", "..KOYYWWWWYYOK..", "..KOYYWWWWYYOK..", "..KOYYYYYYYYOK..", "..KOOYYYYYYOOK..", "..KKOOOOOOOOKK..", "...KKKKKKKKKK...", "......KKKK......", ".......KK.......", "................"};
+            static const char* const kTree[16] = {".......YY.......", "......YYYY......", ".......YY.......", ".......gg.......", "......gRgg......", ".....ggggYg.....", "....gYgggggg....", "...ggggRgggBg...", "....gggggYgg....", "...gRggggggggg..", "..ggggBgggRgggg.", ".ggYggggggggYggg", "..gggggRgggggg..", "......bbbb......", "......bbbb......", "................"};
+            static const char* const kLights[16] = {"KKKKKKKKKKKKKKKK", "..K....K....K...", "..K....K....K...", ".RRR..YYY..GGG..", ".RRR..YYY..GGG..", "..R....Y....G...", "......K....K....", "......K....K....", ".....BBB..PPP...", ".....BBB..PPP...", "......B....P....", "................", "...K.......K....", "..RRR.....YYY...", "..RRR.....YYY...", "...R.......Y...."};
+            static const char* const kStocking[16] = {"...WWWWWWWWW....", "...WWWWWWWWW....", "...RRRRRRRRR....", "...RRRRGRRRR....", "...RRRRRRRRR....", "...RRGRRRRRR....", "...RRRRRRRGR....", "...RRRRRRRRR....", "...RRRRRRRRRR...", "...RRRRRRRRRRR..", "...RRRRRRRRRRRR.", "...RRRRRRRRRRRR.", "....RRRRRRRRRR..", ".....RRRRRRRR...", "................", "................"};
+            static const char* const kLollipop[16] = {".....RRRRRR.....", "....RWWRRWWR....", "...RWRRWWRRWR...", "...RRWWRRWWRR...", "...RWRRWWRRWR...", "....RWWRRWWR....", ".....RRRRRR.....", ".......WW.......", ".......WW.......", ".......WW.......", ".......WW.......", ".......WW.......", ".......WW.......", ".......WW.......", "................", "................"};
+            static const char* const kCaramel[16] = {"................", "................", "....YYYYYYYY....", "...YOOOOOOOOY...", "..YOOOooooOOOY..", "..YOoOOOOOOoOY..", "..YOOOOOOOOOOY..", "..YOoOOOOOOoOY..", "..YOOOooooOOOY..", "...YOOOOOOOOY...", "....YYYYYYYY....", "................", "................", "................", "................", "................"};
+            static const char* const kGinger[16] = {"......bbbb......", ".....bbbbbb.....", ".....bWbbWb.....", ".....bbbbbb.....", ".....bbWWbb.....", "..bbbbbbbbbbbb..", ".bbbbbRbbRbbbbb.", ".bbW.bbbbbb.Wbb.", "......bbbb......", "......bRbb......", "......bbbb......", ".....bb..bb.....", "....bbb..bbb....", "...bbb....bbb...", "...WW......WW...", "................"};
+            static const char* const kSled[16] = {"................", "................", "................", "................", "bbbbbbbbbbbbbbb.", "bRRRRRRRRRRRRRb.", "bRRRRRRRRRRRRRb.", "bbbbbbbbbbbbbbb.", "..S.........S...", "..S.........S...", "SSSSSSSSSSSSSSSS", ".SSSSSSSSSSSSSS.", "................", "................", "................", "................"};
+            static const char* const kGhostface[16] = {"................", "................", "................", "...KKK....KKK...", "..KKKKK..KKKKK..", "..KKWKK..KKWKK..", "..KKKKK..KKKKK..", "...KKK....KKK...", "................", "......KKKK......", ".....KKKKKK.....", ".....KKKKKK.....", "......KKKK......", "................", "................", "................"};
+            static const char* const kSnowmanface[16] = {"................", "................", "................", "...KK......KK...", "...KK......KK...", "................", "........OO......", "........OOOOO...", "........OO......", "................", "...K........K...", "....K......K....", ".....KKKKKK.....", "................", "................", "................"};
+            const std::initializer_list<std::pair<char, Rgb>> pal = {{'K',{30,22,24}},{'Y',{255,214,80}},{'W',{245,245,240}},{'S',{150,150,160}},{'s',{100,100,112}},{'O',{232,120,30}},{'o',{180,90,20}},{'g',{40,120,50}},{'R',{210,40,40}},{'B',{60,110,220}},{'G',{60,180,70}},{'P',{170,90,200}},{'b',{150,96,52}}};
+            auto draw = [&](int tile, const char* const rows[16], const Rgb* base) {
+                for (int y = 0; y < 16; ++y)
+                    for (int x = 0; x < 16; ++x) {
+                        uint8_t* d = px4(tile, x, y);
+                        const char c = rows[y][x];
+                        Rgb col{0, 0, 0};
+                        bool found = false;
+                        for (const auto& [k, v] : pal)
+                            if (k == c) col = v, found = true;
+                        if (!found && base) col = base->plus((int)(hash3(x, y, tile, 3) % 13) - 6), found = true;
+                        if (!found) {
+                            d[0] = d[1] = d[2] = d[3] = 0;
+                            continue;
+                        }
+                        d[0] = (uint8_t)std::clamp(col.r, 0, 255), d[1] = (uint8_t)std::clamp(col.g, 0, 255), d[2] = (uint8_t)std::clamp(col.b, 0, 255), d[3] = 255;
+                    }
+            };
+            const Rgb pumpkin{226, 120, 30}, ghost{236, 240, 248}, snow{240, 244, 250};
+            draw(T_JACK_FACE + 0, kJack0, &pumpkin);
+            draw(T_JACK_FACE + 1, kJack1, &pumpkin);
+            draw(T_JACK_FACE + 2, kJack2, &pumpkin);
+            draw(T_JACK_FACE + 3, kJack3, &pumpkin);
+            draw(T_COBWEB, kCobweb, nullptr);
+            draw(T_GRAVESTONE, kGravestone, nullptr);
+            draw(T_BAT_LANTERN, kBatlantern, nullptr);
+            draw(T_XMAS_TREE, kTree, nullptr);
+            draw(T_STRING_LIGHTS, kLights, nullptr);
+            draw(T_STOCKING, kStocking, nullptr);
+            draw(T_LOLLIPOP, kLollipop, nullptr);
+            draw(T_CARAMEL, kCaramel, nullptr);
+            draw(T_GINGERBREAD, kGinger, nullptr);
+            draw(T_SLED, kSled, nullptr);
+            for (int y = 0; y < 16; ++y)
+                for (int x = 0; x < 16; ++x) {
+                    uint8_t* d = px4(T_GHOST, x, y);
+                    const Rgb c = ghost.plus((int)(hash3(x, y, 620, 3) % 9) - 4);
+                    d[0] = (uint8_t)c.r, d[1] = (uint8_t)c.g, d[2] = (uint8_t)c.b, d[3] = 255;
+                }
+            draw(T_GHOST_FACE, kGhostface, &ghost);
+            draw(T_SNOWMAN_FACE, kSnowmanface, &snow);
+        }
         // The moss: the side's mossy pixels (its top rows), here and there a red stone of the rock.
         for (int y = 0; y < 16; ++y)
             for (int x = 0; x < 16; ++x) {

@@ -69,6 +69,7 @@ struct PlayerState {
     // 1.5.0: which pages of the old documents the player has read (bit per page).
     int documentsRead = 0;
     int journalsRead = 0;  // 2.5.0: the dead explorer's journal pages read (bits)
+    int treeGiftDay = -1, stockingGiftDay = -1;  // 2.6.0: the in-game day of the last Christmas present
     // 2.5.0 preview build 7: achievements belong to the world: every new survival world starts them afresh.
     std::set<std::string> achievements;
     int blocksMined = 0;  // in this world, for the miner achievements

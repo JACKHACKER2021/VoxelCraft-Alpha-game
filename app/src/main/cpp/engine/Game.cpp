@@ -41,7 +41,7 @@ namespace vc {
 namespace vc {
 
 namespace {
-const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.6.0 Preview build 8" : "VoxelCraft 2.5.0";
+const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.6.0 Preview build 9" : "VoxelCraft 2.5.0";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -4651,6 +4651,9 @@ CraftResult Game::craftResult(int size) const {
     // Items of the store addons can be crafted only while the addon is on.
     CraftResult r = matchRecipe(grid_.data(), size);
     Settings s = playSettings();
+    // 2.6.0: the Halloween and Christmas things, with the addon or in their season.
+    const bool spooky = s.addonHalloween || s.season == Season::Halloween, festive = s.addonWinter || s.season == Season::Christmas;
+    if ((halloweenItem(r.id) && !spooky) || (christmasItem(r.id) && !festive)) return {};
     if ((r.id == NUKE_TNT && !s.addonHalloween) || ((r.id == GIFT_BOX || r.id == CANDY_CANE) && !s.addonWinter) ||
         ((r.id == CAKE || isAnniversaryItem(r.id)) && !s.addonAnniversary))
         return {};
@@ -4728,6 +4731,8 @@ std::vector<Game::BookEntry> Game::bookEntries(int gridSize) const {
     auto allowed = [&](ItemId id) {
         if (id == NUKE_TNT) return play.addonHalloween;
         if (id == GIFT_BOX || id == CANDY_CANE) return play.addonWinter;
+        if (halloweenItem(id)) return play.addonHalloween || play.season == Season::Halloween;  // 2.6.0
+        if (christmasItem(id)) return play.addonWinter || play.season == Season::Christmas;
         if (id == CAKE || isAnniversaryItem(id)) return play.addonAnniversary;
         return true;
     };
@@ -5424,6 +5429,10 @@ void Game::creativeInventoryScreen() {
     std::vector<ItemId> addonItems;
     if (play.addonWinter) addonItems.insert(addonItems.end(), {GIFT_BOX, CANDY_CANE});
     if (play.addonHalloween) addonItems.insert(addonItems.end(), {NUKE_TNT, PUMPKIN});
+    if (kFeatures260 && (play.addonHalloween || play.season == Season::Halloween))  // 2.6.0
+        addonItems.insert(addonItems.end(), {JACK_LANTERN, JACK_LANTERN + 1, JACK_LANTERN + 2, JACK_LANTERN + 3, COBWEB, GRAVESTONE, BAT_LANTERN, LOLLIPOP, CARAMEL});
+    if (kFeatures260 && (play.addonWinter || play.season == Season::Christmas))
+        addonItems.insert(addonItems.end(), {XMAS_TREE, STRING_LIGHTS, STOCKING, GINGERBREAD, SLED});
     const std::vector<ItemId>& modItems = ModRegistry::get().creative();
     if (play.addonAnniversary)
         addonItems.insert(addonItems.end(), {CAKE, ANNIV_LOGO, CONFETTI_BLOCK, BALLOON, BALLOON + 1, BALLOON + 2, PARTY_LANTERN,

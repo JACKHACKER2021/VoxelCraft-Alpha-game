@@ -135,6 +135,7 @@ bool saveLevel(const WorldInfo& info, const PlayerState& p) {
             for (const std::string& a : p.achievements) o << (first ? "" : ",") << a, first = false;
         }
         if (p.blocksMined) o << "\nmined=" << p.blocksMined;
+        o << "\nxmas=" << p.treeGiftDay << ":" << p.stockingGiftDay;
         if (!p.metroVisited.empty()) {
             o << "\nmetro=";
             for (size_t i = 0; i < p.metroVisited.size(); ++i) o << (i ? "," : "") << p.metroVisited[i].first << ":" << p.metroVisited[i].second;
@@ -197,6 +198,7 @@ bool loadLevel(const std::string& folder, WorldInfo& info, PlayerState& p) {
     p.documentsRead = std::clamp((int)num(kv, "pages", 0), 0, 255);
     p.journalsRead = std::clamp((int)num(kv, "journals", 0), 0, 4095);
     p.blocksMined = std::max(0, (int)num(kv, "mined", 0));
+    if (kv.count("xmas")) std::sscanf(kv["xmas"].c_str(), "%d:%d", &p.treeGiftDay, &p.stockingGiftDay);
     if (kv.count("achievements")) {
         std::istringstream in(kv["achievements"]);
         std::string id;

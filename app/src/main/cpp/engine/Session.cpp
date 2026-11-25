@@ -1901,6 +1901,15 @@ void Session::touchUp(int id, float x, float y, double time) {
                     f.sitTimer = 0;
                     hand_.use();
                     if (onMessage) onMessage(tr(f.sitting ? "Lišák sedí a čeká." : "Lišák jde s tebou."));
+                } else if (kFeatures260 && mob >= 0 && mobs_.mobs()[mob].type == MobType::Villager && heldNow.id == AIR &&
+                           (settings_.addonHalloween || settings_.season == Season::Halloween) && mobs_.mobs()[mob].calm <= 0 &&
+                           (std::fmod(state_.dayTime, 24000.0) >= 13000 || isNight((float)std::fmod(state_.dayTime, 24000.0)))) {
+                    // 2.6.0: trick or treat: on a Halloween night a villager gives sweets (once a night).
+                    mobs_.mobs()[mob].calm = 600;
+                    giveItem({spawnRandom() < 0.5f ? (ItemId)LOLLIPOP : (ItemId)CARAMEL, (uint8_t)(1 + (int)(spawnRandom() * 3)), 0});
+                    hand_.use();
+                    sound(Sound::Coin);
+                    if (onMessage) onMessage(tr("Koleda! Vesničan ti dal sladkosti."));
                 } else if (mob >= 0 && mobs_.mobs()[mob].type == MobType::Villager) {
                     wantsTrade = mob;  // villagers trade instead of being hit
                 } else if (mob >= 0 && mobs_.mobs()[mob].type == MobType::Hogman && powerstone && mobs_.mobs()[mob].barter <= 0) {
@@ -2496,6 +2505,8 @@ void Session::updateMobs(float dt) {
             if (onMessage) onMessage(tr("Karmínový muž volá zapomenuté na pomoc!"));
         } else if (e.kind == MobEvent::Explode) {
             explode(e.pos, 3.5f * (settings_.expBigBoom ? 2.0f : 1.0f), false);
+        } else if (e.kind == MobEvent::Snowball) {
+            particles_.spawnBurst(*world_, (int)std::floor(e.pos.x), (int)std::floor(e.pos.y), (int)std::floor(e.pos.z), SNOW_BLOCK);
         } else if (e.kind == MobEvent::Teleport) {
             // 1.9.5: a puff of pale sparks where the Reach Stalker vanishes and appears.
             for (int k = 0; k < 12; ++k)
@@ -2518,6 +2529,26 @@ void Session::updateMobs(float dt) {
     const float t = (float)std::fmod(state_.dayTime, 24000.0);
     const bool night = isNight(t) || t >= 13000;
     mobs_.despawn(dim, player_.pos, 80, dim == 0 && !night && !halloween);
+    if (kFeatures260 && dim == 0) {
+        // 2.6.0: Halloween nights: ghosts float about (by the gravestones most of all); by day they are gone.
+        const bool spooky = settings_.addonHalloween || settings_.season == Season::Halloween;
+        // By day (or with Halloween over) the ghosts just fade away: no loot.
+        auto& all = mobs_.mobs();
+        if (!night || !spooky)
+            all.erase(std::remove_if(all.begin(), all.end(), [](const Mob& g) { return g.type == MobType::Ghost && g.dim == 0; }), all.end());
+        for (Mob& g : all)
+            if (g.type == MobType::Ghost && g.dim == 0) {
+                const ItemId h = state_.inventory.slots[state_.selectedSlot].id;
+                const bool light = isTorch(h) || h == TORCH || (h >= JACK_LANTERN && h <= JACK_LANTERN + 3) || h == BAT_LANTERN || lightLevel(h) >= 9;
+                if (light && (g.pos - player_.pos).length() < 9) g.panic = 3;  // the light scares it away
+            }
+        if (spooky && night && !calm && mobs_.countType(0, MobType::Ghost, player_.pos, 64) < 3 && spawnRandom() < 0.15f) {
+            const float a = spawnRandom() * 2 * kPi, r = 14 + spawnRandom() * 16;
+            const int gx = (int)std::floor(player_.pos.x + std::cos(a) * r), gz = (int)std::floor(player_.pos.z + std::sin(a) * r);
+            if (world_->getChunk(floorDiv(gx, kChunkSize), floorDiv(gz, kChunkSize)))
+                mobs_.spawn(MobType::Ghost, 0, Vec3(gx + 0.5f, (float)world_->skyHeight(gx, gz) + 2.5f, gz + 0.5f));
+        }
+    }
     World& w = *world_;
     // A free spot on the ground some distance from the player.
     auto spot = [&](float minR, float maxR, Vec3& out, ItemId& ground) {
@@ -2961,6 +2992,22 @@ void Session::useItem(const RayHit& hit) {
             sound(Sound::Eat);
             return;
         }
+        if (kFeatures260 && (block == XMAS_TREE || block == STOCKING)) {
+            // 2.6.0: a present under the Christmas tree (and in the stocking) once every day.
+            const int day = (int)(state_.dayTime / kDayTicks);
+            int& last = block == XMAS_TREE ? state_.treeGiftDay : state_.stockingGiftDay;
+            if (last != day) {
+                last = day;
+                giveItem({GIFT_BOX, 1, 0});
+                if (block == STOCKING) giveItem({GINGERBREAD, 2, 0});
+                sound(Sound::Coin);
+                if (onMessage) onMessage(tr(block == XMAS_TREE ? "Pod stromečkem je dárek!" : "V punčoše je dárek a perníčky!"));
+            } else if (onMessage) {
+                onMessage(tr("Další dárek bude zítra."));
+            }
+            hand_.use();
+            return;
+        }
         if (block == GIFT_BOX) {
             // A present: sweets and something useful.
             w.setBlock(hit.x, hit.y, hit.z, AIR);
@@ -3027,6 +3074,9 @@ void Session::useItem(const RayHit& hit) {
         if (held.id == HONEY_BALL) food = 3, saturation = 1.5f;  // 1.9.5 build 3
         if (held.id == STARBERRIES) food = 2, saturation = 2, state_.health = std::min(20.0f, state_.health + 4);  // 2.2.0: they heal
         if (held.id == VOID_TRUFFLE) food = 6, saturation = 8;
+        if (held.id == LOLLIPOP) food = 2, saturation = 1;  // 2.6.0: sweets
+        if (held.id == CARAMEL) food = 3, saturation = 1.5f;
+        if (held.id == GINGERBREAD) food = 4, saturation = 3;
         if (held.id == RAW_CHICKEN) food = 2, saturation = 1.2f;
         if (held.id == COOKED_CHICKEN) food = 6, saturation = 7.2f;
         if (held.id == RAW_BEEF) food = 3, saturation = 1.8f;
@@ -3218,6 +3268,15 @@ void Session::useItem(const RayHit& hit) {
     if (isCrop(held.id)) saplings_.push_back({dimIndex(), x, y, z, settings_.expFastGrowth ? 3.0f : 12.0f});  // wheat grows too
     if (isPowerBlock(held.id)) powerChanged(x, y, z);
     if (isBalloon(held.id)) achieve("anniv_party");
+    // 2.6.0: a pumpkin on two blocks of snow comes alive as a snowman.
+    if (kFeatures260 && (place == PUMPKIN || (place >= JACK_LANTERN && place <= JACK_LANTERN + 3)) && w.getBlock(x, y - 1, z) == SNOW_BLOCK &&
+        w.getBlock(x, y - 2, z) == SNOW_BLOCK) {
+        for (int k = 0; k < 3; ++k) w.setBlock(x, y - k, z, AIR);
+        mobs_.spawn(MobType::Snowman, dimIndex(), Vec3(x + 0.5f, (float)(y - 2), z + 0.5f));
+        mobs_.mobs().back().yaw = player_.yaw + kPi;
+        particles_.spawnBurst(w, x, y - 1, z, SNOW_BLOCK);
+        if (onMessage) onMessage(tr("Sněhulák ožil! Bude házet koule po příšerách."));
+    }
     if (survival()) state_.inventory.removeOne(state_.selectedSlot);
     hand_.place();  // only after the game really placed it
     ++blocksPlaced;
@@ -3704,6 +3763,13 @@ void Session::update(float dt, double time, float guiW, float guiH, const Settin
     const bool onHoney = world_->getBlock((int)std::floor(player_.pos.x), (int)std::floor(player_.pos.y - 0.05f), (int)std::floor(player_.pos.z)) == HONEY_BLOCK;
     player_.speedMul = (onHoney ? 0.4f : 1.0f) * settings.devSpeed * (survival() && temperatureLevel() <= -1 ? (temperatureLevel() == -2 ? 0.78f : 0.9f) : 1.0f);
     if (sporeSlow_ > 0) sporeSlow_ -= dt, player_.speedMul *= 0.5f;  // 2.6.0: in a cloud of spores
+    if (kFeatures260 && player_.touches(*world_, COBWEB, 0.0f)) player_.speedMul *= 0.25f;  // 2.6.0: stuck in a cobweb
+    if (kFeatures260 && state_.inventory.slots[state_.selectedSlot].id == SLED && player_.onGround && !player_.flying) {
+        // 2.6.0: on a sled the player slides fast over snow and ice.
+        const ItemId under = world_->getBlock((int)std::floor(player_.pos.x), (int)std::floor(player_.pos.y - 0.05f), (int)std::floor(player_.pos.z));
+        const ItemId on = world_->getBlock((int)std::floor(player_.pos.x), (int)std::floor(player_.pos.y), (int)std::floor(player_.pos.z));
+        if (under == SNOW_BLOCK || under == ICE || under == THIN_ICE || under == DRIED_SNOW || on == SNOW_LAYER) player_.speedMul *= 2.0f;
+    }
     player_.gravityMul = settings.expLowGravity ? 0.3f : 1.0f;
     gliding_ = false;
     if (state_.armor[1].id == CELESTIAL_WINGS && !player_.onGround && !player_.flying && !player_.inWater && player_.vel.y < -2.0f) {
