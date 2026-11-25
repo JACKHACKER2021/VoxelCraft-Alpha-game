@@ -41,7 +41,7 @@ namespace vc {
 namespace vc {
 
 namespace {
-const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.6.0 Preview build 7" : "VoxelCraft 2.5.0";
+const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.6.0 Preview build 8" : "VoxelCraft 2.5.0";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -365,6 +365,20 @@ void Game::loadTextures() {
         celestial(T_SHEEP_FACE, T_CELESTIAL_SHEEP_FACE);
         celestial(T_SHEEP_SKIN, T_CELESTIAL_SHEEP_SKIN);
         recolor(T_GRASS_SIDE, T_GRASS_SIDE_DARK, false);
+        if (kFeatures260 && texturesWinter_) {
+            // 2.6.0: Christmas (and the Winter addon): the grass is white with snow, every biome's
+            // grass: the top is the snow itself, the sides get a thick white rim of snow.
+            auto px = [&](int tile, int x, int y) { return &atlas.rgba[((size_t)((tile / kAtlasCols) * t + y) * atlas.size + (tile % kAtlasCols) * t + x) * 4]; };
+            for (int top : {T_GRASS_TOP, T_GRASS_TOP_ORANGE, T_GRASS_TOP_DARK})
+                for (int y = 0; y < t; ++y)
+                    for (int x = 0; x < t; ++x) std::copy_n(px(T_SNOW, x, y), 4, px(top, x, y));
+            for (int side : {T_GRASS_SIDE, T_GRASS_SIDE_ORANGE, T_GRASS_SIDE_DARK})
+                for (int y = 0; y < t; ++y)
+                    for (int x = 0; x < t; ++x) {
+                        const int rim = t * 5 / 16 + (int)((x * 7 + 3) % 3) * t / 16;  // a ragged lower edge
+                        if (y < rim) std::copy_n(px(T_SNOW, x, y), 4, px(side, x, y));
+                    }
+        }
         if (texturesSeason_ == Season::Halloween && !texturesWinter_) {
             // 1.9.0 autumn Halloween: orange grass everywhere and leaves in autumn reds and yellows.
             auto copyTile = [&](int from, int to) {
@@ -2299,30 +2313,47 @@ void Game::trailersScreen() {
     float x, y, w, h;
     menuWindow(x, y, w, h, false);
     ui_.text(x + 2, y + 2, "Speciální přístup: trailery", kTitle, 1, false);
-    ui_.text(x + 2, y + 14, "Každá verze VoxelCraftu ve videu, od 0.1 po 1.6.0.", kTextDim, 1, false);
+    // 2.6.0: the trailers sorted: the big ones that tell what the game is, then by the versions.
     struct Trailer {
         const char* title;
         const char* asset;
+        int tab;  // 0 big trailers, 1 = 1.x, 2 = 2.x ...
     };
     static const Trailer trailers[] = {
-        {"0.1 - 1.2.0: šestiminutový příběh", "trailers/t01_0.1-1.2.0.mp4"},
-        {"1.3.0: vesnice a farmaření", "trailers/t02_1.3.0.mp4"},
-        {"1.4.0: módy, jeskyně a online", "trailers/t03_1.4.0.mp4"},
-        {"1.5.0: Forgotten Powerstone", "trailers/t04_1.5.0.mp4"},
-        {"1.5.1: opravená edice", "trailers/t05_1.5.1.mp4"},
-        {"1.5.5: The Shaders Update", "trailers/t06_1.5.5.mp4"},
-        {"1.5.7: louče, štít a Prasák", "trailers/t07_1.5.7.mp4"},
-        {"1.6.0: Caves and Tunes", "trailers/t08_1.6.0.mp4"},
-        {"1.7.0: The Celestial Reach", "trailers/t09_1.7.0.mp4"},
-        {"1.8.0: Concrete & Old World", "trailers/t10_1.8.0.mp4"},
-        {"1.9.0: Celestial Reach & Seasons", "trailers/t11_1.9.0.mp4"},
-        {"2.0.0: The whole story (15 min)", "trailers/t12_2.0.0.mp4"},
+        {"2.0.0: celý příběh (15 min)", "trailers/t12_2.0.0.mp4", 0},
+        {"FAQ: kam projekt směřuje (3 min)", "trailers/t13_faq.mp4", 0},
+        {"0.1 - 1.2.0: šestiminutový příběh", "trailers/t01_0.1-1.2.0.mp4", 1},
+        {"1.3.0: vesnice a farmaření", "trailers/t02_1.3.0.mp4", 1},
+        {"1.4.0: módy, jeskyně a online", "trailers/t03_1.4.0.mp4", 1},
+        {"1.5.0: Forgotten Powerstone", "trailers/t04_1.5.0.mp4", 1},
+        {"1.5.1: opravená edice", "trailers/t05_1.5.1.mp4", 1},
+        {"1.5.5: The Shaders Update", "trailers/t06_1.5.5.mp4", 1},
+        {"1.5.7: louče, štít a Prasák", "trailers/t07_1.5.7.mp4", 1},
+        {"1.6.0: Caves and Tunes", "trailers/t08_1.6.0.mp4", 1},
+        {"1.7.0: The Celestial Reach", "trailers/t09_1.7.0.mp4", 1},
+        {"1.8.0: Concrete & Old World", "trailers/t10_1.8.0.mp4", 1},
+        {"1.9.0: Celestial Reach & Seasons", "trailers/t11_1.9.0.mp4", 1},
+        {"2.0.0: The whole story (15 min)", "trailers/t12_2.0.0.mp4", 2},
+        {"FAQ a verze 2.5.0", "trailers/t13_faq.mp4", 2},
     };
-    const float rowH = 22, top = y + 28, colW = (w - 8) / 2;
-    for (int i = 0; i < (int)(sizeof(trailers) / sizeof(trailers[0])); ++i) {
-        const float bx = x + (i % 2) * (colW + 8), by = top + (i / 2) * (rowH + 6);
-        if (ui_.button(bx, by, colW, rowH, trailers[i].title, (bool)onPlayVideo) && onPlayVideo) onPlayVideo(trailers[i].asset);
+    static const char* const kTabs[6] = {"What's this game", "1.0 - 1.9.9", "2.0 - 2.9.9", "3.0 - 3.9.9", "4.0 - 4.9.9", "5.0 - 5.9.9"};
+    trailerTab_ = std::clamp(trailerTab_, 0, 5);
+    float tx = x;
+    for (int t = 0; t < 6; ++t) {
+        const float tw = std::min(ui_.textWidth(kTabs[t]) + 12, (w - 20) / 6 + 30);
+        if (ui_.button(tx, y + 14, tw, 15, kTabs[t], true, trailerTab_ == t)) trailerTab_ = t;
+        tx += tw + 3;
     }
+    if (trailerTab_ == 0) ui_.text(x + 2, y + 33, "Velké trailery: co je VoxelCraft a kam směřuje.", kTextDim, 1, false, w - 4);
+    const float rowH = 22, top = y + 46, colW = (w - 8) / 2;
+    int n = 0;
+    for (const Trailer& tr : trailers) {
+        if (tr.tab != trailerTab_) continue;
+        const float bx = x + (n % 2) * (colW + 8), by = top + (n / 2) * (rowH + 6);
+        if (ui_.button(bx, by, colW, rowH, tr.title, (bool)onPlayVideo) && onPlayVideo) onPlayVideo(tr.asset);
+        ++n;
+    }
+    if (n == 0) ui_.textCentered(x + w / 2, top + 30, trf("Trailery verze {0} přijdou, až vyjde.", {std::to_string(trailerTab_) + ".0.0"}), kTextDim);
     if (ui_.button(x + w / 2 - 60, y + h - 26, 120, 22, "Zpět")) setScreen(Screen::Title);
 }
 

@@ -4405,19 +4405,24 @@ void Session::updateSnowCover(float dt, bool snowing) {
     // where it does not (warm lands, or the snow has stopped outside the cold biomes) it melts.
     if (world_ != &overworld_) return;
     snowTimer_ += dt;
-    const float every = snowing ? 0.04f : 0.12f;
+    // 2.6.0: the snow settles on every loaded chunk round the player (it used to fill just the few
+    // chunks next to them), so the rate grows with the area.
+    const int reach = kFeatures260 ? 16 * 6 : 24;
+    const float every = (snowing ? 0.04f : 0.12f) * (kFeatures260 ? 0.0625f : 1.0f);
     World& w = overworld_;
     while (snowTimer_ >= every) {
         snowTimer_ -= every;
-        const int x = (int)std::floor(player_.pos.x) + (int)(spawnRandom() * 49) - 24;
-        const int z = (int)std::floor(player_.pos.z) + (int)(spawnRandom() * 49) - 24;
+        const int x = (int)std::floor(player_.pos.x) + (int)(spawnRandom() * (2 * reach + 1)) - reach;
+        const int z = (int)std::floor(player_.pos.z) + (int)(spawnRandom() * (2 * reach + 1)) - reach;
         if (!w.getChunk(floorDiv(x, kChunkSize), floorDiv(z, kChunkSize))) continue;
         const int y = w.skyHeight(x, z);
         if (y <= 1 || y >= kChunkHeight - 1) continue;
         const ItemId here = w.getBlock(x, y, z), below = w.getBlock(x, y - 1, z);
         if (snowing) {
             const bool ground = isOpaque(below) || isLeaves(below);
-            if (ground && (here == AIR || here == TALL_GRASS) && !isLiquid(below)) w.setBlock(x, y, z, SNOW_LAYER);
+            // 2.6.0: the snow covers flowers and grass too (they stood out green through a white land).
+            const bool plant = kFeatures260 && isPlant(here) && !isSapling(here);
+            if (ground && (here == AIR || here == TALL_GRASS || plant) && !isLiquid(below)) w.setBlock(x, y, z, SNOW_LAYER);
         } else if (below == SNOW_LAYER || here == SNOW_LAYER) {
             const int sy = here == SNOW_LAYER ? y : y - 1;
             const BiomeDef* b = w.biomeAt(x, z);

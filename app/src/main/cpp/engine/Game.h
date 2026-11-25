@@ -421,7 +421,8 @@ private:
     // Developer login
     std::string devLoginName_;
     std::string bugTitle_;
-    int newsPage_ = 0;  // 2.5.0: the page of the news panel
+    int newsPage_ = 0;
+    int trailerTab_ = 0;  // 2.6.0: the open group of trailers  // 2.5.0: the page of the news panel
     float tutorialSkip_[4] = {};  // 2.5.0: where the tutorial's Skip button is (x, y, w, h); w 0 when hidden  // 2.5.0: the title of the bug report being written
     int devFailures_ = 0;
     double devLockedUntil_ = 0;

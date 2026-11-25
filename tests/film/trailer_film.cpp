@@ -7138,3 +7138,21 @@ SHOT(z06_mobs) {
         }
     }
 }
+
+// 2.6.0 preview: Christmas: white grass, snow settling over flowers and grass everywhere around.
+SHOT(z07_winter) {
+    Director d(out, "z07");
+    d.game->toolProfile().owned.insert("addon:winter");  // the Winter addon, as if bought
+    d.openWorld("Winter", 4242, GameMode::Creative);
+    Session& s = d.s();
+    Player& p = s.player();
+    p.flying = true;
+    d.settings().hideGui = true;
+    p.pos = p.pos + Vec3(0, 6, 0);
+    p.pitch = -0.35f;
+    d.idle(30);
+    d.shot("z07_start");
+    d.seconds(8);  // the snow settles
+    d.shot("z07_snowed");
+    d.seconds(0.3f);
+}
