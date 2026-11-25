@@ -119,7 +119,7 @@ void face(Painter& p, Rgb skin, Rgb hair, Rgb eyes) {
     }
 }
 
-void miner(Painter& p) {
+[[maybe_unused]] void miner(Painter& p) {
     const Rgb skin{198, 140, 100}, vest{230, 120, 30}, shirt{70, 70, 80}, pants{50, 50, 60};
     face(p, skin, {40, 30, 20}, {60, 50, 40});
     p.box(kHat, {235, 190, 30});  // helmet
@@ -156,7 +156,7 @@ void gardener(Painter& p) {
     }
 }
 
-void knight(Painter& p) {
+[[maybe_unused]] void knight(Painter& p) {
     const Rgb steel{165, 170, 178}, dark{95, 100, 110}, red{170, 30, 35};
     p.box(kHead, steel);
     p.band(kHead, 3, 4, {20, 20, 25});  // visor slit
@@ -172,7 +172,7 @@ void knight(Painter& p) {
     }
 }
 
-void robot(Painter& p) {
+[[maybe_unused]] void robot(Painter& p) {
     const Rgb metal{120, 130, 140}, panel{80, 88, 100}, glow{60, 230, 240};
     p.box(kHead, metal);
     p.front(kHead, 2, 3, glow);
@@ -226,7 +226,7 @@ void netherWalker(Painter& p) {
     }
 }
 
-void vipGold(Painter& p) {
+[[maybe_unused]] void vipGold(Painter& p) {
     const Rgb skin{214, 165, 122}, gold{235, 190, 50}, dark{170, 120, 20}, gem{200, 30, 60};
     face(p, skin, {60, 40, 20}, {40, 90, 180});
     p.box(kHat, gold);  // a crown
@@ -245,7 +245,7 @@ void vipGold(Painter& p) {
     }
 }
 
-void vipTux(Painter& p) {
+[[maybe_unused]] void vipTux(Painter& p) {
     const Rgb skin{230, 190, 160}, black{25, 25, 30}, white{240, 240, 240}, gold{235, 190, 50};
     face(p, skin, {30, 25, 20}, {50, 50, 60});
     p.box(kBody, black);
@@ -265,14 +265,15 @@ void vipTux(Painter& p) {
 namespace {
 #include "DeveloperSkin.inc"
 #include "ExplorerSkin.inc"
+#include "BuiltinSkins.inc"
 }  // namespace
 
-// 2.5.0: the main character: the explorer drawn pixel by pixel (in place of the painted one).
-static Skin explorerSkin() {
+// 2.5.0: skins drawn pixel by pixel, in place of the painted ones (same ids, so players keep them).
+static Skin pixelSkin(const char* id, const char* name, const uint8_t* rgba) {
     Skin s;
-    s.id = "explorer";
-    s.name = "Průzkumník";
-    s.rgba.assign(kExplorerSkin, kExplorerSkin + sizeof kExplorerSkin);
+    s.id = id;
+    s.name = name;
+    s.rgba.assign(rgba, rgba + 64 * 64 * 4);
     return s;
 }
 
@@ -292,15 +293,15 @@ static Skin vip(Skin s) {
 
 std::vector<Skin> builtinSkins() {
     return {
-        explorerSkin(),
-        make("miner", "Horník", 2, miner),
+        pixelSkin("explorer", "Průzkumník", kExplorerSkin),
+        pixelSkin("miner", "Horník", kMinerSkin),
         make("gardener", "Zahradnice", 3, gardener),
-        make("knight", "Rytíř", 4, knight),
-        make("robot", "Robot V-01", 5, robot),
+        pixelSkin("knight", "Rytíř", kKnightSkin),
+        pixelSkin("robot", "Robot V-01", kRobotSkin),
         make("astronaut", "Astronautka", 6, astronaut),
         make("nether_walker", "Poutník Netheru", 7, netherWalker),
-        vip(make("vip_gold", "Zlatý VIP", 8, vipGold)),
-        vip(make("vip_tux", "VIP Gentleman", 9, vipTux)),
+        vip(pixelSkin("vip_gold", "Zlatý VIP", kVipGoldSkin)),
+        vip(pixelSkin("vip_tux", "VIP Gentleman", kVipTuxSkin)),
     };
 }
 
