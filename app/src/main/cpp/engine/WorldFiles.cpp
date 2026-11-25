@@ -9,6 +9,10 @@
 #include <zlib.h>
 
 #include "Save.h"
+#include "Items.h"
+#include "World.h"
+#include <memory>
+#include <sstream>
 
 namespace vc {
 
@@ -103,6 +107,122 @@ bool restoreBackup(const std::string& worldFolder, const std::string& backupDir,
     return !ec;
 }
 
+// 2.6.0: a region file in words. Each chunk is written layer by layer (y), each layer as runs of
+// "block*count" over its 256 blocks (row by row: z = 0..15, in each row x = 0..15); layers that are
+// the same are written once as a range. A block the names cannot bring back exactly is "#id".
+std::string regionToText(const std::vector<uint8_t>& vcr, const std::string& name) {
+    std::ostringstream o;
+    o << "# VoxelCraft: a region of the world in readable form (" << name << ")\n"
+      << "# Every chunk is 16 x 16 blocks, " << kChunkHeight << " high. Every line is one layer (y): block*count,\n"
+      << "# read row by row (z = 0..15, in each row x = 0..15). The game turns this back into its .vcr file.\n"
+      << "VCT1\n";
+    if (vcr.size() < 4 + 1024 * 8 || vcr[0] != 'V' || vcr[1] != 'C' || vcr[2] != 'R' || vcr[3] != '1') return o.str();
+    auto le = [&](size_t at) { return vcr[at] | vcr[at + 1] << 8 | vcr[at + 2] << 16 | (uint32_t)vcr[at + 3] << 24; };
+    auto word = [](ItemId id) {
+        const char* k = itemKey(id);
+        if (k && *k && itemFromKey(k) == id) return std::string(k);
+        return "#" + std::to_string(id);
+    };
+    auto c = std::make_unique<Chunk>(0, 0);
+    for (int i = 0; i < 1024; ++i) {
+        const uint32_t off = le(4 + i * 8), len = le(8 + i * 8);
+        if (!len || (size_t)off + len > vcr.size()) continue;
+        if (!decodeChunkData(std::vector<uint8_t>(vcr.begin() + off, vcr.begin() + off + len), *c)) continue;
+        o << "chunk " << (i % 32) << " " << (i / 32) << "\n";
+        std::string prev;
+        int from = 0;
+        auto flush = [&](int to) {
+            if (prev.empty()) return;
+            o << "y " << from;
+            if (to > from) o << "-" << to;
+            o << ":" << prev << "\n";
+        };
+        for (int y = 0; y < kChunkHeight; ++y) {
+            std::string line;
+            ItemId run = 0;
+            int count = 0;
+            for (int z = 0; z < 16; ++z)
+                for (int x = 0; x < 16; ++x) {
+                    const ItemId b = c->blocks[Chunk::index(x, y, z)];
+                    if (count && b == run) {
+                        ++count;
+                        continue;
+                    }
+                    if (count) line += " " + word(run) + "*" + std::to_string(count);
+                    run = b, count = 1;
+                }
+            line += " " + word(run) + "*" + std::to_string(count);
+            if (line != prev) {
+                flush(y - 1);
+                prev = line, from = y;
+            }
+        }
+        flush(kChunkHeight - 1);
+    }
+    return o.str();
+}
+
+// The readable region back into a .vcr file; false when the text is broken.
+bool textToRegion(const std::string& text, std::vector<uint8_t>& vcr) {
+    std::istringstream in(text);
+    std::string line;
+    std::vector<std::vector<uint8_t>> blobs(1024);
+    auto c = std::make_unique<Chunk>(0, 0);
+    int index = -1;
+    bool any = false;
+    auto finish = [&] {
+        if (index >= 0) blobs[(size_t)index] = encodeChunkData(*c);
+    };
+    while (std::getline(in, line)) {
+        if (line.empty() || line[0] == '#' || line == "VCT1") continue;
+        if (line.rfind("chunk ", 0) == 0) {
+            finish();
+            int lx, lz;
+            if (std::sscanf(line.c_str(), "chunk %d %d", &lx, &lz) != 2 || lx < 0 || lx > 31 || lz < 0 || lz > 31) return false;
+            index = lx + lz * 32;
+            std::fill(std::begin(c->blocks), std::end(c->blocks), (ItemId)AIR);
+            any = true;
+            continue;
+        }
+        if (index < 0 || line.rfind("y ", 0) != 0) return false;
+        const size_t colon = line.find(':');
+        if (colon == std::string::npos) return false;
+        int y0 = 0, y1 = 0;
+        if (std::sscanf(line.c_str(), "y %d-%d", &y0, &y1) != 2) {
+            if (std::sscanf(line.c_str(), "y %d", &y0) != 1) return false;
+            y1 = y0;
+        }
+        if (y0 < 0 || y1 < y0 || y1 >= kChunkHeight) return false;
+        std::istringstream runs(line.substr(colon + 1));
+        std::vector<ItemId> layer;
+        for (std::string tok; runs >> tok;) {
+            const size_t star = tok.rfind('*');
+            if (star == std::string::npos) return false;
+            const std::string w = tok.substr(0, star);
+            const int count = std::atoi(tok.c_str() + star + 1);
+            if (count <= 0 || layer.size() + (size_t)count > 256) return false;
+            const ItemId id = w[0] == '#' ? (ItemId)std::atoi(w.c_str() + 1) : (w == "air" ? (ItemId)AIR : itemFromKey(w));
+            if (id == AIR && w != "air" && w != "#0") return false;  // an unknown name: refuse rather than lose blocks
+            layer.insert(layer.end(), (size_t)count, id);
+        }
+        if (layer.size() != 256) return false;
+        for (int y = y0; y <= y1; ++y)
+            for (int z = 0; z < 16; ++z)
+                for (int x = 0; x < 16; ++x) c->blocks[Chunk::index(x, y, z)] = layer[(size_t)(z * 16 + x)];
+    }
+    finish();
+    if (!any) return false;
+    vcr = {'V', 'C', 'R', '1'};
+    vcr.resize(4 + 1024 * 8, 0);
+    for (int i = 0; i < 1024; ++i) {
+        if (blobs[(size_t)i].empty()) continue;
+        const uint32_t off = (uint32_t)vcr.size(), len = (uint32_t)blobs[(size_t)i].size();
+        for (int k = 0; k < 4; ++k) vcr[4 + i * 8 + k] = (uint8_t)(off >> (8 * k)), vcr[8 + i * 8 + k] = (uint8_t)(len >> (8 * k));
+        vcr.insert(vcr.end(), blobs[(size_t)i].begin(), blobs[(size_t)i].end());
+    }
+    return true;
+}
+
 bool exportWorld(const std::string& worldFolder, const std::string& file, std::string& error) {
     std::error_code ec;
     const fs::path root(worldFolder);
@@ -114,20 +234,41 @@ bool exportWorld(const std::string& worldFolder, const std::string& file, std::s
     uint32_t count = 0;
     for (auto& e : fs::recursive_directory_iterator(root, ec)) {
         if (!e.is_regular_file()) continue;
-        const std::string name = fs::relative(e.path(), root, ec).generic_string();
-        const std::vector<uint8_t> data = readAll(e.path());
+        std::string name = fs::relative(e.path(), root, ec).generic_string();
+        std::vector<uint8_t> data = readAll(e.path());
+        uint32_t method = 0;
+        std::vector<uint8_t> stored = data;
+        if (name.size() > 4 && name.compare(name.size() - 4, 4, ".vcr") == 0) {
+            // 2.6.0: a region goes in readable (.vct), deflated so the file stays small.
+            const std::string text = regionToText(data, name);
+            data.assign(text.begin(), text.end());
+            name.replace(name.size() - 4, 4, ".vct");
+            z_stream zs{};
+            stored.assign(compressBound((uLong)data.size()) + 64, 0);
+            if (deflateInit2(&zs, 6, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY) == Z_OK) {
+                zs.next_in = data.data(), zs.avail_in = (uInt)data.size();
+                zs.next_out = stored.data(), zs.avail_out = (uInt)stored.size();
+                const bool done = deflate(&zs, Z_FINISH) == Z_STREAM_END;
+                stored.resize(zs.total_out);
+                deflateEnd(&zs);
+                if (done) method = 8;
+                else stored = data;
+            } else {
+                stored = data;
+            }
+        }
         const uint32_t crc = crc32(data), offset = (uint32_t)out.size();
-        // Local header, stored (method 0).
+        // Local header: stored (method 0), or deflated (8) for the readable regions.
         put32(out, 0x04034b50);
-        put16(out, 20), put16(out, 0x0800), put16(out, 0), put16(out, 0), put16(out, 0x21);
-        put32(out, crc), put32(out, (uint32_t)data.size()), put32(out, (uint32_t)data.size());
+        put16(out, 20), put16(out, 0x0800), put16(out, method), put16(out, 0), put16(out, 0x21);
+        put32(out, crc), put32(out, (uint32_t)stored.size()), put32(out, (uint32_t)data.size());
         put16(out, (uint32_t)name.size()), put16(out, 0);
         out.insert(out.end(), name.begin(), name.end());
-        out.insert(out.end(), data.begin(), data.end());
+        out.insert(out.end(), stored.begin(), stored.end());
         // Central directory entry.
         put32(central, 0x02014b50);
-        put16(central, 20), put16(central, 20), put16(central, 0x0800), put16(central, 0), put16(central, 0), put16(central, 0x21);
-        put32(central, crc), put32(central, (uint32_t)data.size()), put32(central, (uint32_t)data.size());
+        put16(central, 20), put16(central, 20), put16(central, 0x0800), put16(central, method), put16(central, 0), put16(central, 0x21);
+        put32(central, crc), put32(central, (uint32_t)stored.size()), put32(central, (uint32_t)data.size());
         put16(central, (uint32_t)name.size()), put16(central, 0), put16(central, 0), put16(central, 0), put16(central, 0);
         put32(central, 0), put32(central, offset);
         central.insert(central.end(), name.begin(), name.end());
@@ -138,22 +279,11 @@ bool exportWorld(const std::string& worldFolder, const std::string& file, std::s
     put32(out, 0x06054b50);
     put16(out, 0), put16(out, 0), put16(out, count), put16(out, count);
     put32(out, (uint32_t)central.size()), put32(out, centralAt), put16(out, 0);
-    // 2.6.0: the world is packed into one sealed file: a short readable label, then the zip compressed,
-    // so a phone's file manager shows one world file instead of opening it like a folder of parts.
-    std::vector<uint8_t> packed(compressBound((uLong)out.size()));
-    uLongf packedSize = (uLongf)packed.size();
-    if (compress2(packed.data(), &packedSize, out.data(), (uLong)out.size(), 6) != Z_OK) {
-        error = "Svět nejde zabalit";
-        return false;
-    }
-    packed.resize(packedSize);
-    const std::string label = "VCWORLD2\nVoxelCraft world: " + root.filename().string() + "\n\n";
-    std::vector<uint8_t> sealed(label.begin(), label.end());
-    for (int k = 0; k < 8; ++k) sealed.push_back((uint8_t)((uint64_t)out.size() >> (8 * k)));
-    sealed.insert(sealed.end(), packed.begin(), packed.end());
+    // (2.6.0 preview build 6 sealed this into one packed file; it is a plain zip again, with readable
+    // regions inside: the files of the world as they are, nothing hidden.)
     fs::create_directories(fs::path(file).parent_path(), ec);
     std::ofstream o(file, std::ios::binary);
-    o.write((const char*)sealed.data(), (std::streamsize)sealed.size());
+    o.write((const char*)out.data(), (std::streamsize)out.size());
     if (!o) {
         error = "Soubor nejde zapsat";
         return false;
@@ -204,17 +334,18 @@ bool importWorld(const std::string& file, const std::string& worldsRoot, std::st
     struct Entry {
         std::string name;
         size_t data, size;
+        uint32_t method, full;
     };
     std::vector<Entry> entries;
     bool hasLevel = false;
     for (uint32_t i = 0; i < count; ++i) {
         if (get32(d, at) != 0x02014b50) break;
-        const uint32_t method = get16(d, at + 10), size = get32(d, at + 20), nameLen = get16(d, at + 28);
+        const uint32_t method = get16(d, at + 10), size = get32(d, at + 20), full = get32(d, at + 24), nameLen = get16(d, at + 28);
         const uint32_t extra = get16(d, at + 30), comment = get16(d, at + 32), local = get32(d, at + 42);
         if (at + 46 + nameLen > d.size()) break;
         std::string name(d.begin() + (long)at + 46, d.begin() + (long)(at + 46 + nameLen));
         at += 46 + nameLen + extra + comment;
-        if (method != 0) {
+        if (method != 0 && method != 8) {
             error = "Komprimovaný soubor: použij export z VoxelCraftu";
             return false;
         }
@@ -223,7 +354,7 @@ bool importWorld(const std::string& file, const std::string& worldsRoot, std::st
         const size_t dataAt = local + 30 + get16(d, local + 26) + get16(d, local + 28);
         if (dataAt + size > d.size()) continue;
         hasLevel |= name == "level.dat";
-        entries.push_back({name, dataAt, size});
+        entries.push_back({name, dataAt, size, method, full});
     }
     if (!hasLevel) {
         error = "V souboru není svět";
@@ -234,7 +365,35 @@ bool importWorld(const std::string& file, const std::string& worldsRoot, std::st
         const fs::path target = fs::path(folder) / e.name;
         std::error_code ec;
         fs::create_directories(target.parent_path(), ec);
-        std::ofstream(target, std::ios::binary).write((const char*)d.data() + e.data, (std::streamsize)e.size);
+        std::vector<uint8_t> bytes(d.begin() + (long)e.data, d.begin() + (long)(e.data + e.size));
+        if (e.method == 8) {
+            // Deflated (the readable regions): inflate.
+            if (e.full > (1u << 30)) continue;
+            std::vector<uint8_t> raw(e.full);
+            z_stream zs{};
+            if (inflateInit2(&zs, -15) != Z_OK) continue;
+            zs.next_in = bytes.data(), zs.avail_in = (uInt)bytes.size();
+            zs.next_out = raw.data(), zs.avail_out = (uInt)raw.size();
+            const int r = inflate(&zs, Z_FINISH);
+            inflateEnd(&zs);
+            if (r != Z_STREAM_END) {
+                error = "Soubor světa je poškozený: " + e.name;
+                return false;
+            }
+            bytes.swap(raw);
+        }
+        fs::path out = target;
+        if (e.name.size() > 4 && e.name.compare(e.name.size() - 4, 4, ".vct") == 0) {
+            // 2.6.0: a readable region becomes the game's .vcr again.
+            std::vector<uint8_t> vcr;
+            if (!textToRegion(std::string(bytes.begin(), bytes.end()), vcr)) {
+                error = "Čitelný region se nedá přečíst: " + e.name;
+                return false;
+            }
+            bytes.swap(vcr);
+            out.replace_extension(".vcr");
+        }
+        std::ofstream(out, std::ios::binary).write((const char*)bytes.data(), (std::streamsize)bytes.size());
     }
     return true;
 }

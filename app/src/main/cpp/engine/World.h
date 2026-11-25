@@ -57,6 +57,11 @@ struct Chunk {
     void recalcHeightmap();
 };
 
+// 2.6.0: a chunk's blocks to and from the bytes stored in a region file (.vcr).
+bool decodeChunkData(const std::vector<uint8_t>& data, Chunk& c);
+std::vector<uint8_t> encodeChunkData(const Chunk& c);
+
+
 // 1.9.5 build 2: seed presets: a seed whose spawn lies in a taiga, by a village, on ice...
 constexpr int kSeedPresets = 8;
 const char* seedPresetName(int preset);  // Czech, for tr()

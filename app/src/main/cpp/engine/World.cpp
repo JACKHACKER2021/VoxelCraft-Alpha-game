@@ -2742,6 +2742,10 @@ std::vector<uint8_t> readAll(const std::string& path) {
 uint32_t le32(const uint8_t* p) { return p[0] | p[1] << 8 | p[2] << 16 | (uint32_t)p[3] << 24; }
 }  // namespace
 
+// 2.6.0: the chunk codec for other code (the readable world export).
+bool decodeChunkData(const std::vector<uint8_t>& data, Chunk& c) { return decodeChunk(data, c); }
+std::vector<uint8_t> encodeChunkData(const Chunk& c) { return encodeChunk(c); }
+
 std::string World::regionPath(int rx, int rz) const {
     return storageDir_ + "/r." + std::to_string(rx) + "." + std::to_string(rz) + ".vcr";
 }
