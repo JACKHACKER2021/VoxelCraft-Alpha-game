@@ -164,7 +164,7 @@ const std::vector<StoreItem>& storeCatalog() {
         item("skin:knight", K::Skin, "Rytíř", "RYTÍŘ", "SKIN", "Plná zbroj s červeným erbem. Pro hrdiny jeskyní.", 300, 4.8f, 0.36f, 0.38f, 0.42f),
         item("skin:robot", K::Skin, "Robot V-01", "ROBOT", "SKIN", "Kovový pomocník se svítícíma očima.", 450, 4.7f, 0.12f, 0.3f, 0.36f),
         item("skin:astronaut", K::Skin, "Astronautka", "ASTRONAUT", "SKIN", "Skafandr pro výpravy do neznáma.", 500, 4.9f, 0.13f, 0.2f, 0.38f),
-        item("skin:nether_walker", K::Skin, "Poutník Netheru", "POUTNÍK", "SKIN", "Žhnoucí oči a plášť z popela.", 400, 4.6f, 0.42f, 0.1f, 0.06f),
+        item("skin:nether_walker", K::Skin, "Kapitán Moře", "KAPITÁN", "SKIN", "Kapitánská čepice a námořnický kabát.", 400, 4.6f, 0.12f, 0.3f, 0.55f),  // 2.5.0: was the Nether walker
         item("pack:ohnivy_nether", K::ModPack, "Ohnivý Nether", "OHNIVÝ NETHER", "MODPACK",
              "Nether z cihel, vysoké lávové moře a záplava světlitu.", 600, 4.9f, 0.4f, 0.11f, 0.08f),
         item("pack:souostrovi", K::ModPack, "Souostroví", "SOUOSTROVÍ", "SVĚT",

@@ -139,7 +139,7 @@ void face(Painter& p, Rgb skin, Rgb hair, Rgb eyes) {
     }
 }
 
-void gardener(Painter& p) {
+[[maybe_unused]] void gardener(Painter& p) {
     const Rgb skin{240, 200, 170}, overalls{70, 130, 60}, shirt{240, 230, 210};
     face(p, skin, {200, 120, 40}, {60, 120, 60});
     p.box(kBody, shirt);
@@ -193,7 +193,7 @@ void gardener(Painter& p) {
     }
 }
 
-void astronaut(Painter& p) {
+[[maybe_unused]] void astronaut(Painter& p) {
     const Rgb suit{235, 235, 240}, visor{40, 60, 110}, accent{230, 120, 40};
     p.box(kHead, suit);
     p.rect(kHead.u + kHead.d + 1, kHead.v + kHead.d + 2, 6, 4, visor);
@@ -211,7 +211,7 @@ void astronaut(Painter& p) {
     }
 }
 
-void netherWalker(Painter& p) {
+[[maybe_unused]] void netherWalker(Painter& p) {
     const Rgb skin{120, 40, 30}, cloth{35, 20, 25}, ember{255, 140, 30};
     face(p, skin, {25, 15, 15}, ember);
     p.box(kBody, cloth);
@@ -295,11 +295,11 @@ std::vector<Skin> builtinSkins() {
     return {
         pixelSkin("explorer", "Průzkumník", kExplorerSkin),
         pixelSkin("miner", "Horník", kMinerSkin),
-        make("gardener", "Zahradnice", 3, gardener),
+        pixelSkin("gardener", "Zahradnice", kGardenerSkin),
         pixelSkin("knight", "Rytíř", kKnightSkin),
         pixelSkin("robot", "Robot V-01", kRobotSkin),
-        make("astronaut", "Astronautka", 6, astronaut),
-        make("nether_walker", "Poutník Netheru", 7, netherWalker),
+        pixelSkin("astronaut", "Astronautka", kAstronautSkin),
+        pixelSkin("nether_walker", "Kapitán Moře", kCaptainSeaSkin),  // 2.5.0: was the Nether walker (the id stays)
         vip(pixelSkin("vip_gold", "Zlatý VIP", kVipGoldSkin)),
         vip(pixelSkin("vip_tux", "VIP Gentleman", kVipTuxSkin)),
     };
