@@ -40,7 +40,7 @@ namespace vc {
 namespace vc {
 
 namespace {
-const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.5.0 Preview build 10" : "VoxelCraft 2.4.0";
+const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.5.0 Preview build 11" : "VoxelCraft 2.4.0";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -1296,11 +1296,11 @@ void Game::presentsScreen(float dt) {
         "Noví tvorové v Cornerstone",
     };
     static const char* const kNew250[] = {
-        "Síť metra: linky, tunely a čtyři druhy stanic",
-        "Automatické metro, mapa metra a cedule stanic",
-        "Ztracené podzemní město na konci linky",
-        "Zavalené a zatopené tunely, obklady a lavičky",
-        "Deníky mrtvého průzkumníka ve strukturách",
+        "Síť metra, automatické metro a ztracené město",
+        "Vraky vlaků a všechny struktury na mapě",
+        "Nové pixelové skiny a Kapitán Moře",
+        "Voxel Bucks, balíčky za Kč a hlášení chyb",
+        "Hra běží už od Androidu 5.0",
     };
     static const char* const kNext250[] = {
         "Noví tvorové v Cornerstone",
@@ -1906,6 +1906,17 @@ void Game::newsPanel() {
         {"Deníky", "V každé struktuře najdeš deník mrtvého průzkumníka; dohromady vyprávějí jeho příběh"},
         {"Metro", "Dveře se otevírají na straně nástupiště, řidič je může otevřít i ručně"},
     };
+    // Preview builds 3-10: the second page.
+    static const Row rows250b[] = {
+        {"Vraky", "Rezavé vagony metra a parní lokomotivy po celém světě, s truhlou uvnitř"},
+        {"Mapa", "Na mapě se ukáže každá struktura, každý druh svou barvou"},
+        {"Seedy", "Předvolba pro každou strukturu: pevný seed a spawn přímo u ní, natrvalo"},
+        {"Postavy", "Nové pixelové skiny všech postav a nový Kapitán Moře"},
+        {"Animace", "Postava se přikrčí, plave ve vodě a zamává (/wave)"},
+        {"Voxel Bucks", "Mince jsou Voxel Bucks s ikonou kostičky; v obchodě balíčky za Kč"},
+        {"Úspěchy", "Každý nový survival svět začíná úspěchy od nuly"},
+        {"Chyby", "Nahlásit chybu v nastavení otevře GitHub Issues s vyplněnými údaji"},
+    };
     static const Row rows240[] = {
         {"Metro", "Rychlý vlak s posuvnými dveřmi, v noci svítí; kola se točí a podvozky zatáčí"},
         {"Stanice", "Betonové kolejové lože a nástupiště; u nástupiště metro otevře dveře"},
@@ -1915,7 +1926,9 @@ void Game::newsPanel() {
         {"Věže", "Schody z půlbloků ve strážních věžích i věžích Crimson Void"},
         {"Svět", "Vesnice kopírují krajinu, mraky jsou nad horami"},
     };
-    const Row* rows = kFeatures250 ? rows250 : rows240;
+    const int pages = kFeatures250 ? 2 : 1;
+    newsPage_ = std::clamp(newsPage_, 0, pages - 1);
+    const Row* rows = kFeatures250 ? (newsPage_ == 0 ? rows250 : rows250b) : rows240;
     const int rowCount = kFeatures250 ? 8 : 7;
     float y = py + 24;
     const float tw = pw - 114;
@@ -1938,7 +1951,14 @@ void Game::newsPanel() {
         y += 13;
         if (y > py + ph - 34) break;
     }
-    if (ui_.button(W / 2 - 40, py + ph - 26, 80, 20, "Zavřít", true, true)) newsOpen_ = false;
+    if (ui_.button(W / 2 - 40, py + ph - 26, 80, 20, "Zavřít", true, true)) newsOpen_ = false, newsPage_ = 0;
+    if (pages > 1) {
+        // 2.5.0: two pages of news: arrows on both sides of Close, the page in the corner.
+        if (ui_.button(W / 2 - 74, py + ph - 26, 28, 20, "<", newsPage_ > 0)) --newsPage_;
+        if (ui_.button(W / 2 + 46, py + ph - 26, 28, 20, ">", newsPage_ < pages - 1)) ++newsPage_;
+        const std::string pg = std::to_string(newsPage_ + 1) + " / " + std::to_string(pages);
+        ui_.text(px + pw - ui_.textWidth(pg) - 10, py + ph - 20, pg, kTextDim, 1, false);
+    }
 }
 
 void Game::creditsScreen() {

@@ -43,6 +43,11 @@ All code, textures, models and music are our own: **no textures, sounds, music o
 - 🪨 cave-ins to dig through, 🌊 flooded tunnels, subway **tiles**, **station signs** you name yourself, **benches**
 - 🤖 the **automatic subway** (stops at every platform), 🗺️ the **subway map**
 - 🏙️ the **lost underground city** at the end of the line, and the **dead explorer's journals** in every kind of structure
+- 🚂 rusted **train wrecks** (subway cars and steam locomotives) everywhere, and **every structure on the map**
+- 🌱 **structure seeds**: a fixed seed for each structure in the new-world menu, the spawn right by it
+- 🧍 new **pixel skins** for every character and the new **Captain Sea**; crouching, swimming and waving (`/wave`)
+- 🧊 coins are now **Voxel Bucks**, ⚙️ **Report a bug** in the settings opens GitHub Issues, 🏆 achievements per survival world
+- 📱 runs on **Android 5.0** and newer
 
 The rest of this page (history of every version, how to build) is in Czech.
 
@@ -76,6 +81,11 @@ The rest of this page (history of every version, how to build) is in Czech.
 - 🪨 **závaly** k prokopání, 🌊 **zatopené tunely**, **obklady**, **cedule stanic** (pojmenuješ si je) a **lavičky**
 - 🤖 **automatické metro** (staví u každého nástupiště), 🗺️ **mapa metra** s nalezenými stanicemi
 - 🏙️ **ztracené podzemní město** na konci linky (`/locate city`) a 📓 **deníky mrtvého průzkumníka** ve všech strukturách
+- 🚂 rezavé **vraky vlaků** (vagony metra a parní lokomotivy) po celém světě a **každá struktura na mapě**
+- 🌱 **seedy struktur**: v menu nového světa pevný seed pro každou strukturu, spawn přímo u ní
+- 🧍 nové **pixelové skiny** všech postav a nový **Kapitán Moře**; přikrčení, plavání a zamávání (`/wave`)
+- 🧊 mince jsou teď **Voxel Bucks**, ⚙️ **Nahlásit chybu** v nastavení otevře GitHub Issues, 🏆 úspěchy pro každý survival svět
+- 📱 hra běží od **Androidu 5.0**
 
 > [!TIP]
 > Otázky k vydání, číslování verzí, mincím (Voxel Bucks) a vzhledu najdeš ve **[❓ FAQ](docs/FAQ.md)**.

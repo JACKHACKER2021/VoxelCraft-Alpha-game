@@ -113,6 +113,14 @@ int main(int argc, char** argv) {
 
     frames(3);
     shot("01_title");
+    tap(80, 14);  // 2.5.0: Novinky (in the corner while the daily reward toast is up), both pages
+    frames(2);
+    shot("01d_news");
+    tap(360, 244);  // >
+    frames(2);
+    shot("01e_news_2");
+    tap(300, 244);  // Zavřít
+    frames(2);
     tap(575, 265);  // VoxelSoftworks: the credits
     frames(200);
     shot("01b_credits");
