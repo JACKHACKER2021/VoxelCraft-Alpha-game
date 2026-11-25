@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draws the Horník (miner), Rytíř (knight) and Robot player skins.
+"""Draws the Horník (miner), Rytíř (knight), Robot and the two VIP player skins.
 
 Writes 64x64 PNG skins in the usual layout (the one engine/Skin.h describes) to
 assets_src/skins/ and a 3D preview to docs/img/skins_preview.png.
@@ -497,6 +497,217 @@ def robot():
     return s
 
 
+# --------------------------------------------------------------- VIP ---
+
+def vip_face(skin, skin_dk, hair, eyes, brow, mouth):
+    def head(face, x, y, w, h):
+        if face == "top":
+            return hair
+        if face == "bottom":
+            return skin_dk
+        if face == "back":
+            return hair if y < 6 else skin_dk
+        if face in ("right", "left"):
+            if y < 2 or (y < 4 and ((face == "right" and x < 6) or (face == "left" and x > 1))):
+                return hair
+            return skin
+        if y == 0 or (y == 1 and x in (0, 7)):
+            return hair
+        if y == 3 and x in (1, 2, 5, 6):
+            return brow
+        if y == 4:
+            return {1: (240, 240, 236), 2: eyes, 5: eyes, 6: (240, 240, 236)}.get(x, skin)
+        if y == 5 and x in (3, 4):
+            return skin_dk
+        if y == 6 and x in (2, 3, 4, 5):
+            return mouth(x)
+        return skin
+    return head
+
+
+def vip_gold():
+    s = Skin(88)
+    skin, skin_dk = (220, 170, 128), (190, 140, 100)
+    gold, gold_lt, gold_dk = (238, 192, 52), (255, 230, 120), (176, 128, 24)
+    red, red_dk = (170, 24, 40), (120, 14, 28)
+    ermine, spot = (246, 244, 238), (26, 26, 30)
+    pants, boot = (92, 62, 24), (60, 36, 22)
+
+    s.paint(HEAD, vip_face(skin, skin_dk, (86, 54, 24), (40, 90, 180), (70, 44, 20),
+                           lambda x: (160, 96, 84) if x in (3, 4) else skin))
+
+    def crown(face, x, y, w, h):
+        if face in ("top", "bottom"):
+            return None
+        if y > 2:
+            return None
+        if y == 2:
+            return gold_dk  # band
+        if y == 1:
+            if face == "front" and x in (3, 4):
+                return red  # ruby
+            if face in ("right", "left", "back") and x in (3, 4) and w == 8 or face in ("right", "left") and x in (3, 4):
+                return (40, 110, 210)  # sapphires
+            return gold
+        return gold_lt if x % 2 == 0 else None  # spikes
+
+    s.paint(HAT, crown, grain=4)
+
+    def body(face, x, y, w, h):
+        if face == "top":
+            return ermine if (x + y) % 3 else spot
+        if face == "bottom":
+            return pants
+        if y < 2:
+            return spot if (x * 3 + y) % 5 == 0 else ermine  # ermine collar
+        if face == "back":
+            if x in (0, 7):
+                return gold  # cape edge
+            return red if y < 11 else red_dk  # royal cape
+        if y == 9:
+            return gold_lt if face == "front" and x in (3, 4) else gold_dk  # belt
+        if y >= 10:
+            return pants
+        if face == "front":
+            if x == y - 1 or x == y - 2:
+                return red  # sash
+            if x in (3, 4) and y in (3, 5, 7) and not (x == y - 1 or x == y - 2):
+                return gold_lt  # buttons
+            return gold if x not in (0, 7) else gold_dk
+        return gold_dk if x in (0, 3) else gold
+
+    s.paint(BODY, body, grain=4)
+
+    def arm(face, x, y, w, h):
+        if face == "top":
+            return ermine
+        if face == "bottom":
+            return skin_dk
+        if y < 2:
+            return ermine if (x + y) % 4 else spot
+        if y < 8:
+            return gold if y != 7 else gold_dk
+        if y == 8:
+            return ermine  # cuff
+        if y == 10 and face == "front" and x == 1:
+            return red  # signet ring
+        return skin
+
+    s.paint(R_ARM, arm, grain=4)
+    s.paint(L_ARM, arm, grain=4)
+
+    def leg(face, x, y, w, h):
+        if face == "top":
+            return pants
+        if face == "bottom":
+            return (30, 20, 14)
+        if y < 7:
+            return pants if not (face in ("right", "left") and x == 1) else gold_dk  # stripe
+        if y == 7:
+            return gold  # boot top
+        if y == 11:
+            return (30, 20, 14)
+        if face == "front" and y == 9 and x in (1, 2):
+            return gold_lt  # buckle
+        return boot
+
+    s.paint(R_LEG, leg, grain=4)
+    s.paint(L_LEG, leg, grain=4)
+    return s
+
+
+def vip_tux():
+    s = Skin(99)
+    skin, skin_dk = (232, 192, 160), (204, 162, 130)
+    black, satin, black_lt = (26, 26, 32), (52, 52, 62), (40, 40, 48)
+    white, white_dk = (242, 242, 240), (210, 210, 212)
+    gold, gold_dk = (238, 192, 52), (180, 134, 30)
+
+    s.paint(HEAD, vip_face(skin, skin_dk, (34, 28, 24), (50, 56, 70), (34, 28, 24),
+                           lambda x: (34, 28, 24)))  # waxed moustache
+
+    def top_hat(face, x, y, w, h):
+        if face == "top":
+            return black_lt if x in (0, 7) or y in (0, 7) else black
+        if face == "bottom":
+            return None
+        if y < 2:
+            return black if y == 0 else black_lt
+        if y == 2:
+            return gold  # golden hat band
+        if face == "front" and y == 4 and x == 5:
+            return gold  # monocle rim
+        if face == "front" and y == 5 and x == 6:
+            return gold_dk  # monocle chain
+        return None
+
+    s.paint(HAT, top_hat, grain=3)
+
+    def body(face, x, y, w, h):
+        if face == "top":
+            return white if x in (3, 4) else black
+        if face == "bottom":
+            return black
+        if face == "front":
+            if y == 0 and x in (2, 5):
+                return gold  # bow tie
+            if y == 0 and x in (3, 4):
+                return gold_dk
+            if x in (3, 4) and y < 7:
+                if y in (2, 4) and x == 3:
+                    return gold_dk  # studs
+                return white if y < 6 else white_dk
+            if x in (2, 5) and y < 6:
+                return satin  # lapels
+            if y == 1 and x in (1, 6):
+                return satin
+            if x == 6 and y == 3:
+                return gold  # pocket square
+            if x in (3, 4) and y == 8:
+                return gold_dk  # button
+            if y == 9:
+                return black_lt  # cummerbund
+            return black
+        if face == "back" and y == 9:
+            return black_lt
+        return black
+
+    s.paint(BODY, body, grain=3)
+
+    def arm(face, x, y, w, h):
+        if face == "top":
+            return black
+        if face == "bottom":
+            return skin_dk
+        if y < 9:
+            return black
+        if y == 9:
+            if face == "front" and x == 1:
+                return gold  # cufflink
+            return white
+        return skin
+
+    s.paint(R_ARM, arm, grain=3)
+    s.paint(L_ARM, arm, grain=3)
+
+    def leg(face, x, y, w, h):
+        if face == "top":
+            return black
+        if face == "bottom":
+            return (14, 14, 16)
+        if y < 10:
+            if face in ("right", "left") and x == 1:
+                return satin  # trouser stripe
+            return black
+        if face == "front" and y == 10 and x == 1:
+            return (120, 120, 130)  # polished shine
+        return (16, 16, 20)  # patent shoes
+
+    s.paint(R_LEG, leg, grain=3)
+    s.paint(L_LEG, leg, grain=3)
+    return s
+
+
 # --------------------------------------------------------------- preview ---
 
 # Model boxes: (texture part, overlay part, x0, y0, z0, w, h, d) in model pixels.
@@ -595,9 +806,11 @@ def preview(skins, path):
 
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
-    made = [("Horník", "miner", miner()), ("Rytíř", "knight", knight()), ("Robot", "robot", robot())]
+    made = [("Horník", "miner", miner()), ("Rytíř", "knight", knight()), ("Robot", "robot", robot()),
+            ("Zlatý VIP", "vip_gold", vip_gold()), ("VIP Gentleman", "vip_tux", vip_tux())]
     for title, name, skin in made:
         print(skin.save(name))
     p = os.path.join(ROOT, "docs", "img", "skins_preview.png")
-    preview([(t, s) for t, _, s in made], p)
+    preview([(t, s) for t, _, s in made[:3]], p)
+    preview([(t, s) for t, _, s in made[3:]], os.path.join(ROOT, "docs", "img", "skins_vip_preview.png"))
     print(p)
