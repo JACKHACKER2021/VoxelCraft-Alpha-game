@@ -580,6 +580,15 @@ const char* kUpdate210 = R"({
 
 // 2.2.0 preview: the big Bronze Update.
 // 2.5.0 preview: the subway's tiles, signs, benches and map.
+// 2.6.0 preview: the Cornerstone's own ores melt into the same ingots.
+const char* kUpdate260 = R"({
+  "smelting": [
+    {"input": "cornerstone_iron_ore", "output": "iron_ingot"},
+    {"input": "cornerstone_bronze_ore", "output": "bronze_ingot"},
+    {"input": "cornerstone_steel_ore", "output": "steel_ingot"}
+  ]
+})";
+
 const char* kUpdate250 = R"({
   "recipes": [
     {"type": "shaped", "pattern": ["CC", "CC"], "key": {"C": "hardened_concrete"}, "result": "metro_tile", "count": 4},
@@ -860,7 +869,8 @@ const std::vector<std::pair<std::string, std::string>>& defaultPackFiles() {
     };
     if (kFeatures230) f.push_back({"recipes/update_2_3_0.json", kUpdate230});  // 2.3.0: the subway
     if (kFeatures240) f.push_back({"recipes/update_2_4_0.json", kUpdate240});  // 2.4.0: stations and bridges
-    if (kFeatures250) f.push_back({"recipes/update_2_5_0_preview.json", kUpdate250});  // 2.5.0 preview: the subway network
+    if (kFeatures250) f.push_back({"recipes/update_2_5_0_preview.json", kUpdate250});
+    if (kFeatures260) f.push_back({"recipes/update_2_6_0_preview.json", kUpdate260});  // 2.6.0 preview  // 2.5.0 preview: the subway network
     return f;
     }();
     return files;
@@ -914,7 +924,7 @@ const GenConfig& GenConfig::defaults() {
             else if (path.rfind("biomes/", 0) == 0) biomes.push(j);
         }
         doc.set("biomes", biomes);
-        doc.set("generation", Json::number(8));  // new worlds get the newest generator
+        doc.set("generation", Json::number(kFeatures260 ? 9 : 8));  // new worlds get the newest generator
         return fromJson(doc);
     }();
     return cfg;
@@ -970,7 +980,7 @@ GenConfig GenConfig::fromJson(const Json& doc, std::vector<std::string>* w) {
     c.spawnX = (int)doc["spawn_x"].num(8);
     c.spawnZ = (int)doc["spawn_z"].num(8);
     c.crimsonDesert = std::clamp((int)doc["crimson_desert"].num(2), 1, 2);
-    c.generation = std::clamp((int)doc["generation"].num(2), 1, 8);
+    c.generation = std::clamp((int)doc["generation"].num(2), 1, kFeatures260 ? 9 : 8);
     c.oldWorld = doc["old_world"].boolean(false);
     return c;
 }

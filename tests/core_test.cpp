@@ -635,12 +635,12 @@ static int testJsonAndPacks() {
     auto list = pm.list();
     CHECK(list.size() == 2 && list[0].builtin && list[0].enabled && list[0].name == "VoxelCraft Default" &&
           list[1].name == "Pre-Alpha Style" && !list[1].enabled && list[1].style == "pre_alpha");
-    CHECK(pm.files("default").size() == (kFeatures250 ? 31u : 30u) && pm.files("default")[0] == "manifest.json");
+    CHECK(pm.files("default").size() == (kFeatures250 ? 31u : 30u) + (kFeatures260 ? 1u : 0u) && pm.files("default")[0] == "manifest.json");
     warn.clear();
     GenConfig cfg = pm.buildConfig(&warn);
     CHECK(warn.empty() && cfg.biomes.size() == 8);
     // Worlds made in the game (from the packs) get the newest generator: deepstone, hardium, mossy caves.
-    CHECK(cfg.generation == 8);
+    CHECK(cfg.generation == (kFeatures260 ? 9 : 8));
 
     // A mod pack: glowstone Nether with a higher lava sea, a new biome, one removed biome and a recipe.
     std::string id = pm.createPack("Můj mod");
@@ -1948,11 +1948,9 @@ static int testMusic() {
     frames(30);
     CHECK(played.back().first.empty());  // a short silence when the world opens
     frames(150);
-    CHECK(game.musicSource() == "asset:music/overworld.mp3" && !played.back().second);
-    game.onTextResult(12, "asset:music/overworld.mp3");  // the song ended
-    frames(5);
-    CHECK(game.musicSource().empty());
-    frames(60 * 50);  // the pause is 20-45 s
+    CHECK(game.musicSource() == "asset:music/overworld.mp3" && played.back().second);  // 2.6.0: it loops
+    game.onTextResult(12, "asset:music/overworld.mp3");  // (a song that ends anyway: straight on, no pause)
+    frames(60 * 2);
     std::printf("music: after the Overworld song comes %s\n", game.musicSource().c_str());
     CHECK(game.musicSource() == "asset:music/overworld.mp3");  // only the creator's own songs, no old biome tunes
     // The player's own Overworld song.
@@ -2491,7 +2489,7 @@ static int testCommands() {
     for (int i = 0; i < 30; ++i) s->update(1 / 60.0f, t += 1 / 60.0, 600, 270, settings);
     auto run = [&](const char* line, bool cheats) { return runCommand(*s, line, cheats); };
     // Without cheats only the harmless ones work.
-    CHECK(run("/help", false).size() == 8);  // 2.5.0: + /wave
+    CHECK(run("/help", false).size() == 9);  // 2.5.0: + /wave; 2.6.0: + /music
     CHECK(run("/seed", false)[0] == "Seed: 9");
     CHECK(run("/gamemode creative", false)[0].find("not allowed") != std::string::npos);
     CHECK(s->survival());
@@ -4059,7 +4057,7 @@ static int testCaves160() {
     // pools, bigger caves than generation 3; old worlds unchanged; the new recipes and items.
     GenConfig g3 = GenConfig::defaults();
     g3.generation = 3;
-    CHECK(GenConfig::defaults().generation == 8);
+    CHECK(GenConfig::defaults().generation == (kFeatures260 ? 9 : 8));
     World nw(777, Dimension::Overworld), ow(777, Dimension::Overworld, g3);
     nw.ensureChunksAround(0, 0, 5, 100000);
     ow.ensureChunksAround(0, 0, 5, 100000);
@@ -4167,7 +4165,7 @@ static int testWorld159() {
     }
     size_t total = 0;
     for (int c = 0; c < CatCount; ++c) total += creativeCategoryItems(c).size();
-    CHECK(total == (size_t)kCreativeItemCount + 7 + (kFeatures250 ? 6 : 0) && creativeGroup(STAINED_GLASS) && !creativeGroup(STONE));
+    CHECK(total == (size_t)kCreativeItemCount + 7 + (kFeatures250 ? 6 : 0) + (kFeatures260 ? 3 : 0) && creativeGroup(STAINED_GLASS) && !creativeGroup(STONE));
     return 0;
 }
 

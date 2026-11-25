@@ -2191,6 +2191,20 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
                         const int dx = std::abs(px * 2 - 15), dy = std::abs(py * 2 - 15), d = std::max(dx, dy);
                         a.put(T_STONEWOOD_TOP, px, py, d >= 13 ? Rgb{0x56, 0x54, 0x5C} : (d / 3) % 2 ? Rgb{0x8C, 0x8A, 0x90} : Rgb{0x74, 0x72, 0x7A});
                     }
+                    // 2.6.0: the Cornerstone's ores: the specks of the Overworld ores in the Cornerstone's red rock;
+                    // and the top of mossy cornerstone, all moss with a few red stones showing.
+                    {
+                        const float f = 0.8f + patch(px, py, 13, 3) * 0.4f;
+                        const Rgb rock = Rgb{116, 50, 50}.scaled(f).plus((int)(hash3(px, py, 77, 3) % 12) - 6);
+                        const bool cluster = hash3(px / 3, py / 3, 31, 21) % 4 == 0;
+                        const bool speck = cluster && hash3(px, py, 31, 3) % 4 != 0;
+                        const bool hi = px % 3 == 0 && py % 3 == 0;
+                        auto oreCol = [&](Rgb c) { return c.scaled(hi ? 1.25f : 0.95f).plus((int)(hash3(px, py, 2, 31) % 16) - 8); };
+                        a.put(T_CS_IRON_ORE, px, py, speck ? oreCol({214, 172, 140}) : rock);
+                        a.put(T_CS_BRONZE_ORE, px, py, speck ? oreCol(kBronze) : rock);
+                        a.put(T_CS_STEEL_ORE, px, py, speck ? oreCol({170, 184, 200}) : rock);
+                        a.put(T_MOSSY_CORNERSTONE_TOP, px, py, H(px, py, 17) < 10 ? (h < 30 ? redC : redB) : (h < 40 ? Rgb{0x14, 0x92, 0x9C} : Rgb{0x0F, 0x7A, 0x86}));
+                    }
                     // Mossy cornerstone: red rock half covered by cyan moss from the top.
                     {
                         const bool moss = py < 4 + (int)(hash3(px, 0, 9112, 5) % 7) || H(px, py, 12) < 12;
@@ -2395,6 +2409,38 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
                     if (q[3] < 128) a.clear(t.tile, px, py);
                     else a.put(t.tile, px, py, Rgb{q[0], q[1], q[2]}, q[3]);
                 }
+    if (kFeatures260) {
+        // 2.6.0: the Cornerstone's ores are the Overworld's ores with the grey stone around the specks
+        // swapped for the Cornerstone's own rock; the top of mossy cornerstone is the moss of its side.
+        std::vector<uint8_t>& img = a.image();
+        auto px4 = [&](int tile, int x, int y) { return &img[((size_t)((tile / kAtlasCols) * 16 + y) * size + (tile % kAtlasCols) * 16 + x) * 4]; };
+        const std::pair<int, int> kOres[] = {{T_CS_IRON_ORE, T_IRON_ORE}, {T_CS_BRONZE_ORE, T_BRONZE_ORE}, {T_CS_STEEL_ORE, T_STEEL_ORE}};
+        for (const auto& [dst, src] : kOres) {
+            // A speck: coloured, or much lighter or darker than the tile's usual grey.
+            std::vector<int> lums;
+            for (int y = 0; y < 16; ++y)
+                for (int x = 0; x < 16; ++x) {
+                    const uint8_t* o = px4(src, x, y);
+                    lums.push_back(o[0] + o[1] + o[2]);
+                }
+            std::nth_element(lums.begin(), lums.begin() + 128, lums.end());
+            const int median = lums[128];
+            for (int y = 0; y < 16; ++y)
+                for (int x = 0; x < 16; ++x) {
+                    const uint8_t* o = px4(src, x, y);
+                    const int sat = std::max({o[0], o[1], o[2]}) - std::min({o[0], o[1], o[2]});
+                    const bool speck = sat > 20 || std::abs(o[0] + o[1] + o[2] - median) > 75;
+                    std::copy_n(speck ? o : px4(T_NETHERRACK, x, y), 4, px4(dst, x, y));
+                }
+        }
+        // The moss: the side's mossy pixels (its top rows), here and there a red stone of the rock.
+        for (int y = 0; y < 16; ++y)
+            for (int x = 0; x < 16; ++x) {
+                const bool stone = hash3(x, y, 9113, 7) % 100 < 8;
+                const uint8_t* from = stone ? px4(T_NETHERRACK, x, y) : px4(T_MOSSY_CORNERSTONE, (x + y * 5) % 16, (y + x) % 3);
+                std::copy_n(from, 4, px4(T_MOSSY_CORNERSTONE_TOP, x, y));
+            }
+    }
     return a.image();
 }
 

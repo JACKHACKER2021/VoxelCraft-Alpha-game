@@ -338,6 +338,9 @@ enum BlockId : uint16_t {
     STATION_SIGN = 60268,        // 2.5.0: a station's name board (tap it to read or write the name)
     BENCH = 60269,               // 2.5.0: a bench to sit on
     METRO_MAP = 60270,           // 2.5.0: the map of the subway (an item)
+    CS_IRON_ORE = 60271,         // 2.6.0: the Cornerstone's own ores, in its red rock (not the Overworld's stone)
+    CS_BRONZE_ORE = 60272,
+    CS_STEEL_ORE = 60273,
     RAIL_SWITCH8 = 60212,        // 60212..60243: 2.3.0 the flexible switch: entry port * 4 + left * 2 + state   // 2.3.0: a chest of the Bronze Halls
     RAIL_SWITCH_L = 60203,       // 60203..60210: 2.3.0 the mirrored switch, its branch to the left (facing * 2 + state)
     RAIL_GENTLE = 60187,         // 60187..60202: a gentle slope, 4 pieces per block of height: facing * 4 + piece
@@ -621,7 +624,7 @@ inline bool isRailSlope(ItemId id) { return id >= RAIL_SLOPE && id < RAIL_SLOPE 
 inline bool isCrossingSignal(ItemId id) { return id >= CROSSING_SIGNAL && id < CROSSING_SIGNAL + 12; }
 inline bool isCrossingGate(ItemId id) { return id >= CROSSING_GATE && id < CROSSING_GATE + 8; }
 inline bool isTurntable(ItemId id) { return id == TURNTABLE || id == TURNTABLE + 1; }
-constexpr int kExtLastBlock = BENCH;
+constexpr int kExtLastBlock = CS_STEEL_ORE;
 constexpr int kJournalPages = 12;
 inline bool isJournal(ItemId id) { return id >= JOURNAL && id < JOURNAL + kJournalPages; }
 inline bool isRailGentle(ItemId id) { return id >= RAIL_GENTLE && id < RAIL_GENTLE + 16; }
@@ -650,7 +653,7 @@ bool modIsTransparent(ItemId id);
 bool modIsEmissive(ItemId id);
 int modFood(ItemId id);
 inline bool isNewBlock(ItemId id) {
-    if (id >= kExtIdBase && id <= kExtLastBlock && !(id >= LOCOMOTIVE && id <= FREIGHT_WAGON) && id != DRILL_CAR && id != STARBERRIES && id != SUBWAY_LOCOMOTIVE && id != SUBWAY_CAR && !(id >= JOURNAL && id < JOURNAL + 12)) return true;  // the engine's own range
+    if (id >= kExtIdBase && id <= kExtLastBlock && !(id >= LOCOMOTIVE && id <= FREIGHT_WAGON) && id != DRILL_CAR && id != STARBERRIES && id != SUBWAY_LOCOMOTIVE && id != SUBWAY_CAR && id != METRO_MAP && !(id >= JOURNAL && id < JOURNAL + 12)) return true;  // the engine's own range
     if (isModId(id)) return modIsBlock(id);
     return isStairs(id) || isSlab(id) || (id >= TAR && id <= SNOW_LAYER) || isStainedGlass(id) || (id >= WALL_CABLE && id < WALL_CABLE + 8) || (id >= WALL_SWITCH && id < WALL_SWITCH + 8) ||
            (id >= ANNIV_LOGO && id <= PAINTED_PLANKS + 3) || (id >= POWERSTONE_BRICKS && id <= COMMAND_BLOCK && id != 1518 && id != 1519) || (id >= SOUND_BLOCK && id <= RAIL_CURVE + 3) || (id >= RAIL_SWITCH && id < BUFFER_STOP + 4) || isRailSlope(id) ||
@@ -773,6 +776,7 @@ enum Tile : uint16_t {
     T_SUBWAY_LOCO_ITEM, T_SUBWAY_CAR_ITEM,
     T_METRO_TILE, T_METRO_TILE_BLUE, T_METRO_TILE_CRACKED, T_STATION_SIGN, T_BENCH, T_METRO_MAP,  // 2.5.0
     T_TRACK_BED, T_PLATFORM_TOP, T_PLATFORM_SIDE, T_LATTICE, T_RAIL_CROSS, T_RAIL_CROSS_DIAG,  // 2.4.0
+    T_CS_IRON_ORE, T_CS_BRONZE_ORE, T_CS_STEEL_ORE, T_MOSSY_CORNERSTONE_TOP,  // 2.6.0
     T_TRAIN_TEX2, T_TRAIN_TEX2_LAST = T_TRAIN_TEX2 + 15,  // 2.3.0 preview build 7: more train colours (the subway)
     T_COUNT
 };
@@ -1119,7 +1123,13 @@ inline int tileFor(ItemId id, Face face) {
                 case GLASS_REEDS: return T_GLASS_REEDS;
                 case SPORE_PAD: return face == F_TOP || face == F_BOTTOM ? T_SPORE_PAD_TOP : T_SPORE_PAD_SIDE;
                 case STONEWOOD_LOG: return face == F_TOP || face == F_BOTTOM ? T_STONEWOOD_TOP : T_STONEWOOD_LOG;
-                case MOSSY_CORNERSTONE: return T_MOSSY_CORNERSTONE;
+                // 2.6.0: moss on top, the bare rock underneath (it used to show the side on every face).
+                case MOSSY_CORNERSTONE:
+                    if (!kFeatures260) return T_MOSSY_CORNERSTONE;
+                    return face == F_TOP ? T_MOSSY_CORNERSTONE_TOP : face == F_BOTTOM ? T_NETHERRACK : T_MOSSY_CORNERSTONE;
+                case CS_IRON_ORE: return T_CS_IRON_ORE;
+                case CS_BRONZE_ORE: return T_CS_BRONZE_ORE;
+                case CS_STEEL_ORE: return T_CS_STEEL_ORE;
                 case GLOWCAP_LEAVES: return T_GLOWCAP_LEAVES;
                 case STARBERRY_BUSH: return T_STARBERRY_BUSH;
                 case VOID_TRUFFLE: return T_VOID_TRUFFLE;

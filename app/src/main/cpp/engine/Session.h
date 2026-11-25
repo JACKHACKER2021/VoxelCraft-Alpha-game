@@ -139,6 +139,7 @@ public:
     bool wantsFurnace = false;   // tapped a furnace, see openFurnace
     bool wantsChest = false;     // tapped a chest, see openChest
     bool travelled = false;      // went through a portal (the game shows the loading screen)
+    bool musicOff = false;       // 2.6.0: /music off: no songs in the world until /music on
     int wantsTrade = -1;         // a villager was tapped: index into mobs() for the trading screen
     // 1.5.7 book and quill: the books of this world (the item's `damage` is the number).
     struct Book {

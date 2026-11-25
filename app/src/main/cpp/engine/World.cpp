@@ -1504,13 +1504,16 @@ void World::generateNether(Chunk& c) {
             const int cb = cornerBiomeAt(wx, wz);  // 2.2.0 preview
             if (cb == 1) {
                 // Gilded Quarry: the rock in worked bands with carved rows, and rich veins of ore.
+                // 2.6.0 (generation 9): the Cornerstone's own iron, bronze and steel in place of the Overworld's.
+                const bool cs = kFeatures260 && config_.generation >= 9;
                 for (int y = 6; y < kGenHeight - 6; ++y) {
                     if (c.get(x, y, z) != nd.fill) continue;
                     const uint32_t q = hash3(wx, y, wz, seed_ ^ 0x6A11u);
                     if (y % 7 == 0) c.set(x, y, z, CARVED_CORNERSTONE);
-                    else if (q % 70 == 0) c.set(x, y, z, BRONZE_ORE);
+                    else if (q % 70 == 0) c.set(x, y, z, cs ? (ItemId)CS_BRONZE_ORE : (ItemId)BRONZE_ORE);
                     else if (q % 90 == 1) c.set(x, y, z, POWERSTONE_ORE);
-                    else if (q % 240 == 2) c.set(x, y, z, RUBY_ORE);
+                    else if (q % 240 == 2) c.set(x, y, z, cs ? (ItemId)CS_STEEL_ORE : (ItemId)RUBY_ORE);
+                    else if (cs && q % 110 == 3) c.set(x, y, z, CS_IRON_ORE);
                 }
             } else if (cb == 2) {
                 // Prismatide Coast: the lava sea turns into shallow brine lagoons over siltstone.
@@ -2395,10 +2398,12 @@ void World::generateVoid(Chunk& c) {
                     // A crystal formation: rubies and void stone breaking out of crimson rock.
                     for (int dx = -1; dx <= 1; ++dx)
                         for (int dz = -1; dz <= 1; ++dz) putIf(x + dx, h, z + dz, (dx + dz) % 2 ? (ItemId)CRIMSON_STONE : (ItemId)VOID_STONE);
-                    putIf(x, h + 1, z, RUBY_ORE);
+                    // 2.6.0 (generation 9): crimsonium, the mineral of the Crimson Void, in place of the ruby.
+                    const ItemId gem = kFeatures260 && config_.generation >= 9 ? (ItemId)CRIMSONIUM_ORE : (ItemId)RUBY_ORE;
+                    putIf(x, h + 1, z, gem);
                     putIf(x + 1, h + 1, z, CRIMSON_STONE);
                     putIf(x, h + 2, z, VOID_STONE);
-                    if ((r >> 14) & 1) putIf(x - 1, h + 1, z + 1, RUBY_ORE);
+                    if ((r >> 14) & 1) putIf(x - 1, h + 1, z + 1, gem);
                 } else {
                     // A half-buried ruin: a broken pillar and a stretch of wall of void bricks.
                     const int tall = 2 + (int)((r >> 12) % 3);

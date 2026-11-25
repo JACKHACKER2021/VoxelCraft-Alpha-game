@@ -14,6 +14,7 @@
 #include "Crafting.h"
 #include "Items.h"
 #include "WorldFiles.h"
+#include "WorldStructures.h"
 #include "McWorld.h"
 #include <fstream>
 #include "JavaImport.h"
@@ -40,7 +41,7 @@ namespace vc {
 namespace vc {
 
 namespace {
-const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.6.0 Preview build 1" : "VoxelCraft 2.5.0";
+const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.6.0 Preview build 2" : "VoxelCraft 2.5.0";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -461,6 +462,25 @@ void Game::updateMusic(float dt) {
         Dimension d = session_->currentWorld().dimension();
         context = d == Dimension::Nether ? "nether" : d == Dimension::Void ? "void" : d == Dimension::Celestial ? "celestial" : "overworld";
     }
+    // 2.6.0: the Crimson Void's old song plays only in a boss arena; the rest of the Void gets a calm one.
+    if (context == "void") {
+        const Vec3 p = session_->player().pos;
+        int ax, ay, az;
+        if (session_->currentWorld().nearestStructure((int)std::floor(p.x), (int)std::floor(p.z), ax, ay, az) &&
+            std::hypot(p.x - ax, p.z - az) < kArenaRadius + 12)
+            context = "void_arena";
+    }
+    // 2.6.0: the caves are a place of their own (the songs loop, so the change has to switch them).
+    if (context == "overworld") {
+        const Vec3 p = session_->player().pos;
+        const int px = (int)std::floor(p.x), pz = (int)std::floor(p.z);
+        const World& w = session_->currentWorld();
+        int roof = 0;
+        for (int y = (int)p.y + 2; y < kChunkHeight && roof < 8; ++y) roof += isOpaque(w.getBlock(px, y, pz));
+        if (roof >= 8 && p.y < w.config().overworld.seaLevel - 6) context = "caves";
+    }
+    // 2.6.0: /music off silences the world's songs.
+    if (session_ && screen_ != Screen::Title && session_->musicOff) context = "off";
     // 1.8.0: an Old World is as quiet as the versions it comes from.
     if (session_ && screen_ != Screen::Title && session_->currentWorld().config().oldWorld) context = "old";
     auto play = [&](const std::string& source, bool loop) {
@@ -468,63 +488,80 @@ void Game::updateMusic(float dt) {
         musicEnded_ = false;
         onPlayMusic(source, loop);
     };
+    // 2.6.0: between places of the world (Overworld and caves, the Void and its arena) the song fades
+    // out over 1.5 s and the next one fades in, instead of stopping at once.
+    auto setMul = [&](float m) {
+        musicMul_ = std::clamp(m, 0.0f, 1.0f);
+        if (onMusicVolume) onMusicVolume(settings_.musicVolume * musicMul_);
+    };
+    const bool worldSong = [](const std::string& c) { return !c.empty() && c != "menu" && c != "old" && c != "off"; }(musicContext_);
+    if (context != musicContext_ && worldSong && !musicSource_.empty() &&
+        [](const std::string& c) { return c != "menu" && c != "old" && c != "off"; }(context)) {
+        if (musicMul_ > 0.01f) {
+            setMul(musicMul_ - dt / 1.5f);  // fading out; the switch comes once it is silent
+            return;
+        }
+        musicContext_ = context;
+        musicGap_ = 0;
+        play("", false);
+        return;
+    }
+    if (context == musicContext_ && musicMul_ < 1 && (!musicSource_.empty() || context == "menu")) setMul(musicMul_ + dt / 1.5f);  // fading in (or back)
     if (context != musicContext_) {
+        if (musicMul_ < 1) setMul(1);  // a hard change (menus, a dimension, /music): full volume again
         musicContext_ = context;
         if (context == "menu") {
             // The VoxelCraft theme (VoxelSoftworks), looping.
             std::string own = findMusic("menu");
             play(own.empty() ? "asset:music/menu_theme.mp3" : own, true);
         } else {
-            musicGap_ = 2;  // a short breath before the first song in the world
+            musicGap_ = context == "off" ? 0 : 1;  // a short breath before the first song in the world
             play("", false);
         }
         return;
     }
-    if (context == "menu" || context == "old") return;
+    if (context == "menu" || context == "old" || context == "off") return;
     if (!musicSource_.empty() && !musicEnded_) return;  // still playing
     if (!musicSource_.empty()) {
-        // A song finished: silence for a while, like the classic game.
+        // A song finished (2.6.0: they loop now, so only a player's own track ends): straight on.
         musicSource_.clear();
-        musicGap_ = 20 + (float)(std::fmod(now_ * 7.3, 25.0));
+        musicGap_ = 0;
     }
     if ((musicGap_ -= dt) > 0) return;
+    if (context == "void_arena") {
+        // 1.6.0: the Crimson Void's own song (the VoxelCraft theme remix); 2.6.0: now the boss arena's.
+        play("asset:music/void_theme.mp3", true);
+        return;
+    }
     if (context == "void") {
-        // 1.6.0: the Crimson Void has its own song (the VoxelCraft theme remix), unless the
-        // player adds a "void" track.
+        // 2.6.0: a calm song for the rest of the Crimson Void, unless the player adds a "void" track.
         std::string own = findMusic("void");
-        play(own.empty() ? "asset:music/void_theme.mp3" : own, false);
+        play(own.empty() ? "asset:music/void_calm.mp3" : own, true);
         return;
     }
     if (context == "celestial") {
         // 1.7.0: the creator's Celestial Exploration over the floating islands.
         std::string own = findMusic("celestial");
-        play(own.empty() ? "asset:music/celestial_theme.mp3" : own, false);
+        play(own.empty() ? "asset:music/celestial_theme.mp3" : own, true);
         return;
     }
     if (context == "nether") {
         // 1.6.0: the Cornerstone Dimension's own song, unless the player adds a "nether" track.
         std::string own = findMusic(context);
-        play(own.empty() ? "asset:music/cornerstone_theme.mp3" : own, false);
+        play(own.empty() ? "asset:music/cornerstone_theme.mp3" : own, true);
         return;
     }
     // Deep under the ground: the creator's cave song, Echoes of Caves.
-    {
-        const Vec3 p = session_->player().pos;
-        const int px = (int)std::floor(p.x), pz = (int)std::floor(p.z);
-        const World& w = session_->currentWorld();
-        int roof = 0;
-        for (int y = (int)p.y + 2; y < kChunkHeight && roof < 8; ++y) roof += isOpaque(w.getBlock(px, y, pz));
-        if (roof >= 8 && p.y < w.config().overworld.seaLevel - 6) {
-            std::string own = findMusic("caves");
-            play(own.empty() ? "asset:music/caves_theme.mp3" : own, false);
-            return;
-        }
+    if (context == "caves") {
+        std::string own = findMusic("caves");
+        play(own.empty() ? "asset:music/caves_theme.mp3" : own, true);
+        return;
     }
     // The Overworld: only the creator's own songs now, the old generated biome tunes are gone.
     // A player's own "overworld" track still wins. (celestial_theme.mp3, Celestial Exploration,
     // waits in the assets for the Celestial Reach.)
     std::string own = findMusic("overworld");
-    play(own.empty() ? "asset:music/overworld.mp3" : own, false);
+    play(own.empty() ? "asset:music/overworld.mp3" : own, true);
 }
 
 bool Game::saverActive() const {

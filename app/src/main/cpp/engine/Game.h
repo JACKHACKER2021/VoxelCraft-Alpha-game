@@ -416,6 +416,7 @@ private:
     // Music: the context decides the playlist (menu theme, overworld + biome, Nether).
     std::string musicContext_, musicSource_;
     float musicGap_ = 0;       // silence before the next game track
+    float musicMul_ = 1;       // 2.6.0: the fade between songs (0 silent .. 1 full)
     bool musicEnded_ = false;
     // Developer login
     std::string devLoginName_;

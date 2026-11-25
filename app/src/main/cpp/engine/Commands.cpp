@@ -24,6 +24,7 @@ const CommandInfo kCommands[] = {
     {"/give <věc> [počet]", "Dá ti věc (např. ruby, iron_ingot)", true},
     {"/time [day|noon|evening|night|midnight|tiky]", "Denní doba", true},
     {"/wave", "Zamávat (Ahoj!)", false},
+    {"/music [on|off]", "Hudba ve světě zapnout / vypnout", false},
     {"/weather <clear|rain>", "Počasí", true},
     {"/summon <pig|sheep|slime|forgotten|crimson|husking|...>", "Přivolá bytost", true},
     {"/locate <village|forgotten|mineshaft|fortress|arena|frame|temple>", "Najde nejbližší strukturu", false},
@@ -158,6 +159,11 @@ std::vector<std::string> runCommand(Session& s, const std::string& line, bool ch
             left -= n;
         }
         return {trf("Dostal(a) jsi {0}x {1}", {std::to_string(count), tr(itemName(id))})};
+    }
+    if (cmd == "music" || cmd == "hudba") {  // 2.6.0: the world's songs off and on again
+        const std::string a = args.size() > 1 ? lower(args[1]) : "";
+        s.musicOff = a == "off" || a == "vypnout" ? true : a == "on" || a == "zapnout" ? false : !s.musicOff;
+        return {tr(s.musicOff ? "Hudba vypnuta (/music on ji vrátí)" : "Hudba zapnuta")};
     }
     if (cmd == "wave" || cmd == "hello" || cmd == "ahoj") {  // 2.5.0: the player waves hello (seen in third person)
         s.waveHello();
