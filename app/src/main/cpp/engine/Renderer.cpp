@@ -328,6 +328,11 @@ void Renderer::freeMesh(GpuMesh& m) {
     m = {};
 }
 
+std::string Renderer::gpuName() const {
+    const GLubyte* r = glGetString(GL_RENDERER);
+    return r ? std::string((const char*)r) : std::string();
+}
+
 int Renderer::updateMeshes(World& world, int budget) {
     int built = 0;
     // 2.6.0: nearest to the player first.

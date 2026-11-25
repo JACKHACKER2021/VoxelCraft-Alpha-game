@@ -295,6 +295,7 @@ private:
     void refreshStructures();
 
     std::string dataDir_, worldsDir_, settingsPath_, texturePackDir_;
+    std::string gpuName_;  // 2.6.0: GL_RENDERER
     Font font_;
     Ui ui_;
     Renderer renderer_;

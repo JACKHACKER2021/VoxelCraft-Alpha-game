@@ -1447,6 +1447,8 @@
 {"Battery saver", "Úspora baterie", "Ahorro de batería", "Экономия батареи", "Akkusparmodus"},
 {"On: 30 FPS, shorter view, no shadows", "Zapnuto: 30 FPS, kratší dohled, bez stínů", "Activado: 30 FPS, menos distancia, sin sombras", "Включено: 30 FPS, меньше дальность, без теней", "An: 30 FPS, kürzere Sicht, keine Schatten"},
 {"At 35 % or less, when not charging", "Při 35 % a méně, když se nenabíjí", "Al 35 % o menos, sin cargar", "При 35 % и меньше, без зарядки", "Bei 35 % oder weniger, ohne Laden"},
+{"Weak device", "Slabé zařízení", "Dispositivo débil", "Слабое устройство", "Schwaches Gerät"},
+{"Lighter graphics and 30 FPS", "Lehčí grafika a 30 FPS", "Gráficos más ligeros y 30 FPS", "Облегчённая графика и 30 FPS", "Leichtere Grafik und 30 FPS"},
 {"Always", "Vždy", "Siempre", "Всегда", "Immer"},
 {"Battery saver: battery {0} %", "Úsporný režim: baterie {0} %", "Ahorro de batería: batería {0} %", "Экономия: батарея {0} %", "Sparmodus: Akku {0} %"},
 {"World map  {0}, {1}  (1:{2})", "Mapa světa  {0}, {1}  (1:{2})", "Mapa del mundo  {0}, {1}  (1:{2})", "Карта мира  {0}, {1}  (1:{2})", "Weltkarte  {0}, {1}  (1:{2})"},

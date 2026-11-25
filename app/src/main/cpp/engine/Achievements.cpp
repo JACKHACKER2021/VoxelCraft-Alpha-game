@@ -49,6 +49,7 @@ const Achievement kAchievements[] = {
     {"loot_forgotten", "Opuštěný domov", "Otevři truhlu v zapomenuté vesnici.", 40},
     {"loot_drowned", "Pod hladinou", "Otevři truhlu v zatopených ruinách.", 50},
     {"loot_portal", "Rozbitá brána", "Otevři truhlu u rozpadlého portálu.", 40},
+    {"loot_camp", "Táborník", "Otevři sud v táboře poutníků.", 30},
     {"archaeologist", "Archeolog", "Očisti štěrk s nálezy štětcem.", 30},
     {"historian", "Kronikář", "Přečti starý dokument.", 20},
     {"lore_master", "Pád zapomenutého království", "Přečti všech osm starých dokumentů.", 150},

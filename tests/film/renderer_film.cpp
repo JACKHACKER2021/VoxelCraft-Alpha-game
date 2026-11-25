@@ -1,3 +1,4 @@
+#include <cstdlib>
 // A Renderer for the trailer: it draws nothing itself but keeps everything the game
 // hands it (see film_capture.h), plus the UI capture used by the snapshot tools.
 #include "engine/Renderer.h"
@@ -57,6 +58,8 @@ void Renderer::setGuiTexture(const std::vector<uint8_t>& rgba, int w, int h) {
     capture::guiW_px = w;
     capture::guiH_px = h;
 }
+std::string Renderer::gpuName() const { return std::getenv("VC_GPU") ? std::getenv("VC_GPU") : ""; }
+
 int Renderer::updateMeshes(World& world, int) {
     // Unlike the phone, every dirty chunk is meshed at once: no holes in the footage.
     if (&world != film::gWorld) {

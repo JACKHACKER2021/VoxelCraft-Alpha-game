@@ -54,6 +54,7 @@ public:
     // 2.6.0: where the player is: the dirty chunks nearest to it are rebuilt first (falling snow kept
     // far chunks dirty, and a placed block could wait for ever to show).
     void setMeshFocus(float x, float z) { meshFocusX_ = x, meshFocusZ_ = z; }
+    std::string gpuName() const;  // 2.6.0: the graphics chip (GL_RENDERER), "" when not known
     void dropUnloadedMeshes(const World& world);
     void clearMeshes();  // e.g. when switching dimensions
 

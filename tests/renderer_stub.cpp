@@ -1,3 +1,4 @@
+#include <cstdlib>
 // No-op Renderer so the game logic (menus, sessions) can be tested without a GPU.
 #include "engine/Renderer.h"
 #include "stub_capture.h"
@@ -35,6 +36,8 @@ void Renderer::setGuiTexture(const std::vector<uint8_t>& rgba, int w, int h) {
     capture::guiW_px = w;
     capture::guiH_px = h;
 }
+std::string Renderer::gpuName() const { return std::getenv("VC_GPU") ? std::getenv("VC_GPU") : ""; }
+
 int Renderer::updateMeshes(World& world, int budget) {
     int built = 0;
     for (auto& [k, c] : world.chunks())

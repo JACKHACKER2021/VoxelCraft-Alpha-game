@@ -41,7 +41,7 @@ namespace vc {
 namespace vc {
 
 namespace {
-const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.6.0 Preview build 11" : "VoxelCraft 2.5.0";
+const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.6.0 Preview build 12" : "VoxelCraft 2.5.0";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -110,6 +110,16 @@ Game::~Game() { endSession(); }
 
 bool Game::onSurfaceCreated() {
     if (!renderer_.init()) return false;
+    gpuName_ = renderer_.gpuName();
+    if (kFeatures260 && settings_.weakDevice < 0) {
+        // 2.6.0: first start: Mali-G31/G51/G52/G57, Mali-T and PowerVR chips play light by default
+        const std::string& g = gpuName_;
+        const bool weak = g.find("Mali-T") != std::string::npos || g.find("PowerVR") != std::string::npos ||
+            g.find("Mali-G31") != std::string::npos || g.find("Mali-G51") != std::string::npos ||
+            g.find("Mali-G52") != std::string::npos || g.find("Mali-G57") != std::string::npos;
+        settings_.weakDevice = weak ? 1 : 0;
+        saveSettings(settingsPath_, settings_);
+    }
     shadersDirty_ = true;  // a new GL context: build the chosen shader again
     hasSurface_ = true;
     loadTextures();
@@ -581,6 +591,7 @@ void Game::updateMusic(float dt) {
 
 bool Game::saverActive() const {
     const int level = batteryLevel_;
+    if (kFeatures260 && settings_.weakDevice == 1) return true;  // 2.6.0: a weak device always plays light
     return settings_.batterySaver == 2 || (settings_.batterySaver == 1 && level >= 0 && level <= 35 && !charging_);
 }
 
@@ -1426,6 +1437,7 @@ void Game::presentsScreen(float dt) {
 using namespace theme;
 
 void Game::unlockAchievement(const std::string& id) {
+    if (!findAchievement(id)) return;  // 2.6.0: an id the list does not know (it crashed the game: the camp barrel)
     if (kFeatures250) {
         // 2.5.0 preview build 7: earned again in every new survival world; the reward only the first time ever.
         if (!session_ || !session_->achievementsAllowed() || !session_->earnAchievement(id)) return;
@@ -2879,6 +2891,15 @@ void Game::settingsScreen() {
         // 1.5.5: Classic or Enhanced graphics, and the shader pack that tunes Enhanced.
         // 1.5.7: the battery saver.
         {
+            if (kFeatures260) {
+                // 2.6.0: weak phones and tablets (Mali-G52/G57 and the like): light graphics and 30 FPS for good.
+                row("Slabé zařízení", gpuName_.empty() ? tr("Lehčí grafika a 30 FPS") : gpuName_);
+                if (ui_.dropdown(cx - 100, ry + 4, 100, 18, settings_.weakDevice == 1 ? "Ano" : "Ne")) {
+                    settings_.weakDevice = settings_.weakDevice == 1 ? 0 : 1;
+                    saveSettings(settingsPath_, settings_);
+                }
+                endRow();
+            }
             const char* modes[3] = {"Vypnuto", "Automaticky", "Vždy"};
             row("Úspora baterie", saverActive() ? tr("Zapnuto: 30 FPS, kratší dohled, bez stínů") : tr("Při 35 % a méně, když se nenabíjí"));
             if (ui_.dropdown(cx - 100, ry + 4, 100, 18, modes[settings_.batterySaver])) settings_.batterySaver = (settings_.batterySaver + 1) % 3;

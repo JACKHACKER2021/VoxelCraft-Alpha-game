@@ -308,7 +308,8 @@ void Session::openChestAt(const FurnaceKey& key) {
     if (!chests_.count(key)) {
         // A structure chest: its loot is decided by the world seed and the position.
         uint32_t seed = info_.seed ^ (uint32_t)(key.x * 73856093) ^ (uint32_t)(key.y * 19349663) ^ (uint32_t)(key.z * 83492791);
-        chests_[key] = block != CHEST ? structureLoot(block, seed) : ChestContents{};
+        // (2.6.0: only real structure chests and the camp's barrel; a barrel the player placed starts empty.)
+        chests_[key] = (block != CHEST && isChest(block)) || block == LOOT_BARREL_CAMP ? structureLoot(block, seed) : ChestContents{};
         // The Anniversary modpack hides collectible tokens in structure chests.
         if (block != CHEST && settings_.addonAnniversary && seed % 100 < 40)
             for (ItemStack& slot : chests_[key])
@@ -4542,12 +4543,13 @@ Color foundColor(int type) {
         case WorldStructure::Mineshaft: case WorldStructure::Dungeon: case WorldStructure::CaveDungeon: return {0.6f, 0.45f, 0.35f, 1};
         case WorldStructure::BrokenPortal: return {0.75f, 0.4f, 1, 1};
         case WorldStructure::Camp: return {1, 0.55f, 0.3f, 1};
-        case WorldStructure::RuinedStation: return {1, 0.6f, 0.25f, 1};
+        case WorldStructure::RuinedStation: return kFeatures260 ? Color{0.95f, 0.95f, 0.95f, 1} : Color{1, 0.6f, 0.25f, 1};  // 2.6.0: white
         case WorldStructure::TrainWreck: return {0.8f, 0.4f, 0.25f, 1};
         default: break;
     }
     if (type == 100) return {0.95f, 0.65f, 0.3f, 1};  // the Bronze Halls
     if (type == 101) return {0.4f, 1, 0.8f, 1};       // the lost city
+    if (type == 102) return {1, 0.35f, 0.75f, 1};     // 2.6.0: a subway station (pink)
     return {0.6f, 0.9f, 1, 1};
 }
 }  // namespace
@@ -4568,7 +4570,9 @@ std::vector<MapMarker> Session::mapMarkers() const {
             }
         // 2.5.0: the entrances of the abandoned subway nearby.
         int mx, mz, kind;
-        if (world_->nearestMetroStation(px, pz, mx, mz, kind) && std::abs(mx - px) < 300 && std::abs(mz - pz) < 300) m.push_back({MapMarker::Station, mx, mz});
+        // 2.6.0: the subway's entrance in a colour of its own (pink), not the orange of the old stations.
+        if (world_->nearestMetroStation(px, pz, mx, mz, kind) && std::abs(mx - px) < 300 && std::abs(mz - pz) < 300)
+            m.push_back(kFeatures260 ? MapMarker{MapMarker::Found, mx, mz, 102} : MapMarker{MapMarker::Station, mx, mz});
         if (kFeatures250) {
             // 2.5.0: every structure around shows on the map (worked out again only when the player moves on).
             const int cx = floorDiv(px, 64), cz = floorDiv(pz, 64);
@@ -5124,7 +5128,7 @@ void Session::drawHud(Ui& ui) const {
             float fz = std::clamp((mk.z - minimap_.originZ() + 0.5f) * k, 3.0f, ms - 3);
             int glyph = mk.kind == MapMarker::Spawn ? Font::Home : mk.kind == MapMarker::Death ? Font::Skull : Font::House;
             Color c = mk.kind == MapMarker::Spawn ? Color{1, 0.9f, 0.3f, 1} : mk.kind == MapMarker::Death ? Color{1, 0.35f, 0.3f, 1}
-                      : mk.kind == MapMarker::Station ? Color{1, 0.6f, 0.25f, 1}
+                      : mk.kind == MapMarker::Station ? (kFeatures260 ? Color{0.95f, 0.95f, 0.95f, 1} : Color{1, 0.6f, 0.25f, 1})
                       : mk.kind == MapMarker::Found ? foundColor(mk.type) : Color{0.6f, 0.9f, 1, 1};
             ui.icon(mx + fx - 4, my + fz - 4, glyph, {0, 0, 0, 0.7f});
             ui.icon(mx + fx - 4.5f, my + fz - 4.5f, glyph, c);
