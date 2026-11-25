@@ -314,7 +314,8 @@ private:
     DropSystem drops_;
     std::vector<Vertex> dropVerts_;
     float clock_ = 0;  // seconds since the world was opened (animations)
-    float waveUntil_ = -1;  // 2.5.0: the player waves hello until then
+    float waveUntil_ = -1;
+    int devSignPage_ = 0;  // 2.5.0: the page of the HQ journal read next  // 2.5.0: the player waves hello until then
 public:
     void waveHello() { waveUntil_ = clock_ + 2.4f; }  // 2.5.0: "Ahoj!" (the button of developer maps, /wave)
 private:

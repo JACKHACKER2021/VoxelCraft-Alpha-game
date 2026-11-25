@@ -2817,9 +2817,27 @@ void Session::useItem(const RayHit& hit) {
                 blockEditorKey = key;
             } else if (onMessage) {
                 std::string name = blockText(key);
-                if (name.empty()) name = world_->devSignText(hit.x, hit.y, hit.z);  // 2.5.0: a board of a developer map
-                if (name.empty()) name = world_->metroStationName(hit.x, hit.z);
-                onMessage(trf("Stanice: {0}", {name}));
+                int pages = 1, mark = -1;
+                // 2.5.0: a board of a developer map: its own text (the HQ journal turns a page per tap; a
+                // distance mark of the test track also tells how fast the nearest train goes).
+                const std::string dev = name.empty() ? world_->devSignText(hit.x, hit.y, hit.z, devSignPage_, &pages, &mark) : "";
+                if (!dev.empty()) {
+                    std::string text = dev;
+                    if (pages > 1) devSignPage_ = (devSignPage_ + 1) % pages;
+                    if (mark >= 0) {
+                        int ti, car;
+                        if (trains_.nearest(dimIndex(), Vec3(hit.x + 0.5f, (float)hit.y, hit.z + 0.5f), 120.0f, ti, car)) {
+                            const float v = std::fabs(trains_.trains()[(size_t)ti].speed);
+                            text += "  ·  " + trf("vlak jede {0} m/s ({1} km/h)", {std::to_string((int)std::lround(v)), std::to_string((int)std::lround(v * 3.6f))});
+                        } else {
+                            text += "  ·  " + tr("rychlost = 10 m ÷ čas mezi dvěma značkami");
+                        }
+                    }
+                    onMessage(text);
+                } else {
+                    if (name.empty()) name = world_->metroStationName(hit.x, hit.z);
+                    onMessage(trf("Stanice: {0}", {name}));
+                }
             }
             sound(Sound::Click);
             hand_.use();
@@ -3435,7 +3453,9 @@ void Session::updateSurvival(float dt, bool jumped) {
         burning_ = player_.eyeInWater(*world_) || player_.inWater ? 0 : burning_ - dt;
         if (burning_ > 0 && std::fmod(burning_, 1.0f) < dt) hurt(1, true, true);
     }
-    if (player_.touches(*world_, CACTUS)) {
+    // 2.5.0: the cactus is thinner than a block (its collision box is inset), so the player stopped
+    // against it before reaching the block: look a little further out.
+    if (player_.touches(*world_, CACTUS, 0.1f)) {
         // Prickly. 1.9.0 build 3: a real hit: it pushes the player back, so it is felt every time.
         if (hurtCooldown_ <= 0) {
             const int px = (int)std::floor(player_.pos.x), py = (int)std::floor(player_.pos.y), pz = (int)std::floor(player_.pos.z);

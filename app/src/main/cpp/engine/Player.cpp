@@ -120,8 +120,8 @@ bool Player::collides(const World& world, const Vec3& p) const {
     return false;
 }
 
-bool Player::touches(const World& world, ItemId block) const {
-    const float h = kWidth / 2 + 0.05f;
+bool Player::touches(const World& world, ItemId block, float margin) const {
+    const float h = kWidth / 2 + margin;
     for (int x = (int)std::floor(pos.x - h); x <= (int)std::floor(pos.x + h); ++x)
         for (int y = (int)std::floor(pos.y - 0.05f); y <= (int)std::floor(pos.y + kHeight); ++y)
             for (int z = (int)std::floor(pos.z - h); z <= (int)std::floor(pos.z + h); ++z)

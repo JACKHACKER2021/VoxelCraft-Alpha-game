@@ -1875,6 +1875,8 @@
 {"Village", "Vesnice", "Village", "Village", "Village"},
 {"Big dappled forest with taiga", "Velký strakatý les s tajgou", "Big dappled forest with taiga", "Big dappled forest with taiga", "Big dappled forest with taiga"},
 {"Mineshaft nearby", "Důl poblíž", "Mineshaft nearby", "Mineshaft nearby", "Mineshaft nearby"},
+{"train speed {0} m/s ({1} km/h)", "vlak jede {0} m/s ({1} km/h)", "train speed {0} m/s ({1} km/h)", "train speed {0} m/s ({1} km/h)", "train speed {0} m/s ({1} km/h)"},
+{"speed = 10 m ÷ the time between two marks", "rychlost = 10 m ÷ čas mezi dvěma značkami", "speed = 10 m ÷ the time between two marks", "speed = 10 m ÷ the time between two marks", "speed = 10 m ÷ the time between two marks"},
 {"Every structure in a row and the 5 developer buildings", "Všechny struktury v řadě a 5 developer staveb", "Every structure in a row and the 5 developer buildings", "Every structure in a row and the 5 developer buildings", "Every structure in a row and the 5 developer buildings"},
 {"Every block on a pedestal", "Každý blok na podstavci", "Every block on a pedestal", "Every block on a pedestal", "Every block on a pedestal"},
 {"A loop, crossings, platforms and the automatic subway", "Okruh, křížení, nástupiště a automatické metro", "A loop, crossings, platforms and the automatic subway", "A loop, crossings, platforms and the automatic subway", "A loop, crossings, platforms and the automatic subway"},

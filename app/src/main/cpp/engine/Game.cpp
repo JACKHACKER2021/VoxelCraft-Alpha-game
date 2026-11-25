@@ -40,7 +40,7 @@ namespace vc {
 namespace vc {
 
 namespace {
-const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.5.0 Preview build 12" : "VoxelCraft 2.4.0";
+const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.5.0 Preview build 13" : "VoxelCraft 2.4.0";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -2486,6 +2486,10 @@ void Game::openDevMap(int map) {
 void Game::createWorldScreen() {
     float x, y, w, h;
     menuWindow(x, y, w, h, false);
+    // 2.5.0: while a picker of cards is open, the settings under it take no taps (a card over the
+    // "World type" or "Look" box used to open that box's picker instead of choosing the card).
+    const bool picking = worldPicker_ >= 0;
+    if (picking) ui_.holdTaps(true);
     ui_.text(x + 2, y + 2, "Nastavení nového světa", kTitle, 1, false);
     ui_.text(x + 2, y + 14, "Název, herní režim, typ světa a seed.", kTextDim, 1, false);
     float cy = y + 28;
@@ -2561,6 +2565,7 @@ void Game::createWorldScreen() {
     for (const PackInfo& p : packList_) enabled += p.enabled;
     std::string info = trf("Biomy a Nether z {0} aktivních balíčků", {std::to_string(enabled)});
     if (!newWorldOld_ && !newWorldBounded_ && newWorldFlat_) ui_.text(x, cy + 148, info, kTextDim, 1, false, w);
+    if (picking) ui_.holdTaps(false);
     if (worldPicker_ >= 0 && worldPickerScreen(x, y, w, h)) return;  // the panel covers the screen
     // 2.0.0: the packs this world plays with (modpacks, textures, the Pre-Alpha Style...).
     if (ui_.button(x, cy + 148, col, 18, trf("Balíčky světa ({0})", {std::to_string(newWorldPacks_.size())}))) newWorldPacksOpen_ = true;

@@ -267,7 +267,9 @@ public:
     std::vector<FoundStructure> structuresNear(int x, int z, int radius);
     // 2.5.0: developer maps: the pieces of the map in a chunk, the text of a board of the map.
     void stampDevMap(Chunk& c);
-    std::string devSignText(int x, int y, int z) const;
+    // page: which page of a board with several (the HQ journal); pages and mark (a distance mark of the
+    // test track, in metres, else -1) come back when asked for.
+    std::string devSignText(int x, int y, int z, int page = 0, int* pages = nullptr, int* mark = nullptr) const;
     const BiomeDef* devBiomeAt(int x, int z) const;
     static constexpr int kCitySize = 90, kCityFloor = 8, kCityHeight = 24;
 private:

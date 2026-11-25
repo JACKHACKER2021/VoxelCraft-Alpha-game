@@ -45,7 +45,7 @@ public:
 
     Vec3 eye() const { return pos + Vec3(0, sneaking && !flying ? kEyeHeight - 0.25f : kEyeHeight, 0); }
     Vec3 forward() const;
-    bool touches(const World& world, ItemId block) const;  // e.g. cactus
+    bool touches(const World& world, ItemId block, float margin = 0.05f) const;  // 2.5.0: margin (cactus: wider)  // e.g. cactus
     bool collides(const World& world, const Vec3& p) const;  // the body at `p` overlaps a block
 
     // moveX/moveZ are joystick axes in [-1, 1] relative to the view direction.

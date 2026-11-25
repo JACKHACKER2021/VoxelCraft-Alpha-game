@@ -250,7 +250,26 @@ struct DevPiece {
 struct DevSign {
     int x, y, z;
     std::string text;
+    std::vector<std::string> pages;  // more than one: a tap turns to the next (the HQ journal)
+    int mark = -1;                   // >= 0: a distance mark of the test track (metres from the start)
 };
+
+// The developer's journal in the HQ: the notes of the updates, one page per tap.
+const std::vector<std::string>& hqJournal() {
+    static const std::vector<std::string> kPages = {
+        "Deník vývojáře: VoxelCraft od Hoppy_Hopsy21, VoxelSoftworks. Klepni znovu pro další stránku.",
+        "0.1 - 1.0: první kostky, tráva, hlína a kámen; pak domy z prken, nástroje a přežití.",
+        "1.5: zapomenuté powerstonové království, opuštěné vesnice a rozbité portály.",
+        "2.0: módy a balíčky, polštáře a nové menu; 2.1: koleje a vlaky.",
+        "2.2: Cornerstone a mráz: hlubší Overworld, tenký led a Rozhlas s naším hlasem.",
+        "2.3: první metro a bronzové síně; 2.4: nádraží, nástupiště, kolejové lože a mosty.",
+        "2.5: síť metra, automatické metro, ztracené město, deníky průzkumníka a vraky vlaků.",
+        "2.5: seedy struktur, Voxel Bucks, nové pixelové skiny, Kapitán Moře a hlášení chyb.",
+        "Příště ve 2.6: noví tvorové v Cornerstone, lepší Rozhlas a hra přes internet.",
+        "Vydání na Google Play: během roku 2027, rok od vzniku VoxelCraftu. Díky, že hraješ!",
+    };
+    return kPages;
+}
 
 struct DevLayout {
     std::vector<DevPiece> pieces;
@@ -291,11 +310,18 @@ const char* structureName(WorldStructure k) {
 }
 
 void addPiece(DevLayout& L, Structure s, int ox, int oz, const std::string& name) {
-    // The structure's own boards get its name; one more board in front of it.
+    // The structure's own boards get its name; one more board in front of it. The HQ's journal
+    // board holds the journal, the test track's boards along the straight their distances.
+    const bool track = s.name == "Test track";
     for (int y = 0; y < s.sy; ++y)
         for (int z = 0; z < s.sz; ++z)
-            for (int x = 0; x < s.sx; ++x)
-                if (s.at(x, y, z) == STATION_SIGN) L.signs.push_back({ox + x, kGround + y, oz + z, name});
+            for (int x = 0; x < s.sx; ++x) {
+                if (s.at(x, y, z) != STATION_SIGN) continue;
+                DevSign sign{ox + x, kGround + y, oz + z, name, {}, -1};
+                if (s.name == "VoxelSoftworks HQ" && x == 16 && y == 2 && z == 14) sign.pages = hqJournal();
+                if (track && y == 1 && z == 1) sign.mark = (x - 6) * 1;  // the marks stand every 10 blocks from x 6
+                L.signs.push_back(sign);
+            }
     L.signs.push_back({ox + s.sx / 2, kGround, oz - 3, name});
     L.pieces.push_back({std::move(s), ox, kGround, oz, name});
 }
@@ -440,11 +466,19 @@ void World::stampDevMap(Chunk& c) {
             c.set(s.x - x0, s.y, s.z - z0, STATION_SIGN);
 }
 
-std::string World::devSignText(int x, int y, int z) const {
+std::string World::devSignText(int x, int y, int z, int page, int* pages, int* mark) const {
+    if (pages) *pages = 1;
+    if (mark) *mark = -1;
     if (config_.devMap <= 0) return "";
-    for (const DevSign& s : layout(config_.devMap).signs)
-        if (s.x == x && s.y == y && s.z == z) return s.text;
-    // A board of a piece but not on the list (the test track's distance marks): its distance.
+    for (const DevSign& s : layout(config_.devMap).signs) {
+        if (s.x != x || s.y != y || s.z != z) continue;
+        if (mark) *mark = s.mark;
+        if (s.mark >= 0) return s.text + ": " + std::to_string(s.mark) + " m";
+        if (s.pages.empty()) return s.text;
+        const int n = (int)s.pages.size(), i = ((page % n) + n) % n;
+        if (pages) *pages = n;
+        return std::to_string(i + 1) + "/" + std::to_string(n) + "  " + s.pages[(size_t)i];
+    }
     return "";
 }
 

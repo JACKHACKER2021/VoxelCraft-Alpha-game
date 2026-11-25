@@ -4334,6 +4334,22 @@ static int testStations240() {
     return 0;
 }
 
+// 2.5.0: a player pressed against a cactus (which is 1/16 thinner on each side) touches it.
+static int testCactus250() {
+    GenConfig g = GenConfig::defaults();
+    g.flat = true;
+    World w(1, Dimension::Overworld, g);
+    w.ensureChunksAround(0, 0, 1, 1000);
+    w.setBlock(5, 4, 5, CACTUS);
+    Player p;
+    p.pos = Vec3(5 + 1 / 16.0f - Player::kWidth / 2 - 0.001f, 4, 5.5f);  // against its west face
+    if (!p.touches(w, CACTUS, 0.1f)) { std::printf("FAIL cactus not felt\n"); return 1; }
+    p.pos.x -= 1.0f;
+    if (p.touches(w, CACTUS, 0.1f)) { std::printf("FAIL cactus felt from afar\n"); return 1; }
+    std::printf("cactus: ok\n");
+    return 0;
+}
+
 // 2.5.0: the bug report carries the version and the place, and opens through the platform.
 namespace vc { std::string bugReportBody(const std::string& text, const std::string& version, const std::string& language, Session* s); }
 static int testBugReport250() {
@@ -4419,7 +4435,7 @@ static int testStructureSeeds250() {
 int main() {
     if (testOverworld() || testNether() || testPortal() || testTexturePacks() || testFontAndItems() || testSaves() ||
         testSurvivalSession() || testMenuFlow() || testCrafting() || testWorkbenchInSession() ||
-        testJsonAndPacks() || testSkinsStoreAudio() || testThirdPersonCamera() || testWaterEscape() || testLeavesMesh() || testPlants() || testDigParticles() || testDPad() || testStructures() || testInventoryAndHand() || testMetalsAndArmor() || testDeveloperAccess() || testEnglishEverywhere() || testMusic() || testDoorsChests() || testNewBiomes() || testWorldStructures() || testBoat() || testAchievements() || testLanGame() || testCommands() || testUpdate11() || testUpdate12() || testUpdate13() || testUpdate14() || testUpdate15() || testExperiments151() || testShaders155() || testPhysics157() || testWorld157() || testWorld159() || testCaves160() || testStorage157() || testSeasons190() || testStations240() || testStructureSeeds250() || testDevMaps250() || testBugReport250())
+        testJsonAndPacks() || testSkinsStoreAudio() || testThirdPersonCamera() || testWaterEscape() || testLeavesMesh() || testPlants() || testDigParticles() || testDPad() || testStructures() || testInventoryAndHand() || testMetalsAndArmor() || testDeveloperAccess() || testEnglishEverywhere() || testMusic() || testDoorsChests() || testNewBiomes() || testWorldStructures() || testBoat() || testAchievements() || testLanGame() || testCommands() || testUpdate11() || testUpdate12() || testUpdate13() || testUpdate14() || testUpdate15() || testExperiments151() || testShaders155() || testPhysics157() || testWorld157() || testWorld159() || testCaves160() || testStorage157() || testSeasons190() || testStations240() || testStructureSeeds250() || testDevMaps250() || testBugReport250() || testCactus250())
         return 1;
     std::printf("all tests passed\n");
     return 0;
