@@ -41,7 +41,7 @@ namespace vc {
 namespace vc {
 
 namespace {
-const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.6.0 Preview build 9" : "VoxelCraft 2.5.0";
+const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.6.0 Preview build 10" : "VoxelCraft 2.5.0";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -306,7 +306,8 @@ void Game::loadTextures() {
     for (const std::string& dir : packs_.textureDirs()) atlas = loadTexturePack(dir, atlas.rgba, atlas.size);
     for (const auto& [tile, path] : ModRegistry::get().textures()) blitTextureFile(atlas, tile, path);  // mods
     texturesSeason_ = playSettings().season;
-    texturesWinter_ = playSettings().addonWinter || snowySeason(texturesSeason_);
+    // 2.6.0: only the season changes the look (the Winter addon brings its things, not the snow).
+    texturesWinter_ = (playSettings().addonWinter && !kFeatures260) || snowySeason(texturesSeason_);
     if (texturesWinter_) {
         // The Winter addon: snow on the grass and frost on the leaves.
         const int t = atlas.size / kAtlasCols;
@@ -611,6 +612,12 @@ Settings Game::playSettings() const {
     s.addonHalloween = addons.count("halloween") > 0;
     s.addonAnniversary = addons.count("anniversary") > 0;
     s.season = kClassicEdition ? Season::None : s.seasonalEvents ? (seasonOverride_ >= 0 ? (Season)seasonOverride_ : seasonOn(todayYmd())) : Season::None;
+    // 2.6.0: the look of the seasons is the player's choice: by the date, off, or one season for good.
+    if (kFeatures260 && !kClassicEdition && seasonOverride_ < 0) {
+        static const Season kLook[5] = {Season::None, Season::None, Season::Halloween, Season::Christmas, Season::NewYear};
+        if (s.seasonLook == 0) s.season = s.seasonalEvents ? seasonOn(todayYmd()) : Season::None;
+        else s.season = kLook[std::clamp(s.seasonLook, 0, 4)];
+    }
     if (session_ && session_->oldMode()) {
         // 1.8.0 Old World: the plain renderer of 0.3: no shaders, shadows, waves or clouds.
         s.graphics = GraphicsMode::Classic;
@@ -814,7 +821,7 @@ void Game::frame(double time) {
         }
         saverWasOn_ = saver;
     }
-    if (textureReload_.exchange(false) || texturesWinter_ != (playSettings().addonWinter || snowySeason(playSettings().season)) ||
+    if (textureReload_.exchange(false) || texturesWinter_ != ((playSettings().addonWinter && !kFeatures260) || snowySeason(playSettings().season)) ||
         texturesSeason_ != playSettings().season)
         loadTextures();
     if (packsReload_.exchange(false)) rebuildFromPacks();
@@ -2908,7 +2915,19 @@ void Game::settingsScreen() {
         if (slider("Zvuky", std::to_string((int)std::round(v * 100)) + " %", v)) settings_.soundVolume = v;
         check("Zvuky rozhraní", "Cvaknutí tlačítek", settings_.uiSounds);
         check("Klidný režim", "Bez příšer, tišší zvuky, bez rudého záblesku", settings_.calmMode);
-        check("Sezónní události", "Podzim a Halloween, Vánoce a Silvestr podle data", settings_.seasonalEvents);
+        if (kFeatures260) {
+            // 2.6.0: the seasonal look (grass, weather, the land): by the date, off, or a season of choice.
+            static const char* const kLooks[5] = {"Podle data", "Vypnuto", "Podzim a Halloween", "Zima a Vánoce", "Silvestr"};
+            row("Sezónní vzhled", tr("Tráva a počasí"));
+            if (ui_.dropdown(cx - 140, ry + 2, 140, 18, tr(kLooks[std::clamp(settings_.seasonLook, 0, 4)]))) {
+                settings_.seasonLook = (settings_.seasonLook + 1) % 5;
+                settings_.seasonalEvents = settings_.seasonLook != 1;
+                saveSettings(settingsPath_, settings_);
+            }
+            endRow();
+        } else {
+            check("Sezónní události", "Podzim a Halloween, Vánoce a Silvestr podle data", settings_.seasonalEvents);
+        }
         for (const std::string& line : wrapText("Hudba: témata VoxelSoftworks a skladby biomů. Vlastní písně dej do složky music.", pw - 16)) {
             ui_.text(px + 8, ry + 6, line, kTextDim, 1, false, pw - 16);
             ry += 10;

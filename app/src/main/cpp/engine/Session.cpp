@@ -4411,7 +4411,7 @@ PlayerPose Session::pose() const {
 
 Precipitation Session::precipitation() const {
     if (world_ != &overworld_) return Precipitation::None;
-    if (settings_.addonWinter || snowySeason(settings_.season)) return Precipitation::Snow;  // a white winter everywhere
+    if ((settings_.addonWinter && !kFeatures260) || snowySeason(settings_.season)) return Precipitation::Snow;  // a white winter everywhere (2.6.0: the season only)
     const int x = (int)std::floor(player_.pos.x), z = (int)std::floor(player_.pos.z);
     const BiomeDef* b = overworld_.biomeAt(x, z);
     if (!b) return Precipitation::Rain;
@@ -4435,7 +4435,7 @@ void Session::updateWeather(float dt) {
         state_.weatherTimer = state_.raining ? 120.0f + r % 240 : 300.0f + r % 900;
     }
     const Precipitation kind = precipitation();
-    const bool falling = (state_.raining || settings_.addonWinter || snowySeason(settings_.season)) && kind != Precipitation::None;
+    const bool falling = (state_.raining || (settings_.addonWinter && !kFeatures260) || snowySeason(settings_.season)) && kind != Precipitation::None;
     updateSnowCover(dt, falling && kind == Precipitation::Snow);
     if (falling && kind == Precipitation::Rain && world_ == &overworld_) {
         // 1.7.2 build 3: rain sets concrete powder that lies under the open sky.
@@ -4492,7 +4492,7 @@ void Session::updateSnowCover(float dt, bool snowing) {
         } else if (below == SNOW_LAYER || here == SNOW_LAYER) {
             const int sy = here == SNOW_LAYER ? y : y - 1;
             const BiomeDef* b = w.biomeAt(x, z);
-            const bool cold = settings_.addonWinter || snowySeason(settings_.season) || (b && (b->freeze || b->id == "snowy_taiga" || b->id == "ice_plains" || b->id == "dappled_forest"));
+            const bool cold = (settings_.addonWinter && !kFeatures260) || snowySeason(settings_.season) || (b && (b->freeze || b->id == "snowy_taiga" || b->id == "ice_plains" || b->id == "dappled_forest"));
             if (!cold) w.setBlock(x, sy, z, AIR);
         }
     }

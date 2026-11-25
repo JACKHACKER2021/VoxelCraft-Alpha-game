@@ -369,6 +369,7 @@ Settings loadSettings(const std::string& path) {
     s.expBigBoom = flag("expBigBoom", false);
     s.calmMode = flag("calmMode", false);
     s.seasonalEvents = flag("seasonalEvents", true);
+    s.seasonLook = std::clamp((int)num(kv, "seasonLook", 0.0f), 0, 4);
     s.fallingLeaves = flag("fallingLeaves", true);
     s.tinyCaps = flag("tinyCaps", true);
     s.showFps = flag("showFps", false);
@@ -390,7 +391,7 @@ void saveSettings(const std::string& path, const Settings& s) {
       << "\ndevGodMode=" << s.devGodMode << "\ndevFly=" << s.devFly << "\ndevInstantMine=" << s.devInstantMine
       << "\ndevDebug=" << s.devDebug << "\ndevNoclip=" << s.devNoclip << "\ndevSpeed=" << s.devSpeed
       << "\nexpDayNight=" << s.expDayNight << "\nexpFastFurnace=" << s.expFastFurnace << "\nexpOreMap=" << s.expOreMap << "\nexpFastGrowth=" << s.expFastGrowth << "\nexpLowGravity=" << s.expLowGravity
-      << "\nexpBigBoom=" << s.expBigBoom << "\ncalmMode=" << s.calmMode << "\nseasonalEvents=" << s.seasonalEvents << "\nfallingLeaves=" << s.fallingLeaves << "\ntinyCaps=" << s.tinyCaps << "\nshowFps=" << s.showFps << "\nclassicFog=" << s.classicFog << "\ntutorialStep=" << s.tutorialStep << "\nmpPvp=" << s.mpPvp << "\nmpProtectSpawn=" << s.mpProtectSpawn
+      << "\nexpBigBoom=" << s.expBigBoom << "\ncalmMode=" << s.calmMode << "\nseasonalEvents=" << s.seasonalEvents << "\nseasonLook=" << s.seasonLook << "\nfallingLeaves=" << s.fallingLeaves << "\ntinyCaps=" << s.tinyCaps << "\nshowFps=" << s.showFps << "\nclassicFog=" << s.classicFog << "\ntutorialStep=" << s.tutorialStep << "\nmpPvp=" << s.mpPvp << "\nmpProtectSpawn=" << s.mpProtectSpawn
       << "\n";
     writeFileAtomic(path, o.str());
 }

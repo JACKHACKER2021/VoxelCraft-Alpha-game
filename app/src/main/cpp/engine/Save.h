@@ -127,6 +127,7 @@ struct Settings {
     bool addonWinter = false, addonHalloween = false, addonAnniversary = false;
     // 1.9.0: seasonal events by the date (saved on/off; the season itself is filled in every frame).
     bool seasonalEvents = true;
+    int seasonLook = 0;  // 2.6.0: 0 by the date, 1 off, 2 autumn and Halloween, 3 winter and Christmas, 4 New Year's Eve
     bool fallingLeaves = true;  // 1.9.0 build 2: leaves drift down from the trees
     int classicFog = 1;         // Classic 0.0.3: 0 none, 1 normal, 2 far haze
     bool showFps = false;       // Classic 0.0.3: FPS and position in the corner
