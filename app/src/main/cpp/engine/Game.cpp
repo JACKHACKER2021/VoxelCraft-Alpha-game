@@ -41,7 +41,7 @@ namespace vc {
 namespace vc {
 
 namespace {
-const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.6.0 Preview build 13" : "VoxelCraft 2.5.0";
+const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.7.0 Preview build 1" : "VoxelCraft 2.6.0";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -1332,10 +1332,10 @@ void Game::presentsScreen(float dt) {
     y += 14;
     const float big = ui_.textWidth("VOXELCRAFT 1.8.0", 3) < W - 20 && H >= 260 ? 3 : 2;
     // 2.5.0: the version and the name of the update (they stayed at 2.1.0 for a long time).
-    const char* title = kClassicEdition ? "VOXELCRAFT CLASSIC" : kPreviewEdition ? "VOXELCRAFT 2.6.0 PREVIEW" : "VOXELCRAFT 2.5.0";
+    const char* title = kClassicEdition ? "VOXELCRAFT CLASSIC" : kPreviewEdition ? "VOXELCRAFT 2.7.0 PREVIEW" : "VOXELCRAFT 2.6.0";
     ui_.textCentered(W / 2, y, title, faded(gold, 0.2f), ui_.textWidth(title, big) < W - 20 ? big : 2);
     y += 10 * big + 4;
-    ui_.textCentered(W / 2, y, tr("Podzemí a metro"), faded(white, 0.5f), 1);
+    ui_.textCentered(W / 2, y, tr("Cornerstone a svátky"), faded(white, 0.5f), 1);
     y += 14;
     if (season != Season::None) {
         // The event that is on right now, in a coloured band.
@@ -1966,7 +1966,7 @@ void Game::newsPanel() {
     const float pw = std::min(420.0f, W - 20), ph = std::min(260.0f, H - 20), px = (W - pw) / 2, py = (H - ph) / 2;
     ui_.roundPanel(px, py, pw, ph);
     const Color gold{1.0f, 0.82f, 0.43f, 1};
-    ui_.textCentered(W / 2, py + 8, kFeatures250 ? "Co je nového ve VoxelCraftu 2.5.0" : "Co je nového ve VoxelCraftu 2.4.0", gold);
+    ui_.textCentered(W / 2, py + 8, kFeatures260 ? "Co je nového ve VoxelCraftu 2.6.0" : kFeatures250 ? "Co je nového ve VoxelCraftu 2.5.0" : "Co je nového ve VoxelCraftu 2.4.0", gold);
     struct Row { const char* head; const char* text; };
     static const Row rows250[] = {
         {"Síť metra", "Linky východ-západ nahoře a sever-jih dole, tunely mezi stanicemi"},
@@ -1989,6 +1989,25 @@ void Game::newsPanel() {
         {"Úspěchy", "Každý nový survival svět začíná úspěchy od nuly"},
         {"Chyby", "Nahlásit chybu v nastavení otevře GitHub Issues s vyplněnými údaji"},
     };
+    static const Row rows260[] = {
+        {"Cornerstone", "Úhelný golem, mechový plaz, sporovka, žhavá můra a popelavý lišák"},
+        {"Lišák", "Ochočíš ho syrovým masem; chodí za tebou, kouše příšery a na povel si sedne"},
+        {"Rudy", "Železná, bronzová a ocelová ruda Cornerstone; krystalium v Karmínové poušti"},
+        {"Halloween", "Dýně s obličeji, pavučiny, náhrobky, duchové v noci a koleda u vesničanů"},
+        {"Vánoce", "Stromek a punčocha s dárkem každé ráno, světýlka, perník, sáně a sněhulák"},
+        {"Zima", "Bílá tráva a sníh, který zasype i květiny; sezónní vzhled si vybereš"},
+        {"Hudba", "Čtyři nové klidné skladby, které se plynule prolínají"},
+        {"Vajíčka", "Spawn vajíčko pro každého tvora, všechna v novém vzhledu"},
+    };
+    static const Row rows260b[] = {
+        {"Svět", "Export světa do čitelného zipu, import i starších souborů"},
+        {"Mapa", "Metro je na mapě růžové, rozpadlé nádraží bílé"},
+        {"Výkon", "Režim Slabé zařízení: lehčí grafika a 30 FPS, zapne se sám"},
+        {"Trailery", "Trailery v záložkách podle verzí a nové FAQ"},
+        {"Úspěchy", "Nový úspěch Táborník za sud v táboře poutníků"},
+        {"Tvorové", "Projdou napadaným sněhem a v lávě se už neodráží nahoru"},
+        {"Opravy", "Sud už hru neshodí a položené bloky se zimním doplňkem jsou vidět"},
+    };
     static const Row rows240[] = {
         {"Metro", "Rychlý vlak s posuvnými dveřmi, v noci svítí; kola se točí a podvozky zatáčí"},
         {"Stanice", "Betonové kolejové lože a nástupiště; u nástupiště metro otevře dveře"},
@@ -2000,8 +2019,8 @@ void Game::newsPanel() {
     };
     const int pages = kFeatures250 ? 2 : 1;
     newsPage_ = std::clamp(newsPage_, 0, pages - 1);
-    const Row* rows = kFeatures250 ? (newsPage_ == 0 ? rows250 : rows250b) : rows240;
-    const int rowCount = kFeatures250 ? 8 : 7;
+    const Row* rows = kFeatures260 ? (newsPage_ == 0 ? rows260 : rows260b) : kFeatures250 ? (newsPage_ == 0 ? rows250 : rows250b) : rows240;
+    const int rowCount = kFeatures260 ? (newsPage_ == 0 ? 8 : 7) : kFeatures250 ? 8 : 7;
     float y = py + 24;
     // 2.5.0: the heads' column as wide as the widest head (English ones are longer).
     float headW = 90;

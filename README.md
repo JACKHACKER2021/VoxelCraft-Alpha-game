@@ -7,13 +7,13 @@
 **Kostičková hra pro Android s vlastním enginem v C++**
 *Hoppy_Hopsy21 · VoxelSoftworks · vytvořeno společně s Claude*
 
-![Verze](https://img.shields.io/badge/verze-2.5.0-2ea44f?style=for-the-badge)
-![Preview](https://img.shields.io/badge/preview-2.6.0-orange?style=for-the-badge)
+![Verze](https://img.shields.io/badge/verze-2.6.0-2ea44f?style=for-the-badge)
+![Preview](https://img.shields.io/badge/preview-2.7.0-orange?style=for-the-badge)
 ![Android](https://img.shields.io/badge/Android-arm64-3DDC84?style=for-the-badge&logo=android&logoColor=white)
 ![C++](https://img.shields.io/badge/C%2B%2B-17-00599C?style=for-the-badge&logo=cplusplus&logoColor=white)
 ![OpenGL ES](https://img.shields.io/badge/OpenGL%20ES-3.0-5586A4?style=for-the-badge&logo=opengl&logoColor=white)
 
-[⬇️ Stáhnout APK 2.5.0](release/VoxelCraft-2.5.0.apk) · [📦 Všechny verze](release/) · [❓ FAQ](docs/FAQ.md) · [🎬 Trailer FAQ (3 min)](trailers/t13_faq.mp4) · [🎬 Trailer (17 min)](trailers/t12_2.0.0.mp4) · [📜 Historie](docs/HISTORIE.md)
+[⬇️ Stáhnout APK 2.6.0](release/VoxelCraft-2.6.0.apk) · [📦 Všechny verze](release/) · [❓ FAQ](docs/FAQ.md) · [🎬 Trailer FAQ (3 min)](trailers/t13_faq.mp4) · [🎬 Trailer (17 min)](trailers/t12_2.0.0.mp4) · [📜 Historie](docs/HISTORIE.md)
 
 
 **[🇨🇿 Čeština](#cestina)** · **[🇬🇧 English](#english)**
@@ -27,7 +27,7 @@
 **VoxelCraft** is a block-building game for Android with its own C++ engine, by Hoppy_Hopsy21 and VoxelSoftworks, made together with Claude.
 All code, textures, models and music are our own: **no textures, sounds, music or code from Mojang**, and it is not connected with Mojang or Microsoft.
 
-**⬇️ [VoxelCraft 2.5.0](release/VoxelCraft-2.5.0.apk)** · **[📦 all versions](release/)** · **[❓ FAQ](docs/FAQ.md)**
+**⬇️ [VoxelCraft 2.6.0](release/VoxelCraft-2.6.0.apk)** · **[📦 all versions](release/)** · **[❓ FAQ](docs/FAQ.md)**
 
 #### 🆕 2.4.0
 - 🚇 **Subway**: a fast train with sliding doors (they open on the platform side), lit at night; the driver can open the doors by hand
@@ -48,6 +48,15 @@ All code, textures, models and music are our own: **no textures, sounds, music o
 - 🧍 new **pixel skins** for every character and the new **Captain Sea**; crouching, swimming and waving (`/wave`)
 - 🧊 coins are now **Voxel Bucks**, ⚙️ **Report a bug** in the settings opens GitHub Issues, 🏆 achievements per survival world
 - 📱 runs on **Android 5.0** and newer
+
+#### 🆕 2.6.0 – the Cornerstone and the holidays
+- 🪨 new **Cornerstone creatures**: golem, moss lurker, sporeling, ember moth and ash fox; Cornerstone **iron, bronze and steel ore**
+- 🦊 the **fox** of the snowy and dappled forests: tame it with raw meat, it follows you, bites monsters and sits on command
+- 🎃 **Halloween**: carved pumpkins, cobwebs, gravestones, bat lanterns, ghosts at night, trick-or-treat at villagers
+- 🎄 **Christmas**: tree and stocking with a gift every morning, string lights, gingerbread, sled, the **snowman**
+- ❄️ white grass and snow that covers flowers; choose the **seasonal look** in the settings
+- 🎵 four new calm **songs**, 🥚 a **spawn egg** for every creature in a new look
+- 📦 **world export** to a readable zip, 🗺️ the subway pink on the map, 🐢 **weak device mode** (Mali, PowerVR)
 
 The rest of this page (history of every version, how to build) is in Czech.
 
@@ -86,6 +95,16 @@ The rest of this page (history of every version, how to build) is in Czech.
 - 🧍 nové **pixelové skiny** všech postav a nový **Kapitán Moře**; přikrčení, plavání a zamávání (`/wave`)
 - 🧊 mince jsou teď **Voxel Bucks**, ⚙️ **Nahlásit chybu** v nastavení otevře GitHub Issues, 🏆 úspěchy pro každý survival svět
 - 📱 hra běží od **Androidu 5.0**
+
+## 🆕 2.6.0 – Cornerstone a svátky
+
+- 🪨 nové **tvory Cornerstone**: úhelný golem, mechový plaz, sporovka, žhavá můra a popelavý lišák; **železná, bronzová a ocelová ruda** Cornerstone
+- 🦊 **lišák** ze sněžné tajgy a Dappled forest: ochočíš ho syrovým masem, chodí za tebou, kouše příšery, na povel si sedne
+- 🎃 **Halloween**: dýně s obličeji, pavučiny, náhrobky, netopýří lucerny, duchové v noci a koleda u vesničanů
+- 🎄 **Vánoce**: stromek a punčocha s dárkem každé ráno, světýlka, perník, sáně a **sněhulák**
+- ❄️ bílá tráva a sníh, který zasype i květiny; **sezónní vzhled** si vybereš v nastavení
+- 🎵 čtyři nové klidné **skladby**, 🥚 **spawn vajíčko** pro každého tvora v novém vzhledu
+- 📦 **export světa** do čitelného zipu, 🗺️ metro na mapě růžově, 🐢 režim **Slabé zařízení** (Mali, PowerVR)
 
 > [!TIP]
 > Otázky k vydání, číslování verzí, mincím (Voxel Bucks) a vzhledu najdeš ve **[❓ FAQ](docs/FAQ.md)**.

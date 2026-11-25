@@ -4,7 +4,7 @@
 
 <a id="cz"></a>
 Všechna APK VoxelCraftu. Hra pro Android od Hoppy_Hopsy21 a VoxelSoftworks, vytvořená společně s Claude.
-Nejnovější je **2.5.0**. Preview další verze (2.6.0) je jen pro vývojáře, proto tu není. Neoficiální fanouškovský projekt, bez obsahu od Mojangu.
+Nejnovější je **2.6.0**. Preview další verze (2.7.0) je jen pro vývojáře, proto tu není. Neoficiální fanouškovský projekt, bez obsahu od Mojangu.
 
 > [!IMPORTANT]
 > Od verze **2.4.0** má hra nové ID (`cz.voxelsoftworks.voxelcraft`) a nový podpis. Nainstaluje se **vedle** starší verze.
@@ -12,12 +12,13 @@ Nejnovější je **2.5.0**. Preview další verze (2.6.0) je jen pro vývojáře
 > APK verzí 2.2.0 a 2.3.x tu nejsou: jejich sestavení se ztratilo; všechno z nich obsahuje 2.4.0.
 
 <a id="en"></a>
-All VoxelCraft APKs. Newest: **2.5.0**. The preview of the next version (2.6.0) is for developers only, so it is not here. From 2.4.0 the app has a new id and a new
+All VoxelCraft APKs. Newest: **2.6.0**. The preview of the next version (2.7.0) is for developers only, so it is not here. From 2.4.0 the app has a new id and a new
 signature, so it installs **next to** an older one (move worlds with *Export* / *Import*). The 2.2.0 and 2.3.x APKs were lost; 2.4.0 has all of them.
 
 | Verze | APK | Co přinesla |
 |---|---|---|
-| **2.5.0** | [VoxelCraft-2.5.0.apk](VoxelCraft-2.5.0.apk) | The underground: subway network with four kinds of station, the automatic subway, subway map, the lost city, explorer's journals, train wrecks, every structure on the map, structure seeds, new pixel skins and Captain Sea, crouching, swimming and waving, Voxel Bucks, Report a bug, Android 5.0 and newer. |
+| **2.6.0** | [VoxelCraft-2.6.0.apk](VoxelCraft-2.6.0.apk) | The Cornerstone and the holidays: golem, moss lurker, sporeling, ember moth, ash fox, the tameable fox, Cornerstone ores, Halloween and Christmas blocks, ghosts, snowman, sled, white winter grass, seasonal look, four new songs, spawn eggs for every creature, readable world export, weak device mode. |
+| 2.5.0 | [VoxelCraft-2.5.0.apk](VoxelCraft-2.5.0.apk) | The underground: subway network with four kinds of station, the automatic subway, subway map, the lost city, explorer's journals, train wrecks, every structure on the map, structure seeds, new pixel skins and Captain Sea, crouching, swimming and waving, Voxel Bucks, Report a bug, Android 5.0 and newer. |
 | 2.4.0 | [VoxelCraft-2.4.0.apk](VoxelCraft-2.4.0.apk) | Subway with sliding doors and night lights, spinning wheels, stations (concrete track bed, platforms), lattice bridges, crossings, ruined stations, Bronze Halls, slab stairs in towers, villages that follow the land. |
 | Classic 0.0.3 | [VoxelCraft-Classic-0.0.3.apk](VoxelCraft-Classic-0.0.3.apk) | The old game as its own small app: the first textures, creative and survival, small inventory. |
 | 2.1.0 | [VoxelCraft-2.1.0.apk](VoxelCraft-2.1.0.apk) | Trains & Bronze: trains, 3D rails, level crossing, drill car, Bronze Update. |
