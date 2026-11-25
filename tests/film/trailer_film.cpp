@@ -7161,3 +7161,51 @@ SHOT(z07_winter) {
     d.shot("z07_snowed");
     d.seconds(0.3f);
 }
+
+// 2.6.0 preview: a bug hunt: blocks placed with the Winter and Halloween addons on.
+SHOT(z08_addons) {
+    Director d(out, "z08");
+    if (!std::getenv("VC_NO_ADDONS")) {
+        d.game->toolProfile().owned.insert("addon:winter");
+        d.game->toolProfile().owned.insert("addon:halloween");
+    }
+    if (std::getenv("VC_WINTER_LOOK")) d.settings().seasonLook = 3;  // winter and Christmas, snowing
+    d.openWorld("Addons", 4242, GameMode::Survival);
+    Session& s = d.s();
+    Player& p = s.player();
+    d.settings().hideGui = true;
+    p.flying = true;
+    d.idle(20);
+    const int bx = (int)std::floor(p.pos.x), by = (int)std::floor(p.pos.y), bz = (int)std::floor(p.pos.z) - 3;
+    s.currentWorld().setBlock(bx, by, bz, STONE);
+    s.currentWorld().setBlock(bx + 1, by, bz, PLANKS);
+    s.currentWorld().setBlock(bx - 1, by, bz, GIFT_BOX);
+    p.yaw = 0, p.pitch = 0;
+    d.idle(10);
+    d.shot("z08_placed");
+    d.seconds(0.3f);
+    // Now with a real tap: stone in the hand, looking down at the ground in front.
+    p.flying = false;
+    d.give(0, STONE, 10);
+    s.selectedSlot() = 0;
+    p.pitch = -0.9f;
+    d.idle(30);
+    for (int k = 0; k < 4; ++k) {
+        d.tap(300, 135);
+        p.yaw += 0.35f;
+        d.idle(6);
+    }
+    p.pitch = -0.6f;
+    d.idle(10);
+    std::printf("stone left in the hand: %d\n", (int)s.inventory().slots[0].count);
+    d.shot("z08_tapped");
+    d.seconds(6);  // let it snow a while
+    int stones = 0;
+    for (int dx = -6; dx <= 6; ++dx)
+        for (int dz = -6; dz <= 6; ++dz)
+            for (int dy = -4; dy <= 2; ++dy)
+                stones += s.currentWorld().getBlock((int)std::floor(p.pos.x) + dx, (int)std::floor(p.pos.y) + dy, (int)std::floor(p.pos.z) + dz) == STONE;
+    std::printf("stone blocks still standing near the player: %d\n", stones);
+    d.shot("z08_later");
+    d.seconds(0.3f);
+}

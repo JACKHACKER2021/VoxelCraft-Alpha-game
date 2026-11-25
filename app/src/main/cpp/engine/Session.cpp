@@ -4150,6 +4150,7 @@ void Session::updateCamera(float dt, bool walking) {
 
 void Session::render(Renderer& renderer, Ui& ui, const Settings& settings, bool hud) {
     renderer.dropUnloadedMeshes(*world_);
+    renderer.setMeshFocus(player_.pos.x, player_.pos.z);
     renderer.updateMeshes(*world_, 3);
     if (world_ == &overworld_ && oldMode()) {
         // 1.8.0 Old World: the sky of 0.3: always day, one pale blue that the distance fades into
@@ -4474,7 +4475,8 @@ void Session::updateSnowCover(float dt, bool snowing) {
     // 2.6.0: the snow settles on every loaded chunk round the player (it used to fill just the few
     // chunks next to them), so the rate grows with the area.
     const int reach = kFeatures260 ? 16 * 6 : 24;
-    const float every = (snowing ? 0.04f : 0.12f) * (kFeatures260 ? 0.0625f : 1.0f);
+    // (2.6.0 preview build 11: a quarter of the earlier rate: each flake that settles rebuilds a chunk.)
+    const float every = (snowing ? 0.04f : 0.12f) * (kFeatures260 ? 0.25f : 1.0f);
     World& w = overworld_;
     while (snowTimer_ >= every) {
         snowTimer_ -= every;

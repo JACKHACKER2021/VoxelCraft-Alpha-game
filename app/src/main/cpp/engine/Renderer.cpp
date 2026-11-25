@@ -330,9 +330,18 @@ void Renderer::freeMesh(GpuMesh& m) {
 
 int Renderer::updateMeshes(World& world, int budget) {
     int built = 0;
-    for (auto& [key, chunk] : world.chunks()) {
+    // 2.6.0: nearest to the player first.
+    std::vector<std::pair<float, decltype(&*world.chunks().begin())>> dirty;
+    for (auto& kv : world.chunks()) {
+        if (!kv.second->dirty || !canMesh(world, kv.second->cx, kv.second->cz)) continue;
+        const float dx = kv.second->cx * 16 + 8 - meshFocusX_, dz = kv.second->cz * 16 + 8 - meshFocusZ_;
+        dirty.push_back({dx * dx + dz * dz, &kv});
+    }
+    std::sort(dirty.begin(), dirty.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+    for (auto& [dist, kv] : dirty) {
         if (built >= budget) break;
-        if (!chunk->dirty || !canMesh(world, chunk->cx, chunk->cz)) continue;
+        auto& key = kv->first;
+        auto& chunk = kv->second;
         buildChunkMesh(world, *chunk, scratch_);
         GpuMesh& m = meshes_[key];
         uploadPart(m, 0, scratch_.opaque);

@@ -51,6 +51,9 @@ public:
 
     // Rebuilds up to `budget` dirty chunk meshes; returns how many were built.
     int updateMeshes(World& world, int budget);
+    // 2.6.0: where the player is: the dirty chunks nearest to it are rebuilt first (falling snow kept
+    // far chunks dirty, and a placed block could wait for ever to show).
+    void setMeshFocus(float x, float z) { meshFocusX_ = x, meshFocusZ_ = z; }
     void dropUnloadedMeshes(const World& world);
     void clearMeshes();  // e.g. when switching dimensions
 
@@ -92,6 +95,7 @@ public:
     int height() const { return height_; }
 
 private:
+    float meshFocusX_ = 0, meshFocusZ_ = 0;
     struct GpuMesh {
         GLuint vao[2] = {}, vbo[2] = {};
         GLsizei count[2] = {};
