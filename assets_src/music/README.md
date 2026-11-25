@@ -20,3 +20,20 @@ Hru stačí zkusit tak, že se `otevreny_obzor.mp3` zkopíruje do složky hry `m
 jako `overworld.mp3` (nebo `plains.mp3`, `forest.mp3` …).
 
     python3 tools/sandbox_soundtrack.py   # znovu vytvoří otevreny_obzor.mp3
+
+# Hudba dimenzí
+
+Čtyři nové, samostatné skladby (každá má vlastní melodii, akordy, stupnici, takt a nástroje),
+složené a syntetizované skriptem `tools/dimension_soundtracks.py`. Do hry zatím zapojené nejsou.
+
+| Soubor | Skladba | Dimenze | Hudba |
+|---|---|---|---|
+| `cornerstone.mp3` | **Žhavé kameny** | Cornerstone | d harmonická moll, 3/4, 66 BPM; kamenná marimba hraje ostinato, nízký lesní roh melodii, dunivé údery, žhavý pad s chvěním lávy |
+| `crimson_void.mp3` | **Oko prázdnoty** | Crimson Void | frygické shluky na E, 54 BPM; pětitónový motiv na rozladěné sklo (i o tritón výš a obráceně), tep srdce, který se ve střední části zrychluje (Crimson Man se blíží) |
+| `celestial_reach.mp3` | **Nad oblaky** | Celestial Reach | lydický valčík v G, 3/4, 96 BPM; stoupající třpytivá arpeggia, sbor, zvonky, po přestávce se tónina zvedne o celý tón |
+| `caves.mp3` | **Hlubiny** | Jeskyně | fis moll, 50 BPM; řídké piano s dlouhými pauzami, hrací strojek, kapky vody, hluboký bzučivý tón, ozvěna jeskyně |
+
+Ve hře je zatím lze vyzkoušet tak, že se zkopírují do složky hry `music/` místo hudby, kterou nahrazují.
+
+    python3 tools/dimension_soundtracks.py                 # všechny čtyři
+    python3 tools/dimension_soundtracks.py caves           # jen jednu
