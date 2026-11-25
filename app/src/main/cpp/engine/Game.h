@@ -93,6 +93,9 @@ public:
     std::function<void()> onImportPack;
     std::function<void(int ms)> onVibrate;
     std::function<void()> onQuit;
+    // 2.5.0: opens a new GitHub issue in the browser, filled in (the phone's model is added there).
+    std::function<void(const std::string& title, const std::string& body)> onOpenBugReport;
+    void openBugReport(const std::string& title, const std::string& text);
     std::function<void(const std::string& sound, float volume)> onPlaySound;
     std::function<void(const std::string& path, float volume)> onPlayFile;  // 2.2.0: the Rozhlas voice (a WAV file)
     std::function<void(float volume)> onMusicVolume;
@@ -145,7 +148,7 @@ private:
                     PromptStructureImported = 9, PromptDevName = 10, PromptDevPassword = 11, PromptMusicEnded = 12,
                     PromptJoinAddress = 13, PromptChat = 14, PromptCode = 15, PromptPublicIp = 16, PromptWorldImported = 17,
                     PromptShaderPackName = 18, PromptWaypoint = 19, PromptBookPage = 20, PromptBookTitle = 21,
-                    PromptBlockText = 22 };  // 1.9.5 build 3: command and structure blocks
+                    PromptBlockText = 22, PromptBugTitle = 23, PromptBugText = 24 };  // 2.5.0: the bug report  // 1.9.5 build 3: command and structure blocks
 
     void setScreen(Screen s);
     Settings playSettings() const;  // settings_ without developer options for normal players
@@ -415,6 +418,8 @@ private:
     bool musicEnded_ = false;
     // Developer login
     std::string devLoginName_;
+    std::string bugTitle_;
+    float tutorialSkip_[4] = {};  // 2.5.0: where the tutorial's Skip button is (x, y, w, h); w 0 when hidden  // 2.5.0: the title of the bug report being written
     int devFailures_ = 0;
     double devLockedUntil_ = 0;
     Screen devReturn_ = Screen::Settings;

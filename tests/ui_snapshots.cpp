@@ -131,6 +131,8 @@ int main(int argc, char** argv) {
     shot("03b_settings_audio");
     tap(103, 159);
     shot("03c_settings_profile");
+    tap(103, 185);  // 2.2.0 added the Display tab: Profile is one lower
+    shot("03c2_settings_profile");
     tap(514, 120);  // Úspěchy: Otevřít
     shot("03d_achievements");
     game.onBack();
@@ -157,6 +159,8 @@ int main(int argc, char** argv) {
     shot("18d_store_wheel");
     frames(240);
     shot("18e_store_wheel_done");
+    tap(560, 44);  // 2.5.0 preview: Mince za Kč
+    shot("18f_store_czk");
     tap(30, 44);  // Vše
     game.onBack();
     frames(1);

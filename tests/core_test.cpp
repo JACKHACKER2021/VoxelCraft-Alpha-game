@@ -4334,6 +4334,22 @@ static int testStations240() {
     return 0;
 }
 
+// 2.5.0: the bug report carries the version and the place, and opens through the platform.
+namespace vc { std::string bugReportBody(const std::string& text, const std::string& version, const std::string& language, Session* s); }
+static int testBugReport250() {
+    const std::string b = bugReportBody("Padá to", "VoxelCraft 2.5.0", "cs", nullptr);
+    if (b.find("Padá to") == std::string::npos || b.find("VoxelCraft 2.5.0") == std::string::npos) return 1;
+    const std::filesystem::path root = std::filesystem::temp_directory_path() / "vc_bugreport";
+    std::filesystem::remove_all(root);
+    Game g(root.string());
+    std::string title, body;
+    g.onOpenBugReport = [&](const std::string& t, const std::string& bb) { title = t, body = bb; };
+    g.openBugReport("Test", "Popis");
+    if (title != "[Bug] Test" || body.find("Popis") == std::string::npos) { std::printf("FAIL bug report\n"); return 1; }
+    std::printf("bug report: ok\n");
+    return 0;
+}
+
 // 2.5.0 preview build 5: the developer maps generate their pieces, and their boards have names.
 static int testDevMaps250() {
     for (int m = 1; m <= kDevMaps; ++m) {
@@ -4397,7 +4413,7 @@ static int testStructureSeeds250() {
 int main() {
     if (testOverworld() || testNether() || testPortal() || testTexturePacks() || testFontAndItems() || testSaves() ||
         testSurvivalSession() || testMenuFlow() || testCrafting() || testWorkbenchInSession() ||
-        testJsonAndPacks() || testSkinsStoreAudio() || testThirdPersonCamera() || testWaterEscape() || testLeavesMesh() || testPlants() || testDigParticles() || testDPad() || testStructures() || testInventoryAndHand() || testMetalsAndArmor() || testDeveloperAccess() || testEnglishEverywhere() || testMusic() || testDoorsChests() || testNewBiomes() || testWorldStructures() || testBoat() || testAchievements() || testLanGame() || testCommands() || testUpdate11() || testUpdate12() || testUpdate13() || testUpdate14() || testUpdate15() || testExperiments151() || testShaders155() || testPhysics157() || testWorld157() || testWorld159() || testCaves160() || testStorage157() || testSeasons190() || testStations240() || testStructureSeeds250() || testDevMaps250())
+        testJsonAndPacks() || testSkinsStoreAudio() || testThirdPersonCamera() || testWaterEscape() || testLeavesMesh() || testPlants() || testDigParticles() || testDPad() || testStructures() || testInventoryAndHand() || testMetalsAndArmor() || testDeveloperAccess() || testEnglishEverywhere() || testMusic() || testDoorsChests() || testNewBiomes() || testWorldStructures() || testBoat() || testAchievements() || testLanGame() || testCommands() || testUpdate11() || testUpdate12() || testUpdate13() || testUpdate14() || testUpdate15() || testExperiments151() || testShaders155() || testPhysics157() || testWorld157() || testWorld159() || testCaves160() || testStorage157() || testSeasons190() || testStations240() || testStructureSeeds250() || testDevMaps250() || testBugReport250())
         return 1;
     std::printf("all tests passed\n");
     return 0;

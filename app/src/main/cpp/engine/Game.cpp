@@ -40,7 +40,7 @@ namespace vc {
 namespace vc {
 
 namespace {
-const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.5.0 Preview build 5" : "VoxelCraft 2.4.0";
+const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.5.0 Preview build 6" : "VoxelCraft 2.4.0";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -143,6 +143,15 @@ void Game::applyGuiScale() {
 void Game::onTouch(int id, TouchAction action, float x, float y, double time) {
     float gx = x / guiScale_, gy = y / guiScale_;
     if (screen_ == Screen::Playing && session_ && !typing()) {  // build 6: while typing, the input bar takes the taps
+        // 2.5.0: the tutorial's Skip button (drawn over the game, which would take the tap otherwise).
+        if (action == TouchAction::Down && tutorialSkip_[2] > 0 && gx >= tutorialSkip_[0] && gx < tutorialSkip_[0] + tutorialSkip_[2] &&
+            gy >= tutorialSkip_[1] && gy < tutorialSkip_[1] + tutorialSkip_[3]) {
+            settings_.tutorialStep = kTutorialSteps;
+            saveSettings(settingsPath_, settings_);
+            tutorialSkip_[2] = 0;
+            playSound(Sound::Click);
+            return;
+        }
         if (action == TouchAction::Down) session_->touchDown(id, gx, gy, time);
         else if (action == TouchAction::Move) session_->touchMove(id, gx, gy);
         else session_->touchUp(id, gx, gy, time);
@@ -826,6 +835,17 @@ void Game::frame(double time) {
             if (kFeatures220 && (id == PromptChat || id == PromptBookPage || id == PromptBookTitle || id == PromptPlayerName))
                 for (size_t k = 0; k + 1 < text.size(); ++k)
                     if (text[k] == '&' && std::strchr("0123456789abcdeflmnorABCDEFLMNOR", text[k + 1])) text.replace(k, 1, "\xC2\xA7");
+            if (id == PromptBugTitle) {
+                bugTitle_ = text.substr(0, 120);
+                if (!bugTitle_.empty() && onEditText)
+                    onEditText(PromptBugText, tr("Popiš chybu"), tr("Co se stalo:\n\nJak to zopakovat:\n1. \n\nCo jsi čekal(a):\n"));
+                continue;
+            }
+            if (id == PromptBugText) {
+                if (!bugTitle_.empty()) openBugReport(bugTitle_, text);
+                bugTitle_.clear();
+                continue;
+            }
             if (id == PromptWorldName) newWorldName_ = text.substr(0, 40);
             else if (id == PromptSeed) newWorldSeed_ = text.substr(0, 40), newWorldStructSeed_ = 0;
             else if (id == PromptJson) editorApply(text, true);
@@ -1813,19 +1833,20 @@ void Game::titleScreen() {
     ui_.roundPanel(px, py, pw, 4 * (bh + gap) + 12);
     float x = px + 9, y = py + 9;
     using St = Ui::Style;
-    if (ui_.menuButton(x, y, bw, bh, "Hrát", St::Primary, Font::Sword)) setScreen(Screen::WorldList);
-    if (ui_.menuButton(x + bw + 8, y, bw, bh, "Nastavení", St::Normal, Font::Gear)) {
+    const bool live = !newsOpen_;  // 2.5.0: while the news are open, the menu under them does not take taps
+    if (ui_.menuButton(x, y, bw, bh, "Hrát", St::Primary, Font::Sword, live)) setScreen(Screen::WorldList);
+    if (ui_.menuButton(x + bw + 8, y, bw, bh, "Nastavení", St::Normal, Font::Gear, live)) {
         settingsReturn_ = Screen::Title;
         setScreen(Screen::Settings);
     }
     y += bh + gap;
-    if (ui_.menuButton(x, y, bw, bh, "Obchod", St::Normal, Font::Bag)) setScreen(Screen::Store);
-    if (ui_.menuButton(x + bw + 8, y, bw, bh, "Profil a skiny", St::Normal, Font::Person)) setScreen(Screen::Skins);
+    if (ui_.menuButton(x, y, bw, bh, "Obchod", St::Normal, Font::Bag, live)) setScreen(Screen::Store);
+    if (ui_.menuButton(x + bw + 8, y, bw, bh, "Profil a skiny", St::Normal, Font::Person, live)) setScreen(Screen::Skins);
     y += bh + gap;
-    if (ui_.menuButton(x, y, bw, bh, "Módy a balíčky", St::Normal, Font::Cube)) setScreen(Screen::Packs);
-    if (ui_.menuButton(x + bw + 8, y, bw, bh, "Encyklopedie", St::Normal, Font::Star)) encCat_ = encSel_ = 0, encScroll_ = 0, setScreen(Screen::Encyclopedia);
+    if (ui_.menuButton(x, y, bw, bh, "Módy a balíčky", St::Normal, Font::Cube, live)) setScreen(Screen::Packs);
+    if (ui_.menuButton(x + bw + 8, y, bw, bh, "Encyklopedie", St::Normal, Font::Star, live)) encCat_ = encSel_ = 0, encScroll_ = 0, setScreen(Screen::Encyclopedia);
     y += bh + gap;
-    if (ui_.menuButton(x, y, pw - 18, bh, "Ukončit hru", St::Danger, Font::ExitDoor) && onQuit) onQuit();
+    if (ui_.menuButton(x, y, pw - 18, bh, "Ukončit hru", St::Danger, Font::ExitDoor, live) && onQuit) onQuit();
 
     if (now_ < toastUntil_ && !toast_.empty()) {
         float tw = ui_.textWidth(toast_) + 16;
@@ -1836,14 +1857,17 @@ void Game::titleScreen() {
     // Build 6: what 2.1.0 brings, from a button under the menu.
     {
         const float nw = 150, ny = py + 4 * (bh + gap) + 18 + (now_ < toastUntil_ && !toast_.empty() ? 20 : 0);
-        if (ny + 20 < H - 12 && ui_.menuButton((W - nw) / 2, ny, nw, 20, kFeatures250 ? "Novinky 2.5.0" : "Novinky 2.4.0", St::Primary, Font::Star)) newsOpen_ = true;
+        // 2.5.0: on a low screen there is no room under the menu: the button goes to the top left corner.
+        const bool under = ny + 20 < H - 12;
+        const float bx = under ? (W - nw) / 2 : 4, by = under ? ny : 4;
+        if (ui_.menuButton(bx, by, nw, 20, kFeatures250 ? "Novinky 2.5.0" : "Novinky 2.4.0", St::Primary, Font::Star, live)) newsOpen_ = true;
     }
     if (newsOpen_) newsPanel();
     ui_.text(3, H - 10, kVersion, kText);
     std::string note = "VoxelSoftworks";
     ui_.text(W - ui_.textWidth(note) - 3, H - 10, note, kAccent);
     // 1.5.7: the studio name opens the credits.
-    if (ui_.tapped(W - ui_.textWidth(note) - 8, H - 16, ui_.textWidth(note) + 8, 16)) {
+    if (!newsOpen_ && ui_.tapped(W - ui_.textWidth(note) - 8, H - 16, ui_.textWidth(note) + 8, 16)) {
         creditsStart_ = now_;
         setScreen(Screen::Credits);
     }
@@ -2553,6 +2577,23 @@ void Game::createWorldScreen() {
     if (ui_.button(x + w / 2 + 4, by, bw, 22, "Zrušit")) setScreen(Screen::WorldList);
 }
 
+// 2.5.0: the bug report: the player's text plus what the game knows (version, world, place).
+std::string bugReportBody(const std::string& text, const std::string& version, const std::string& language, Session* s) {
+    std::string body = "### Popis / Description\n" + text + "\n\n### Hra / Game\n- Verze: " + version + "\n- Jazyk: " + language + "\n";
+    if (s) {
+        const Vec3 p = s->player().pos;
+        body += "- Svět: seed " + std::to_string(s->info().seed) + ", pozice " + std::to_string((int)std::floor(p.x)) + " " +
+                std::to_string((int)std::floor(p.y)) + " " + std::to_string((int)std::floor(p.z)) + "\n";
+    }
+    return body;
+}
+
+void Game::openBugReport(const std::string& title, const std::string& text) {
+    const std::string body = bugReportBody(text, kVersion, settings_.language, session_.get());
+    if (onOpenBugReport) onOpenBugReport("[Bug] " + title, body);
+    toast_ = tr("Otevírám GitHub Issues…"), toastUntil_ = now_ + 3;
+}
+
 void Game::confirmDeleteScreen() {
     const float W = ui_.width(), H = ui_.height();
     ui_.fill(0, 0, W, H, {0.2f, 0, 0, 0.5f});
@@ -2764,7 +2805,13 @@ void Game::settingsScreen() {
         endRow();
     }
 
-    if (ry <= y + h - 20) ui_.text(px + 8, y + h - 18, std::string(kVersion), kTextDim, 1, false, pw - 100);
+    if (ry <= y + h - 26) {
+        // 2.5.0: report a bug: a short title, then the description; it opens as a new GitHub issue.
+        const float bw = std::max(90.0f, ui_.textWidth(tr("Nahlásit chybu")) + 12);
+        ui_.text(px + 8, y + h - 18, std::string(kVersion), kTextDim, 1, false, pw - 100 - bw);
+        if (ui_.button(px + pw - 72 - bw, y + h - 26, bw, 20, "Nahlásit chybu") && onTextPrompt)
+            onTextPrompt(PromptBugTitle, tr("Co nefunguje? (krátce)"), "");
+    }
     if (ui_.button(px + pw - 68, y + h - 26, 60, 20, "Zpět")) {
         saveSettings(settingsPath_, settings_);
         setScreen(settingsReturn_);
@@ -3141,6 +3188,7 @@ void Game::pauseScreen() {
 }
 
 void Game::tutorial(float dt) {
+    tutorialSkip_[2] = 0;  // 2.5.0: shown again below if the tip is on screen
     // First steps for new players, one hint at a time, in survival worlds.
     if (settings_.tutorialStep >= kTutorialSteps || !session_->survival()) return;
     static const char* const kSteps[kTutorialSteps] = {
@@ -3181,10 +3229,9 @@ void Game::tutorial(float dt) {
     ui_.fill(tx + 2, ty + 2, tw, 18, {0, 0, 0, 0.5f});
     ui_.frame(tx, ty, tw, 18, kPanel, kGreenBorder);
     ui_.text(tx + 6, ty + 5, line, kTextBright, 1, false);
-    if (ui_.button(tx + tw - 58, ty + 2, 54, 14, "Přeskočit")) {
-        settings_.tutorialStep = kTutorialSteps;
-        saveSettings(settingsPath_, settings_);
-    }
+    // The game's own touch handling takes every tap while playing, so onTouch checks this box first.
+    tutorialSkip_[0] = tx + tw - 62, tutorialSkip_[1] = ty - 2, tutorialSkip_[2] = 62, tutorialSkip_[3] = 22;
+    ui_.button(tx + tw - 58, ty + 2, 54, 14, "Přeskočit");
 }
 
 void Game::inviteScreen() {
@@ -3757,11 +3804,13 @@ void Game::storeScreen() {
     ui_.text(x + 2, y + 14, "Platí se mincemi z hraní, žádné skutečné peníze.", kTextDim, 1, false, w - 120);
     coinsPill(x + w, y);
 
-    const char* cats[] = {"Vše", "Skiny", "Textury", "Světy a modpacky", "VIP a doplňky", "Odměny"};
+    // 2.5.0 preview: the last tab sells coins for real money (Czech crowns); free for the developer.
+    const char* cats[] = {"Vše", "Skiny", "Textury", "Světy a modpacky", "VIP a doplňky", "Odměny", "Mince za Kč"};
+    const int catCount = kFeatures250 ? 7 : 6;
     float cx = x, catsW = 0;
-    for (const char* c : cats) catsW += ui_.textWidth(c) + 20;
+    for (int i = 0; i < catCount; ++i) catsW += ui_.textWidth(cats[i]) + 20;
     const float pad = catsW <= w ? 16 : 6;  // tighter tabs on narrow screens
-    for (int i = 0; i < 6; ++i) {
+    for (int i = 0; i < catCount; ++i) {
         float bw = ui_.textWidth(cats[i]) + pad;
         if (ui_.button(cx, y + 26, bw, 18, cats[i], true, storeCategory_ == i)) {
             storeCategory_ = i;
@@ -3781,6 +3830,42 @@ void Game::storeScreen() {
             shown.push_back((int)i);
     }
     if (storeCategory_ == 5) shown.clear();
+    if (storeCategory_ == 6) {
+        // 2.5.0 preview: packs of coins for Czech crowns. Paying comes with Google Play; until then only
+        // the developer can take them (for free), to try the shop out.
+        shown.clear();
+        struct Pack { int coins, bonus; const char* price; };
+        static const Pack kPacks[] = {{500, 0, "29 Kč"}, {1200, 100, "59 Kč"}, {2600, 300, "119 Kč"}, {6500, 1000, "249 Kč"}};
+        const bool dev = profile_.isDeveloper();
+        const float gy = y + 50, cw = std::floor((w - 6) / 2), ch = 70;
+        for (int i = 0; i < 4; ++i) {
+            const Pack& pk = kPacks[i];
+            const float bx = x + (i % 2) * (cw + 6), by = gy + (i / 2) * (ch + 6);
+            ui_.fill(bx + 2, by + 2, cw, ch, {0, 0, 0, 0.4f});
+            ui_.frame(bx, by, cw, ch, kPanel, kBorder);
+            ui_.fill(bx + 1, by + 1, cw - 2, 30, Color{0.85f, 0.65f, 0.15f, 1});
+            ui_.icon(bx + 8, by + 11, Font::Coin, kTitle);
+            ui_.text(bx + 20, by + 8, std::to_string(pk.coins), kTitle, 2, false);
+            if (pk.bonus) ui_.text(bx + cw - ui_.textWidth(trf("+{0} navíc", {std::to_string(pk.bonus)})) - 8, by + 12,
+                                   trf("+{0} navíc", {std::to_string(pk.bonus)}), kTextBright, 1, false);
+            ui_.text(bx + 8, by + 38, pk.price, kGold, 2, false);
+            const float bw2 = std::min(cw - 90, ui_.textWidth(tr(dev ? "Zdarma (vývojář)" : "Brzy na Google Play")) + 14);
+            if (dev) {
+                if (ui_.button(bx + cw - bw2 - 6, by + ch - 24, bw2, 18, "Zdarma (vývojář)", true, true)) {
+                    profile_.coins += pk.coins + pk.bonus;
+                    profile_.save(profilePath_);
+                    toast_ = trf("Připsáno {0} mincí", {std::to_string(pk.coins + pk.bonus)}), toastUntil_ = now_ + 3;
+                    playSound(Sound::Coin);
+                }
+            } else {
+                ui_.button(bx + cw - bw2 - 6, by + ch - 24, bw2, 18, "Brzy na Google Play", false);
+            }
+        }
+        ui_.text(x + 2, gy + 2 * (ch + 6) + 4, dev ? tr("Vývojářský přístup: mince zdarma, nic se neplatí.")
+                                                   : tr("Placení přibude s vydáním na Google Play. Hraní zůstává zdarma."),
+                 kTextDim, 1, false, w - 4);
+        if (now_ < toastUntil_ && !toast_.empty()) ui_.textCentered(x + w / 2, gy + 2 * (ch + 6) + 18, toast_, kAccent);
+    }
 
     // Cards, two per row, scrolled by dragging.
     const float gridY = y + 50, gridH = h - 50 - 16, gap = 6;

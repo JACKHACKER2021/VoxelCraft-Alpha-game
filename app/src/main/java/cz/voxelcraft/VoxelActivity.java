@@ -316,6 +316,26 @@ public class VoxelActivity extends NativeActivity {
         });
     }
 
+    /**
+     * Called from native code (2.5.0): opens a new GitHub issue in the browser, filled in with the
+     * player's text and the game's details; the phone's model and Android version are added here.
+     * Nothing is sent by the game itself: the player reviews it and submits it on GitHub.
+     */
+    @SuppressWarnings("unused")
+    public void openBugReport(String title, String body) {
+        String full = body + "- Telefon: " + Build.MANUFACTURER + " " + Build.MODEL
+                + "\n- Android: " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + ")\n";
+        String url = "https://github.com/JACKHACKER2021/VoxelCraft-Alpha-game/issues/new?labels=bug&title="
+                + android.net.Uri.encode(title) + "&body=" + android.net.Uri.encode(full);
+        runOnUiThread(() -> {
+            try {
+                startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)));
+            } catch (Exception e) {
+                android.widget.Toast.makeText(this, "GitHub: " + url.substring(0, 60), android.widget.Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
     /** Called from native code: short haptic feedback. */
     @SuppressWarnings("unused")
     public void vibrate(int ms) {

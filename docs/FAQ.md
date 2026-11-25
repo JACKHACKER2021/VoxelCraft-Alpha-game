@@ -126,7 +126,9 @@ Do budoucna je to **v plánu**.
 
 ![Nahlášení chyby](img/faq/bugs.jpg)
 
-Založ nový **Issue** tady na GitHubu ([Issues](../../../issues)) a napiš:
+**Ve hře:** Nastavení → **Nahlásit chybu**. Napíšeš krátký název a popis a hra otevře GitHub s vyplněným hlášením (verze hry, svět, telefon). Stačí ho odeslat.
+
+Nebo založ nový **Issue** přímo tady na GitHubu ([Issues](../../../issues)) a napiš:
 
 1. **Co se stalo** a co jsi čekal(a).
 2. **Jak to zopakovat**, krok po kroku.
@@ -267,7 +269,9 @@ It is **planned** for the future.
 
 ![Report a bug](img/faq/bugs.jpg)
 
-Open a new **issue** here on GitHub ([Issues](../../../issues)) and write:
+**In the game:** Settings → **Report a bug**. Write a short title and a description, and the game opens GitHub with the report filled in (game version, world, phone). Just submit it.
+
+Or open a new **issue** right here on GitHub ([Issues](../../../issues)) and write:
 
 1. **What happened**, and what you expected.
 2. **How to make it happen again**, step by step.
