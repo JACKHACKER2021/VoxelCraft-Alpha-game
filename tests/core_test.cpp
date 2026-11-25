@@ -4347,6 +4347,12 @@ static int testBugReport250() {
     g.openBugReport("Test", "Popis");
     if (title != "[Bug] Test" || body.find("Popis") == std::string::npos) { std::printf("FAIL bug report\n"); return 1; }
     std::printf("bug report: ok\n");
+    // 2.5.0: the developer tab opens a developer map straight away, as a flat creative world.
+    g.openDevMap(3);
+    if (!g.session() || g.session()->currentWorld().config().devMap != 3 || !g.session()->currentWorld().config().flat) {
+        std::printf("FAIL dev map open\n");
+        return 1;
+    }
     return 0;
 }
 

@@ -40,7 +40,7 @@ namespace vc {
 namespace vc {
 
 namespace {
-const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.5.0 Preview build 11" : "VoxelCraft 2.4.0";
+const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.5.0 Preview build 12" : "VoxelCraft 2.4.0";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -1931,23 +1931,27 @@ void Game::newsPanel() {
     const Row* rows = kFeatures250 ? (newsPage_ == 0 ? rows250 : rows250b) : rows240;
     const int rowCount = kFeatures250 ? 8 : 7;
     float y = py + 24;
-    const float tw = pw - 114;
+    // 2.5.0: the heads' column as wide as the widest head (English ones are longer).
+    float headW = 90;
+    for (int ri = 0; ri < rowCount; ++ri) headW = std::max(headW, ui_.textWidth(tr(rows[ri].head)) + 8);
+    headW = std::min(headW, pw * 0.4f);
+    const float tw = pw - headW - 24;
     for (int ri = 0; ri < rowCount; ++ri) {
         const Row& r = rows[ri];
-        ui_.text(px + 10, y, r.head, kTextBright, 1, false, 90);
+        ui_.text(px + 10, y, r.head, kTextBright, 1, false, headW);
         // Wrap the description onto as many lines as it needs.
         std::string line, word;
         std::istringstream words(tr(r.text));
         while (words >> word) {
             const std::string next = line.empty() ? word : line + " " + word;
             if (!line.empty() && ui_.textWidth(next) > tw) {
-                ui_.text(px + 104, y, line, kText, 1, false);
+                ui_.text(px + 14 + headW, y, line, kText, 1, false);
                 y += 10, line = word;
             } else {
                 line = next;
             }
         }
-        if (!line.empty()) ui_.text(px + 104, y, line, kText, 1, false);
+        if (!line.empty()) ui_.text(px + 14 + headW, y, line, kText, 1, false);
         y += 13;
         if (y > py + ph - 34) break;
     }
@@ -2287,9 +2291,12 @@ void Game::worldListScreen() {
     float x, y, w, h;
     menuWindow(x, y, w, h, false);
     // Two parts: your own worlds (Singleplayer) and games on the Wi-Fi (Multiplayer).
-    const char* tabs[2] = {"Singleplayer", "Multiplayer"};
+    // 2.5.0: a third tab for the developer: the developer maps, opened straight away.
+    const char* tabs[3] = {"Singleplayer", "Multiplayer", "Developer"};
+    const int tabCount = kFeatures250 && profile_.isDeveloper() ? 3 : 2;
+    if (playTab_ >= tabCount) playTab_ = 0;
     float tx = x;
-    for (int t = 0; t < 2; ++t) {
+    for (int t = 0; t < tabCount; ++t) {
         float tw = ui_.textWidth(tabs[t]) + 18;
         if (ui_.button(tx, y - 1, tw, 15, tabs[t], true, playTab_ == t)) {
             playTab_ = t;
@@ -2300,6 +2307,30 @@ void Game::worldListScreen() {
     if (now_ < toastUntil_ && !toast_.empty()) ui_.text(x + w - ui_.textWidth(toast_), y + 2, toast_, kAccent, 1, false);
     const bool multi = playTab_ == 1;
     const float listY = y + 16, listH = h - 16 - 32, rowH = 34;
+    if (playTab_ == 2) {
+        // The developer maps: one row each; a tap opens the map's world (made the first time).
+        ui_.frame(x, listY, w, listH, kPanelInner, kSeparator);
+        static const ItemId kIcons[kDevMaps] = {STONE_BRICKS, BOOKSHELF, RAIL_NS, GRASS, MOB_SPAWNER, CONCRETE + 5};
+        static const char* const kSubs[kDevMaps] = {"Všechny struktury v řadě a 5 developer staveb", "Každý blok na podstavci",
+                                                    "Okruh, křížení, nástupiště a automatické metro", "Čtverce všech biomů",
+                                                    "Ohrada se spawnerem pro každého moba", "Zelené plátno a světla na natáčení"};
+        const float rh = std::min(rowH, std::floor((listH - 4) / kDevMaps));
+        for (int m = 1; m <= kDevMaps; ++m) {
+            const float rx = x + 2, ry = listY + 2 + (m - 1) * rh, rw = w - 4;
+            const bool down = ui_.held(rx, ry, rw, rh - 2);
+            ui_.frame(rx, ry, rw, rh - 2, down ? kButtonDown : kButton, kGreenBorder);
+            ui_.item(rx + 4, ry + 3, std::min(26.0f, rh - 8), kIcons[m - 1]);
+            ui_.text(rx + 36, ry + 4, devMapName(m), kTextBright, 1, false, rw - 120);
+            ui_.text(rx + 36, ry + 15, kSubs[m - 1], kTextDim, 1, false, rw - 120);
+            if (ui_.tapped(rx, ry, rw, rh - 2)) {
+                openDevMap(m);
+                return;
+            }
+        }
+        const float bw = std::min(120.0f, (w - 12) / 3), by = y + h - 24;
+        if (ui_.button(x + w / 2 + bw / 2 + 6, by, bw, 22, "Zpět")) setScreen(Screen::Title);
+        return;
+    }
     ui_.frame(x, listY, w, listH, kPanelInner, kSeparator);
     worldScroll_ -= ui_.dragY(x, listY, w, listH);
     // Multiplayer: games opened to the LAN, then your worlds to host. Singleplayer: your worlds.
@@ -2421,6 +2452,35 @@ void Game::worldListScreen() {
             onTextPrompt(PromptPlayerName, "Jméno hráče", profile_.name);
     }
     if (ui_.button(x + w / 2 + bw / 2 + 6, by, bw, 22, "Zpět")) setScreen(Screen::Title);
+}
+
+// 2.5.0: opens a developer map: its world if one was made before, else a new one (creative, commands on).
+void Game::openDevMap(int map) {
+    for (const WorldInfo& wi : worlds_) {
+        if (loadGenerator(wi.folder).devMap != map) continue;
+        WorldInfo info;
+        PlayerState player;
+        if (loadLevel(wi.folder, info, player)) startSession(info, player);
+        return;
+    }
+    WorldInfo wi;
+    wi.folder = createWorldFolder(worldsDir_);
+    wi.name = tr(devMapName(map));
+    wi.seed = 1;
+    wi.mode = GameMode::Creative;
+    wi.lastPlayed = unixNow();
+    wi.showCoordinates = true;
+    wi.allowCommands = true;
+    wi.expRails = true;
+    GenConfig config = packs_.buildConfig();
+    config.flat = true;
+    config.flatPreset = 0;
+    config.devMap = map;
+    int sx, sz;
+    devMapSpawn(map, sx, sz);
+    config.spawnX = sx, config.spawnZ = sz;
+    saveGenerator(wi.folder, config);
+    startSession(wi, PlayerState{});
 }
 
 void Game::createWorldScreen() {

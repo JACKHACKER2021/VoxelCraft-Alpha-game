@@ -96,6 +96,7 @@ public:
     // 2.5.0: opens a new GitHub issue in the browser, filled in (the phone's model is added there).
     std::function<void(const std::string& title, const std::string& body)> onOpenBugReport;
     void openBugReport(const std::string& title, const std::string& text);
+    void openDevMap(int map);  // 2.5.0: the developer tab of the world list
     std::function<void(const std::string& sound, float volume)> onPlaySound;
     std::function<void(const std::string& path, float volume)> onPlayFile;  // 2.2.0: the Rozhlas voice (a WAV file)
     std::function<void(float volume)> onMusicVolume;
