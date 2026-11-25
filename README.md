@@ -13,7 +13,7 @@
 ![C++](https://img.shields.io/badge/C%2B%2B-17-00599C?style=for-the-badge&logo=cplusplus&logoColor=white)
 ![OpenGL ES](https://img.shields.io/badge/OpenGL%20ES-3.0-5586A4?style=for-the-badge&logo=opengl&logoColor=white)
 
-[⬇️ Stáhnout APK 2.4.0](release/VoxelCraft-2.4.0.apk) · [🧪 2.5.0 Preview](release/VoxelCraft-2.5.0-preview-build3.apk) · [📦 Všechny verze](release/) · [❓ FAQ](docs/FAQ.md) · [🎬 Trailer (17 min)](trailers/t12_2.0.0.mp4) · [📜 Historie](docs/HISTORIE.md)
+[⬇️ Stáhnout APK 2.4.0](release/VoxelCraft-2.4.0.apk) · [🧪 2.5.0 Preview](release/VoxelCraft-2.5.0-preview-build4.apk) · [📦 Všechny verze](release/) · [❓ FAQ](docs/FAQ.md) · [🎬 Trailer (17 min)](trailers/t12_2.0.0.mp4) · [📜 Historie](docs/HISTORIE.md)
 
 
 **[🇨🇿 Čeština](#cestina)** · **[🇬🇧 English](#english)**
@@ -27,7 +27,7 @@
 **VoxelCraft** is a block-building game for Android with its own C++ engine, by Hoppy_Hopsy21 and VoxelSoftworks, made together with Claude.
 All code, textures, models and music are our own: **no textures, sounds, music or code from Mojang**, and it is not connected with Mojang or Microsoft.
 
-**⬇️ [VoxelCraft 2.4.0](release/VoxelCraft-2.4.0.apk)** · **🧪 [2.5.0 Preview](release/VoxelCraft-2.5.0-preview-build3.apk)** · **[📦 all versions](release/)** · **[❓ FAQ](docs/FAQ.md)**
+**⬇️ [VoxelCraft 2.4.0](release/VoxelCraft-2.4.0.apk)** · **🧪 [2.5.0 Preview](release/VoxelCraft-2.5.0-preview-build4.apk)** · **[📦 all versions](release/)** · **[❓ FAQ](docs/FAQ.md)**
 
 #### 🆕 2.4.0
 - 🚇 **Subway**: a fast train with sliding doors (they open on the platform side), lit at night; the driver can open the doors by hand

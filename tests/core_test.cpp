@@ -4334,10 +4334,47 @@ static int testStations240() {
     return 0;
 }
 
+// 2.5.0: every structure seed of the menu still has its structure exactly where it was found.
+// If this fails, an update changed the generator for old worlds: fix the generator, never the table.
+static int testStructureSeeds250() {
+    int n = 0;
+    const StructureSeed* ss = structureSeeds(n);
+    if (!kClassicEdition && n < 15) { std::printf("FAIL structure seeds: only %d\n", n); return 1; }
+    for (int i = 0; i < n; ++i) {
+        const StructureSeed& st = ss[i];
+        GenConfig g = GenConfig::defaults();
+        g.generation = st.generation;
+        World w(seedFromText(st.seed), Dimension::Overworld, g);
+        bool ok = false;
+        if (st.type == 100) {
+            for (int rx = -2; rx <= 1 && !ok; ++rx)
+                for (int rz = -2; rz <= 1 && !ok; ++rz) {
+                    int hx, hz;
+                    ok = w.bronzeHallsIn(rx, rz, hx, hz) && hx + 49 == st.x && hz + 49 == st.z;
+                }
+        } else if (st.type == 101) {
+            for (int l = -2; l <= 1 && !ok; ++l)
+                for (int r = -2; r <= 1 && !ok; ++r) {
+                    int a, ox, oz;
+                    ok = w.lostCityOf(l, r, a, ox, oz) && ox + 45 == st.x && oz + 45 == st.z;
+                }
+        } else if (st.type == 102) {
+            int x, z, k;
+            ok = w.nearestMetroStation(0, 0, x, z, k) && x == st.x && z == st.z;
+        } else {
+            for (const World::FoundStructure& f : w.structuresNear(0, 0, 300)) ok = ok || (f.type == st.type && f.x == st.x && f.z == st.z);
+        }
+        if (!ok) { std::printf("FAIL structure seed %s (%s) moved\n", st.name, st.seed); return 1; }
+        if (tr(st.name) == std::string()) return 1;
+    }
+    std::printf("structure seeds: %d fixed\n", n);
+    return 0;
+}
+
 int main() {
     if (testOverworld() || testNether() || testPortal() || testTexturePacks() || testFontAndItems() || testSaves() ||
         testSurvivalSession() || testMenuFlow() || testCrafting() || testWorkbenchInSession() ||
-        testJsonAndPacks() || testSkinsStoreAudio() || testThirdPersonCamera() || testWaterEscape() || testLeavesMesh() || testPlants() || testDigParticles() || testDPad() || testStructures() || testInventoryAndHand() || testMetalsAndArmor() || testDeveloperAccess() || testEnglishEverywhere() || testMusic() || testDoorsChests() || testNewBiomes() || testWorldStructures() || testBoat() || testAchievements() || testLanGame() || testCommands() || testUpdate11() || testUpdate12() || testUpdate13() || testUpdate14() || testUpdate15() || testExperiments151() || testShaders155() || testPhysics157() || testWorld157() || testWorld159() || testCaves160() || testStorage157() || testSeasons190() || testStations240())
+        testJsonAndPacks() || testSkinsStoreAudio() || testThirdPersonCamera() || testWaterEscape() || testLeavesMesh() || testPlants() || testDigParticles() || testDPad() || testStructures() || testInventoryAndHand() || testMetalsAndArmor() || testDeveloperAccess() || testEnglishEverywhere() || testMusic() || testDoorsChests() || testNewBiomes() || testWorldStructures() || testBoat() || testAchievements() || testLanGame() || testCommands() || testUpdate11() || testUpdate12() || testUpdate13() || testUpdate14() || testUpdate15() || testExperiments151() || testShaders155() || testPhysics157() || testWorld157() || testWorld159() || testCaves160() || testStorage157() || testSeasons190() || testStations240() || testStructureSeeds250())
         return 1;
     std::printf("all tests passed\n");
     return 0;

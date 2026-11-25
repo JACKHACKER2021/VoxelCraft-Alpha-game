@@ -40,7 +40,7 @@ namespace vc {
 namespace vc {
 
 namespace {
-const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.5.0 Preview build 3" : "VoxelCraft 2.4.0";
+const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.5.0 Preview build 4" : "VoxelCraft 2.4.0";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -827,7 +827,7 @@ void Game::frame(double time) {
                 for (size_t k = 0; k + 1 < text.size(); ++k)
                     if (text[k] == '&' && std::strchr("0123456789abcdeflmnorABCDEFLMNOR", text[k + 1])) text.replace(k, 1, "\xC2\xA7");
             if (id == PromptWorldName) newWorldName_ = text.substr(0, 40);
-            else if (id == PromptSeed) newWorldSeed_ = text.substr(0, 40);
+            else if (id == PromptSeed) newWorldSeed_ = text.substr(0, 40), newWorldStructSeed_ = 0;
             else if (id == PromptJson) editorApply(text, true);
             else if (id == PromptPackImported) {
                 std::string packId = text;
@@ -2336,7 +2336,7 @@ void Game::worldListScreen() {
             newWorldSeed_.clear();
             newWorldMode_ = GameMode::Survival;
             newWorldFlatPreset_ = 0;
-            newWorldBounded_ = false, newWorldBoundSize_ = 0, newWorldSeedPreset_ = 0, worldPicker_ = -1;
+            newWorldBounded_ = false, newWorldBoundSize_ = 0, newWorldSeedPreset_ = 0, newWorldStructSeed_ = 0, worldPicker_ = -1;
             newWorldPacks_ = packs_.enabledOrder(), newWorldPacksOpen_ = false;
             newWorldOld_ = newWorldFlat_ = newWorldCoords_ = newWorldKeepInventory_ = newWorldCommands_ = newWorldExpLiquids_ = newWorldExpMaps_ = newWorldExpOpen_ = false;
             newWorldExpStorms_ = newWorldExpStars_ = newWorldExpBreeding_ = newWorldExpRails_ = false;
@@ -2396,7 +2396,10 @@ void Game::createWorldScreen() {
             newWorldBoundSize_ = (newWorldBoundSize_ + 1) % 3;
     } else if (!newWorldOld_ && !newWorldFlat_) {
         // A preset finds a seed whose spawn lies where the player wants it.
-        if (ui_.dropdown(x, cy + 104, col, 18, trf("Předvolba: {0}", {tr(seedPresetName(newWorldSeedPreset_))}))) worldPicker_ = 2;
+        int nStruct = 0;
+        const StructureSeed* ss = structureSeeds(nStruct);
+        const char* presetName = newWorldStructSeed_ > 0 && newWorldStructSeed_ <= nStruct ? ss[newWorldStructSeed_ - 1].name : seedPresetName(newWorldSeedPreset_);
+        if (ui_.dropdown(x, cy + 104, col, 18, trf("Předvolba: {0}", {tr(presetName)}))) worldPicker_ = 2;
     }
     if (newWorldBounded_) {
     } else if (newWorldOld_ && kClassicEdition) {
@@ -2416,7 +2419,7 @@ void Game::createWorldScreen() {
         onTextPrompt(PromptSeed, "Seed světa", newWorldSeed_);
     if (ui_.button(rx + col - 18, cy + 10, 18, 18, "?")) {
         std::random_device rd;
-        newWorldSeed_ = std::to_string((int32_t)rd());
+        newWorldSeed_ = std::to_string((int32_t)rd()), newWorldStructSeed_ = 0;
     }
     float oy = cy + 34;
     ui_.frame(rx, oy, col, 92, kPanelInner, kSeparator);
@@ -2518,7 +2521,15 @@ void Game::createWorldScreen() {
         config.flatPreset = newWorldFlatPreset_;
         config.oldWorld = newWorldOld_;
         if (newWorldBounded_) config.boundedChunks = kBoundSizes[newWorldBoundSize_];
-        if (!newWorldOld_ && !newWorldFlat_ && !newWorldBounded_ && newWorldSeedPreset_ > 0) {
+        int nStruct = 0;
+        const StructureSeed* ss = structureSeeds(nStruct);
+        if (!newWorldOld_ && !newWorldFlat_ && !newWorldBounded_ && newWorldStructSeed_ > 0 && newWorldStructSeed_ <= nStruct) {
+            // 2.5.0: a structure seed: its own seed and generation, the spawn just by the structure.
+            const StructureSeed& st = ss[newWorldStructSeed_ - 1];
+            wi.seed = seedFromText(st.seed);
+            config.generation = st.generation;
+            config.spawnX = st.x + 8, config.spawnZ = st.z + 8;
+        } else if (!newWorldOld_ && !newWorldFlat_ && !newWorldBounded_ && newWorldSeedPreset_ > 0) {
             // The seed stays the player's; the world just starts at the nearest place that fits.
             int sx, sz;
             if (findPresetSpot(newWorldSeedPreset_, config, wi.seed, sx, sz)) config.spawnX = sx, config.spawnZ = sz;
@@ -4838,8 +4849,13 @@ bool Game::worldPickerScreen(float x, float y, float w, float h) {
     const char* title = worldPicker_ == 0 ? "Typ světa" : worldPicker_ == 1 ? "Vzhled plochého světa" : "Předvolba seedu";
     if (worldPicker_ == 0) cards.assign(std::begin(kTypes), std::end(kTypes));
     else if (worldPicker_ == 1) for (int i = 0; i < kFlatPresets; ++i) cards.push_back({flatPresetName(i), kFlatPics[i]});
-    else for (int i = 0; i < kSeedPresets; ++i) cards.push_back({seedPresetName(i), kPresetPics[i]});
-    const int n = (int)cards.size(), cols = n <= 4 ? 2 : 4, rows = (n + cols - 1) / cols;
+    else {
+        for (int i = 0; i < kSeedPresets; ++i) cards.push_back({seedPresetName(i), kPresetPics[i]});
+        int nStruct = 0;  // 2.5.0: then a card for each structure seed
+        const StructureSeed* ss = structureSeeds(nStruct);
+        for (int i = 0; i < nStruct; ++i) cards.push_back({ss[i].name, ss[i].pic});
+    }
+    const int n = (int)cards.size(), cols = n <= 4 ? 2 : n <= 8 ? 4 : 6, rows = (n + cols - 1) / cols;
     const std::string sheetId = "#picker" + std::to_string(worldPicker_);
     if (encPicture_ != sheetId) {
         std::vector<uint8_t> sheet((size_t)kPicW * cols * kPicH * rows * 4, 40);
@@ -4874,7 +4890,7 @@ bool Game::worldPickerScreen(float x, float y, float w, float h) {
         const float cx = left + (c % cols) * (cw + gap), cy = gy + (c / cols) * (ch + gap), ph = ch - 14;
         const bool chosen = worldPicker_ == 0 ? (c == 3 ? newWorldBounded_ : c == 2 ? newWorldOld_ : c == 1 ? newWorldFlat_ && !newWorldOld_ && !newWorldBounded_
                                                                                                     : !newWorldFlat_ && !newWorldOld_ && !newWorldBounded_)
-                            : worldPicker_ == 1 ? c == newWorldFlatPreset_ : c == newWorldSeedPreset_;
+                            : worldPicker_ == 1 ? c == newWorldFlatPreset_ : c < kSeedPresets ? newWorldStructSeed_ == 0 && c == newWorldSeedPreset_ : c - kSeedPresets + 1 == newWorldStructSeed_;
         ui_.fill(cx - 1, cy - 1, cw + 2, ch + 2, chosen ? kGreenBorder : kBorder);
         ui_.image(TexMap, cx, cy, cw, ph, (float)(c % cols) / cols, (float)(c / cols) / rows, (float)(c % cols + 1) / cols, (float)(c / cols + 1) / rows);
         ui_.fill(cx, cy + ph, cw, 14, chosen ? kGreen : kPanelInner);
@@ -4889,7 +4905,12 @@ bool Game::worldPickerScreen(float x, float y, float w, float h) {
         if (ui_.tapped(cx, cy, cw, ch)) {
             if (worldPicker_ == 0) newWorldFlat_ = c == 1, newWorldOld_ = c == 2, newWorldBounded_ = c == 3;
             else if (worldPicker_ == 1) newWorldFlatPreset_ = c;
-            else newWorldSeedPreset_ = c;
+            else if (c < kSeedPresets) newWorldSeedPreset_ = c, newWorldStructSeed_ = 0;
+            else {
+                int nStruct = 0;
+                newWorldSeedPreset_ = 0, newWorldStructSeed_ = c - kSeedPresets + 1;
+                newWorldSeed_ = structureSeeds(nStruct)[c - kSeedPresets].seed;  // shown in the seed box
+            }
             worldPicker_ = -1;
             return true;
         }

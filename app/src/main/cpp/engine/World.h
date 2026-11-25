@@ -64,6 +64,19 @@ const char* seedPresetName(int preset);  // Czech, for tr()
 // outwards from the middle; false when there is none within a few thousand blocks.
 bool findPresetSpot(int preset, const GenConfig& config, uint32_t seed, int& outX, int& outZ);
 
+// 2.5.0 preview build 4: structure seeds: a fixed seed for each structure, with its own generation
+// pinned and the spawn right by the structure. tests/core_test.cpp checks every entry, so an update
+// that would move one of them fails the tests instead of quietly changing the world.
+struct StructureSeed {
+    const char* name;  // Czech, for tr()
+    const char* pic;   // a picture of EncyclopediaPictures.inc
+    const char* seed;  // the seed text, as typed into the menu
+    int generation;    // the generator generation it was found with (kept, whatever is newest later)
+    int type;          // WorldStructure, or 100 = Bronze Halls, 101 = lost city, 102 = subway station
+    int x, z;          // the structure's middle (for the subway: its entrance shaft)
+};
+const StructureSeed* structureSeeds(int& count);  // only the ones this edition has
+
 class World {
 public:
     World(uint32_t seed, Dimension dim, const GenConfig& config = GenConfig::defaults());

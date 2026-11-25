@@ -625,7 +625,9 @@ ItemId lineRail(bool row) { return row ? (ItemId)RAIL_EW : (ItemId)RAIL_NS; }
 
 int World::metroLineCoord(bool row, int line, bool& exists) const {
     const uint32_t h = hash3(row ? 0 : line, row ? 2505 : 2506, row ? line : 0, seed_ ^ 0x3E7Fu);
-    exists = h % (row ? 7u : 9u) == 0;  // rare: only now and then a line (the land is not a subway map)
+    // 2.5.0 preview: rare, only now and then a line (the land is not a subway map). The 2.4.0
+    // edition keeps its own denser network, so its worlds do not change.
+    exists = kFeatures250 ? h % (row ? 7u : 9u) == 0 : h % 3 != 0;
     return line * kMetroR + 120 + (int)((h >> 8) % 208u);
 }
 
@@ -2828,6 +2830,34 @@ const char* seedPresetName(int preset) {
     static const char* kNames[kSeedPresets] = {"Žádná", "Tajgový les", "Vesnice", "Led", "Pláně", "Strakatý les", "Velký strakatý les s tajgou",
                                                "Důl poblíž"};
     return kNames[std::clamp(preset, 0, kSeedPresets - 1)];
+}
+
+const StructureSeed* structureSeeds(int& count) {
+    // Never change an entry: players keep these seeds. Add new ones at the end instead.
+    static const StructureSeed kSeeds[] = {
+        {"Ruina", "ruin", "2787", 7, (int)WorldStructure::Ruin, 4, 4},
+        {"Vrak lodi", "shipwreck", "2411", 7, (int)WorldStructure::Shipwreck, 29, -28},
+        {"Kobka", "dungeon", "969", 7, (int)WorldStructure::Dungeon, 4, 6},
+        {"Důl", "cave_dungeon", "1914", 7, (int)WorldStructure::Mineshaft, 49, 49},
+        {"Pouštní chrám", "desert_temple", "3696", 7, (int)WorldStructure::DesertTemple, -36, 13},
+        {"Iglú", "igloo", "1771", 7, (int)WorldStructure::Igloo, -8, 37},
+        {"Strážní věž", "watchtower", "2359", 7, (int)WorldStructure::Watchtower, -5, 5},
+        {"Vesnice u spawnu", "village", "2694", 7, (int)WorldStructure::Village, 24, 24},
+        {"Potopené ruiny", "drowned_ruins", "1169", 7, (int)WorldStructure::DrownedRuins, 23, 18},
+        {"Rozbitý portál", "broken_portal", "42", 7, (int)WorldStructure::BrokenPortal, -8, 6},
+        {"Zničená vesnice", "ruined_village", "590", 7, (int)WorldStructure::RuinedVillage, -25, -24},
+        {"Jeskynní kobka", "cave_dungeon", "589", 7, (int)WorldStructure::CaveDungeon, 6, 5},
+        {"Tábor", "camp", "1011", 7, (int)WorldStructure::Camp, 6, 5},
+        {"Bronzové síně", "temple", "10", 7, 100, 91, -91},
+        {"Zničená stanice", "bridges", "917", 7, (int)WorldStructure::RuinedStation, 13, 8},
+        // The 2.5.0 preview ones (its sparser subway, and the wrecks): last, so 2.4.0 can leave them out.
+        {"Stanice metra", "concrete", "8072", 7, 102, 113, 108},
+        {"Ztracené město", "shattered", "3423", 7, 101, -47, -123},
+        {"Vrak vlaku", "cutters", "2810", 7, (int)WorldStructure::TrainWreck, 6, 2},
+    };
+    constexpr int kAll = (int)(sizeof(kSeeds) / sizeof(kSeeds[0]));
+    count = kClassicEdition ? 0 : kFeatures250 ? kAll : kAll - 3;
+    return kSeeds;
 }
 
 bool findPresetSpot(int preset, const GenConfig& config, uint32_t seed, int& outX, int& outZ) {
