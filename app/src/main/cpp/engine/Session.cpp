@@ -2350,7 +2350,13 @@ void Session::tickSpawners() {
                 while (sy > y - 3 && !isSolid(w.getBlock(sx, sy - 1, sz))) --sy;
                 if (w.getBlock(sx, sy, sz) != AIR || w.getBlock(sx, sy + 1, sz) != AIR || !isSolid(w.getBlock(sx, sy - 1, sz))) continue;
                 static const MobType kinds[3] = {MobType::Spider, MobType::ForgottenMan, MobType::TntZombie};
-                const MobType type = kinds[(uint32_t)(x * 31 + y * 17 + z * 7) % 3];  // each spawner has its own kind
+                MobType type = kinds[(uint32_t)(x * 31 + y * 17 + z * 7) % 3];  // each spawner has its own kind
+                if (w.config().devMap == 5) {
+                    // 2.5.0: the mob arena: the pen's own kind (6 pens a row, 14 and 16 blocks apart), one at a time.
+                    const int m = (floorDiv(x, 14)) + (floorDiv(z, 16)) * 6;
+                    if (m < 0 || m >= (int)MobType::Count || mobs_.countType(0, (MobType)m, at, 6) >= 1) continue;
+                    type = (MobType)m;
+                }
                 mobs_.spawn(type, 0, Vec3(sx + 0.5f, (float)sy, sz + 0.5f));
                 mobs_.mobs().back().cave = true;
                 particles_.spawnChips(w, x, y, z, 0, 1, 0, MOB_SPAWNER, 6);
@@ -2811,6 +2817,7 @@ void Session::useItem(const RayHit& hit) {
                 blockEditorKey = key;
             } else if (onMessage) {
                 std::string name = blockText(key);
+                if (name.empty()) name = world_->devSignText(hit.x, hit.y, hit.z);  // 2.5.0: a board of a developer map
                 if (name.empty()) name = world_->metroStationName(hit.x, hit.z);
                 onMessage(trf("Stanice: {0}", {name}));
             }
@@ -3696,6 +3703,14 @@ void Session::update(float dt, double time, float guiW, float guiH, const Settin
     bool jumped = false;
     // Only simulate the player once the ground below exists.
     // 2.1.0 preview: the trains move; a player standing in one rides along, a seated one sits still in it.
+    if (world_->config().devMap == 3 && dimIndex() == 0 && trains_.trains().empty() && isRail(world_->getBlock(20, 5, 2))) {
+        // 2.5.0: the metro lab starts with a subway of three cars on the loop, driving itself.
+        if (trains_.place(*world_, 0, CarKind::SubwayLocomotive, 20, 5, 2, 1)) {
+            trains_.place(*world_, 0, CarKind::SubwayCar, 20, 5, 2, 1);
+            trains_.place(*world_, 0, CarKind::SubwayCar, 20, 5, 2, 1);
+            if (kFeatures250) trains_.trains().back().autoMode = true;
+        }
+    }
     trains_.update(*world_, dimIndex(), dt, player_.pos, player_.yaw, trainSeatTrain_ >= 0);
     // Build 5: the drill car bores the tunnel: the next cell past the end of the track is cut
     // 3 wide and 4 high, a floor goes under it where there is none, and a straight rail goes on it.
@@ -4229,6 +4244,13 @@ PlayerPose Session::pose() const {
     pose.sneaking = player_.sneaking && !player_.flying && riding_ < 0;
     pose.riding = riding_ >= 0 || seated_ || trainSeatTrain_ >= 0;
     if (pose.riding) pose.feet.y -= 0.45f;  // sitting in the boat
+    if (kFeatures250 && !pose.riding) {
+        // 2.5.0 preview build 5: crouching, swimming and waving show on the model.
+        pose.crouch = pose.sneaking ? 1.0f : 0.0f;
+        pose.swim = player_.inWater && !player_.flying && (!player_.onGround || player_.headInWater) ? 1.0f : 0.0f;
+        if (pose.swim > 0) pose.crouch = 0, pose.feet.y += 0.5f;
+        if (clock_ < waveUntil_) pose.wave = clock_ - (waveUntil_ - 2.4f);
+    }
     if (kFeatures220) {
         // 2.2.0 preview: the arms breathe, the body dips as the legs stride apart, a bow is drawn.
         pose.lively = true;
@@ -4520,10 +4542,13 @@ void Session::drawOldHud(Ui& ui) const {
 
 Session::TrainButtons Session::trainButtons() const {
     TrainButtons b;
-    if (dead_ || trains_.trains().empty()) return b;  // trains exist only in worlds with the rails experiment
+    if (dead_) return b;
     b.w = 66, b.h = 20, b.gap = 4;
     b.x = guiW_ - b.w - 8;
     b.y = std::max(guiH_ * 0.30f, 84.0f);  // below the minimap
+    // 2.5.0: in a developer map, a button to wave hello (for filming).
+    if (kFeatures250 && world_->config().devMap > 0 && trainSeatTrain_ < 0) b.labels[b.count++] = "Ahoj";
+    if (trains_.trains().empty()) return b;  // trains exist only in worlds with the rails experiment
     if (trainSeatTrain_ >= 0) {
         const bool driver = trainSeat_ == 0 &&
                             isEngineCar(trains_.trains()[(size_t)trainSeatTrain_].cars[(size_t)trainSeatCar_].kind);
@@ -4548,6 +4573,11 @@ bool Session::trainButtonTap(float x, float y) {
         const float by = b.y + i * (b.h + b.gap);
         if (x < b.x || x >= b.x + b.w || y < by || y >= by + b.h) continue;
         const std::string what = b.labels[i];
+        if (what == "Ahoj") {
+            waveHello();
+            sound(Sound::Click);
+            return true;
+        }
         if (what == "Nastoupit") {
             // The driver's seat if the nearest car is a locomotive, else a free passenger seat.
             int tr, car;

@@ -23,6 +23,7 @@ const CommandInfo kCommands[] = {
     {"/tp <x> <y> <z> | <hráč>", "Teleport (~ = od tvé pozice)", true},
     {"/give <věc> [počet]", "Dá ti věc (např. ruby, iron_ingot)", true},
     {"/time [day|noon|evening|night|midnight|tiky]", "Denní doba", true},
+    {"/wave", "Zamávat (Ahoj!)", false},
     {"/weather <clear|rain>", "Počasí", true},
     {"/summon <pig|sheep|slime|forgotten|crimson|husking|...>", "Přivolá bytost", true},
     {"/locate <village|forgotten|mineshaft|fortress|arena|frame|temple>", "Najde nejbližší strukturu", false},
@@ -157,6 +158,10 @@ std::vector<std::string> runCommand(Session& s, const std::string& line, bool ch
             left -= n;
         }
         return {trf("Dostal(a) jsi {0}x {1}", {std::to_string(count), tr(itemName(id))})};
+    }
+    if (cmd == "wave" || cmd == "hello" || cmd == "ahoj") {  // 2.5.0: the player waves hello (seen in third person)
+        s.waveHello();
+        return {tr("Ahoj!")};
     }
     if (cmd == "time") {
         if (args.size() < 2) {

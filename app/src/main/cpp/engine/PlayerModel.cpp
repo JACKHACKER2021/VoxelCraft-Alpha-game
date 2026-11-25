@@ -13,6 +13,21 @@ namespace {
 
 constexpr float kPixel = 1.8f / 32.0f;  // a 32 px tall model is 1.8 blocks tall
 
+// 2.5.0: crouching and swimming bend the body round the hips (model y 12). Parts above the hips
+// (pivot higher than the hips) lean forward when crouching; swimming tips the whole model flat.
+Vec3 bodyBend(const PlayerPose& pose, Vec3 p, const Vec3& pivot) {
+    const Vec3 hip{0, 12, 0};
+    auto pitch = [&](float a) {  // positive tips the top towards -Z (forward)
+        const float ca = std::cos(a), sa = std::sin(a), ry = p.y - hip.y, rz = p.z - hip.z;
+        p.y = hip.y + ry * ca + rz * sa;
+        p.z = hip.z - ry * sa + rz * ca;
+    };
+    if (pose.crouch > 0 && pivot.y > 12.5f) pitch(0.5f * pose.crouch);
+    if (pose.swim > 0) pitch(1.4f * pose.swim);
+    p.y -= 3.0f * pose.crouch + 9.0f * pose.swim;  // sink: knees bent, or lying in the water
+    return p;
+}
+
 struct Corner {
     float x, y, z, u, v;
 };
@@ -41,6 +56,7 @@ public:
             float ry = p.y - pivot.y, rz = p.z - pivot.z;
             p.y = pivot.y + ry * ca - rz * sa;
             p.z = pivot.z + ry * sa + rz * ca;
+            p = bodyBend(pose_, p, pivot);
             // Model faces -Z; turn it to the player's yaw, then scale to blocks.
             float wx = (p.x * cy_ - p.z * sy_) * kPixel, wz = (p.x * sy_ + p.z * cy_) * kPixel;
             return Vec3(pose_.feet.x + wx, pose_.feet.y + p.y * kPixel, pose_.feet.z + wz);
@@ -83,6 +99,9 @@ namespace {
 float rightArmAngle(const PlayerPose& pose) {
     // 2.2.0 preview: drawing a bow, the right hand comes up to the face (pulling the string).
     if (pose.bow > 0) return 1.35f + 0.2f * (1 - pose.bow) - pose.headPitch * 0.8f;
+    // 2.5.0: waving hello: the arm straight up; swimming: a slow breaststroke ahead.
+    if (pose.wave >= 0) return 2.9f;
+    if (pose.swim > 0.5f) return 2.6f + 0.5f * std::sin(pose.time * 3.0f);
     // Positive angles swing the arm forward (towards -Z, where the model looks).
     float a = -pose.swing;
     if (pose.attack < 1) a += std::sin(std::sqrt(pose.attack) * 3.14159265f) * 1.5f;
@@ -96,12 +115,14 @@ float rightArmAngle(const PlayerPose& pose) {
 float leftArmAngle(const PlayerPose& pose) {
     if (pose.bow > 0) return 1.55f - pose.headPitch * 0.8f;  // 2.2.0: the arm holding the bow points ahead
     if (pose.offhand == SHIELD && pose.sneaking) return 1.1f;
+    if (pose.swim > 0.5f) return 2.6f + 0.5f * std::sin(pose.time * 3.0f + 3.14159f);
     return pose.swing + (pose.offhand ? 0.25f : 0.0f);
 }
 
 // 2.2.0 preview: the arms' roll away from the body (positive moves the right hand outwards):
 // a little apart and breathing at rest, together in front of the chest drawing a bow.
 float rightArmRoll(const PlayerPose& pose) {
+    if (pose.wave >= 0) return 0.25f + 0.45f * std::sin(pose.wave * 9.0f);  // the hand waves side to side
     if (!pose.lively) return 0;
     if (pose.bow > 0) return -0.35f - 0.25f * pose.bow;
     return 0.06f + 0.035f * std::sin(pose.time * 1.7f);
@@ -123,6 +144,7 @@ Vec3 modelToWorld(const PlayerPose& pose, Vec3 p, Vec3 pivot, float angle, float
     float ry = p.y - pivot.y, rz = p.z - pivot.z;
     p.y = pivot.y + ry * ca - rz * sa;
     p.z = pivot.z + ry * sa + rz * ca;
+    p = bodyBend(pose, p, pivot);
     const float cy = std::cos(pose.yaw), sy = std::sin(pose.yaw);
     float wx = (p.x * cy - p.z * sy) * kPixel, wz = (p.x * sy + p.z * cy) * kPixel;
     return Vec3(pose.feet.x + wx, pose.feet.y + p.y * kPixel, pose.feet.z + wz);
@@ -146,7 +168,8 @@ std::vector<Vertex> buildPlayerModel(const PlayerPose& pose) {
         b.box(layer ? kRightSleeve : kRightArm, 4, 12, -2, 4 + arm, 24, 2, rS, rightArmAngle(pose), lg, rightArmRoll(pose));
         b.box(layer ? kLeftSleeve : kLeftArm, -4 - arm, 12, -2, -4, 24, 2, lS, leftArmAngle(pose), lg, leftArmRoll(pose));
         // In a boat the legs point forward.
-        const float rl = pose.riding ? 1.4f : s, ll = pose.riding ? 1.4f : -s;
+        float rl = pose.riding ? 1.4f : s, ll = pose.riding ? 1.4f : -s;
+        if (pose.swim > 0.5f) rl = 0.35f * std::sin(pose.time * 8.0f), ll = -rl;  // 2.5.0: kicking
         b.box(layer ? kRightPants : kRightLeg, 0, 0, -2, 4, 12, 2, rH, rl, lg);
         b.box(layer ? kLeftPants : kLeftLeg, -4, 0, -2, 0, 12, 2, lH, ll, lg);
     }
@@ -181,7 +204,8 @@ std::vector<Vertex> buildPlayerExtras(const PlayerPose& pose) {
     };
     const float arm = pose.slim ? 3 : 4, s = pose.swing, ra = rightArmAngle(pose);
     const Vec3 neck{0, 24, 0}, rS{6, 22, 0}, lS{-6, 22, 0}, rH{2, 12, 0}, lH{-2, 12, 0};
-    const float rl = pose.riding ? 1.4f : s, ll = pose.riding ? 1.4f : -s;
+    float rl = pose.riding ? 1.4f : s, ll = pose.riding ? 1.4f : -s;
+    if (pose.swim > 0.5f) rl = 0.35f * std::sin(pose.time * 8.0f), ll = -rl;
     // Armour: the material's block texture, a little outside the skin.
     static const int kMaterialTile[8] = {T_PLANKS, T_COBBLE, T_BRONZE_BLOCK, T_STEEL_BLOCK, T_RUBY_BLOCK, T_HARDIUM_PLATE, T_CELESTIUM_PLATE, T_WINGS_PLATE};
     for (int piece = 0; piece < 4; ++piece) {

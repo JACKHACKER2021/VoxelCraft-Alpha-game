@@ -49,6 +49,7 @@ add_library(voxelcraft SHARED
     main.cpp
     engine/Noise.cpp
     engine/World.cpp
+    engine/DevMaps.cpp
     engine/Mesher.cpp
     engine/Player.cpp
     engine/Portal.cpp

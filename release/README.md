@@ -17,7 +17,7 @@ signature, so it installs **next to** an older one (move worlds with *Export* / 
 
 | Verze | APK | Co přinesla |
 |---|---|---|
-| **2.5.0 Preview** | [VoxelCraft-2.5.0-preview-build4.apk](VoxelCraft-2.5.0-preview-build4.apk) | Preview: the subway network (four kinds of station, tunnels, cave-ins, floods), the automatic subway, the subway map, the lost underground city, the dead explorer's journals. Installs as its own app (VoxelCraft Preview). |
+| **2.5.0 Preview** | [VoxelCraft-2.5.0-preview-build5.apk](VoxelCraft-2.5.0-preview-build5.apk) | Preview: the subway network (four kinds of station, tunnels, cave-ins, floods), the automatic subway, the subway map, the lost underground city, the dead explorer's journals. Installs as its own app (VoxelCraft Preview). |
 | **2.4.0** | [VoxelCraft-2.4.0.apk](VoxelCraft-2.4.0.apk) | Subway with sliding doors and night lights, spinning wheels, stations (concrete track bed, platforms), lattice bridges, crossings, ruined stations, Bronze Halls, slab stairs in towers, villages that follow the land. |
 | Classic 0.0.3 | [VoxelCraft-Classic-0.0.3.apk](VoxelCraft-Classic-0.0.3.apk) | The old game as its own small app: the first textures, creative and survival, small inventory. |
 | 2.1.0 | [VoxelCraft-2.1.0.apk](VoxelCraft-2.1.0.apk) | Trains & Bronze: trains, 3D rails, level crossing, drill car, Bronze Update. |

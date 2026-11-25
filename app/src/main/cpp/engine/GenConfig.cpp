@@ -965,6 +965,7 @@ GenConfig GenConfig::fromJson(const Json& doc, std::vector<std::string>* w) {
     }
     c.flat = doc["flat"].boolean(false);
     c.flatPreset = std::clamp((int)doc["flat_preset"].num(0), 0, kFlatPresets - 1);
+    c.devMap = std::clamp((int)doc["dev_map"].num(0), 0, 6);
     c.boundedChunks = std::clamp((int)doc["bounded_chunks"].num(0), 0, 64);
     c.spawnX = (int)doc["spawn_x"].num(8);
     c.spawnZ = (int)doc["spawn_z"].num(8);
@@ -1055,6 +1056,7 @@ Json GenConfig::toJson() const {
     Json doc = Json::object();
     doc.set("flat", Json::fromBool(flat));
     doc.set("flat_preset", Json::number(flatPreset));
+    if (devMap > 0) doc.set("dev_map", Json::number(devMap));
     doc.set("bounded_chunks", Json::number(boundedChunks));
     doc.set("spawn_x", Json::number(spawnX));
     doc.set("spawn_z", Json::number(spawnZ));

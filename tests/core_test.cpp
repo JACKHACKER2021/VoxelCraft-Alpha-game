@@ -2491,7 +2491,7 @@ static int testCommands() {
     for (int i = 0; i < 30; ++i) s->update(1 / 60.0f, t += 1 / 60.0, 600, 270, settings);
     auto run = [&](const char* line, bool cheats) { return runCommand(*s, line, cheats); };
     // Without cheats only the harmless ones work.
-    CHECK(run("/help", false).size() == 7);
+    CHECK(run("/help", false).size() == 8);  // 2.5.0: + /wave
     CHECK(run("/seed", false)[0] == "Seed: 9");
     CHECK(run("/gamemode creative", false)[0].find("not allowed") != std::string::npos);
     CHECK(s->survival());
@@ -4334,6 +4334,29 @@ static int testStations240() {
     return 0;
 }
 
+// 2.5.0 preview build 5: the developer maps generate their pieces, and their boards have names.
+static int testDevMaps250() {
+    for (int m = 1; m <= kDevMaps; ++m) {
+        GenConfig g = GenConfig::defaults();
+        g.flat = true, g.devMap = m;
+        World w(1, Dimension::Overworld, g);
+        int sx, sz;
+        const int gy = devMapSpawn(m, sx, sz);
+        if (gy != 4 || std::string(devMapName(m)).empty()) return 1;
+        w.ensureChunksAround(0, 0, 3, 100000);
+        int placed = 0;
+        for (int x = -40; x < 56; ++x)
+            for (int z = -40; z < 56; ++z)
+                if (w.getBlock(x, 4, z) != AIR) ++placed;
+        if (m == 4) placed = w.biomeAt(10, 10) != w.biomeAt(60, 10) ? 50 : 0;  // the checkerboard: squares of other biomes
+        if (placed < 50) { std::printf("FAIL dev map %d: %d blocks\n", m, placed); return 1; }
+    }
+    // The HQ's logo and the tower's chest stay where they are.
+    if (devHeadquarters().sy != 19 || devHoppyTower().at(5, 40, 5) != LOOT_CHEST_METRO) return 1;
+    std::printf("dev maps: %d\n", kDevMaps);
+    return 0;
+}
+
 // 2.5.0: every structure seed of the menu still has its structure exactly where it was found.
 // If this fails, an update changed the generator for old worlds: fix the generator, never the table.
 static int testStructureSeeds250() {
@@ -4374,7 +4397,7 @@ static int testStructureSeeds250() {
 int main() {
     if (testOverworld() || testNether() || testPortal() || testTexturePacks() || testFontAndItems() || testSaves() ||
         testSurvivalSession() || testMenuFlow() || testCrafting() || testWorkbenchInSession() ||
-        testJsonAndPacks() || testSkinsStoreAudio() || testThirdPersonCamera() || testWaterEscape() || testLeavesMesh() || testPlants() || testDigParticles() || testDPad() || testStructures() || testInventoryAndHand() || testMetalsAndArmor() || testDeveloperAccess() || testEnglishEverywhere() || testMusic() || testDoorsChests() || testNewBiomes() || testWorldStructures() || testBoat() || testAchievements() || testLanGame() || testCommands() || testUpdate11() || testUpdate12() || testUpdate13() || testUpdate14() || testUpdate15() || testExperiments151() || testShaders155() || testPhysics157() || testWorld157() || testWorld159() || testCaves160() || testStorage157() || testSeasons190() || testStations240() || testStructureSeeds250())
+        testJsonAndPacks() || testSkinsStoreAudio() || testThirdPersonCamera() || testWaterEscape() || testLeavesMesh() || testPlants() || testDigParticles() || testDPad() || testStructures() || testInventoryAndHand() || testMetalsAndArmor() || testDeveloperAccess() || testEnglishEverywhere() || testMusic() || testDoorsChests() || testNewBiomes() || testWorldStructures() || testBoat() || testAchievements() || testLanGame() || testCommands() || testUpdate11() || testUpdate12() || testUpdate13() || testUpdate14() || testUpdate15() || testExperiments151() || testShaders155() || testPhysics157() || testWorld157() || testWorld159() || testCaves160() || testStorage157() || testSeasons190() || testStations240() || testStructureSeeds250() || testDevMaps250())
         return 1;
     std::printf("all tests passed\n");
     return 0;

@@ -305,6 +305,10 @@ private:
     DropSystem drops_;
     std::vector<Vertex> dropVerts_;
     float clock_ = 0;  // seconds since the world was opened (animations)
+    float waveUntil_ = -1;  // 2.5.0: the player waves hello until then
+public:
+    void waveHello() { waveUntil_ = clock_ + 2.4f; }  // 2.5.0: "Ahoj!" (the button of developer maps, /wave)
+private:
     HandAnimator hand_;
     std::vector<Vertex> handSkin_, handAtlas_;
     bool miningNow_ = false;  // really digging this frame (drives the hand's strokes)

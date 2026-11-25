@@ -7037,3 +7037,68 @@ SHOT(z03_wrecks) {
     d.shot("z03_map");
     d.seconds(0.3f);
 }
+
+// 2.5.0 preview build 5: the developer maps, one view each (and the developer structures).
+SHOT(z04_devmaps) {
+    struct View { int map; const char* name; float px, py, pz, lx, ly, lz; };
+    static const View kViews[] = {
+        {1, "z04_structs", -14, 22, -6, 60, 4, 30},
+        {1, "z04_hq", 16, 14, -125, 16, 8, -100},
+        {1, "z04_tower_archive", 60, 30, -130, 80, 10, -100},
+        {1, "z04_track_glitch", 170, 26, -130, 210, 6, -100},
+        {2, "z04_gallery", -8, 14, -8, 30, 4, 30},
+        {3, "z04_metrolab", 35, 30, -20, 35, 4, 15},
+        {4, "z04_biomes", 96, 40, 48, 140, 4, 100},
+        {5, "z04_arena", 38, 24, -14, 38, 4, 20},
+        {6, "z04_studio", 0, 10, 28, 0, 8, -10},
+    };
+    for (const View& v : kViews) {
+        Director d(out, "z04");
+        d.openWorld("Dev", 1, GameMode::Creative, [&](GenConfig& g) { g.flat = true; g.flatPreset = 0; g.devMap = v.map; });
+        Player& p = d.s().player();
+        p.flying = true;
+        d.settings().hideGui = true;
+        d.s().currentWorld().ensureChunksAround(floorDiv((int)v.lx, 16), floorDiv((int)v.lz, 16), 6, 100000);
+        p.pos = Vec3(v.px, v.py, v.pz);
+        d.idle(60);
+        d.lookNow(Vec3(v.lx, v.ly, v.lz));
+        d.shot(v.name);
+        d.seconds(0.2f, [&](float) { d.lookNow(Vec3(v.lx, v.ly, v.lz)); });
+    }
+}
+
+// 2.5.0 preview build 5: the new animations in the trailer studio: waving hello, crouching, swimming.
+SHOT(z05_anim) {
+    Director d(out, "z05");
+    d.openWorld("Studio", 1, GameMode::Creative, [](GenConfig& g) { g.flat = true; g.devMap = 6; });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    p.flying = false;
+    p.pos = Vec3(0.5f, 5.0f, 18.5f);
+    p.yaw = 0, p.pitch = 0;
+    d.settings().hideGui = true;
+    d.settings().cameraMode = 2;  // from the front
+    d.idle(30);
+    s.waveHello();
+    d.seconds(0.5f);
+    d.shot("z05_wave");
+    d.seconds(1.9f);
+    p.sneaking = true;
+    p.yaw = 0.9f;  // turned a little, so the lean shows
+    d.seconds(0.6f);
+    d.shot("z05_crouch");
+    d.seconds(0.6f);
+    p.sneaking = false;
+    // A pool dug into the floor for swimming.
+    for (int x = -20; x <= 20; ++x)
+        for (int z = 2; z <= 38; ++z)
+            for (int y = 1; y <= 4; ++y) w.setBlock(x, y, z, WATER);  // the studio floor is y 4
+    p.pos = Vec3(0.5f, 3.2f, 18.5f);
+    d.settings().cameraMode = 1;  // from behind
+    p.yaw = 1.57f;
+    p.pitch = 0.3f;
+    d.seconds(1.2f, [&](float) { p.pitch = 0.3f; p.pos.y = 3.2f; p.vel = {}; });
+    d.shot("z05_swim");
+    d.seconds(1.2f);
+}

@@ -40,7 +40,7 @@ namespace vc {
 namespace vc {
 
 namespace {
-const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.5.0 Preview build 4" : "VoxelCraft 2.4.0";
+const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.5.0 Preview build 5" : "VoxelCraft 2.4.0";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -2336,7 +2336,7 @@ void Game::worldListScreen() {
             newWorldSeed_.clear();
             newWorldMode_ = GameMode::Survival;
             newWorldFlatPreset_ = 0;
-            newWorldBounded_ = false, newWorldBoundSize_ = 0, newWorldSeedPreset_ = 0, newWorldStructSeed_ = 0, worldPicker_ = -1;
+            newWorldBounded_ = false, newWorldBoundSize_ = 0, newWorldSeedPreset_ = 0, newWorldStructSeed_ = 0, newWorldDevMap_ = 0, worldPicker_ = -1;
             newWorldPacks_ = packs_.enabledOrder(), newWorldPacksOpen_ = false;
             newWorldOld_ = newWorldFlat_ = newWorldCoords_ = newWorldKeepInventory_ = newWorldCommands_ = newWorldExpLiquids_ = newWorldExpMaps_ = newWorldExpOpen_ = false;
             newWorldExpStorms_ = newWorldExpStars_ = newWorldExpBreeding_ = newWorldExpRails_ = false;
@@ -2409,7 +2409,9 @@ void Game::createWorldScreen() {
         ui_.text(x, cy + 101, "Terén verzí 0.1-0.3, jen kreativní, bez hudby", Color{0.9f, 0.8f, 0.4f, 1}, 1, false, col);
     } else if (newWorldFlat_) {
         // 1.9.0: the flat world's look, tapped through in turn.
-        if (ui_.dropdown(x, cy + 104, col, 18, trf("Vzhled: {0}", {tr(flatPresetName(newWorldFlatPreset_))}))) worldPicker_ = 1;
+        if (!profile_.isDeveloper()) newWorldDevMap_ = 0;
+        const char* look = newWorldDevMap_ > 0 ? devMapName(newWorldDevMap_) : flatPresetName(newWorldFlatPreset_);
+        if (ui_.dropdown(x, cy + 104, col, 18, trf("Vzhled: {0}", {tr(look)}))) worldPicker_ = 1;
     }
 
     // Right column: seed and options
@@ -2519,6 +2521,15 @@ void Game::createWorldScreen() {
         GenConfig config = packs_.buildConfig();
         config.flat = newWorldFlat_;
         config.flatPreset = newWorldFlatPreset_;
+        if (newWorldFlat_ && !newWorldOld_ && !newWorldBounded_ && newWorldDevMap_ > 0 && profile_.isDeveloper()) {
+            // 2.5.0: a developer test map: flat classic ground, the map's pieces, its own spawn.
+            config.flatPreset = 0;
+            config.devMap = newWorldDevMap_;
+            int sx, sz;
+            devMapSpawn(newWorldDevMap_, sx, sz);
+            config.spawnX = sx, config.spawnZ = sz;
+            if (newWorldName_.empty()) wi.name = tr(devMapName(newWorldDevMap_));
+        }
         config.oldWorld = newWorldOld_;
         if (newWorldBounded_) config.boundedChunks = kBoundSizes[newWorldBoundSize_];
         int nStruct = 0;
@@ -4848,7 +4859,13 @@ bool Game::worldPickerScreen(float x, float y, float w, float h) {
     std::vector<Card> cards;
     const char* title = worldPicker_ == 0 ? "Typ světa" : worldPicker_ == 1 ? "Vzhled plochého světa" : "Předvolba seedu";
     if (worldPicker_ == 0) cards.assign(std::begin(kTypes), std::end(kTypes));
-    else if (worldPicker_ == 1) for (int i = 0; i < kFlatPresets; ++i) cards.push_back({flatPresetName(i), kFlatPics[i]});
+    else if (worldPicker_ == 1) {
+        for (int i = 0; i < kFlatPresets; ++i) cards.push_back({flatPresetName(i), kFlatPics[i]});
+        // 2.5.0: the developer's test maps, for the developer only.
+        static const char* const kDevPics[kDevMaps] = {"village", "concrete", "bridges", "dappled", "arena", "flat_classic"};
+        if (profile_.isDeveloper())
+            for (int i = 1; i <= kDevMaps; ++i) cards.push_back({devMapName(i), kDevPics[i - 1]});
+    }
     else {
         for (int i = 0; i < kSeedPresets; ++i) cards.push_back({seedPresetName(i), kPresetPics[i]});
         int nStruct = 0;  // 2.5.0: then a card for each structure seed
@@ -4890,7 +4907,7 @@ bool Game::worldPickerScreen(float x, float y, float w, float h) {
         const float cx = left + (c % cols) * (cw + gap), cy = gy + (c / cols) * (ch + gap), ph = ch - 14;
         const bool chosen = worldPicker_ == 0 ? (c == 3 ? newWorldBounded_ : c == 2 ? newWorldOld_ : c == 1 ? newWorldFlat_ && !newWorldOld_ && !newWorldBounded_
                                                                                                     : !newWorldFlat_ && !newWorldOld_ && !newWorldBounded_)
-                            : worldPicker_ == 1 ? c == newWorldFlatPreset_ : c < kSeedPresets ? newWorldStructSeed_ == 0 && c == newWorldSeedPreset_ : c - kSeedPresets + 1 == newWorldStructSeed_;
+                            : worldPicker_ == 1 ? (c < kFlatPresets ? newWorldDevMap_ == 0 && c == newWorldFlatPreset_ : c - kFlatPresets + 1 == newWorldDevMap_) : c < kSeedPresets ? newWorldStructSeed_ == 0 && c == newWorldSeedPreset_ : c - kSeedPresets + 1 == newWorldStructSeed_;
         ui_.fill(cx - 1, cy - 1, cw + 2, ch + 2, chosen ? kGreenBorder : kBorder);
         ui_.image(TexMap, cx, cy, cw, ph, (float)(c % cols) / cols, (float)(c / cols) / rows, (float)(c % cols + 1) / cols, (float)(c / cols + 1) / rows);
         ui_.fill(cx, cy + ph, cw, 14, chosen ? kGreen : kPanelInner);
@@ -4904,7 +4921,10 @@ bool Game::worldPickerScreen(float x, float y, float w, float h) {
         ui_.textCentered(cx + cw / 2, cy + ph + 3, label, kTextBright, 1);
         if (ui_.tapped(cx, cy, cw, ch)) {
             if (worldPicker_ == 0) newWorldFlat_ = c == 1, newWorldOld_ = c == 2, newWorldBounded_ = c == 3;
-            else if (worldPicker_ == 1) newWorldFlatPreset_ = c;
+            else if (worldPicker_ == 1) {
+                if (c < kFlatPresets) newWorldFlatPreset_ = c, newWorldDevMap_ = 0;
+                else newWorldFlatPreset_ = 0, newWorldDevMap_ = c - kFlatPresets + 1;
+            }
             else if (c < kSeedPresets) newWorldSeedPreset_ = c, newWorldStructSeed_ = 0;
             else {
                 int nStruct = 0;

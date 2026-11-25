@@ -77,6 +77,17 @@ struct StructureSeed {
 };
 const StructureSeed* structureSeeds(int& count);  // only the ones this edition has
 
+// 2.5.0 preview build 5: developer-only test maps (flat worlds laid out from fixed coordinates).
+constexpr int kDevMaps = 6;
+const char* devMapName(int map);              // Czech, for tr(); 0 = none
+int devMapSpawn(int map, int& x, int& z);     // the spawn of the map; returns the ground's height
+// The developer structures (they stand in the test world of structures and the metro lab).
+Structure devHeadquarters();
+Structure devHoppyTower();
+Structure devVersionArchive();
+Structure devTestTrack();
+Structure devGlitch();
+
 class World {
 public:
     World(uint32_t seed, Dimension dim, const GenConfig& config = GenConfig::defaults());
@@ -254,6 +265,10 @@ public:
     bool structurePlacement(int ki, int rx, int rz, int& ox, int& oy, int& oz, const Structure*& sp);
     static bool structureOnSurface(int type);
     std::vector<FoundStructure> structuresNear(int x, int z, int radius);
+    // 2.5.0: developer maps: the pieces of the map in a chunk, the text of a board of the map.
+    void stampDevMap(Chunk& c);
+    std::string devSignText(int x, int y, int z) const;
+    const BiomeDef* devBiomeAt(int x, int z) const;
     static constexpr int kCitySize = 90, kCityFloor = 8, kCityHeight = 24;
 private:
     GenConfig config_;

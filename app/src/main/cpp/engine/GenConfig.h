@@ -85,6 +85,7 @@ struct GenConfig {
     bool flat = false;  // superflat world type
     // 1.9.0: how the flat world looks: 0 classic grass, 1 desert, 2 snow, 3 stone, 4 nether, 5 void.
     int flatPreset = 0;
+    int devMap = 0;  // 2.5.0: a developer test map (1..6, see DevMaps.cpp), 0 for none
     // 1.9.5 build 2: a classic bounded world: this many chunks across (0 = endless), an oak forest
     // with water, sand and gravel, walled in by bedrock all round.
     int boundedChunks = 0;

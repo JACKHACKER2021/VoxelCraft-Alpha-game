@@ -25,6 +25,10 @@ struct PlayerPose {
     bool lively = false;     // arms sway apart a little and breathe, the body bobs while walking
     float time = 0;          // seconds, for the idle breathing
     float bow = 0;           // 0..1 drawing the bow: both arms up, the right one pulling the string
+    // 2.5.0 preview build 5: the body follows what the player does.
+    float crouch = 0;        // 0..1 crouched: the upper body leans forward, the model sinks a little
+    float swim = 0;          // 0..1 swimming: the body lies flat in the water, the legs kick, the arms stroke
+    float wave = -1;         // >= 0: seconds into a wave ("Hello!"): the right arm up, waving side to side
 };
 
 // Builds the textured boxes of a player model (base layer plus the slightly

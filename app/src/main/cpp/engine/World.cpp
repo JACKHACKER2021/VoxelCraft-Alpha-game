@@ -124,6 +124,7 @@ World::Column World::column(int x, int z) const {
 int World::surfaceHeight(int x, int z) const { return column(x, z).height + yShift(); }
 
 const BiomeDef* World::biomeAt(int x, int z) const {
+    if (config_.devMap == 4 && dim_ == Dimension::Overworld && !config_.biomes.empty()) return devBiomeAt(x, z);  // 2.5.0: the checkerboard
     return dim_ == Dimension::Overworld && !config_.biomes.empty() ? column(x, z).biome : nullptr;
 }
 
@@ -434,7 +435,10 @@ void World::generateOverworld(Chunk& c) {
             cols[x][z] = col;
         }
     }
-    if (config_.flat) return;
+    if (config_.flat) {
+        if (config_.devMap > 0) stampDevMap(c);  // 2.5.0: a developer test map
+        return;
+    }
     // Vegetation in a second pass: a tree reaches two blocks into its neighbours' columns,
     // and filling those columns afterwards used to wipe half of every crown away.
     for (int x = 0; x < kChunkSize; ++x) {
