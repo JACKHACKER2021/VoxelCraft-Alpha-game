@@ -2433,6 +2433,45 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
                     std::copy_n(speck ? o : px4(T_NETHERRACK, x, y), 4, px4(dst, x, y));
                 }
         }
+        // Crimsonium and celestium ores: cut crystals set in the rock (like their items), each with a dark
+        // rim, a light facet, a shadowed facet and the rock darkened around it.
+        auto gems = [&](int dst, int rock, Rgb rim, Rgb base, Rgb hi, Rgb shadow) {
+            static const char* const kBig[5] = {"..o..", ".oHo.", "oHBSo", ".oSo.", "..o.."};
+            static const char* const kSmall[4] = {".oo.", "oHBo", "oBSo", ".oo."};
+            struct Gem { int x, y; bool big; };
+            static const Gem kGems[] = {{1, 1, true}, {9, 3, true}, {3, 9, false}, {10, 10, true}, {7, 7, false}};
+            char mask[16][16] = {};
+            for (const Gem& g : kGems) {
+                const int n = g.big ? 5 : 4;
+                for (int y = 0; y < n; ++y)
+                    for (int x = 0; x < n; ++x) {
+                        const char c = g.big ? kBig[y][x] : kSmall[y][x];
+                        if (c != '.' && g.x + x < 16 && g.y + y < 16) mask[g.y + y][g.x + x] = c;
+                    }
+            }
+            for (int y = 0; y < 16; ++y)
+                for (int x = 0; x < 16; ++x) {
+                    const uint8_t* r = px4(rock, x, y);
+                    Rgb c{r[0], r[1], r[2]};
+                    switch (mask[y][x]) {
+                        case 'o': c = rim; break;
+                        case 'H': c = hi; break;
+                        case 'B': c = base.plus((int)(hash3(x, y, dst, 5) % 12) - 6); break;
+                        case 'S': c = shadow; break;
+                        default: {
+                            bool near = false;  // the rock round a crystal is a little darker
+                            for (int dy = -1; dy <= 1; ++dy)
+                                for (int dx = -1; dx <= 1; ++dx)
+                                    if (x + dx >= 0 && x + dx < 16 && y + dy >= 0 && y + dy < 16 && mask[y + dy][x + dx]) near = true;
+                            if (near) c = c.scaled(0.82f);
+                        }
+                    }
+                    uint8_t* d = px4(dst, x, y);
+                    d[0] = (uint8_t)std::clamp(c.r, 0, 255), d[1] = (uint8_t)std::clamp(c.g, 0, 255), d[2] = (uint8_t)std::clamp(c.b, 0, 255), d[3] = 255;
+                }
+        };
+        gems(T_CRIMSONIUM_ORE, T_VOID_STONE, {70, 8, 22}, {214, 38, 58}, {255, 160, 172}, {140, 18, 38});
+        gems(T_CELESTIUM_ORE, T_PALE_STONE, {120, 88, 18}, {238, 196, 72}, {255, 246, 196}, {186, 140, 36});
         // The moss: the side's mossy pixels (its top rows), here and there a red stone of the rock.
         for (int y = 0; y < 16; ++y)
             for (int x = 0; x < 16; ++x) {
