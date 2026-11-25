@@ -129,6 +129,12 @@ bool saveLevel(const WorldInfo& info, const PlayerState& p) {
         if (p.hasShowcase) o << "\nshowcase=" << p.showcaseX << ":" << p.showcaseY << ":" << p.showcaseZ;
         if (p.documentsRead) o << "\npages=" << p.documentsRead;
         if (p.journalsRead) o << "\njournals=" << p.journalsRead;
+        if (!p.achievements.empty()) {
+            o << "\nachievements=";
+            bool first = true;
+            for (const std::string& a : p.achievements) o << (first ? "" : ",") << a, first = false;
+        }
+        if (p.blocksMined) o << "\nmined=" << p.blocksMined;
         if (!p.metroVisited.empty()) {
             o << "\nmetro=";
             for (size_t i = 0; i < p.metroVisited.size(); ++i) o << (i ? "," : "") << p.metroVisited[i].first << ":" << p.metroVisited[i].second;
@@ -190,6 +196,13 @@ bool loadLevel(const std::string& folder, WorldInfo& info, PlayerState& p) {
     p.bossesDefeated = std::max(0, (int)num(kv, "bosses", 0));
     p.documentsRead = std::clamp((int)num(kv, "pages", 0), 0, 255);
     p.journalsRead = std::clamp((int)num(kv, "journals", 0), 0, 4095);
+    p.blocksMined = std::max(0, (int)num(kv, "mined", 0));
+    if (kv.count("achievements")) {
+        std::istringstream in(kv["achievements"]);
+        std::string id;
+        while (std::getline(in, id, ','))
+            if (!id.empty()) p.achievements.insert(id);
+    }
     if (kv.count("metro")) {
         std::istringstream in(kv["metro"]);
         std::string item;

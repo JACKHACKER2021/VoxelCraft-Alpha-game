@@ -40,7 +40,7 @@ namespace vc {
 namespace vc {
 
 namespace {
-const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.5.0 Preview build 6" : "VoxelCraft 2.4.0";
+const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.5.0 Preview build 7" : "VoxelCraft 2.4.0";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -631,9 +631,10 @@ void Game::startSession(const WorldInfo& info, const PlayerState& player) {
         ++tutorialMined_;
         if (profile_.countBlock()) playSound(Sound::Coin);
         ++profile_.blocksMined;
+        const int mined = kFeatures250 ? session_->countWorldBlock() : profile_.blocksMined;  // 2.5.0: per world
         unlockAchievement("first_block");
-        if (profile_.blocksMined >= 100) unlockAchievement("miner_100");
-        if (profile_.blocksMined >= 1000) unlockAchievement("miner_1000");
+        if (mined >= 100) unlockAchievement("miner_100");
+        if (mined >= 1000) unlockAchievement("miner_1000");
     };
     session_->onAchievement = [this](const std::string& id) { unlockAchievement(id); };
     session_->onMessage = [this](const std::string& text) { addChat(text); };
@@ -1111,7 +1112,8 @@ void Game::frame(double time) {
         if (now_ < achievementUntil_ && !achievementBanner_.empty() && !session_->oldMode()) {
             // "Achievement!" banner below the pause button, like the classic toasts.
             std::string line = trf("Úspěch: {0}", {tr(achievementBanner_)});
-            std::string coins = "+" + std::to_string(achievementCoins_);
+            // 2.5.0: earned again in a new world: the Voxel Bucks came the first time.
+            std::string coins = achievementCoins_ > 0 ? "+" + std::to_string(achievementCoins_) : tr("odměna už vybrána dřív");
             float bw = std::max(ui_.textWidth(line), ui_.textWidth(coins) + 12) + 20, bx = std::floor((W - bw) / 2), by = 26;
             ui_.fill(bx + 2, by + 2, bw, 26, {0, 0, 0, 0.5f});
             ui_.frame(bx, by, bw, 26, theme::kPanel, theme::kGreenBorder);
@@ -1364,6 +1366,17 @@ void Game::presentsScreen(float dt) {
 using namespace theme;
 
 void Game::unlockAchievement(const std::string& id) {
+    if (kFeatures250) {
+        // 2.5.0 preview build 7: earned again in every new survival world; the reward only the first time ever.
+        if (!session_ || !session_->achievementsAllowed() || !session_->earnAchievement(id)) return;
+        const int coins = profile_.unlock(id);
+        if (coins > 0) profile_.save(profilePath_);
+        achievementBanner_ = findAchievement(id)->name;
+        achievementCoins_ = std::max(0, coins);
+        achievementUntil_ = now_ + 4;
+        playSound(Sound::Coin);
+        return;
+    }
     int coins = profile_.unlock(id);
     if (coins <= 0) return;
     profile_.save(profilePath_);
@@ -1377,9 +1390,11 @@ void Game::achievementsScreen() {
     float x, y, w, h;
     menuWindow(x, y, w, h, false);
     ui_.text(x + 2, y + 2, "Úspěchy", kTitle, 1, false);
+    // 2.5.0 preview build 7: from a world, its own achievements; from the menu, all ever earned.
+    const std::set<std::string>& got = kFeatures250 && session_ ? session_->worldAchievements() : profile_.achievements;
     ui_.text(x + 2 + ui_.textWidth("Úspěchy") + 10, y + 2,
-             std::to_string(profile_.achievements.size()) + " / " + std::to_string(kAchievementCount), kGold, 1, false);
-    ui_.text(x + 2, y + 14, "Plň cíle v Přežití a získej bonusové mince.", kTextDim, 1, false, w);
+             std::to_string(got.size()) + " / " + std::to_string(kAchievementCount), kGold, 1, false);
+    ui_.text(x + 2, y + 14, "Plň cíle v Přežití a získej bonusové Voxel Bucks.", kTextDim, 1, false, w);
     const float listY = y + 28, listH = h - 28 - 30, rowH = 24, colW = std::floor((w - 6) / 2);
     ui_.frame(x, listY, w, listH, kPanelInner, kSeparator);
     const int rows = (kAchievementCount + 1) / 2;
@@ -1389,7 +1404,7 @@ void Game::achievementsScreen() {
         const Achievement& a = kAchievements[i];
         float rx = x + 3 + (i % 2) * (colW + 2), ry = listY + 2 + (i / 2) * rowH - listScroll_;
         if (ry < listY || ry + rowH > listY + listH + 1) continue;
-        bool done = profile_.achievements.count(a.id) > 0;
+        bool done = got.count(a.id) > 0;
         ui_.frame(rx, ry, colW - 2, rowH - 2, done ? kGreen : kButton, done ? kGreenBorder : kSeparator);
         ui_.icon(rx + 4, ry + 7, Font::Star, done ? Color{1, 0.85f, 0.2f, 1} : Color{0.3f, 0.3f, 0.3f, 1});
         ui_.text(rx + 16, ry + 3, a.name, done ? kTextBright : kText, 1, false, colW - 60);
@@ -1408,7 +1423,7 @@ namespace {
 const char* const kLoadingTips[] = {
     "Tip: Truhly ve zříceninách a kobkách skrývají poklady.",
     "Tip: Rubín najdeš hluboko pod zemí.",
-    "Tip: Úspěchy v Přežití dávají bonusové mince.",
+    "Tip: Úspěchy v Přežití dávají bonusové Voxel Bucks.",
     "Tip: Otevři svět pro LAN a hraj s kamarády.",
     "Tip: Loďka je nejrychlejší cesta přes oceán.",
     "Tip: Pod zasněženými horami bývá tvrdý kámen.",
@@ -1723,7 +1738,7 @@ void Game::menuWindow(float& x, float& y, float& w, float& h, bool logo) {
 }
 
 void Game::coinsPill(float right, float y) {
-    std::string text = trf("{0} MINCÍ", {std::to_string(profile_.coins)});
+    std::string text = trf("{0} VOXEL BUCKS", {std::to_string(profile_.coins)});
     float w = ui_.textWidth(text) + 22;
     ui_.frame(right - w, y, w, 16, kPanel, kBorder);
     ui_.icon(right - w + 4, y + 4, Font::Coin, kGold);
@@ -2782,7 +2797,7 @@ void Game::settingsScreen() {
         row("Skin", skinIndex(profile_.skin) >= 0 ? skins_[skinIndex(profile_.skin)].name : "");
         if (ui_.button(cx - 100, ry + 1, 100, 20, "Změnit")) setScreen(Screen::Skins);
         endRow();
-        row("Mince", "Za hraní: 1 za 10 bloků, 50 denně");
+        row("Voxel Bucks", "Za hraní: 1 za 10 bloků, 50 denně");
         std::string coins = std::to_string(profile_.coins);
         ui_.icon(cx - ui_.textWidth(coins) - 12, ry + 7, Font::Coin, kGold);
         ui_.text(cx - ui_.textWidth(coins), ry + 7, coins, kGold, 1, false);
@@ -3801,11 +3816,11 @@ void Game::storeScreen() {
     float x, y, w, h;
     menuWindow(x, y, w, h, false);
     ui_.text(x + 2, y + 2, "Obchod VoxelCraftu", kTitle, 1, false);
-    ui_.text(x + 2, y + 14, "Platí se mincemi z hraní, žádné skutečné peníze.", kTextDim, 1, false, w - 120);
+    ui_.text(x + 2, y + 14, "Platí se Voxel Bucks z hraní, žádné skutečné peníze.", kTextDim, 1, false, w - 120);
     coinsPill(x + w, y);
 
     // 2.5.0 preview: the last tab sells coins for real money (Czech crowns); free for the developer.
-    const char* cats[] = {"Vše", "Skiny", "Textury", "Světy a modpacky", "VIP a doplňky", "Odměny", "Mince za Kč"};
+    const char* cats[] = {"Vše", "Skiny", "Textury", "Světy a modpacky", "VIP a doplňky", "Odměny", "Voxel Bucks za Kč"};
     const int catCount = kFeatures250 ? 7 : 6;
     float cx = x, catsW = 0;
     for (int i = 0; i < catCount; ++i) catsW += ui_.textWidth(cats[i]) + 20;
@@ -3854,14 +3869,14 @@ void Game::storeScreen() {
                 if (ui_.button(bx + cw - bw2 - 6, by + ch - 24, bw2, 18, "Zdarma (vývojář)", true, true)) {
                     profile_.coins += pk.coins + pk.bonus;
                     profile_.save(profilePath_);
-                    toast_ = trf("Připsáno {0} mincí", {std::to_string(pk.coins + pk.bonus)}), toastUntil_ = now_ + 3;
+                    toast_ = trf("Připsáno {0} Voxel Bucks", {std::to_string(pk.coins + pk.bonus)}), toastUntil_ = now_ + 3;
                     playSound(Sound::Coin);
                 }
             } else {
                 ui_.button(bx + cw - bw2 - 6, by + ch - 24, bw2, 18, "Brzy na Google Play", false);
             }
         }
-        ui_.text(x + 2, gy + 2 * (ch + 6) + 4, dev ? tr("Vývojářský přístup: mince zdarma, nic se neplatí.")
+        ui_.text(x + 2, gy + 2 * (ch + 6) + 4, dev ? tr("Vývojářský přístup: Voxel Bucks zdarma, nic se neplatí.")
                                                    : tr("Placení přibude s vydáním na Google Play. Hraní zůstává zdarma."),
                  kTextDim, 1, false, w - 4);
         if (now_ < toastUntil_ && !toast_.empty()) ui_.textCentered(x + w / 2, gy + 2 * (ch + 6) + 18, toast_, kAccent);
@@ -3964,7 +3979,7 @@ void Game::storeScreen() {
         const char* hint = "Táhni pro další";
         ui_.text(x + w - ui_.textWidth(hint), y + 31, hint, kTextDim, 1, false);
     }
-    ui_.text(x, y + h - 10, "Mince: 1 za 10 vytěžených bloků v Přežití a denní odměny.", kTextDim, 1, false, w - 70);
+    ui_.text(x, y + h - 10, "Voxel Bucks: 1 za 10 vytěžených bloků v Přežití a denní odměny.", kTextDim, 1, false, w - 70);
     if (ui_.button(x + w - 64, y + h - 14, 64, 16, "Zpět")) setScreen(Screen::Title);
     if (now_ < toastUntil_ && !toast_.empty()) ui_.textCentered(x + w / 2 + 40, y + 2, toast_, kAccent);
 
@@ -3979,11 +3994,11 @@ void Game::storeScreen() {
         const bool devFree = developerFree(it, profile_);
         bool enough = devFree || profile_.coins >= it.price;
         ui_.textCentered(W / 2, py + 10, trf("Koupit „{0}“?", {tr(it.title)}), kTextBright);
-        std::string cost = devFree ? tr("Vývojářský přístup: zdarma, mince se neodečtou")
-                                   : trf("Cena {0} mincí, máš {1}", {std::to_string(it.price), std::to_string(profile_.coins)});
+        std::string cost = devFree ? tr("Vývojářský přístup: zdarma, Voxel Bucks se neodečtou")
+                                   : trf("Cena {0} Voxel Bucks, máš {1}", {std::to_string(it.price), std::to_string(profile_.coins)});
         ui_.textCentered(W / 2, py + 26, cost, kGold);
         if (!enough)
-            ui_.textCentered(W / 2, py + 40, trf("Chybí {0} mincí. Hraj a těž!", {std::to_string(it.price - profile_.coins)}), kError);
+            ui_.textCentered(W / 2, py + 40, trf("Chybí {0} Voxel Bucks. Hraj a těž!", {std::to_string(it.price - profile_.coins)}), kError);
         float bw = (pw - 24) / 2;
         if (ui_.button(px + 8, py + ph - 28, bw, 20, "Koupit", enough, true)) {
             std::string err;
@@ -4067,7 +4082,7 @@ void Game::rewardsPage(float x, float y, float w, float h) {
         }
     }
     by += 26;
-    ui_.text(x + 6, by, isVip(profile_, nowS) ? "VIP: 2× mince z odměn a točení navíc" : "Věci z odměn dostaneš v příštím světě.",
+    ui_.text(x + 6, by, isVip(profile_, nowS) ? "VIP: 2× Voxel Bucks z odměn a točení navíc" : "Věci z odměn dostaneš v příštím světě.",
              isVip(profile_, nowS) ? kGold : kTextDim, 1, false, leftW - 12);
     by += 14;
     if (ui_.button(x + 6, by, 90, 18, "Zadat kód") && onTextPrompt)

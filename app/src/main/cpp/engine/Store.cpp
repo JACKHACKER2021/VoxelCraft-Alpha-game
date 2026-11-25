@@ -175,7 +175,7 @@ const std::vector<StoreItem>& storeCatalog() {
         item("textures:pastel", K::Textures, "Pastelové kostky", "PASTEL", "TEXTURY", "Jemné světlé barvy.", 300, 4.4f, 0.55f, 0.45f, 0.55f),
         item("textures:sepia", K::Textures, "Retro sépie", "SÉPIE", "TEXTURY", "Svět jako stará fotografie.", 250, 4.5f, 0.4f, 0.3f, 0.18f),
         item("vip", K::Vip, "VIP", "VIP", "VIP",
-             "Zlaté jméno, 2× mince z denních odměn, točení navíc každý den a dva VIP skiny.", 3000, 5.0f, 0.55f, 0.42f, 0.05f),
+             "Zlaté jméno, 2× Voxel Bucks z denních odměn, točení navíc každý den a dva VIP skiny.", 3000, 5.0f, 0.55f, 0.42f, 0.05f),
         item("addon:winter", K::Addon, "Zimní doplněk", "ZIMA", "DOPLNĚK",
              "Všude sníh a sněžení, vánoční textury, dárky a cukrové hůlky.", 850, 4.9f, 0.55f, 0.7f, 0.85f),
         item("addon:halloween", K::Addon, "Halloween", "HALLOWEEN", "DOPLNĚK",

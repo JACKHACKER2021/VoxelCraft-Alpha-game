@@ -61,6 +61,15 @@ public:
     bool explorationMaps() const { return info_.expExplorationMaps || overworld_.config().generation >= 3; }
     GameMode mode() const { return info_.mode; }
     bool survival() const { return info_.mode == GameMode::Survival; }
+    // 2.5.0 preview build 7: achievements count only in survival worlds of the real land (not flat,
+    // not the Old World, not a developer map); each world keeps its own.
+    bool achievementsAllowed() const {
+        const GenConfig& g = overworld_.config();
+        return survival() && !g.flat && !g.oldWorld && g.devMap == 0;
+    }
+    bool earnAchievement(const std::string& id) { return state_.achievements.insert(id).second; }
+    const std::set<std::string>& worldAchievements() const { return state_.achievements; }
+    int countWorldBlock() { return ++state_.blocksMined; }
     // 1.8.0: a world made as "Old (historic generation)". It plays like VoxelCraft 0.1-0.3, apart
     // from the current game: its own HUD (nine fixed blocks, a jump button, a grass block for the
     // menu), a joystick on the left half, creative only, no inventory, map, chat or flying.

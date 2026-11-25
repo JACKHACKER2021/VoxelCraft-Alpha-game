@@ -83,7 +83,7 @@ std::string claimDailyReward(Profile& p, int today, long long now, uint32_t seed
     p.coins += coins;
     p.bonusSpins += r.spins;
     for (auto& it : r.items) p.pendingItems.push_back(it);
-    std::string text = trf("Den {0}: +{1} mincí", {std::to_string(day), std::to_string(coins)});
+    std::string text = trf("Den {0}: +{1} Voxel Bucks", {std::to_string(day), std::to_string(coins)});
     if (r.spins) text += ", " + tr("točení navíc");
     if (!r.items.empty()) text += ", " + tr("věci do příštího světa");
     if (r.addon) {
@@ -96,15 +96,15 @@ std::string claimDailyReward(Profile& p, int today, long long now, uint32_t seed
 
 const std::vector<WheelSegment>& wheelSegments() {
     static const std::vector<WheelSegment> s = {
-        {WheelPrize::Coins10, "10 mincí", 24, {0.55f, 0.45f, 0.2f}},
-        {WheelPrize::Coins50, "50 mincí", 20, {0.2f, 0.45f, 0.75f}},
+        {WheelPrize::Coins10, "10 Voxel Bucks", 24, {0.55f, 0.45f, 0.2f}},
+        {WheelPrize::Coins50, "50 Voxel Bucks", 20, {0.2f, 0.45f, 0.75f}},
         {WheelPrize::Skin, "Skin zdarma", 6, {0.75f, 0.3f, 0.6f}},
-        {WheelPrize::Coins100, "100 mincí", 14, {0.25f, 0.6f, 0.3f}},
+        {WheelPrize::Coins100, "100 Voxel Bucks", 14, {0.25f, 0.6f, 0.3f}},
         {WheelPrize::Addon, "Doplněk 8 h", 8, {0.3f, 0.55f, 0.75f}},
-        {WheelPrize::Coins250, "250 mincí", 7, {0.7f, 0.35f, 0.15f}},
+        {WheelPrize::Coins250, "250 Voxel Bucks", 7, {0.7f, 0.35f, 0.15f}},
         {WheelPrize::Vip, "VIP 24 h", 3, {0.85f, 0.7f, 0.1f}},
         {WheelPrize::Code, "Výroční kód", 4, {0.8f, 0.2f, 0.25f}},
-        {WheelPrize::Coins500, "500 mincí", 3, {0.45f, 0.2f, 0.7f}},
+        {WheelPrize::Coins500, "500 Voxel Bucks", 3, {0.45f, 0.2f, 0.7f}},
     };
     return s;
 }
@@ -138,11 +138,11 @@ int spinWheel(Profile& p, int today, long long now, uint32_t seed, std::string& 
     }
     code.clear();
     switch (segs[index].prize) {
-        case WheelPrize::Coins10: p.coins += 10; message = trf("Vyhrál(a) jsi {0} mincí!", {"10"}); break;
-        case WheelPrize::Coins50: p.coins += 50; message = trf("Vyhrál(a) jsi {0} mincí!", {"50"}); break;
-        case WheelPrize::Coins100: p.coins += 100; message = trf("Vyhrál(a) jsi {0} mincí!", {"100"}); break;
-        case WheelPrize::Coins250: p.coins += 250; message = trf("Vyhrál(a) jsi {0} mincí!", {"250"}); break;
-        case WheelPrize::Coins500: p.coins += 500; message = trf("Vyhrál(a) jsi {0} mincí!", {"500"}); break;
+        case WheelPrize::Coins10: p.coins += 10; message = trf("Vyhrál(a) jsi {0} Voxel Bucks!", {"10"}); break;
+        case WheelPrize::Coins50: p.coins += 50; message = trf("Vyhrál(a) jsi {0} Voxel Bucks!", {"50"}); break;
+        case WheelPrize::Coins100: p.coins += 100; message = trf("Vyhrál(a) jsi {0} Voxel Bucks!", {"100"}); break;
+        case WheelPrize::Coins250: p.coins += 250; message = trf("Vyhrál(a) jsi {0} Voxel Bucks!", {"250"}); break;
+        case WheelPrize::Coins500: p.coins += 500; message = trf("Vyhrál(a) jsi {0} Voxel Bucks!", {"500"}); break;
         case WheelPrize::Vip:
             grantFor(p, "vip", now, 24 * 3600);
             message = tr("Vyhrál(a) jsi VIP na 24 hodin!");
@@ -153,7 +153,7 @@ int spinWheel(Profile& p, int today, long long now, uint32_t seed, std::string& 
                 if (!p.owns(s)) missing.push_back(s);
             if (missing.empty()) {
                 p.coins += 300;
-                message = tr("Všechny skiny už máš: +300 mincí!");
+                message = tr("Všechny skiny už máš: +300 Voxel Bucks!");
             } else {
                 const char* s = missing[mix(seed * 31) % missing.size()];
                 p.owned.insert(s);
