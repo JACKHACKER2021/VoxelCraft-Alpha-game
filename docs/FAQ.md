@@ -71,6 +71,82 @@ Vzhled menu se během vývoje několikrát měnil. **Současný zelený vzhled u
   v modpacku **Pre-Alpha Style**, ve starších verzích a ve **VoxelCraft Classic**.
 - Všude jinde ho nahradí **nové písmo (Tiny Caps)**.
 
+---
+
+## 🚀 Release
+
+### 📅 Kdy vyjde hra na Google Play?
+
+![Google Play 2027](img/faq/date.jpg)
+
+Během roku **2027**. Možná **1. 1. 2027**, nebo **1. 2. 2027**, kdy bude VoxelCraft slavit **rok od vzniku**.
+
+### 💸 Bude hra zdarma?
+
+![Zdarma](img/faq/free.jpg)
+
+- **Ano.** Stáhnout i hrát půjde zdarma.
+- **Voxel Bucks** si můžeš i koupit za peníze.
+- **Žádné reklamy.**
+
+### 💾 Přenesou se moje světy a předměty do releasu?
+
+![Světy](img/faq/saves.jpg)
+
+**Ano.** Uložené světy, pevné seedy struktur i inventář zůstanou.
+
+### 📱 Na jakých telefonech hra poběží?
+
+![Telefony](img/faq/phones.jpg)
+
+- Hra je pro **Android** a bude se podporovat i dál, dokud bude fungovat **Google Play**.
+- Teď hra potřebuje **Android 11 nebo novější**.
+
+### 🌐 Bude multiplayer přes internet?
+
+![Multiplayer](img/faq/online.jpg)
+
+**Ano, bude.** Teď se dá hrát jen přes **LAN** (hráči na stejné Wi-Fi).
+
+### 🍎 Bude verze pro iPhone nebo PC?
+
+![iPhone a PC](img/faq/platforms.jpg)
+
+Do budoucna je to **v plánu**.
+
+### 🧪 Co je preview a co normální verze?
+
+![Normální a preview](img/faq/preview.jpg)
+
+- **Normální verze** (teď **2.4.0**) je hotová verze. Může ji mít **kdokoli**.
+- **Preview** (teď **2.5.0 Preview**) je další update, který se ještě dělá. Má ji **jen developer**.
+- Obě jsou samostatné aplikace, takže můžou být v telefonu **vedle sebe**.
+
+### 🐞 Jak nahlásit chybu?
+
+![Nahlášení chyby](img/faq/bugs.jpg)
+
+Založ nový **Issue** tady na GitHubu ([Issues](../../../issues)) a napiš:
+
+1. **Co se stalo** a co jsi čekal(a).
+2. **Jak to zopakovat**, krok po kroku.
+3. **Verzi hry** a **telefon** (model a verzi Androidu).
+4. Pokud můžeš, přidej **screenshot** nebo video.
+
+### 🎥 Můžu točit videa a streamovat VoxelCraft?
+
+![Videa](img/faq/videos.jpg)
+
+**Ano!** Videa i streamy jsou vítané.
+
+### 🔑 Proč se staré APK nedají nainstalovat přes nové?
+
+![Staré a nové APK](img/faq/apk.jpg)
+
+- Starší verze byly podepsané **jiným klíčem**. Android update s jiným klíčem nepovolí.
+- Od verze **2.4.0** má hra **nové ID aplikace** (`cz.voxelsoftworks.voxelcraft`) a **trvalý klíč**.
+- Každé nové APK se od 2.4.0 nainstaluje přes předchozí, bez odinstalování.
+
 </details>
 
 ---
@@ -135,6 +211,82 @@ The look of the menus changed a few times during development. **The current gree
 - The earlier alpha and classic font of versions **0.1 – 1.9.9** stays only where it belongs:
   in the **Pre-Alpha Style** modpack, in the older versions and in **VoxelCraft Classic**.
 - Everywhere else the **new font (Tiny Caps)** replaces it.
+
+---
+
+## 🚀 Release
+
+### 📅 When does the game come to Google Play?
+
+![Google Play 2027](img/faq/date.jpg)
+
+During **2027**. Maybe on **1 January 2027**, or on **1 February 2027**, when VoxelCraft turns **one year old**.
+
+### 💸 Will the game be free?
+
+![Free](img/faq/free.jpg)
+
+- **Yes.** Downloading and playing are free.
+- **Voxel Bucks** can also be bought with money.
+- **No ads.**
+
+### 💾 Will my worlds and items carry over to the release?
+
+![Worlds](img/faq/saves.jpg)
+
+**Yes.** Saved worlds, the fixed structure seeds and your inventory all stay.
+
+### 📱 Which phones will the game run on?
+
+![Phones](img/faq/phones.jpg)
+
+- The game is for **Android** and stays supported for as long as **Google Play** works.
+- Right now it needs **Android 11 or newer**.
+
+### 🌐 Will there be online multiplayer?
+
+![Multiplayer](img/faq/online.jpg)
+
+**Yes.** For now only **LAN** play works (players on the same Wi-Fi).
+
+### 🍎 Will there be an iPhone or PC version?
+
+![iPhone and PC](img/faq/platforms.jpg)
+
+It is **planned** for the future.
+
+### 🧪 What is the preview and what is the normal version?
+
+![Normal and preview](img/faq/preview.jpg)
+
+- The **normal version** (now **2.4.0**) is the finished one. **Anyone** can have it.
+- The **preview** (now **2.5.0 Preview**) is the next update, still being made. **Only the developer** has it.
+- They are separate apps, so both can be installed **side by side**.
+
+### 🐞 How do I report a bug?
+
+![Report a bug](img/faq/bugs.jpg)
+
+Open a new **issue** here on GitHub ([Issues](../../../issues)) and write:
+
+1. **What happened**, and what you expected.
+2. **How to make it happen again**, step by step.
+3. The **game version** and your **phone** (model and Android version).
+4. A **screenshot** or video, if you can.
+
+### 🎥 Can I make videos and stream VoxelCraft?
+
+![Videos](img/faq/videos.jpg)
+
+**Yes!** Videos and streams are welcome.
+
+### 🔑 Why can't old APKs be installed over new ones?
+
+![Old and new APKs](img/faq/apk.jpg)
+
+- Older versions were signed with **another key**, and Android refuses an update signed with a different key.
+- Since **2.4.0** the game has a **new app id** (`cz.voxelsoftworks.voxelcraft`) and a **lasting key**.
+- From 2.4.0 on, every new APK installs over the previous one without uninstalling.
 
 </details>
 
