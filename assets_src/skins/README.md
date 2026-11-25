@@ -17,6 +17,7 @@ Do hry zatím zapojené nejsou. Teď se dají vyzkoušet přes nahrání vlastn�
 | `gardener.png` | Zahradnice | slaměný klobouk se stuhou a kytičkou, zrzavý cop, pihy, kostkovaná košile, lacláče s kapsou, růžové rukavice, žluté holínky |
 | `astronaut.png` | Astronautka | bílý skafandr, tónované hledí s obličejem, ovládací panel na hrudi, podpora života na zádech, oranžové pruhy, šedé rukavice a boty |
 | `nether_walker.png` | Poutník Netheru | věrně podle původního: stejné barvy, oči, jiskry na hábitu na stejných místech a žhnoucí podrážky; navíc stínování, žhnoucí praskliny, šerpa, límec a manžety |
+| `captain_wanderer.png` | Kapitán Poutník | Poutník Netheru jako kapitán: kapitánská čepice se zlatou páskou a žhnoucím odznakem, černý plnovous, dlouhý kabát se zlatými knoflíky a výložky, vysoké boty se žhnoucími podrážkami |
 | `vip_gold.png` | Zlatý VIP | zlatá koruna s rubínem a safíry, hranostajový límec, zlatý kabátec s červenou šerpou, červený plášť na zádech, prsten |
 | `vip_tux.png` | VIP Gentleman | cylindr se zlatou stuhou, monokl, knír, frak se saténovými klopami, zlatý motýlek a manžetové knoflíčky, lakýrky |
 

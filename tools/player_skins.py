@@ -1090,6 +1090,133 @@ def nether_walker():
     return s
 
 
+# ------------------------------------------------------- Kapitán Poutník ---
+# The Nether wanderer as a ship's captain: his face and ember glow, a captain's
+# cap and a long coat with gold buttons and epaulettes.
+
+def captain_wanderer():
+    s = Skin(91)
+    skin, skin_dk, skin_lt = (120, 40, 30), (96, 30, 22), (142, 54, 40)
+    hair = (25, 15, 15)
+    coat, coat_dk, coat_lt = (30, 26, 44), (20, 17, 30), (46, 40, 64)
+    gold, gold_dk = (232, 186, 60), (170, 126, 30)
+    ember, ember_lt, ember_dk = (255, 140, 30), (255, 214, 120), (190, 80, 20)
+    white = (232, 228, 220)
+
+    def head(face, x, y, w, h):
+        if face == "top":
+            return hair
+        if face == "bottom":
+            return skin_dk
+        if face == "back":
+            return hair if y < 5 else skin_dk
+        if face in ("right", "left"):
+            if y < 4 and ((face == "right" and x < 5) or (face == "left" and x > 2)):
+                return hair
+            if y >= 6 and ((face == "right" and x == 7) or (face == "left" and x == 0)):
+                return hair  # beard along the jaw
+            return skin
+        if y < 2:
+            return skin  # under the cap's peak
+        if y == 2 and x in (1, 2, 5, 6):
+            return skin_dk
+        if y == 3:
+            return {1: (255, 255, 255), 2: ember_lt, 5: ember_lt, 6: (255, 255, 255)}.get(x, skin)
+        if y == 4:
+            if x in (3, 4):
+                return skin_lt
+            if x in (2, 5):
+                return ember_dk
+        if y == 5 and x == 0:
+            return ember_dk  # crack on the cheek
+        if y >= 5:
+            if y == 6 and x in (3, 4):
+                return (150, 90, 80)
+            return hair if (y == 7 or x in (0, 1, 6, 7) or y == 5 and x in (2, 3, 4, 5)) else skin  # black beard
+        return skin
+
+    s.paint(HEAD, head)
+
+    def cap(face, x, y, w, h):
+        if face == "top":
+            return white if 1 <= x <= 6 and 1 <= y <= 6 else coat_dk
+        if face == "bottom":
+            return None
+        if y == 0:
+            return coat_dk if face != "front" else (white if 1 <= x <= 6 else coat_dk)
+        if y == 1:
+            if face == "front" and x in (3, 4):
+                return ember if x == 3 else ember_lt  # ember badge
+            return gold  # gold band
+        if y == 2:
+            return (14, 12, 20) if face == "front" else None  # black peak
+        return None
+
+    s.paint(HAT, cap, grain=3)
+
+    def body(face, x, y, w, h):
+        if face == "top":
+            return gold if x in (0, 7) else coat
+        if face == "bottom":
+            return coat_dk
+        if face == "front":
+            if y == 0 and x in (3, 4):
+                return white  # shirt collar
+            if x in (3, 4):
+                return coat_dk if y > 0 else white  # coat opening
+            if x in (2, 5) and y in (2, 4, 6):
+                return gold  # buttons
+            if y == 8:
+                return (60, 30, 22) if x not in (3, 4) else gold
+            if (x, y) in ((0, 0), (7, 0)):
+                return gold  # epaulettes
+            if (x, y) in ((6, 10), (1, 9)):
+                return ember  # sparks like on his old robe
+            return coat if x not in (0, 7) else coat_dk
+        if y == 8:
+            return (60, 30, 22)
+        if face == "back" and x in (3, 4) and y > 8:
+            return coat_dk  # vent of the coat
+        return coat_dk if x in (0, w - 1) else coat
+
+    s.paint(BODY, body)
+
+    def arm(face, x, y, w, h):
+        if face == "top":
+            return gold  # epaulette
+        if face == "bottom":
+            return skin_dk
+        if y == 0:
+            return gold_dk if face != "bottom" else gold
+        if y in (7, 8):
+            return gold if y == 7 else coat_dk  # gold rings on the cuff
+        if y < 9:
+            return coat
+        if face == "front" and y == 10 and x == 1:
+            return ember_dk
+        return skin
+
+    s.paint(R_ARM, arm)
+    s.paint(L_ARM, arm)
+
+    def leg(face, x, y, w, h):
+        if face == "top":
+            return coat
+        if face == "bottom":
+            return ember
+        if y == 11:
+            return ember_lt if face == "front" and x in (1, 2) else ember  # still glowing soles
+        if y >= 8:
+            return (22, 18, 20) if y != 8 else (40, 34, 36)  # tall boots
+        if face in ("right", "left") and x == 1:
+            return gold_dk  # stripe
+        return coat if y > 1 else coat_dk
+
+    s.paint(R_LEG, leg)
+    s.paint(L_LEG, leg)
+    return s
+
+
 # --------------------------------------------------------------- preview ---
 
 # Model boxes: (texture part, overlay part, x0, y0, z0, w, h, d) in model pixels.
@@ -1191,7 +1318,8 @@ if __name__ == "__main__":
     made = [("Horník", "miner", miner()), ("Rytíř", "knight", knight()), ("Robot", "robot", robot()),
             ("Zlatý VIP", "vip_gold", vip_gold()), ("VIP Gentleman", "vip_tux", vip_tux()),
             ("Zahradnice", "gardener", gardener()), ("Astronautka", "astronaut", astronaut()),
-            ("Poutník Netheru", "nether_walker", nether_walker())]
+            ("Poutník Netheru", "nether_walker", nether_walker()),
+            ("Kapitán Poutník", "captain_wanderer", captain_wanderer())]
     for title, name, skin in made:
         print(skin.save(name))
     p = os.path.join(ROOT, "docs", "img", "skins_preview.png")
