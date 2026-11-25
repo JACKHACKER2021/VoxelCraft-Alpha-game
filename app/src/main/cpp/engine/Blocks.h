@@ -354,6 +354,17 @@ enum BlockId : uint16_t {
     CARAMEL = 60286,
     GINGERBREAD = 60287,
     SLED = 60288,                // held on snow or ice: the player slides fast
+    EGG_CELESTLING = 60289,  // 2.6.0: spawn eggs for every creature
+    EGG_REACH_STALKER = 60290,
+    EGG_SKY_DRIFTER = 60291,
+    EGG_GOLEM = 60292,
+    EGG_LURKER = 60293,
+    EGG_SPORELING = 60294,
+    EGG_MOTH = 60295,
+    EGG_ASH_FOX = 60296,
+    EGG_FOX = 60297,
+    EGG_GHOST = 60298,
+    EGG_SNOWMAN = 60299,
     RAIL_SWITCH8 = 60212,        // 60212..60243: 2.3.0 the flexible switch: entry port * 4 + left * 2 + state   // 2.3.0: a chest of the Bronze Halls
     RAIL_SWITCH_L = 60203,       // 60203..60210: 2.3.0 the mirrored switch, its branch to the left (facing * 2 + state)
     RAIL_GENTLE = 60187,         // 60187..60202: a gentle slope, 4 pieces per block of height: facing * 4 + piece
@@ -794,6 +805,7 @@ enum Tile : uint16_t {
     T_MOTH_BODY, T_MOTH_WING, T_MOTH_GLOW, T_FOX_FUR, T_FOX_FACE, T_FOX_WHITE, T_FOX_DARK, T_ASHFOX_FUR, T_ASHFOX_FACE, T_EMBER_DUST,
     T_JACK_FACE, T_JACK_FACE_LAST = T_JACK_FACE + 3, T_COBWEB, T_GRAVESTONE, T_BAT_LANTERN, T_XMAS_TREE, T_STRING_LIGHTS, T_STOCKING,  // 2.6.0
     T_LOLLIPOP, T_CARAMEL, T_GINGERBREAD, T_SLED, T_GHOST, T_GHOST_FACE, T_SNOWMAN_FACE,
+    T_EGG2, T_EGG2_LAST = T_EGG2 + 10,  // 2.6.0: the new spawn eggs
     T_TRAIN_TEX2, T_TRAIN_TEX2_LAST = T_TRAIN_TEX2 + 15,  // 2.3.0 preview build 7: more train colours (the subway)
     T_COUNT
 };
@@ -871,7 +883,7 @@ inline bool bronzeBulbLit(ItemId id) { return isBronzeBulb(id) && ((id - BRONZE_
 inline bool isTnt(ItemId id) { return id == TNT || id == NUKE_TNT; }
 inline bool isSword(ItemId id) { return (id >= WOOD_SWORD && id <= RUBY_SWORD) || id == HARDIUM_SWORD || id == CELESTIUM_SWORD; }
 inline bool isSpawnEgg(ItemId id) {
-    return (id >= EGG_PIG && id <= EGG_FORGOTTEN) || (id >= EGG_CHICKEN && id <= EGG_VILLAGER) || (id >= EGG_SPIDER && id <= EGG_HOGMAN);
+    return (id >= EGG_PIG && id <= EGG_FORGOTTEN) || (id >= EGG_CHICKEN && id <= EGG_VILLAGER) || (id >= EGG_SPIDER && id <= EGG_HOGMAN) || (id >= EGG_CELESTLING && id <= EGG_SNOWMAN);
 }
 // Wheat: seeds (stage 0) grow through two more stages into ripe wheat (stage 3), on farmland only.
 inline int cropStage(ItemId id) {
@@ -1170,6 +1182,7 @@ inline int tileFor(ItemId id, Face face) {
                 case CARAMEL: return T_CARAMEL;
                 case GINGERBREAD: return T_GINGERBREAD;
                 case SLED: return T_SLED;
+                case EGG_CELESTLING ... EGG_SNOWMAN: return T_EGG2 + (id - EGG_CELESTLING);
                 case GLOWCAP_LEAVES: return T_GLOWCAP_LEAVES;
                 case STARBERRY_BUSH: return T_STARBERRY_BUSH;
                 case VOID_TRUFFLE: return T_VOID_TRUFFLE;

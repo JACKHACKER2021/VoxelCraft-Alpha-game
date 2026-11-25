@@ -3127,6 +3127,18 @@ void Session::useItem(const RayHit& hit) {
             case EGG_TAR_MONSTER: mobs_.spawn(MobType::TarMonster, dimIndex(), feet); break;
             case EGG_HUSKING: mobs_.spawn(MobType::Husking, dimIndex(), feet); break;
             case EGG_HOGMAN: mobs_.spawn(MobType::Hogman, dimIndex(), feet); break;
+            case EGG_CELESTLING: mobs_.spawn(MobType::Celestling, dimIndex(), feet); break;
+            case EGG_REACH_STALKER: mobs_.spawn(MobType::ReachStalker, dimIndex(), feet); break;
+            case EGG_SKY_DRIFTER: mobs_.spawn(MobType::SkyDrifter, dimIndex(), feet + Vec3(0, 1, 0)); break;
+            case EGG_GOLEM: mobs_.spawn(MobType::CornerstoneGolem, dimIndex(), feet); break;
+            case EGG_LURKER: mobs_.spawn(MobType::MossLurker, dimIndex(), feet); break;
+            case EGG_SPORELING: mobs_.spawn(MobType::Sporeling, dimIndex(), feet); break;
+            case EGG_MOTH: mobs_.spawn(MobType::EmberMoth, dimIndex(), feet + Vec3(0, 1, 0)); break;
+            case EGG_ASH_FOX: mobs_.spawn(MobType::AshFox, dimIndex(), feet); break;
+            case EGG_FOX: mobs_.spawn(MobType::Fox, dimIndex(), feet); break;
+            case EGG_GHOST: mobs_.spawn(MobType::Ghost, dimIndex(), feet + Vec3(0, 1, 0)); break;
+            case EGG_SNOWMAN: mobs_.spawn(MobType::Snowman, dimIndex(), feet); break;
+
             default: mobs_.spawnVillager(dimIndex(), feet, (Profession)(rng_ % 3), feet); break;
         }
         rng_ = rng_ * 1664525u + 1013904223u;

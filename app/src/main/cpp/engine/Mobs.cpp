@@ -51,6 +51,8 @@ static_assert(sizeof(kInfo) / sizeof(kInfo[0]) == (size_t)MobType::Count, "info 
 
 bool solidAt(const World& w, float x, float y, float z) {
     ItemId b = w.getBlock((int)std::floor(x), (int)std::floor(y), (int)std::floor(z));
+    // 2.6.0: a thin cover (fallen snow, leaf litter, a carpet) is walked through, not climbed onto like a full block
+    if (kFeatures260 && (b == SNOW_LAYER || b == LEAF_LITTER || isCarpet(b))) return false;
     return isSolid(b) && b != CACTUS;
 }
 
@@ -448,7 +450,7 @@ void MobSystem::update(const World& world, int dim, const Vec3& target, bool hun
         if (m.type == MobType::Bat || m.type == MobType::SkyDrifter || m.type == MobType::EmberMoth || m.type == MobType::Ghost) {}  // flies
         else if (m.dim == 3) m.vel.y -= kGravity * 0.45f * dt;  // 1.9.5: low gravity in the Celestial Reach
         else if (inside == WATER) m.vel.y = std::min(m.vel.y + 30 * dt, 2.5f);
-        else if (inside == TAR) m.vel.y = std::max(m.vel.y - 6 * dt, -1.0f);  // sinks slowly
+        else if (inside == TAR || (kFeatures260 && inside == LAVA)) m.vel.y = std::max(m.vel.y - 6 * dt, -1.0f);  // sinks slowly
         else m.vel.y -= kGravity * dt;
         // The tar monster heals in tar.
         if (m.type == MobType::TarMonster && inside == TAR) m.health = std::min(info.health, m.health + dt * 2);
@@ -487,7 +489,20 @@ void MobSystem::update(const World& world, int dim, const Vec3& target, bool hun
         m.phase += dt * speed * (info.boss ? 1.6f : 3.2f);
         m.swing = std::sin(m.phase) * std::min(1.0f, speed / std::max(1.0f, info.speed)) * 0.8f;
         // Lava and the void hurt everyone but the boss.
-        if (!info.boss && (inside == LAVA || m.pos.y < -20)) hurt((int)i, dt * 8, m.pos);
+        if (kFeatures260 && inside == LAVA && !info.boss) {
+            // 2.6.0: lava burns without the knock-back of a hit (that bounced creatures up and kept them on top);
+            // the creatures of fire do not mind it, a snowman melts quickly.
+            const bool fireproof = m.type == MobType::EmberMoth || m.type == MobType::AshFox || m.type == MobType::Hogman;
+            if (!fireproof) {
+                m.health -= dt * (m.type == MobType::Snowman ? 12.0f : 4.0f);
+                m.hurtTime = std::max(m.hurtTime, 0.2f);
+                if (!info.hostile) m.panic = 4;
+                m.sitting = false;
+                m.vel.x *= std::max(0.0f, 1 - 3 * dt), m.vel.z *= std::max(0.0f, 1 - 3 * dt);  // thick: slow going
+                if (m.health <= 0 && m.deathTime <= 0) m.deathTime = 0.001f;
+            }
+        }
+        else if (!info.boss && (inside == LAVA || m.pos.y < -20)) hurt((int)i, dt * 8, m.pos);
     }
 }
 

@@ -7226,7 +7226,7 @@ SHOT(z09_walk) {
     // Floor y 4: x -3..3, z 0..8 snow layer, z 9..17 grass, a lava pool at x 12..18.
     for (int x = -3; x <= 3; ++x) {
         for (int z = 0; z <= 8; ++z) w.setBlock(x, 5, z, SNOW_LAYER);
-        for (int z = 9; z <= 17; ++z) w.setBlock(x, 4, z, GRASS);
+        for (int z = 9; z <= 17; ++z) w.setBlock(x, 4, z, GRASS), w.setBlock(x, 5, z, z % 2 ? TALL_GRASS : DANDELION);
     }
     for (int x = 12; x <= 18; ++x)
         for (int z = 4; z <= 12; ++z) w.setBlock(x, 4, z, LAVA);
@@ -7251,7 +7251,7 @@ SHOT(z09_walk) {
         d.idle(2);
         d.shot("z09_" + name);
         float stuck = 0, lastZ = 5.5f;
-        d.seconds(1.5f, [&](float) {
+        d.seconds(std::getenv("VC_TRACE") ? 8.0f : 1.5f, [&](float) {
             steer(Vec3(0.5f, 5, 14.5f));
             if (!s.mobs().mobs().empty()) {
                 // Facing the way it walks; standing still for half a second: on to the next part.
@@ -7260,6 +7260,7 @@ SHOT(z09_walk) {
                 stuck = m.pos.z - lastZ < 0.002f ? stuck + 1 / 24.0f : 0;
                 lastZ = m.pos.z;
                 if (stuck > 0.5f) m.pos.z += 3.0f, stuck = 0;
+                if (std::getenv("VC_TRACE")) std::printf("z %.2f y %.2f\n", m.pos.z, m.pos.y);
             }
             if (!s.mobs().mobs().empty()) d.lookNow(s.mobs().mobs().back().pos);
         });

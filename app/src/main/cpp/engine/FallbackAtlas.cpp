@@ -500,6 +500,25 @@ const char* const kSprite_bucket[16] = {
     "................",
     "................",
 };
+const char* const kSprite_eggA[16] = {  // 2.6.0: the new spawn egg: a round egg in the creature's colours, spotted
+    "................",
+    "......1111......",
+    "....11111111....",
+    "....11111113....",
+    "...1111113113...",
+    "...1111311311...",
+    "...1131131111...",
+    "...3113111111...",
+    "...1311111113...",
+    "...1111111311...",
+    "...1111131131...",
+    "....11311311....",
+    ".....113111.....",
+    "......1111......",
+    "................",
+    "................",
+};
+inline const char* const* eggArt(const char* const* old) { return kFeatures260 ? kSprite_eggA : old; }
 const char* const kSprite_egg[16] = {
     "................",
     "......1111......",
@@ -3026,7 +3045,7 @@ void drawUpdate15(Canvas& a, int tile) {
         case T_ANCIENT_COIN: a.sprite(tile, kSprite_coin, {150, 110, 30}, {236, 196, 80}); return;
         case T_POWERSTONE_RELIC: a.sprite(tile, kSprite_relic, {30, 110, 130}, {120, 240, 255}); return;
         case T_POTTERY_SHARD: a.sprite(tile, kSprite_shard, {170, 90, 60}, {230, 200, 140}); return;
-        case T_EGG_HUSKING: a.sprite(tile, kSprite_egg15, {150, 132, 100}, {230, 110, 30}); return;
+        case T_EGG_HUSKING: a.sprite(tile, eggArt(kSprite_egg15), {150, 132, 100}, {230, 110, 30}); return;
         default: break;
     }
     const Rgb power{40, 200, 230}, psStone{82, 92, 98}, netherBrick{64, 30, 36};
@@ -3275,7 +3294,12 @@ void drawUpdate157(Canvas& a, int tile) {
                 for (int k = 0; k < 7; ++k) a.put(tile, 13 - k, 2 + k, k < 2 ? Rgb{30, 30, 30} : Rgb{245, 245, 245});
             return;
         }
-        case T_EGG_HOGMAN: a.sprite(tile, kSprite_egg15, {226, 150, 140}, {60, 200, 220}); return;
+        case T_EGG2 ... T_EGG2_LAST: {
+            static const Rgb kEgg[11][2] = {{{200, 220, 255}, {250, 230, 120}}, {{60, 50, 90}, {170, 120, 255}}, {{180, 230, 240}, {255, 255, 255}}, {{120, 70, 60}, {230, 120, 50}}, {{70, 110, 60}, {150, 200, 90}}, {{160, 110, 170}, {230, 210, 120}}, {{90, 60, 50}, {255, 150, 40}}, {{90, 90, 95}, {255, 110, 40}}, {{235, 120, 40}, {250, 245, 235}}, {{235, 235, 250}, {170, 170, 205}}, {{245, 250, 255}, {250, 140, 40}}};
+            a.sprite(tile, kSprite_eggA, kEgg[tile - T_EGG2][0], kEgg[tile - T_EGG2][1]);
+            return;
+        }
+        case T_EGG_HOGMAN: a.sprite(tile, eggArt(kSprite_egg15), {226, 150, 140}, {60, 200, 220}); return;
         default: break;
     }
     for (int py = 0; py < 16; ++py)

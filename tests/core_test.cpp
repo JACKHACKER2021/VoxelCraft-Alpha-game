@@ -4165,7 +4165,7 @@ static int testWorld159() {
     }
     size_t total = 0;
     for (int c = 0; c < CatCount; ++c) total += creativeCategoryItems(c).size();
-    CHECK(total == (size_t)kCreativeItemCount + 7 + (kFeatures250 ? 6 : 0) + (kFeatures260 ? 4 : 0) && creativeGroup(STAINED_GLASS) && !creativeGroup(STONE));
+    CHECK(total == (size_t)kCreativeItemCount + 7 + (kFeatures250 ? 6 : 0) + (kFeatures260 ? 15 : 0) && creativeGroup(STAINED_GLASS) && !creativeGroup(STONE));
     return 0;
 }
 
