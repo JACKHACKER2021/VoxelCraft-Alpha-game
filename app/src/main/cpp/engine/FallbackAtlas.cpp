@@ -2470,7 +2470,32 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
                     d[0] = (uint8_t)std::clamp(c.r, 0, 255), d[1] = (uint8_t)std::clamp(c.g, 0, 255), d[2] = (uint8_t)std::clamp(c.b, 0, 255), d[3] = 255;
                 }
         };
-        gems(T_CRIMSONIUM_ORE, T_VOID_STONE, {70, 8, 22}, {214, 38, 58}, {255, 160, 172}, {140, 18, 38});
+        // Crimsonium is not ruby: long slanting shards, crimson turning to magenta, set in void stone.
+        {
+            static const char* const kShard[7] = {"...o", "..oH", "..HB", ".oBS", ".BSo", "oSo.", "o..."};
+            struct Shard { int x, y; bool flip; };
+            static const Shard kShards[] = {{1, 1, false}, {10, 0, true}, {5, 6, false}, {11, 8, true}, {2, 10, true}};
+            char mask[16][16] = {};
+            for (const Shard& sh : kShards)
+                for (int y = 0; y < 7; ++y)
+                    for (int x = 0; x < 4; ++x) {
+                        const char c = kShard[y][sh.flip ? 3 - x : x];
+                        if (c != '.' && sh.x + x < 16 && sh.y + y < 16) mask[sh.y + y][sh.x + x] = c;
+                    }
+            const Rgb rim{60, 6, 34}, base{206, 34, 108}, hi{255, 150, 200}, shadow{128, 16, 70};
+            for (int y = 0; y < 16; ++y)
+                for (int x = 0; x < 16; ++x) {
+                    const uint8_t* r = px4(T_VOID_STONE, x, y);
+                    Rgb c{r[0], r[1], r[2]};
+                    const char m = mask[y][x];
+                    if (m == 'o') c = rim;
+                    else if (m == 'H') c = hi;
+                    else if (m == 'B') c = base.plus((int)(hash3(x, y, 7701, 5) % 14) - 7);
+                    else if (m == 'S') c = shadow;
+                    uint8_t* d = px4(T_CRIMSONIUM_ORE, x, y);
+                    d[0] = (uint8_t)std::clamp(c.r, 0, 255), d[1] = (uint8_t)std::clamp(c.g, 0, 255), d[2] = (uint8_t)std::clamp(c.b, 0, 255), d[3] = 255;
+                }
+        }
         gems(T_CELESTIUM_ORE, T_PALE_STONE, {120, 88, 18}, {238, 196, 72}, {255, 246, 196}, {186, 140, 36});
         // The moss: the side's mossy pixels (its top rows), here and there a red stone of the rock.
         for (int y = 0; y < 16; ++y)
