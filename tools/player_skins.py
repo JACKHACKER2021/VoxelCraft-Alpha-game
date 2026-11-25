@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draws the Horník (miner), Rytíř (knight), Robot and the two VIP player skins.
+"""Draws the Horník (miner), Rytíř (knight), Robot, Zahradnice, Astronautka and the two VIP player skins.
 
 Writes 64x64 PNG skins in the usual layout (the one engine/Skin.h describes) to
 assets_src/skins/ and a 3D preview to docs/img/skins_preview.png.
@@ -708,6 +708,278 @@ def vip_tux():
     return s
 
 
+# --------------------------------------------------- Zahradnice, Astronautka ---
+
+def gardener():
+    s = Skin(33)
+    skin, skin_dk = (240, 200, 170), (214, 172, 142)
+    hair, hair_dk = (204, 110, 40), (164, 82, 26)
+    freckle = (210, 150, 110)
+    check_a, check_b = (232, 226, 206), (196, 84, 70)  # checked shirt
+    denim, denim_dk, denim_lt = (70, 128, 62), (50, 98, 44), (98, 156, 86)
+    glove, glove_dk = (236, 132, 150), (200, 100, 120)  # pink garden gloves
+    boot, boot_dk = (236, 196, 40), (196, 156, 24)
+    dirt = (110, 78, 50)
+
+    def head(face, x, y, w, h):
+        if face == "top":
+            return hair
+        if face == "bottom":
+            return skin_dk
+        if face == "back":
+            if x in (3, 4) and y >= 2:
+                return hair_dk if y % 2 else hair  # braid
+            return hair
+        if face in ("right", "left"):
+            if y < 3 or (y < 6 and ((face == "right" and x < 4) or (face == "left" and x > 3))):
+                return hair
+            return skin
+        if y == 0 or (y == 1 and x not in (2, 3, 4, 5)) or (y in (2, 3) and x in (0, 7)):
+            return hair  # fringe and hair at the sides
+        if y == 3 and x in (1, 2, 5, 6):
+            return (170, 90, 40)
+        if y == 4:
+            return {1: (242, 242, 238), 2: (60, 130, 70), 5: (60, 130, 70), 6: (242, 242, 238)}.get(x, skin)
+        if y == 5:
+            if x in (1, 6):
+                return (236, 160, 150)  # rosy cheeks
+            if x in (2, 5):
+                return freckle
+            if x in (3, 4):
+                return skin_dk
+        if y == 6 and x in (3, 4):
+            return (196, 96, 90)
+        return skin
+
+    s.paint(HEAD, head)
+
+    straw, straw_dk, straw_lt = (226, 192, 110), (186, 150, 76), (244, 216, 140)
+
+    def hat(face, x, y, w, h):
+        if face == "top":
+            return straw_lt if (x + y) % 3 == 0 else straw
+        if face == "bottom":
+            return None
+        if y == 0:
+            return straw_dk if (x % 2) else straw
+        if y == 1:
+            if face == "right" and x in (5, 6):
+                return (220, 60, 80)  # flower on the band
+            return (60, 130, 70)  # green ribbon
+        if y == 2:
+            return straw_dk  # brim
+        return None
+
+    s.paint(HAT, hat, grain=5)
+
+    def body(face, x, y, w, h):
+        checked = check_b if (x // 2 + y // 2) % 2 else check_a
+        if face == "top":
+            return check_a
+        if face == "bottom":
+            return denim_dk
+        if face == "front":
+            if y < 4:
+                if x in (1, 6):
+                    return denim  # straps
+                if y == 3 and 2 <= x <= 5:
+                    return denim  # bib top
+                return checked
+            if y == 4 and x in (1, 6):
+                return (220, 200, 90)  # brass buttons
+            if 5 <= y <= 7 and 2 <= x <= 5:
+                if y == 5:
+                    return denim_lt  # pocket edge
+                if x == 5 and y == 6:
+                    return (80, 160, 60)  # seed packet in the pocket
+                return denim_dk
+            if y == 9 and x in (0, 7):
+                return dirt
+            return denim
+        if face == "back":
+            if y < 4:
+                if x == y + 1 or x == 6 - y:
+                    return denim  # crossed straps
+                return checked
+            return denim
+        if y < 4:
+            return checked
+        return denim if x not in (0, 3) else denim_dk
+
+    s.paint(BODY, body)
+
+    def arm(face, x, y, w, h):
+        checked = check_b if (x // 2 + y // 2) % 2 else check_a
+        if face == "top":
+            return check_a
+        if face == "bottom":
+            return glove_dk
+        if y < 4:
+            return checked
+        if y == 4:
+            return check_a  # rolled sleeve
+        if y < 8:
+            return skin
+        if y == 8:
+            return glove_dk
+        if face == "front" and y == 10 and x == 2:
+            return dirt
+        return glove
+
+    s.paint(R_ARM, arm)
+    s.paint(L_ARM, arm)
+
+    def leg(face, x, y, w, h):
+        if face == "top":
+            return denim
+        if face == "bottom":
+            return (60, 50, 40)
+        if y >= 7:
+            if y == 11:
+                return (60, 50, 40)
+            if face == "front" and y == 8 and x == 1:
+                return dirt
+            return boot if y > 7 else boot_dk  # rubber boots
+        if face == "front" and y in (3, 4) and x in (1, 2):
+            return denim_lt if y == 3 else denim  # knee patch
+        if s.rng.random() < 0.03:
+            return dirt
+        return denim
+
+    s.paint(R_LEG, leg)
+    s.paint(L_LEG, leg)
+    return s
+
+
+def astronaut():
+    s = Skin(66)
+    suit, suit_lt, suit_dk = (232, 234, 238), (250, 250, 252), (186, 190, 200)
+    grey, grey_dk = (128, 134, 146), (82, 88, 100)
+    orange = (240, 124, 36)
+    blue = (52, 110, 210)
+    glass, glass_lt, glass_dk = (60, 96, 150), (150, 196, 240), (34, 56, 96)
+    skin, hair = (226, 180, 146), (92, 56, 34)
+
+    def tinted(c):
+        return mix(c, glass, 0.25)
+
+    def head(face, x, y, w, h):
+        if face == "top":
+            return suit_lt if x in (3, 4) else suit
+        if face == "bottom":
+            return grey
+        if face == "front":
+            if 1 <= x <= 6 and 2 <= y <= 5:
+                # the face behind the tinted visor
+                if (x, y) in ((5, 2), (6, 2), (6, 3)):
+                    return glass_lt  # reflection
+                if y == 2:
+                    return tinted(hair)
+                if y == 3:
+                    return tinted({1: (245, 245, 245), 2: (40, 70, 150), 5: (40, 70, 150), 6: (245, 245, 245)}.get(x, skin))
+                if y == 5 and x in (3, 4):
+                    return tinted((200, 110, 110))
+                return tinted(skin)
+            if x in (0, 7) or y in (1, 6):
+                return suit_dk  # visor frame
+            if y == 7:
+                return grey  # neck ring
+            if y == 0:
+                return suit
+        if face in ("right", "left"):
+            if x in (3, 4) and y in (3, 4):
+                return grey_dk if (x + y) % 2 else grey  # helmet light
+            if y == 7:
+                return grey
+        if face == "back":
+            if y == 7:
+                return grey
+            if y in (3, 4) and 2 <= x <= 5:
+                return suit_dk
+        return suit if y > 0 else suit_lt
+
+    s.paint(HEAD, head, grain=2)
+
+    def body(face, x, y, w, h):
+        if face == "top":
+            return grey if face == "top" and 2 <= x <= 5 else suit
+        if face == "bottom":
+            return suit_dk
+        if face == "front":
+            if 2 <= y <= 5 and 2 <= x <= 5:
+                # control panel
+                if y in (2, 5) or x in (2, 5):
+                    return grey_dk
+                return {(3, 3): (230, 60, 50), (4, 3): (70, 220, 90), (3, 4): (240, 210, 60), (4, 4): blue}[(x, y)]
+            if y == 1 and x in (0, 1):
+                return blue  # mission patch: a little cube
+            if y == 1 and x == 6:
+                return orange
+            if y == 8:
+                return grey  # belt
+            if y in (9, 10) and x in (0, 7):
+                return orange  # hoses
+            return suit if x not in (0, 7) else suit_dk
+        if face == "back":
+            if 0 <= y <= 8 and 1 <= x <= 6:
+                # life support backpack
+                if y in (0, 8) or x in (1, 6):
+                    return grey_dk
+                if y == 2 and x in (2, 3):
+                    return (70, 220, 90)
+                if y == 6 and 2 <= x <= 5:
+                    return orange
+                return grey
+            if y == 8:
+                return grey
+        if y == 8:
+            return grey
+        return suit if x not in (0, 3) else suit_dk
+
+    s.paint(BODY, body, grain=2)
+
+    def arm(face, x, y, w, h):
+        if face == "top":
+            return suit
+        if face == "bottom":
+            return grey_dk
+        if y == 3:
+            return orange  # shoulder stripe
+        if y == 6:
+            return suit_dk  # elbow fold
+        if y == 9:
+            return grey  # wrist ring
+        if y >= 10:
+            return grey_dk if face == "front" and y == 11 else grey  # gloves
+        if face == "left" and w == 4 and y == 7 and x in (1, 2):
+            return glass_dk  # wrist pad
+        return suit
+
+    s.paint(R_ARM, arm, grain=2)
+    s.paint(L_ARM, arm, grain=2)
+
+    def leg(face, x, y, w, h):
+        if face == "top":
+            return suit
+        if face == "bottom":
+            return grey_dk
+        if y in (4, 5):
+            return grey if face == "front" else suit_dk  # knee pads
+        if y >= 9:
+            if y == 11:
+                return grey_dk
+            if face == "front" and y == 9:
+                return orange
+            return grey  # moon boots
+        if face in ("right", "left") and x == 1 and y < 4:
+            return blue  # stripe
+        return suit if not (face in ("front", "back") and x in (0, w - 1)) else mix(suit, suit_dk, 0.5)
+
+    s.paint(R_LEG, leg, grain=2)
+    s.paint(L_LEG, leg, grain=2)
+    return s
+
+
 # --------------------------------------------------------------- preview ---
 
 # Model boxes: (texture part, overlay part, x0, y0, z0, w, h, d) in model pixels.
@@ -807,10 +1079,12 @@ def preview(skins, path):
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     made = [("Horník", "miner", miner()), ("Rytíř", "knight", knight()), ("Robot", "robot", robot()),
-            ("Zlatý VIP", "vip_gold", vip_gold()), ("VIP Gentleman", "vip_tux", vip_tux())]
+            ("Zlatý VIP", "vip_gold", vip_gold()), ("VIP Gentleman", "vip_tux", vip_tux()),
+            ("Zahradnice", "gardener", gardener()), ("Astronautka", "astronaut", astronaut())]
     for title, name, skin in made:
         print(skin.save(name))
     p = os.path.join(ROOT, "docs", "img", "skins_preview.png")
     preview([(t, s) for t, _, s in made[:3]], p)
-    preview([(t, s) for t, _, s in made[3:]], os.path.join(ROOT, "docs", "img", "skins_vip_preview.png"))
+    preview([(t, s) for t, _, s in made[3:5]], os.path.join(ROOT, "docs", "img", "skins_vip_preview.png"))
+    preview([(t, s) for t, _, s in made[5:]], os.path.join(ROOT, "docs", "img", "skins_gardener_astronaut_preview.png"))
     print(p)
