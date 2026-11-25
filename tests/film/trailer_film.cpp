@@ -7209,3 +7209,68 @@ SHOT(z08_addons) {
     d.shot("z08_later");
     d.seconds(0.3f);
 }
+
+// 2.6.0 preview: every creature walks across fallen snow, then grass, then is put on lava.
+SHOT(z09_walk) {
+    Director d(out, "z09");
+    if (const char* o = std::getenv("VC_MOB"); o && std::string(o) == "ghost") {
+        d.game->toolProfile().owned.insert("addon:halloween");
+        runCommand(d.s(), "/time night", true);
+    }
+    d.openWorld("Studio", 1, GameMode::Creative, [](GenConfig& g) { g.flat = true; g.devMap = 6; });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    p.flying = true;
+    d.settings().hideGui = true;
+    // Floor y 4: x -3..3, z 0..8 snow layer, z 9..17 grass, a lava pool at x 12..18.
+    for (int x = -3; x <= 3; ++x) {
+        for (int z = 0; z <= 8; ++z) w.setBlock(x, 5, z, SNOW_LAYER);
+        for (int z = 9; z <= 17; ++z) w.setBlock(x, 4, z, GRASS);
+    }
+    for (int x = 12; x <= 18; ++x)
+        for (int z = 4; z <= 12; ++z) w.setBlock(x, 4, z, LAVA);
+    static const std::pair<MobType, const char*> kMobs[] = {
+        {MobType::CornerstoneGolem, "golem"}, {MobType::MossLurker, "lurker"}, {MobType::Sporeling, "sporeling"},
+        {MobType::EmberMoth, "moth"}, {MobType::AshFox, "ashfox"}, {MobType::Fox, "fox"}, {MobType::Ghost, "ghost"}, {MobType::Snowman, "snowman"}};
+    const char* only = std::getenv("VC_MOB");
+    (void)kMobs; (void)only;
+    for (int ti = 0; ti < (int)MobType::Count; ++ti) {
+        const MobType type = (MobType)ti;
+        const std::string name = std::to_string(ti);
+        if (only && std::atoi(only) != ti) continue;
+        // Walk: snow then grass, steered to z 17 every frame.
+        s.mobs().mobs().clear();
+        s.mobs().spawn(type, 0, Vec3(0.5f, 5.2f, 5.5f));
+        auto steer = [&](Vec3 to) {
+            if (s.mobs().mobs().empty()) return;
+            Mob& m = s.mobs().mobs().back();
+            m.target = to, m.wandering = true, m.wanderTimer = 999, m.sitting = false, m.angry = false;
+        };
+        p.pos = Vec3(8.5f, 9.0f, 6.0f);
+        d.idle(2);
+        d.shot("z09_" + name);
+        float stuck = 0, lastZ = 5.5f;
+        d.seconds(1.5f, [&](float) {
+            steer(Vec3(0.5f, 5, 14.5f));
+            if (!s.mobs().mobs().empty()) {
+                // Facing the way it walks; standing still for half a second: on to the next part.
+                Mob& m = s.mobs().mobs().back();
+                m.yaw = 3.14159f;  // facing +z
+                stuck = m.pos.z - lastZ < 0.002f ? stuck + 1 / 24.0f : 0;
+                lastZ = m.pos.z;
+                if (stuck > 0.5f) m.pos.z += 3.0f, stuck = 0;
+            }
+            if (!s.mobs().mobs().empty()) d.lookNow(s.mobs().mobs().back().pos);
+        });
+        // Lava.
+        s.mobs().mobs().clear();
+        s.mobs().spawn(type, 0, Vec3(15.5f, 5.0f, 8.5f));
+        p.pos = Vec3(15.5f, 10.0f, 1.0f);
+        d.seconds(0.8f, [&](float) {
+            steer(Vec3(15.5f, 5, 8.5f));
+            d.lookNow(Vec3(15.5f, 5, 8.5f));
+        });
+        std::printf("%s after lava: %s\n", mobInfo(type).name, s.mobs().mobs().empty() ? "gone" : ("health " + std::to_string(s.mobs().mobs().back().health)).c_str());
+    }
+}
