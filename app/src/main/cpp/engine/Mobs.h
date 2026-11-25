@@ -24,6 +24,8 @@ enum class MobType : uint8_t {
     Hogman,                              // 1.5.7: a pig man of the Cornerstone Dimension; calmed by powerstone
     Celestling, ReachStalker, SkyDrifter,  // 1.9.5: the creatures of the Celestial Reach
     SkyGuardian,                           // 1.9.5: the boss of the Celestial Temple
+    // 2.6.0: the creatures of the Cornerstone, and the fox of the snowy and dappled forests.
+    CornerstoneGolem, MossLurker, Sporeling, EmberMoth, AshFox, Fox,
     Count
 };
 
@@ -59,6 +61,11 @@ struct Mob {
     float calm = 0;          // 1.5.7 hog man: seconds it stays peaceful after a gift of powerstone
     float love = 0;          // 1.9.0 build 3 (2.0 preview): seconds an animal looks for a mate after being fed
     float barter = 0;        // 1.5.7 hog man: > 0 while it looks over the powerstone, then it pays
+    float angry = 0;         // 2.6.0: the golem (its ore dug) and the moss lurker (sprung): seconds it hunts
+    bool tamed = false;      // 2.6.0: a fox fed raw meat follows the player and defends them
+    bool sitting = false;    // 2.6.0: sits (resting now and then; a tamed fox when told to)
+    float sit = 0;           // 2.6.0: the sitting pose, 0 standing .. 1 sat down
+    float sitTimer = 0;      // 2.6.0: how long it keeps resting
     bool alive() const { return deathTime <= 0; }
 };
 
@@ -67,7 +74,7 @@ struct Mob {
 constexpr float kBossDeathTime = 3.5f;
 
 struct MobEvent {
-    enum Kind { HitPlayer, Died, BossRoar, Explode, TarSpread, Fireball, Barter, BossWave, BossSummon, Teleport } kind;  // 1.6.0: wave, summon; 1.9.5 teleport
+    enum Kind { HitPlayer, Died, BossRoar, Explode, TarSpread, Fireball, Barter, BossWave, BossSummon, Teleport, Spores } kind;  // 2.6.0: spores  // 1.6.0: wave, summon; 1.9.5 teleport
     MobType type;
     Vec3 pos;
     float damage = 0;
@@ -99,6 +106,8 @@ public:
     // Removes hostile mobs far from the player (and all of them in daylight, when asked).
     void despawn(int dim, const Vec3& player, float radius, bool daylightHostiles);
     void clearHostiles();
+    // 2.6.0: ore dug near golems makes them angry.
+    void angerGolems(int dim, const Vec3& at, float radius);
     bool zombieSkin = false;  // Halloween: forgotten men look like zombies
     const std::vector<Mob>& mobs() const { return mobs_; }
     std::vector<Mob>& mobs() { return mobs_; }

@@ -2493,6 +2493,100 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
                 }
         }
         gems(T_CELESTIUM_ORE, T_PALE_STONE, {120, 88, 18}, {238, 196, 72}, {255, 246, 196}, {186, 140, 36});
+        // 2.6.0: the new creatures. Furs and skins with a little noise; the faces drawn pixel by pixel from
+        // a pattern, with big eyes and a white glint in each (so they look friendly), a nose and blushes.
+        {
+            auto put = [&](int tile, int x, int y, Rgb c) {
+                uint8_t* d = px4(tile, x, y);
+                d[0] = (uint8_t)std::clamp(c.r, 0, 255), d[1] = (uint8_t)std::clamp(c.g, 0, 255), d[2] = (uint8_t)std::clamp(c.b, 0, 255), d[3] = 255;
+            };
+            auto noisy = [&](int tile, Rgb base, int amount, int seed) {
+                for (int y = 0; y < 16; ++y)
+                    for (int x = 0; x < 16; ++x) put(tile, x, y, base.plus((int)(hash3(x, y, seed, 3) % (2 * amount + 1)) - amount));
+            };
+            // A face from 16 rows: '.' the skin below, other letters from the palette.
+            auto face = [&](int tile, int skin, const char* const rows[16], std::initializer_list<std::pair<char, Rgb>> pal) {
+                for (int y = 0; y < 16; ++y)
+                    for (int x = 0; x < 16; ++x) {
+                        const char c = rows[y][x];
+                        const uint8_t* b = px4(skin, x, y);
+                        Rgb col{b[0], b[1], b[2]};
+                        for (const auto& [k, v] : pal)
+                            if (k == c) col = v;
+                        put(tile, x, y, col);
+                    }
+            };
+            const Rgb red{158, 37, 39}, redDark{110, 24, 28}, eye{30, 22, 24}, white{250, 250, 245}, blush{240, 130, 140};
+            // Cornerstone golem: red rock with dark cracks; on the face glowing gold eyes under a heavy brow.
+            for (int y = 0; y < 16; ++y)
+                for (int x = 0; x < 16; ++x) {
+                    const bool crack = (x + y * 3) % 11 == 0 || (x * 2 + y) % 13 == 0;
+                    put(T_GOLEM_SKIN, x, y, crack ? redDark : red.plus((int)(hash3(x, y, 601, 3) % 21) - 10));
+                }
+            static const char* const kGolem[16] = {
+                "................", "................", "................", "..DDDDD..DDDDD..", "..DDDDD..DDDDD..",
+                "..GGGG....GGGG..", "..GWGG....GWGG..", "..GGGG....GGGG..", "..GGGG....GGGG..", "................",
+                "................", ".....DDDDDD.....", "......DDDD......", "................", "................", "................"};
+            face(T_GOLEM_FACE, T_GOLEM_SKIN, kGolem, {{'D', redDark}, {'G', {255, 214, 80}}, {'W', white}});
+            // Moss lurker: dark red scales; big round eyes with gold rings, little nostrils.
+            for (int y = 0; y < 16; ++y)
+                for (int x = 0; x < 16; ++x) {
+                    const bool scale = (x + (y / 2) * 2) % 4 == 0 && y % 2 == 0;
+                    put(T_LURKER_SKIN, x, y, scale ? redDark.scaled(0.85f) : Rgb{124, 30, 34}.plus((int)(hash3(x, y, 602, 3) % 13) - 6));
+                }
+            static const char* const kLurker[16] = {
+                "................", "................", "..YYYY....YYYY..", ".YKKKKY..YKKKKY.", ".YKWKKY..YKWKKY.",
+                ".YKKKKY..YKKKKY.", "..YYYY....YYYY..", "................", "................", "......N..N......",
+                "................", "................", "...MMMMMMMMMM...", "................", "................", "................"};
+            face(T_LURKER_FACE, T_LURKER_SKIN, kLurker, {{'Y', {240, 200, 70}}, {'K', eye}, {'W', white}, {'N', {50, 12, 14}}, {'M', {70, 14, 18}}});
+            // Sporeling: a cream body; a cheerful face with round black eyes, pink cheeks and a small smile.
+            noisy(T_SPORELING_SKIN, {232, 212, 182}, 6, 603);
+            static const char* const kSpore[16] = {
+                "................", "................", "................", "................", "...KKK....KKK...",
+                "..KKWKK..KKWKK..", "..KKKKK..KKKKK..", "...KKK....KKK...", "................", ".PP..........PP.",
+                ".PP..........PP.", "......K..K......", ".......KK.......", "................", "................", "................"};
+            face(T_SPORELING_FACE, T_SPORELING_SKIN, kSpore, {{'K', eye}, {'W', white}, {'P', blush}});
+            // Ember moth: a dark fuzzy body, orange wings with a yellow eye-spot and dark edges, a bright glow.
+            noisy(T_MOTH_BODY, {66, 20, 22}, 10, 604);
+            for (int y = 0; y < 16; ++y)
+                for (int x = 0; x < 16; ++x) {
+                    const int dx = x - 8, dy = y - 8, r2 = dx * dx + dy * dy;
+                    const bool edge = x == 0 || y == 0 || x == 15 || y == 15;
+                    put(T_MOTH_WING, x, y, edge ? Rgb{90, 20, 10} : r2 < 6 ? Rgb{255, 222, 90} : r2 < 14 ? Rgb{150, 30, 20} : Rgb{232, 110, 34}.plus((int)(hash3(x, y, 605, 3) % 15) - 7));
+                    put(T_MOTH_GLOW, x, y, Rgb{255, 226, 110}.plus((int)(hash3(x, y, 606, 3) % 21) - 10));
+                }
+            // Fox: orange fur, a cream white chest and muzzle, dark paws; a cute face with a black nose.
+            noisy(T_FOX_FUR, {222, 112, 40}, 10, 607);
+            noisy(T_FOX_WHITE, {244, 236, 222}, 6, 608);
+            noisy(T_FOX_DARK, {58, 36, 30}, 6, 609);
+            static const char* const kFox[16] = {
+                "................", "................", "................", "................", "...KKK....KKK...",
+                "..KKWKK..KKWKK..", "..KKKKK..KKKKK..", "...KKK....KKK...", ".PP..........PP.", "................",
+                "WW............WW", "WWW..........WWW", ".WW..........WW.", "................", "................", "................"};
+            face(T_FOX_FACE, T_FOX_FUR, kFox, {{'K', eye}, {'W', white}, {'P', blush}, {'N', {30, 22, 22}}});
+            // Ash fox: ash grey fur with glowing ember flecks; the same cute face with amber eyes.
+            for (int y = 0; y < 16; ++y)
+                for (int x = 0; x < 16; ++x)
+                    put(T_ASHFOX_FUR, x, y, hash3(x, y, 610, 3) % 23 == 0 ? Rgb{255, 140, 40} : Rgb{120, 116, 112}.plus((int)(hash3(x, y, 611, 3) % 17) - 8));
+            static const char* const kAsh[16] = {
+                "................", "................", "................", "................", "...AAA....AAA...",
+                "..AAWAA..AAWAA..", "..AAKAA..AAKAA..", "...AAA....AAA...", ".PP..........PP.", "................",
+                "WW............WW", "WWW..........WWW", ".WW..........WW.", "................", "................", "................"};
+            face(T_ASHFOX_FACE, T_ASHFOX_FUR, kAsh, {{'A', {255, 176, 60}}, {'K', eye}, {'W', white}, {'P', {230, 110, 90}}, {'N', {30, 22, 22}}});
+            // Ember dust (the item): a little heap of glowing specks.
+            for (int y = 0; y < 16; ++y)
+                for (int x = 0; x < 16; ++x) {
+                    const int dx = x - 8, dy = y - 11;
+                    const bool heap = dx * dx + dy * dy * 3 < 30 && y > 6;
+                    const bool speck = (y < 7 && hash3(x, y, 612, 3) % 9 == 0 && x > 3 && x < 12);
+                    uint8_t* d = px4(T_EMBER_DUST, x, y);
+                    if (!heap && !speck) {
+                        d[0] = d[1] = d[2] = d[3] = 0;
+                        continue;
+                    }
+                    put(T_EMBER_DUST, x, y, hash3(x, y, 613, 3) % 3 == 0 ? Rgb{255, 232, 120} : Rgb{238, 120, 36});
+                }
+        }
         // The moss: the side's mossy pixels (its top rows), here and there a red stone of the rock.
         for (int y = 0; y < 16; ++y)
             for (int x = 0; x < 16; ++x) {

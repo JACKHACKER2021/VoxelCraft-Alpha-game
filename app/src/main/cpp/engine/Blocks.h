@@ -341,6 +341,7 @@ enum BlockId : uint16_t {
     CS_IRON_ORE = 60271,         // 2.6.0: the Cornerstone's own ores, in its red rock (not the Overworld's stone)
     CS_BRONZE_ORE = 60272,
     CS_STEEL_ORE = 60273,
+    EMBER_DUST = 60274,          // 2.6.0: glowing dust of the ember moth (an item)
     RAIL_SWITCH8 = 60212,        // 60212..60243: 2.3.0 the flexible switch: entry port * 4 + left * 2 + state   // 2.3.0: a chest of the Bronze Halls
     RAIL_SWITCH_L = 60203,       // 60203..60210: 2.3.0 the mirrored switch, its branch to the left (facing * 2 + state)
     RAIL_GENTLE = 60187,         // 60187..60202: a gentle slope, 4 pieces per block of height: facing * 4 + piece
@@ -777,6 +778,8 @@ enum Tile : uint16_t {
     T_METRO_TILE, T_METRO_TILE_BLUE, T_METRO_TILE_CRACKED, T_STATION_SIGN, T_BENCH, T_METRO_MAP,  // 2.5.0
     T_TRACK_BED, T_PLATFORM_TOP, T_PLATFORM_SIDE, T_LATTICE, T_RAIL_CROSS, T_RAIL_CROSS_DIAG,  // 2.4.0
     T_CS_IRON_ORE, T_CS_BRONZE_ORE, T_CS_STEEL_ORE, T_MOSSY_CORNERSTONE_TOP,  // 2.6.0
+    T_GOLEM_SKIN, T_GOLEM_FACE, T_LURKER_SKIN, T_LURKER_FACE, T_SPORELING_SKIN, T_SPORELING_FACE,  // 2.6.0: the new creatures
+    T_MOTH_BODY, T_MOTH_WING, T_MOTH_GLOW, T_FOX_FUR, T_FOX_FACE, T_FOX_WHITE, T_FOX_DARK, T_ASHFOX_FUR, T_ASHFOX_FACE, T_EMBER_DUST,
     T_TRAIN_TEX2, T_TRAIN_TEX2_LAST = T_TRAIN_TEX2 + 15,  // 2.3.0 preview build 7: more train colours (the subway)
     T_COUNT
 };
@@ -1130,6 +1133,7 @@ inline int tileFor(ItemId id, Face face) {
                 case CS_IRON_ORE: return T_CS_IRON_ORE;
                 case CS_BRONZE_ORE: return T_CS_BRONZE_ORE;
                 case CS_STEEL_ORE: return T_CS_STEEL_ORE;
+                case EMBER_DUST: return T_EMBER_DUST;
                 case GLOWCAP_LEAVES: return T_GLOWCAP_LEAVES;
                 case STARBERRY_BUSH: return T_STARBERRY_BUSH;
                 case VOID_TRUFFLE: return T_VOID_TRUFFLE;

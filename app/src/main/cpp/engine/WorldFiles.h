@@ -13,7 +13,8 @@ std::vector<std::string> listBackups(const std::string& worldFolder, const std::
 // Puts a backup back in place of the world (the current state becomes a backup first).
 bool restoreBackup(const std::string& worldFolder, const std::string& backupDir, const std::string& backupsRoot);
 
-// A .vcworld file is a plain (uncompressed) zip of the world folder, readable by any zip tool.
+// A .vcworld file: 2.6.0 one sealed file ("VCWORLD2", a readable label, the zip of the world folder
+// compressed); before 2.6.0 the plain zip, which importWorld still reads.
 bool exportWorld(const std::string& worldFolder, const std::string& file, std::string& error);
 // Unpacks a .vcworld made by exportWorld into a new folder under `worldsRoot`.
 bool importWorld(const std::string& file, const std::string& worldsRoot, std::string& folder, std::string& error);

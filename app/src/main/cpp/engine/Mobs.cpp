@@ -37,6 +37,13 @@ const MobInfo kInfo[] = {
     {"Reach Stalker", 0.6f, 2.3f, 26, 3.0f, 5, true, false},
     {"Sky Drifter", 1.4f, 0.8f, 14, 2.2f, 0, false, false},
     {"Strážce Nebe", 1.1f, 3.9f, 260, 2.6f, 8, true, true},
+    // 2.6.0
+    {"Úhelný golem", 1.2f, 2.0f, 60, 1.2f, 7, false, false},   // peaceful until its ore is dug (then it hunts)
+    {"Mechový plaz", 0.8f, 0.55f, 16, 3.6f, 3, true, false},   // lies in wait, springs at the player
+    {"Sporovka", 0.6f, 0.95f, 8, 1.6f, 0, false, false},       // hops; a hit puffs a cloud of spores
+    {"Žhavá můra", 0.7f, 0.5f, 4, 2.2f, 0, false, false},      // flies round, glows
+    {"Popelavý lišák", 0.6f, 0.75f, 12, 2.6f, 0, false, false},  // the Cornerstone's fox, tamed with raw meat
+    {"Lišák", 0.6f, 0.75f, 12, 2.6f, 0, false, false},          // the fox of the snowy and dappled forests
 };
 static_assert(sizeof(kInfo) / sizeof(kInfo[0]) == (size_t)MobType::Count, "info for every mob");
 
@@ -213,10 +220,33 @@ void MobSystem::update(const World& world, int dim, const Vec3& target, bool hun
             }
             canHunt = huntable || prey >= 0;
         }
+        // 2.6.0: a tamed fox goes for monsters near its player.
+        const bool fox = m.type == MobType::AshFox || m.type == MobType::Fox;
+        if (fox && m.tamed && !m.sitting) {
+            float best = 9;
+            for (size_t j = 0; j < mobs_.size(); ++j) {
+                const Mob& o = mobs_[j];
+                if (j == i || o.dim != dim || !o.alive() || !mobInfo(o.type).hostile || mobInfo(o.type).boss) continue;
+                const float d = (o.pos - target).length();
+                if (d < best) best = d, prey = (int)j;
+            }
+            if (prey >= 0) goal = mobs_[(size_t)prey].pos;
+        }
         Vec3 toPlayer = goal - m.pos;
         const float dist = std::sqrt(toPlayer.x * toPlayer.x + toPlayer.z * toPlayer.z);
         float want = 0;  // forward speed this frame
         bool hunting = info.hostile && canHunt && dist < (info.boss ? 40.0f : 22.0f) && std::fabs(toPlayer.y) < 12;
+        // 2.6.0: the golem hunts only while angry; the moss lurker waits until the player comes close.
+        if (m.angry > 0) m.angry -= dt;
+        if (m.type == MobType::CornerstoneGolem) hunting = m.angry > 0 && canHunt && dist < 24 && std::fabs(toPlayer.y) < 8;
+        if (m.type == MobType::MossLurker) {
+            if (hunting && dist < 5) m.angry = 8;
+            if (m.angry <= 0) hunting = false;
+        }
+        // 2.6.0: resting: now and then a calm animal sits down for a while (a tamed fox when told to).
+        if (m.sitTimer > 0 && (m.sitTimer -= dt) <= 0 && !(fox && m.tamed)) m.sitting = false;
+        if (hunting || m.panic > 0) m.sitting = false, m.sitTimer = 0;
+        m.sit = std::clamp(m.sit + (m.sitting ? dt : -dt) * 3.0f, 0.0f, 1.0f);
         if (m.type == MobType::Hogman) {
             // 1.5.7: a gift of powerstone keeps it peaceful for a while; it looks the stone over and pays.
             if (m.calm > 0) m.calm -= dt, hunting = false;
@@ -296,6 +326,27 @@ void MobSystem::update(const World& world, int dim, const Vec3& target, bool hun
                 events.push_back({MobEvent::BossWave, m.type, m.pos, 4.0f, {}});
             }
             if (info.boss && std::fmod(m.age + 1.0f, 16.0f) < dt) events.push_back({MobEvent::BossSummon, m.type, m.pos, 0, {}});
+        } else if (fox && m.tamed && prey >= 0) {
+            // 2.6.0: the tamed fox runs at the monster and bites.
+            m.sitting = false;
+            m.yaw = turnTo(m.yaw, yawTo(m.pos, goal), dt * 8);
+            want = dist > 1.0f ? info.speed * 1.3f : 0;
+            if (dist < 1.4f && m.attackCooldown <= 0) {
+                m.attackCooldown = 0.8f;
+                m.attackAnim = 1;
+                hurt(prey, 3, m.pos);
+            }
+        } else if (fox && m.tamed && !m.sitting) {
+            // Follows its player; far behind, it catches up at once.
+            const Vec3 d = target - m.pos;
+            const float far = std::sqrt(d.x * d.x + d.z * d.z);
+            if (far > 24) m.pos = target + Vec3(1.2f, 0.2f, 1.2f), m.vel = {};
+            else if (far > 3.5f) {
+                m.yaw = turnTo(m.yaw, yawTo(m.pos, target), dt * 6);
+                want = info.speed * (far > 8 ? 1.3f : 0.9f);
+            }
+        } else if (m.sitting) {
+            want = 0;
         } else if (m.panic > 0) {
             m.panic -= dt;
             m.yaw = turnTo(m.yaw, yawTo(target, m.pos), dt * 8);
@@ -303,6 +354,9 @@ void MobSystem::update(const World& world, int dim, const Vec3& target, bool hun
         } else {
             if ((m.wanderTimer -= dt) <= 0) {
                 m.wandering = random() < 0.6f;
+                // 2.6.0: the new creatures sit down to rest now and then.
+                if (!m.wandering && m.type >= MobType::CornerstoneGolem && m.type != MobType::EmberMoth && random() < 0.5f)
+                    m.sitting = true, m.sitTimer = 4 + random() * 6;
                 m.wanderTimer = 3 + random() * 5;
                 float a = random() * 2 * kPi, r = 3 + random() * 6;
                 m.target = m.pos + Vec3(std::cos(a) * r, 0, std::sin(a) * r);
@@ -329,13 +383,13 @@ void MobSystem::update(const World& world, int dim, const Vec3& target, bool hun
             Vec3 d = (m.target - m.pos).normalized() * info.speed;
             m.vel = m.vel + (d - m.vel) * std::min(1.0f, 0.8f * dt);
             m.yaw = turnTo(m.yaw, yawTo(m.pos, m.target), dt * 1.2f);
-        } else if (m.type == MobType::Celestling) {
+        } else if (m.type == MobType::Celestling || m.type == MobType::Sporeling) {
             // Light as a feather: it bobs along in long, floaty hops.
             float accel = m.onGround ? 10.0f : 1.5f;
             m.vel.x += (fwd.x * want - m.vel.x) * std::min(1.0f, accel * dt);
             m.vel.z += (fwd.z * want - m.vel.z) * std::min(1.0f, accel * dt);
             if (m.onGround && want > 0 && std::fmod(m.age, 1.3f) < dt) m.vel.y = 4.0f;
-        } else if (m.type == MobType::Bat) {
+        } else if (m.type == MobType::Bat || m.type == MobType::EmberMoth) {
             if (!m.wandering || (m.target - m.pos).length() < 0.6f) {
                 float a = random() * 2 * kPi;
                 m.target = m.pos + Vec3(std::cos(a) * 4, random() * 3 - 1.4f, std::sin(a) * 4);
@@ -361,7 +415,7 @@ void MobSystem::update(const World& world, int dim, const Vec3& target, bool hun
 
         // Water carries mobs up; gravity everywhere else.
         ItemId inside = world.getBlock((int)std::floor(m.pos.x), (int)std::floor(m.pos.y + 0.3f), (int)std::floor(m.pos.z));
-        if (m.type == MobType::Bat || m.type == MobType::SkyDrifter) {}  // flies
+        if (m.type == MobType::Bat || m.type == MobType::SkyDrifter || m.type == MobType::EmberMoth) {}  // flies
         else if (m.dim == 3) m.vel.y -= kGravity * 0.45f * dt;  // 1.9.5: low gravity in the Celestial Reach
         else if (inside == WATER) m.vel.y = std::min(m.vel.y + 30 * dt, 2.5f);
         else if (inside == TAR) m.vel.y = std::max(m.vel.y - 6 * dt, -1.0f);  // sinks slowly
@@ -392,7 +446,7 @@ void MobSystem::update(const World& world, int dim, const Vec3& target, bool hun
             }
             m.vel.y = 0;
         }
-        if (blocked && (m.type == MobType::Bat || m.type == MobType::SkyDrifter)) m.wandering = false;  // turn around at walls
+        if (blocked && (m.type == MobType::Bat || m.type == MobType::SkyDrifter || m.type == MobType::EmberMoth)) m.wandering = false;  // turn around at walls
         else if (blocked && want > 0 && m.type == MobType::Spider) m.vel.y = 3.5f;  // spiders climb walls
         else if (blocked && m.onGround && want > 0 && m.type != MobType::PumpkinSlime) m.vel.y = info.boss ? 10.5f : 8.2f;
         if (p.y < -30) p.y = -30;
@@ -455,11 +509,20 @@ bool MobSystem::hurt(int index, float damage, const Vec3& from, int killer) {
     }
     if (!info.hostile) m.panic = 4;  // animals run away
     if (m.type == MobType::Hogman) m.calm = 0, m.barter = 0;  // a hit makes it angry again
+    // 2.6.0: a hit golem or lurker fights back; a tamed fox only steps aside.
+    if (m.type == MobType::CornerstoneGolem || m.type == MobType::MossLurker) m.angry = 20, m.panic = 0;
+    if (m.tamed) m.panic = 0;
+    m.sitting = false;
     if (m.health <= 0) {
         m.deathTime = 0.001f;
         return true;
     }
     return false;
+}
+
+void MobSystem::angerGolems(int dim, const Vec3& at, float radius) {
+    for (Mob& m : mobs_)
+        if (m.dim == dim && m.type == MobType::CornerstoneGolem && m.alive() && (m.pos - at).length() < radius) m.angry = 25;
 }
 
 int MobSystem::count(int dim, bool hostile, const Vec3& near, float radius) const {
@@ -730,6 +793,135 @@ void MobSystem::buildVertices(int dim, float time, std::vector<Vertex>& out) con
                 b.box({-0.06f, 0.36f, 0.5f}, {0.06f, 0.42f, 1.2f}, t, std::sin(time * 3) * 0.2f, {0, 0.4f, 0.5f}, roll);
                 break;
             }
+            // 2.6.0: the new creatures, in model pixels (16 to a block). `sit` folds them down to rest,
+            // `breathe` makes them breathe while standing about.
+            case MobType::CornerstoneGolem:
+            case MobType::MossLurker:
+            case MobType::Sporeling:
+            case MobType::EmberMoth:
+            case MobType::AshFox:
+            case MobType::Fox: {
+                const float sit = m.sit, breathe = std::sin(time * 2.0f + m.age) * 0.4f, P = 1 / 16.0f;
+                auto bx = [&](float x0, float y0, float z0, float x1, float y1, float z1, const int tl[6], float pitch = 0, Vec3 piv = {}, float rl = 0) {
+                    b.box({x0 * P, y0 * P, z0 * P}, {x1 * P, y1 * P, z1 * P}, tl, pitch, piv * P, rl);
+                };
+                int a6[6], f6[6], c6[6];
+                if (m.type == MobType::CornerstoneGolem) {
+                    tilesAll(T_GOLEM_SKIN, a6);
+                    const float drop = 9 * sit;  // sitting: the body goes down onto folded legs
+                    bx(-4, 0, -2, -1, 10, 2, a6, m.swing * (1 - sit) - 1.45f * sit, {-2.5f, 10 - drop, 0});
+                    bx(1, 0, -2, 4, 10, 2, a6, -m.swing * (1 - sit) - 1.45f * sit, {2.5f, 10 - drop, 0});
+                    bx(-5, 10 - drop, -3, 5, 22 - drop + breathe * 0.5f, 3, a6);
+                    tilesAll(T_GILDED_COBBLE, c6);
+                    bx(-6, 19 - drop, -4, 6, 23 - drop + breathe * 0.5f, 4, c6);
+                    bx(-3, 14 - drop, -3.5f, 3, 16 - drop, -3, c6);
+                    const float armSwing = -m.swing * 0.6f * (1 - sit) + m.attackAnim * 1.6f;
+                    bx(-9, 8 - drop, -2, -5, 22 - drop, 2, a6, armSwing, {-7, 21 - drop, 0});
+                    bx(5, 8 - drop, -2, 9, 22 - drop, 2, a6, -armSwing + 2 * m.attackAnim * 1.6f * 0, {7, 21 - drop, 0});
+                    tilesAll(T_GOLEM_SKIN, f6);
+                    f6[2] = T_GOLEM_FACE;
+                    bx(-3, 23 - drop, -3, 3, 28 - drop, 3, f6);
+                    tilesAll(T_MOSSY_CORNERSTONE_TOP, c6);
+                    bx(-2, 28 - drop, -1, 2, 30 - drop, 1, c6);
+                } else if (m.type == MobType::MossLurker) {
+                    tilesAll(T_LURKER_SKIN, a6);
+                    const float drop = 2 * sit;
+                    for (int k = 0; k < 4; ++k) {
+                        const float lx = k % 2 ? 3 : -5, lz = k < 2 ? -6 : 3;
+                        bx(lx, 0, lz, lx + 2, 3, lz + 2, a6, (k == 0 || k == 3 ? m.swing : -m.swing) * (1 - sit), {lx + 1, 3, lz + 1});
+                    }
+                    bx(-3, 2 - drop, -8, 3, 6 - drop + breathe * 0.4f, 6, a6);
+                    tilesAll(T_MOSSY_CORNERSTONE_TOP, c6);
+                    bx(-3, 6 - drop + breathe * 0.4f, -6, 3, 7 - drop + breathe * 0.4f, 4, c6);
+                    bx(-2, 7 - drop + breathe * 0.4f, -4, 2, 8 - drop + breathe * 0.4f, 2, c6);
+                    tilesAll(T_LURKER_SKIN, f6);
+                    f6[2] = T_LURKER_FACE;
+                    bx(-2, 2 - drop, -12, 2, 5.5f - drop, -8, f6, -m.attackAnim * 0.5f, {0, 3, -8});
+                    const float wag = std::sin(time * 2.5f + m.age) * 0.25f;
+                    bx(-1, 3 - drop, 6, 1, 5 - drop, 14, a6, 0, {0, 4, 6}, wag);
+                    bx(-0.5f, 3 - drop, 14, 0.5f, 4 - drop, 18, a6, 0, {0, 4, 6}, wag * 1.5f);
+                } else if (m.type == MobType::Sporeling) {
+                    tilesAll(T_SPORELING_SKIN, a6);
+                    const float drop = 2.5f * sit;
+                    bx(-3, 0, -1, -1, 3 - drop, 1, a6, m.swing * (1 - sit), {-2, 3, 0});
+                    bx(1, 0, -1, 3, 3 - drop, 1, a6, -m.swing * (1 - sit), {2, 3, 0});
+                    tilesAll(T_SPORELING_SKIN, f6);
+                    f6[2] = T_SPORELING_FACE;
+                    bx(-3, 3 - drop, -3, 3, 8 - drop + breathe * 0.3f, 3, f6);
+                    tilesAll(T_SPORE_PAD_TOP, c6);
+                    const float bob = std::sin(time * 3.0f + m.age) * 0.3f;
+                    bx(-6, 8 - drop + bob, -6, 6, 11 - drop + bob, 6, c6);
+                    bx(-4, 11 - drop + bob, -4, 4, 13 - drop + bob, 4, c6);
+                    int w6[6];
+                    tilesAll(T_FOX_WHITE, w6);
+                    bx(-5, 13 - drop + bob, -1, -4, 15 - drop + bob, 0, w6);
+                    bx(3, 12 - drop + bob, 2, 4, 14 - drop + bob, 3, w6);
+                    bx(0, 13 - drop + bob, 3, 1, 15.5f - drop + bob, 4, w6);
+                } else if (m.type == MobType::EmberMoth) {
+                    tilesAll(T_MOTH_BODY, a6);
+                    bx(-2, 6, -5, 2, 10, 5, a6);
+                    bx(-2, 7, -8, 2, 11, -5, a6);
+                    bx(-2, 10, -10, -1, 13, -9, a6);
+                    bx(1, 10, -10, 2, 13, -9, a6);
+                    const float flap = std::sin(time * 14.0f + m.age * 3) * 0.7f;
+                    tilesAll(T_MOTH_WING, c6);
+                    bx(-12, 9, -4, -2, 10, 3, c6, 0, {-2, 9.5f, 0}, flap);
+                    bx(2, 9, -4, 12, 10, 3, c6, 0, {2, 9.5f, 0}, -flap);
+                    bx(-9, 8, 2, -2, 9, 7, c6, 0, {-2, 8.5f, 0}, flap * 0.8f);
+                    bx(2, 8, 2, 9, 9, 7, c6, 0, {2, 8.5f, 0}, -flap * 0.8f);
+                    tilesAll(T_MOTH_GLOW, c6);
+                    const float keep = b.light;
+                    b.light = std::max(keep, 1.6f + 0.3f * std::sin(time * 4.0f));  // the glowing tail
+                    bx(-1, 5, 5, 1, 7, 8, c6);
+                    b.light = keep;
+                } else {
+                    // Foxes: the orange one of the forests, the ash grey one of the Cornerstone.
+                    const bool ash = m.type == MobType::AshFox;
+                    const int fur = ash ? T_ASHFOX_FUR : T_FOX_FUR, faceT = ash ? T_ASHFOX_FACE : T_FOX_FACE;
+                    int fur6[6], dark6[6], white6[6];
+                    tilesAll(fur, fur6);
+                    tilesAll(ash ? T_ASHFOX_FUR : T_FOX_DARK, dark6);
+                    tilesAll(T_FOX_WHITE, white6);
+                    // Sitting: the back goes down, the front legs stay up and the body leans back.
+                    // The rear goes down and the chest stays up, so the body tilts back (front higher).
+                    const float lean = 0.5f * sit, rear = 3.0f * sit;
+                    bx(-3, 0, -5, -1, 5, -3, dark6, m.swing * (1 - sit), {-2, 5, -4});
+                    bx(1, 0, -5, 3, 5, -3, dark6, -m.swing * (1 - sit), {2, 5, -4});
+                    bx(-3, 0, 2, -1, 5 - rear, 4, dark6, -m.swing * (1 - sit), {-2, 5, 3});
+                    bx(1, 0, 2, 3, 5 - rear, 4, dark6, m.swing * (1 - sit), {2, 5, 3});
+                    (void)white6;
+                    int body6[6];
+                    tilesAll(fur, body6);
+                    body6[1] = T_FOX_WHITE;  // a white belly
+                    bx(-3, 5, -6, 3, 10 + breathe * 0.3f, 5, body6, lean, {0, 7, -5});
+                    tilesAll(fur, f6);
+                    f6[2] = faceT;
+                    const float lift = 1.5f * sit;
+                    bx(-3, 7 + lift, -10, 3, 12 + lift, -6, f6);
+                    // The muzzle: fur on top, white below, a small black nose at its tip.
+                    int snout6[6];
+                    tilesAll(fur, snout6);
+                    snout6[1] = T_FOX_WHITE;
+                    snout6[2] = T_FOX_WHITE;
+                    bx(-1.5f, 7 + lift, -12.5f, 1.5f, 9.5f + lift, -10, snout6);
+                    int nose6[6];
+                    tilesAll(T_FOX_DARK, nose6);
+                    bx(-0.6f, 8.6f + lift, -12.9f, 0.6f, 9.6f + lift, -12.4f, nose6);
+                    int ear6[6];
+                    tilesAll(fur, ear6);
+                    ear6[0] = ash ? T_MOTH_GLOW : T_FOX_DARK;  // dark (or glowing) ear tips
+                    bx(-3, 12 + lift, -9, -1, 15 + lift, -8, ear6);
+                    bx(1, 12 + lift, -9, 3, 15 + lift, -8, ear6);
+                    const float wag = std::sin(time * (m.tamed ? 7.0f : 3.0f) + m.age) * (m.tamed ? 0.35f : 0.2f);
+                    bx(-2, 7 - rear, 5, 2, 11 - rear, 12, fur6, 0.25f * sit, {0, 9, 5}, wag);
+                    int tip6[6];
+                    tilesAll(ash ? T_MOTH_GLOW : T_FOX_WHITE, tip6);
+                    if (ash) b.light = std::max(b.light, 1.5f);
+                    bx(-1.5f, 7.5f - rear, 12, 1.5f, 10.5f - rear, 15, tip6, 0.25f * sit, {0, 9, 5}, wag);
+                    b.light = light;
+                }
+                break;
+            }
             case MobType::Bat: {
                 tilesAll(T_BAT_BODY, t);
                 b.box({-0.11f, 0.15f, -0.1f}, {0.11f, 0.45f, 0.12f}, t, 0, {}, roll);
@@ -825,12 +1017,12 @@ void MobSystem::buildVertices(int dim, float time, std::vector<Vertex>& out) con
 
 void MobSystem::save(const std::string& folder) const {
     std::ostringstream o;
-    o << "VCMOBS3\n";
+    o << "VCMOBS4\n";  // 2.6.0: + tamed
     for (const Mob& m : mobs_)
         if (!mobInfo(m.type).hostile && m.alive())
             o << (int)m.type << " " << m.dim << " " << m.pos.x << " " << m.pos.y << " " << m.pos.z << " " << m.yaw << " " << m.health
               << " " << (int)m.profession << " " << (m.hasHome ? 1 : 0) << " " << m.home.x << " " << m.home.y << " " << m.home.z
-              << " " << m.variant << "\n";
+              << " " << m.variant << " " << (m.tamed ? 1 : 0) << "\n";
     std::ofstream(folder + "/mobs.dat") << o.str();
 }
 
@@ -838,8 +1030,8 @@ void MobSystem::load(const std::string& folder) {
     mobs_.clear();
     std::ifstream in(folder + "/mobs.dat");
     std::string magic;
-    if (!std::getline(in, magic) || (magic != "VCMOBS1" && magic != "VCMOBS2" && magic != "VCMOBS3")) return;
-    const bool v2 = magic != "VCMOBS1", v3 = magic == "VCMOBS3";
+    if (!std::getline(in, magic) || (magic != "VCMOBS1" && magic != "VCMOBS2" && magic != "VCMOBS3" && magic != "VCMOBS4")) return;
+    const bool v2 = magic != "VCMOBS1", v3 = magic == "VCMOBS3" || magic == "VCMOBS4", v4 = magic == "VCMOBS4";
     int type, dim;
     float x, y, z, yaw, health;
     while (in >> type >> dim >> x >> y >> z >> yaw >> health) {
@@ -848,11 +1040,13 @@ void MobSystem::load(const std::string& folder) {
         int variant = 0;
         if (v2 && !(in >> profession >> hasHome >> hx >> hy >> hz)) break;
         if (v3 && !(in >> variant)) break;
+        int tamed = 0;
+        if (v4 && !(in >> tamed)) break;
         if (type < 0 || type >= (int)MobType::Count || mobInfo((MobType)type).hostile) continue;
         if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(z)) continue;
         Mob m;
         m.type = (MobType)type;
-        m.dim = std::clamp(dim, 0, 2);
+        m.dim = std::clamp(dim, 0, 3);
         m.pos = Vec3(x, y, z);
         m.yaw = yaw;
         m.health = std::clamp(health, 1.0f, mobInfo(m.type).health);
@@ -861,6 +1055,8 @@ void MobSystem::load(const std::string& folder) {
         m.hasHome = hasHome != 0 && std::isfinite(hx) && std::isfinite(hy) && std::isfinite(hz);
         m.home = Vec3(hx, hy, hz);
         m.variant = (uint16_t)(ModRegistry::get().mob(variant) ? variant : 0);
+        m.tamed = tamed != 0;
+        if (m.tamed) m.sitting = true;  // a tamed fox waits where it was left
         m.uid = nextUid_++;
         mobs_.push_back(m);
         if (mobs_.size() > 200) break;
@@ -895,6 +1091,15 @@ std::vector<std::pair<ItemId, int>> mobDrops(MobType type, float roll) {
                                                        : std::vector<std::pair<ItemId, int>>{{PALE_CRYSTAL, 1 + (int)(roll * 2)}};
         case MobType::SkyDrifter: return {{FEATHER, 2 + (int)(roll * 3)}};
         case MobType::SkyGuardian: return {{CELESTIAL_WINGS, 1}, {CELESTIUM, 6}, {PALE_CRYSTAL, 8}};
+        // 2.6.0
+        case MobType::CornerstoneGolem:
+            return roll < 0.35f ? std::vector<std::pair<ItemId, int>>{{NETHERRACK, 3}, {roll < 0.15f ? (ItemId)CS_STEEL_ORE : (ItemId)CS_BRONZE_ORE, 1}}
+                                : std::vector<std::pair<ItemId, int>>{{NETHERRACK, 2 + (int)(roll * 3)}, {CS_IRON_ORE, 1}};
+        case MobType::MossLurker: return {{MOSSY_CORNERSTONE, 1}, {RAW_BEEF, 1 + (int)(roll * 2)}};
+        case MobType::Sporeling: return {{SPORE_PAD, 1}};
+        case MobType::EmberMoth: return {{EMBER_DUST, 1 + (int)(roll * 2)}};
+        case MobType::AshFox:
+        case MobType::Fox: return {};
         case MobType::CrimsonMan:
             // 1.7.0 preview: his twelve heads, which open the Celestial portal, and the compass to it.
             return {{CRIMSON_HEAD, 12}, {CELESTIAL_COMPASS, 1}};

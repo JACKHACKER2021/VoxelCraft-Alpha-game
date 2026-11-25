@@ -1885,6 +1885,22 @@ void Session::touchUp(int id, float x, float y, double time) {
                         giveItem({kind == CarKind::Locomotive ? LOCOMOTIVE : kind == CarKind::Passenger ? PASSENGER_WAGON : kind == CarKind::Drill ? DRILL_CAR : kind == CarKind::SubwayLocomotive ? SUBWAY_LOCOMOTIVE : kind == CarKind::SubwayCar ? SUBWAY_CAR : FREIGHT_WAGON, 1, 0});
                     hand_.use();
                     sound(Sound::DoorIron);
+                } else if (mob >= 0 && (mobs_.mobs()[mob].type == MobType::Fox || mobs_.mobs()[mob].type == MobType::AshFox) &&
+                           !mobs_.mobs()[mob].tamed && (heldNow.id == RAW_BEEF || heldNow.id == RAW_PORK || heldNow.id == RAW_MUTTON || heldNow.id == RAW_CHICKEN)) {
+                    // 2.6.0: raw meat tames a fox: from now on it follows the player and defends them.
+                    Mob& f = mobs_.mobs()[mob];
+                    f.tamed = true, f.panic = 0, f.sitting = false, f.health = mobInfo(f.type).health;
+                    if (survival() && --heldNow.count == 0) heldNow = {};
+                    hand_.use();
+                    sound(Sound::Eat);
+                    if (onMessage) onMessage(tr("Lišák je ochočený! Klepnutím v plížení si sedne nebo vstane."));
+                } else if (mob >= 0 && mobs_.mobs()[mob].tamed && player_.sneaking) {
+                    // 2.6.0: a tap while sneaking tells a tamed fox to sit and wait, or to come along.
+                    Mob& f = mobs_.mobs()[mob];
+                    f.sitting = !f.sitting;
+                    f.sitTimer = 0;
+                    hand_.use();
+                    if (onMessage) onMessage(tr(f.sitting ? "Lišák sedí a čeká." : "Lišák jde s tebou."));
                 } else if (mob >= 0 && mobs_.mobs()[mob].type == MobType::Villager) {
                     wantsTrade = mob;  // villagers trade instead of being hit
                 } else if (mob >= 0 && mobs_.mobs()[mob].type == MobType::Hogman && powerstone && mobs_.mobs()[mob].barter <= 0) {
@@ -2021,6 +2037,16 @@ void Session::attackMob(int index) {
         m.hurtTime = 0.35f;
         if (onHitRemoteMob) onHitRemoteMob(m.uid, damage);
         return;
+    }
+    // 2.6.0: a hit sporeling puffs a cloud of spores: the player is slowed for a few seconds.
+    {
+        const Mob& m = mobs_.mobs()[(size_t)index];
+        if (m.type == MobType::Sporeling && (m.pos - player_.pos).length() < 4.5f) {
+            sporeSlow_ = 4.0f;
+            const int sx = (int)std::floor(m.pos.x), sy = (int)std::floor(m.pos.y + 0.6f), sz = (int)std::floor(m.pos.z);
+            particles_.spawnBurst(*world_, sx, sy, sz, SPORE_PAD);
+            if (onMessage) onMessage(tr("Oblak spor tě zpomalil!"));
+        }
     }
     mobs_.hurt(index, damage, player_.pos);
 }
@@ -2551,7 +2577,39 @@ void Session::updateMobs(float dt) {
             for (int i = 0; i < horde; ++i)
                 mobs_.spawn(MobType::ForgottenMan, 0, at + Vec3(spawnRandom() * 3 - 1.5f, 0, spawnRandom() * 3 - 1.5f));
         }
-    } else if (dim == 1) {
+    }
+    if (dim == 0 && kFeatures260 && mobs_.countType(0, MobType::Fox, player_.pos, 80) < 3 && spawnRandom() < 0.08f) {
+        // 2.6.0: foxes in the Dappled Forest and the snowy taiga, in pairs.
+        Vec3 at;
+        ItemId ground;
+        if (spot(24, 44, at, ground) && (ground == GRASS || ground == SNOW_BLOCK || ground == DRIED_SNOW || ground == SNOW_LAYER)) {
+            const BiomeDef* bd = overworld_.biomeAt((int)std::floor(at.x), (int)std::floor(at.z));
+            if (bd && (bd->id == "dappled_forest" || bd->id == "snowy_taiga"))
+                for (int k = 0; k < 2; ++k) mobs_.spawn(MobType::Fox, 0, at + Vec3(spawnRandom() * 2 - 1, 0, spawnRandom() * 2 - 1));
+        }
+    }
+    if (dim == 1 && kFeatures260 && spawnRandom() < 0.3f) {
+        // 2.6.0: the Cornerstone's creatures, each where it belongs (by the floor under it).
+        const float a = spawnRandom() * 2 * kPi, r = 14 + spawnRandom() * 20;
+        const int x = (int)std::floor(player_.pos.x + std::cos(a) * r), z = (int)std::floor(player_.pos.z + std::sin(a) * r);
+        if (w.getChunk(floorDiv(x, kChunkSize), floorDiv(z, kChunkSize)))
+            for (int y = (int)player_.pos.y + 8; y > (int)player_.pos.y - 10 && y > 2; --y) {
+                const ItemId g = w.getBlock(x, y - 1, z);
+                if (w.getBlock(x, y, z) != AIR || w.getBlock(x, y + 1, z) != AIR || !isSolid(g) || g == LAVA) continue;
+                const Vec3 at(x + 0.5f, (float)y, z + 0.5f);
+                MobType type = MobType::Count;
+                int cap = 0;
+                if (g == CARVED_CORNERSTONE || g == GILDED_COBBLE || w.cornerBiomeAt(x, z) == 1) type = MobType::CornerstoneGolem, cap = 1;
+                else if (g == MOSSY_CORNERSTONE) type = calm ? MobType::Count : MobType::MossLurker, cap = 2;
+                else if (g == SPORE_PAD) type = MobType::Sporeling, cap = 4;
+                else if (g == NETHER_GRASS) type = MobType::AshFox, cap = 2;
+                else if (spawnRandom() < 0.3f) type = MobType::EmberMoth, cap = 3;
+                if (type != MobType::Count && mobs_.countType(1, type, player_.pos, 64) < cap)
+                    mobs_.spawn(type, 1, type == MobType::EmberMoth ? at + Vec3(0, 2.5f, 0) : at);
+                break;
+            }
+    }
+    if (dim == 1) {
         // 1.5.1: Huskings roam the Powerstone Wasteland of the Cornerstone Dimension. There is no
         // sky here, so look for a floor near the player's height.
         // 1.5.7: hog men roam the rest of the Cornerstone Dimension in small bands.
@@ -3265,6 +3323,9 @@ void Session::breakBlock(const RayHit& hit) {
         if (toolKind(tool) != ToolKind::None) damageHeldTool();
         if (onBlockMined) onBlockMined();
     }
+    // 2.6.0: digging ore in the Cornerstone wakes the golems round about.
+    if (kFeatures260 && dimIndex() == 1 && (id == CS_IRON_ORE || id == CS_BRONZE_ORE || id == CS_STEEL_ORE || id == POWERSTONE_ORE || id == BRONZE_ORE || id == RUBY_ORE))
+        mobs_.angerGolems(1, Vec3(hit.x + 0.5f, (float)hit.y, hit.z + 0.5f), 20);
 }
 
 void Session::updateMining(float dt, double time) {
@@ -3642,6 +3703,7 @@ void Session::update(float dt, double time, float guiW, float guiH, const Settin
     // 1.9.5 build 3: honey is sticky underfoot.
     const bool onHoney = world_->getBlock((int)std::floor(player_.pos.x), (int)std::floor(player_.pos.y - 0.05f), (int)std::floor(player_.pos.z)) == HONEY_BLOCK;
     player_.speedMul = (onHoney ? 0.4f : 1.0f) * settings.devSpeed * (survival() && temperatureLevel() <= -1 ? (temperatureLevel() == -2 ? 0.78f : 0.9f) : 1.0f);
+    if (sporeSlow_ > 0) sporeSlow_ -= dt, player_.speedMul *= 0.5f;  // 2.6.0: in a cloud of spores
     player_.gravityMul = settings.expLowGravity ? 0.3f : 1.0f;
     gliding_ = false;
     if (state_.armor[1].id == CELESTIAL_WINGS && !player_.onGround && !player_.flying && !player_.inWater && player_.vel.y < -2.0f) {

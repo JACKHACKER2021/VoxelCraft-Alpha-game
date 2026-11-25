@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <zlib.h>
 
 #include "Save.h"
 
@@ -137,9 +138,22 @@ bool exportWorld(const std::string& worldFolder, const std::string& file, std::s
     put32(out, 0x06054b50);
     put16(out, 0), put16(out, 0), put16(out, count), put16(out, count);
     put32(out, (uint32_t)central.size()), put32(out, centralAt), put16(out, 0);
+    // 2.6.0: the world is packed into one sealed file: a short readable label, then the zip compressed,
+    // so a phone's file manager shows one world file instead of opening it like a folder of parts.
+    std::vector<uint8_t> packed(compressBound((uLong)out.size()));
+    uLongf packedSize = (uLongf)packed.size();
+    if (compress2(packed.data(), &packedSize, out.data(), (uLong)out.size(), 6) != Z_OK) {
+        error = "Svět nejde zabalit";
+        return false;
+    }
+    packed.resize(packedSize);
+    const std::string label = "VCWORLD2\nVoxelCraft world: " + root.filename().string() + "\n\n";
+    std::vector<uint8_t> sealed(label.begin(), label.end());
+    for (int k = 0; k < 8; ++k) sealed.push_back((uint8_t)((uint64_t)out.size() >> (8 * k)));
+    sealed.insert(sealed.end(), packed.begin(), packed.end());
     fs::create_directories(fs::path(file).parent_path(), ec);
     std::ofstream o(file, std::ios::binary);
-    o.write((const char*)out.data(), (std::streamsize)out.size());
+    o.write((const char*)sealed.data(), (std::streamsize)sealed.size());
     if (!o) {
         error = "Soubor nejde zapsat";
         return false;
@@ -148,7 +162,30 @@ bool exportWorld(const std::string& worldFolder, const std::string& file, std::s
 }
 
 bool importWorld(const std::string& file, const std::string& worldsRoot, std::string& folder, std::string& error) {
-    const std::vector<uint8_t> d = readAll(file);
+    std::vector<uint8_t> d = readAll(file);
+    // 2.6.0: a sealed world file (VCWORLD2): unpack the zip inside; older .vcworld files are the zip itself.
+    if (d.size() > 8 && std::string(d.begin(), d.begin() + 8) == "VCWORLD2") {
+        size_t p = 8;
+        while (p + 1 < d.size() && !(d[p] == '\n' && d[p + 1] == '\n')) ++p;
+        p += 2;
+        if (p + 8 > d.size()) {
+            error = "Soubor světa je poškozený";
+            return false;
+        }
+        uint64_t size = 0;
+        for (int k = 0; k < 8; ++k) size |= (uint64_t)d[p + k] << (8 * k);
+        if (size > (1ull << 31)) {
+            error = "Soubor světa je poškozený";
+            return false;
+        }
+        std::vector<uint8_t> zip((size_t)size);
+        uLongf got = (uLongf)size;
+        if (uncompress(zip.data(), &got, d.data() + p + 8, (uLong)(d.size() - p - 8)) != Z_OK || got != size) {
+            error = "Soubor světa je poškozený";
+            return false;
+        }
+        d.swap(zip);
+    }
     // The end of central directory record, searched from the end.
     size_t end = std::string::npos;
     for (size_t p = d.size() >= 22 ? d.size() - 22 : 0; p + 22 <= d.size(); --p) {

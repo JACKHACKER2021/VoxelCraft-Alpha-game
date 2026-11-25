@@ -7102,3 +7102,39 @@ SHOT(z05_anim) {
     d.shot("z05_swim");
     d.seconds(1.2f);
 }
+
+// 2.6.0 preview: the new creatures, each standing (idle) and sitting, in the trailer studio.
+SHOT(z06_mobs) {
+    Director d(out, "z06");
+    d.openWorld("Studio", 1, GameMode::Creative, [](GenConfig& g) { g.flat = true; g.devMap = 6; });
+    Session& s = d.s();
+    Player& p = s.player();
+    p.flying = true;
+    d.settings().hideGui = true;
+    static const std::pair<MobType, const char*> kMobs[] = {
+        {MobType::CornerstoneGolem, "golem"}, {MobType::MossLurker, "lurker"}, {MobType::Sporeling, "sporeling"},
+        {MobType::EmberMoth, "moth"}, {MobType::AshFox, "ashfox"}, {MobType::Fox, "fox"}};
+    const char* only = std::getenv("VC_MOB");  // film just one of them
+    for (const auto& [type, name] : kMobs) {
+        if (only && std::string(only) != name) continue;
+        s.mobs().mobs().clear();
+        const float big = type == MobType::CornerstoneGolem ? 1.9f : type == MobType::EmberMoth ? 1.6f : 1.0f;
+        const Vec3 at(0.5f, 5.0f + (type == MobType::EmberMoth ? 0.8f : 0.0f), 8.5f);
+        s.mobs().spawn(type, 0, at);
+        Mob& m = s.mobs().mobs().back();
+        m.yaw = 0.6f, m.wanderTimer = 999, m.wandering = false;
+        p.pos = Vec3(0.5f - 1.4f * big, 4.6f + 0.6f * big, 8.5f - 3.2f * big);
+        d.idle(20);
+        const Vec3 look = at + Vec3(0, 0.5f * big, 0);
+        d.lookNow(look);
+        d.shot(std::string("z06_") + name + "_idle");
+        d.seconds(0.4f, [&](float) { d.lookNow(look); s.mobs().mobs().back().wanderTimer = 999; });
+        if (type != MobType::EmberMoth) {
+            s.mobs().mobs().back().sitting = true;
+            s.mobs().mobs().back().sitTimer = 99;
+            d.seconds(0.6f, [&](float) { d.lookNow(look); });
+            d.shot(std::string("z06_") + name + "_sit");
+            d.seconds(0.4f, [&](float) { d.lookNow(look); });
+        }
+    }
+}
