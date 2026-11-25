@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draws the Horník (miner), Rytíř (knight), Robot, Zahradnice, Astronautka and the two VIP player skins.
+"""Draws the Horník (miner), Rytíř (knight), Robot, Zahradnice, Astronautka, Poutník Netheru and the two VIP player skins.
 
 Writes 64x64 PNG skins in the usual layout (the one engine/Skin.h describes) to
 assets_src/skins/ and a 3D preview to docs/img/skins_preview.png.
@@ -980,6 +980,116 @@ def astronaut():
     return s
 
 
+# --------------------------------------------------------- Poutník Netheru ---
+# Keeps the look of the old painted skin (same colours, eyes, ember sparks on the
+# front of the robe, glowing soles), only drawn in more detail.
+
+def nether_walker():
+    s = Skin(77)
+    skin, skin_dk, skin_lt = (120, 40, 30), (96, 30, 22), (142, 54, 40)
+    hair, hair_lt = (25, 15, 15), (44, 26, 24)
+    cloth, cloth_dk, cloth_lt = (35, 20, 25), (24, 13, 17), (50, 30, 36)
+    ember, ember_lt, ember_dk = (255, 140, 30), (255, 214, 120), (190, 80, 20)
+    sparks = {(0, 0), (7, 3), (6, 6), (5, 9)}  # the same places as before
+
+    def head(face, x, y, w, h):
+        if face == "top":
+            return hair_lt if (x * 3 + y) % 5 == 0 else hair
+        if face == "bottom":
+            return skin_dk
+        if y < 2:
+            return hair_lt if face == "front" and y == 1 and x in (2, 6) else hair
+        if face == "back":
+            return hair if y < 4 else skin_dk
+        if face in ("right", "left"):
+            if y == 2 and ((face == "right" and x < 5) or (face == "left" and x > 2)):
+                return hair
+            if y == 5 and x == 2:
+                return ember_dk  # glowing crack
+            return skin if y < 6 else skin_dk
+        # front
+        if y == 3 and x in (1, 2, 5, 6):
+            return skin_dk  # brow
+        if y == 4:
+            return {1: (255, 255, 255), 2: ember_lt, 5: ember_lt, 6: (255, 255, 255)}.get(x, skin)
+        if y == 5:
+            if x in (2, 5):
+                return ember_dk  # glow under the eyes
+            if x in (3, 4):
+                return skin_lt  # nose
+        if y == 6:
+            if x in (3, 4):
+                return (150, 90, 80)  # mouth
+            if x in (1, 6):
+                return skin_dk
+        if y == 7 and x == 0:
+            return ember_dk  # crack on the cheek
+        return skin
+
+    s.paint(HEAD, head)
+
+    def glow_near(x, y):
+        return any(abs(x - sx) + abs(y - sy) == 1 for sx, sy in sparks)
+
+    def body(face, x, y, w, h):
+        if face == "top":
+            return cloth_lt if y in (0, 3) else cloth
+        if face == "bottom":
+            return cloth_dk
+        if y == 0 and face != "front":
+            return cloth_lt  # collar
+        if y == 8:
+            return (60, 26, 22) if not (face == "front" and x in (3, 4)) else ember_dk  # sash
+        if face == "front":
+            if (x, y) in sparks:
+                return ember_lt if y in (3, 6) else ember
+            if glow_near(x, y):
+                return mix(cloth, ember_dk, 0.2)
+            if x in (3, 4) and y != 8:
+                return cloth_dk  # robe opening
+            return cloth
+        if face == "back" and x in (3, 4) and y > 8:
+            return cloth_dk
+        return cloth_dk if x in (0, w - 1) else cloth
+
+    s.paint(BODY, body)
+
+    def arm(face, x, y, w, h):
+        if face == "top":
+            return cloth_lt
+        if face == "bottom":
+            return skin_dk
+        if y < 8:
+            return cloth_lt if y == 0 else (cloth_dk if y in (4, 7) else cloth)
+        if y == 8:
+            return cloth_dk  # cuff
+        if face == "front" and y == 10 and x == 1:
+            return ember_dk  # glowing crack on the hand
+        return skin if y < 11 else skin_dk
+
+    s.paint(R_ARM, arm)
+    s.paint(L_ARM, arm)
+
+    def leg(face, x, y, w, h):
+        if face == "top":
+            return cloth
+        if face == "bottom":
+            return ember
+        if y == 11:
+            return ember_lt if face == "front" and x in (1, 2) else ember  # glowing soles
+        if y == 10:
+            return mix(cloth_dk, ember_dk, 0.45)  # glow rising from the soles
+        if y == 9:
+            return cloth_dk
+        if face in ("right", "left") and x == 1:
+            return cloth_dk  # seam
+        return cloth
+
+    s.paint(R_LEG, leg)
+    s.paint(L_LEG, leg)
+    return s
+
+
 # --------------------------------------------------------------- preview ---
 
 # Model boxes: (texture part, overlay part, x0, y0, z0, w, h, d) in model pixels.
@@ -1080,11 +1190,13 @@ if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     made = [("Horník", "miner", miner()), ("Rytíř", "knight", knight()), ("Robot", "robot", robot()),
             ("Zlatý VIP", "vip_gold", vip_gold()), ("VIP Gentleman", "vip_tux", vip_tux()),
-            ("Zahradnice", "gardener", gardener()), ("Astronautka", "astronaut", astronaut())]
+            ("Zahradnice", "gardener", gardener()), ("Astronautka", "astronaut", astronaut()),
+            ("Poutník Netheru", "nether_walker", nether_walker())]
     for title, name, skin in made:
         print(skin.save(name))
     p = os.path.join(ROOT, "docs", "img", "skins_preview.png")
     preview([(t, s) for t, _, s in made[:3]], p)
     preview([(t, s) for t, _, s in made[3:5]], os.path.join(ROOT, "docs", "img", "skins_vip_preview.png"))
-    preview([(t, s) for t, _, s in made[5:]], os.path.join(ROOT, "docs", "img", "skins_gardener_astronaut_preview.png"))
+    preview([(t, s) for t, _, s in made[5:7]], os.path.join(ROOT, "docs", "img", "skins_gardener_astronaut_preview.png"))
+    preview([(t, s) for t, _, s in made[7:]], os.path.join(ROOT, "docs", "img", "skins_nether_walker_preview.png"))
     print(p)
