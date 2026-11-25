@@ -100,7 +100,7 @@ Během roku **2027**. Možná **1. 1. 2027**, nebo **1. 2. 2027**, kdy bude Voxe
 ![Telefony](img/faq/phones.jpg)
 
 - Hra je pro **Android** a bude se podporovat i dál, dokud bude fungovat **Google Play**.
-- Teď hra potřebuje **Android 11 nebo novější**.
+- Hra poběží na **Androidu 5.0 a novějším**.
 
 ### 🌐 Bude multiplayer přes internet?
 
@@ -243,7 +243,7 @@ During **2027**. Maybe on **1 January 2027**, or on **1 February 2027**, when Vo
 ![Phones](img/faq/phones.jpg)
 
 - The game is for **Android** and stays supported for as long as **Google Play** works.
-- Right now it needs **Android 11 or newer**.
+- The game runs on **Android 5.0 and newer**.
 
 ### 🌐 Will there be online multiplayer?
 

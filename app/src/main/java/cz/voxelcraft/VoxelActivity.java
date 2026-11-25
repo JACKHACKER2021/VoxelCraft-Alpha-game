@@ -32,6 +32,7 @@ import android.view.KeyEvent;
 import android.window.OnBackInvokedDispatcher;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
+import android.view.View;
 import android.view.WindowManager;
 import android.widget.Toast;
 
@@ -42,8 +43,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
@@ -122,8 +121,12 @@ public class VoxelActivity extends NativeActivity {
         unpackVoice();
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        getWindow().getAttributes().layoutInDisplayCutoutMode =
-                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)  // the notch: draw under it (Android 11+ constant)
+            getWindow().getAttributes().layoutInDisplayCutoutMode =
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
+        else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
+            getWindow().getAttributes().layoutInDisplayCutoutMode =
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             // Predictive back (Android 13+) never sends KEYCODE_BACK to the native side.
             getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
@@ -336,6 +339,27 @@ public class VoxelActivity extends NativeActivity {
         });
     }
 
+    // 2.5.0: plain java.io copies (java.nio.file needs Android 8.0; the game runs from Android 5.0).
+    private static void copyToFile(InputStream in, File target) throws IOException {
+        try (OutputStream out = new java.io.FileOutputStream(target)) {
+            byte[] buf = new byte[65536];
+            for (int n; (n = in.read(buf)) > 0; ) out.write(buf, 0, n);
+        }
+    }
+
+    private static void copyFromFile(File source, OutputStream out) throws IOException {
+        try (InputStream in = new java.io.FileInputStream(source)) {
+            byte[] buf = new byte[65536];
+            for (int n; (n = in.read(buf)) > 0; ) out.write(buf, 0, n);
+        }
+    }
+
+    private static void writeBytes(File target, byte[] data) throws IOException {
+        try (OutputStream out = new java.io.FileOutputStream(target)) {
+            out.write(data);
+        }
+    }
+
     /** Called from native code: short haptic feedback. */
     @SuppressWarnings("unused")
     public void vibrate(int ms) {
@@ -346,8 +370,11 @@ public class VoxelActivity extends NativeActivity {
         } else {
             vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
         }
-        if (vibrator != null && vibrator.hasVibrator())
+        if (vibrator == null || !vibrator.hasVibrator()) return;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
             vibrator.vibrate(VibrationEffect.createOneShot(ms, VibrationEffect.DEFAULT_AMPLITUDE));
+        else
+            vibrator.vibrate(ms);  // Android 5-7
     }
 
     // ---- audio: the native side synthesises files/sounds/*.wav, we just play them
@@ -524,7 +551,7 @@ public class VoxelActivity extends NativeActivity {
                 new Thread(() -> {
                     File part = new File(getCacheDir(), out.getName() + ".part");
                     try (InputStream in = new java.net.URL(TRAILER_URL + asset).openStream()) {
-                        Files.copy(in, part.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                        copyToFile(in, part);
                         if (!part.renameTo(out)) throw new IOException("rename");
                         runOnUiThread(() -> playVideo(asset));
                     } catch (IOException e) {
@@ -689,6 +716,10 @@ public class VoxelActivity extends NativeActivity {
     @SuppressWarnings("unused")
     public void exportWorld(String path, String name) {
         // Straight into Downloads/VoxelCraft, where the Files app shows it; no permission needed.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {  // MediaStore.Downloads came with Android 10
+            exportWorldTo(path, name);
+            return;
+        }
         new Thread(() -> {
             try {
                 ContentValues values = new ContentValues();
@@ -699,7 +730,7 @@ public class VoxelActivity extends NativeActivity {
                 if (uri == null) throw new IOException("MediaStore");
                 try (OutputStream out = getContentResolver().openOutputStream(uri)) {
                     if (out == null) throw new IOException("cannot write file");
-                    Files.copy(new File(path).toPath(), out);
+                    copyFromFile(new File(path), out);
                 }
                 runOnUiThread(() -> Toast.makeText(this, str(R.string.world_exported, name), Toast.LENGTH_LONG).show());
             } catch (IOException | RuntimeException e) {
@@ -734,10 +765,17 @@ public class VoxelActivity extends NativeActivity {
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
         if (!hasFocus) return;
-        WindowInsetsController controller = getWindow().getInsetsController();
-        if (controller != null) {
-            controller.hide(WindowInsets.Type.systemBars());
-            controller.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            WindowInsetsController controller = getWindow().getInsetsController();
+            if (controller != null) {
+                controller.hide(WindowInsets.Type.systemBars());
+                controller.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+            }
+        } else {
+            // Android 5-10: the older immersive full screen flags.
+            getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY | View.SYSTEM_UI_FLAG_FULLSCREEN
+                    | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                    | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
         }
     }
 
@@ -781,7 +819,7 @@ public class VoxelActivity extends NativeActivity {
                 File target = new File(getCacheDir(), "import.vcworld");
                 try (InputStream in = getContentResolver().openInputStream(uri)) {
                     if (in == null) throw new IOException("cannot open file");
-                    Files.copy(in, target.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                    copyToFile(in, target);
                 }
                 sendText(RESULT_WORLD_IMPORTED, target.getAbsolutePath());  // the game unpacks and checks it
             } catch (IOException e) {
@@ -793,7 +831,7 @@ public class VoxelActivity extends NativeActivity {
             if (pendingExport == null) return;
             try (OutputStream out = getContentResolver().openOutputStream(uri)) {
                 if (out == null) throw new IOException("cannot write file");
-                Files.copy(new File(pendingExport).toPath(), out);
+                copyFromFile(new File(pendingExport), out);
             } catch (IOException e) {
                 Toast.makeText(this, str(R.string.pack_error, e.getMessage()), Toast.LENGTH_LONG).show();
             }
@@ -931,7 +969,7 @@ public class VoxelActivity extends NativeActivity {
         File archive = new File(getCacheDir(), "import.zip");
         try (InputStream in = getContentResolver().openInputStream(uri)) {
             if (in == null) throw new IOException("cannot open file");
-            Files.copy(in, archive.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            copyToFile(in, archive);
         }
         try (ZipFile zip = new ZipFile(archive)) {
             String prefix = null;
@@ -985,7 +1023,7 @@ public class VoxelActivity extends NativeActivity {
             File manifest = new File(root, "manifest.json");
             if (!manifest.exists()) {
                 String json = "{\n  \"name\": \"" + base + "\",\n  \"description\": \"\",\n  \"version\": \"1.0.0\"\n}\n";
-                Files.write(manifest.toPath(), json.getBytes(StandardCharsets.UTF_8));
+                writeBytes(manifest, json.getBytes(StandardCharsets.UTF_8));
             }
             return shaders ? "shaders:" + id : id;
         } finally {
@@ -1030,7 +1068,7 @@ public class VoxelActivity extends NativeActivity {
             count++;
         }
         if (count == 0) throw new IOException(str(R.string.modpack_invalid));
-        Files.write(new File(root, "classes.txt").toPath(), Integer.toString(classes).getBytes(StandardCharsets.UTF_8));
+        writeBytes(new File(root, "classes.txt"), Integer.toString(classes).getBytes(StandardCharsets.UTF_8));
         return "java:" + id;
     }
 

@@ -4,7 +4,7 @@
 
 <a id="cz"></a>
 Všechna APK VoxelCraftu. Hra pro Android od Hoppy_Hopsy21 a VoxelSoftworks, vytvořená společně s Claude.
-Nejnovější je **2.4.0**, náhled další verze je **2.5.0 Preview**. Neoficiální fanouškovský projekt, bez obsahu od Mojangu.
+Nejnovější je **2.4.0**. Preview další verze (2.5.0) je jen pro vývojáře, proto tu není. Neoficiální fanouškovský projekt, bez obsahu od Mojangu.
 
 > [!IMPORTANT]
 > Od verze **2.4.0** má hra nové ID (`cz.voxelsoftworks.voxelcraft`) a nový podpis. Nainstaluje se **vedle** starší verze.
@@ -12,12 +12,11 @@ Nejnovější je **2.4.0**, náhled další verze je **2.5.0 Preview**. Neofici�
 > APK verzí 2.2.0 a 2.3.x tu nejsou: jejich sestavení se ztratilo; všechno z nich obsahuje 2.4.0.
 
 <a id="en"></a>
-All VoxelCraft APKs. Newest: **2.4.0**; the next version's preview: **2.5.0 Preview**. From 2.4.0 the app has a new id and a new
+All VoxelCraft APKs. Newest: **2.4.0**. The preview of the next version (2.5.0) is for developers only, so it is not here. From 2.4.0 the app has a new id and a new
 signature, so it installs **next to** an older one (move worlds with *Export* / *Import*). The 2.2.0 and 2.3.x APKs were lost; 2.4.0 has all of them.
 
 | Verze | APK | Co přinesla |
 |---|---|---|
-| **2.5.0 Preview** | [VoxelCraft-2.5.0-preview-build7.apk](VoxelCraft-2.5.0-preview-build7.apk) | Preview: the subway network (four kinds of station, tunnels, cave-ins, floods), the automatic subway, the subway map, the lost underground city, the dead explorer's journals. Installs as its own app (VoxelCraft Preview). |
 | **2.4.0** | [VoxelCraft-2.4.0.apk](VoxelCraft-2.4.0.apk) | Subway with sliding doors and night lights, spinning wheels, stations (concrete track bed, platforms), lattice bridges, crossings, ruined stations, Bronze Halls, slab stairs in towers, villages that follow the land. |
 | Classic 0.0.3 | [VoxelCraft-Classic-0.0.3.apk](VoxelCraft-Classic-0.0.3.apk) | The old game as its own small app: the first textures, creative and survival, small inventory. |
 | 2.1.0 | [VoxelCraft-2.1.0.apk](VoxelCraft-2.1.0.apk) | Trains & Bronze: trains, 3D rails, level crossing, drill car, Bronze Update. |

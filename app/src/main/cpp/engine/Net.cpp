@@ -18,6 +18,27 @@
 #include <cstdlib>
 #include <cstring>
 
+#if defined(__ANDROID__) && __ANDROID_API__ < 24
+// 2.5.0: the game runs from Android 5.0, but getifaddrs() came only with Android 7.0 (API 24):
+// it is looked up at run time; on older phones the list of addresses stays empty.
+#include <dlfcn.h>
+namespace {
+int vcGetifaddrs(ifaddrs** out) {
+    using Fn = int (*)(ifaddrs**);
+    static Fn fn = (Fn)dlsym(RTLD_DEFAULT, "getifaddrs");
+    *out = nullptr;
+    return fn ? fn(out) : -1;
+}
+void vcFreeifaddrs(ifaddrs* a) {
+    using Fn = void (*)(ifaddrs*);
+    static Fn fn = (Fn)dlsym(RTLD_DEFAULT, "freeifaddrs");
+    if (fn && a) fn(a);
+}
+}  // namespace
+#define getifaddrs vcGetifaddrs
+#define freeifaddrs vcFreeifaddrs
+#endif
+
 namespace vc::net {
 
 namespace {

@@ -105,7 +105,7 @@ void face(Painter& p, Rgb skin, Rgb hair, Rgb eyes) {
     p.front(kHead, 4, 6, {150, 90, 80});
 }
 
-void explorer(Painter& p) {
+[[maybe_unused]] void explorer(Painter& p) {  // the painted explorer before 2.5.0
     const Rgb skin{214, 165, 122}, shirt{51, 153, 158}, pants{61, 69, 158}, shoes{90, 90, 90};
     face(p, skin, {84, 51, 26}, {64, 77, 178});
     p.box(kBody, shirt);
@@ -264,7 +264,17 @@ void vipTux(Painter& p) {
 
 namespace {
 #include "DeveloperSkin.inc"
+#include "ExplorerSkin.inc"
 }  // namespace
+
+// 2.5.0: the main character: the explorer drawn pixel by pixel (in place of the painted one).
+static Skin explorerSkin() {
+    Skin s;
+    s.id = "explorer";
+    s.name = "Průzkumník";
+    s.rgba.assign(kExplorerSkin, kExplorerSkin + sizeof kExplorerSkin);
+    return s;
+}
 
 Skin developerSkin() {
     Skin s;
@@ -282,7 +292,7 @@ static Skin vip(Skin s) {
 
 std::vector<Skin> builtinSkins() {
     return {
-        make("explorer", "Průzkumník", 1, explorer),
+        explorerSkin(),
         make("miner", "Horník", 2, miner),
         make("gardener", "Zahradnice", 3, gardener),
         make("knight", "Rytíř", 4, knight),
