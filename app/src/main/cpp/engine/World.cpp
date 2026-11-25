@@ -629,9 +629,9 @@ ItemId lineRail(bool row) { return row ? (ItemId)RAIL_EW : (ItemId)RAIL_NS; }
 
 int World::metroLineCoord(bool row, int line, bool& exists) const {
     const uint32_t h = hash3(row ? 0 : line, row ? 2505 : 2506, row ? line : 0, seed_ ^ 0x3E7Fu);
-    // 2.5.0 preview: rare, only now and then a line (the land is not a subway map). The 2.4.0
-    // edition keeps its own denser network, so its worlds do not change.
-    exists = kFeatures250 ? h % (row ? 7u : 9u) == 0 : h % 3 != 0;
+    // 2.5.0: rare, only now and then a line (the land is not a subway map). The network exists only
+    // in worlds of generation 8, so 2.4.0 worlds do not change.
+    exists = h % (row ? 7u : 9u) == 0;
     return line * kMetroR + 120 + (int)((h >> 8) % 208u);
 }
 
@@ -649,7 +649,7 @@ bool World::metroActive(bool row, int line, int region, bool* first, bool* last)
 
 World::MetroStation World::metroStation(bool row, int line, int region) const {
     MetroStation s;
-    if (!kFeatures250 || dim_ != Dimension::Overworld || !config_.overworld.structures || config_.generation < 7) return s;
+    if (!kFeatures250 || dim_ != Dimension::Overworld || !config_.overworld.structures || config_.generation < 8) return s;
     bool first = false, last = false;
     if (!metroActive(row, line, region, &first, &last)) return s;
     s.ok = true;
@@ -801,7 +801,7 @@ ItemId World::metroLineBlock(bool row, int line, int a, int b, int y) const {
 }
 
 void World::stampMetro(Chunk& c) {
-    if (!kFeatures250 || config_.generation < 7) return;
+    if (!kFeatures250 || config_.generation < 8) return;  // 2.5.0 worlds (generation 8) only
     const int x0 = c.cx * kChunkSize, z0 = c.cz * kChunkSize;
     for (int pass = 0; pass < 2; ++pass) {
         const bool row = pass == 0;
@@ -863,7 +863,7 @@ bool World::lostCityOf(int line, int region, int& rampX, int& x0, int& z0) const
 }
 
 void World::stampLostCity(Chunk& c) {
-    if (!kFeatures250 || config_.generation < 7) return;
+    if (!kFeatures250 || config_.generation < 8) return;
     const int cx0 = c.cx * kChunkSize, cz0 = c.cz * kChunkSize;
     for (int line = floorDiv(cz0, kMetroR) - 1; line <= floorDiv(cz0 + 15, kMetroR) + 1; ++line)
         for (int region = floorDiv(cx0, kMetroR) - 1; region <= floorDiv(cx0 + 15, kMetroR); ++region) {
@@ -1288,7 +1288,7 @@ bool World::structurePlacement(int ki, int rx, int rz, int& ox, int& oy, int& oz
     if (k.type == WorldStructure::CaveDungeon && config_.generation < 4) return false;
     if (k.type == WorldStructure::Camp && config_.generation < 5) return false;
     if (k.type == WorldStructure::RuinedStation && (config_.generation < 7 || !kFeatures240)) return false;
-    if (k.type == WorldStructure::TrainWreck && (config_.generation < 7 || !kFeatures250)) return false;
+    if (k.type == WorldStructure::TrainWreck && (config_.generation < 8 || !kFeatures250)) return false;
     const int sea = config_.overworld.seaLevel;
     uint32_t h = hash3(rx, (int)k.type * 977 + 13, rz, seed_ ^ 0x57A7u);
     if ((int)(h % 100) >= k.percent) return false;
@@ -2839,28 +2839,28 @@ const char* seedPresetName(int preset) {
 const StructureSeed* structureSeeds(int& count) {
     // Never change an entry: players keep these seeds. Add new ones at the end instead.
     static const StructureSeed kSeeds[] = {
-        {"Ruina", "ruin", "2787", 7, (int)WorldStructure::Ruin, 4, 4},
-        {"Vrak lodi", "shipwreck", "2411", 7, (int)WorldStructure::Shipwreck, 29, -28},
-        {"Kobka", "dungeon", "969", 7, (int)WorldStructure::Dungeon, 4, 6},
-        {"Důl", "cave_dungeon", "1914", 7, (int)WorldStructure::Mineshaft, 49, 49},
-        {"Pouštní chrám", "desert_temple", "3696", 7, (int)WorldStructure::DesertTemple, -36, 13},
-        {"Iglú", "igloo", "1771", 7, (int)WorldStructure::Igloo, -8, 37},
-        {"Strážní věž", "watchtower", "2359", 7, (int)WorldStructure::Watchtower, -5, 5},
-        {"Vesnice u spawnu", "village", "2694", 7, (int)WorldStructure::Village, 24, 24},
-        {"Potopené ruiny", "drowned_ruins", "1169", 7, (int)WorldStructure::DrownedRuins, 23, 18},
-        {"Rozbitý portál", "broken_portal", "42", 7, (int)WorldStructure::BrokenPortal, -8, 6},
-        {"Zničená vesnice", "ruined_village", "590", 7, (int)WorldStructure::RuinedVillage, -25, -24},
-        {"Jeskynní kobka", "cave_dungeon", "589", 7, (int)WorldStructure::CaveDungeon, 6, 5},
-        {"Tábor", "camp", "1011", 7, (int)WorldStructure::Camp, 6, 5},
-        {"Bronzové síně", "temple", "10", 7, 100, 91, -91},
-        {"Zničená stanice", "bridges", "917", 7, (int)WorldStructure::RuinedStation, 13, 8},
+        {"Ruina", "ruin", "2787", 8, (int)WorldStructure::Ruin, 4, 4},
+        {"Vrak lodi", "shipwreck", "2411", 8, (int)WorldStructure::Shipwreck, 29, -28},
+        {"Kobka", "dungeon", "969", 8, (int)WorldStructure::Dungeon, 4, 6},
+        {"Důl", "cave_dungeon", "1914", 8, (int)WorldStructure::Mineshaft, 49, 49},
+        {"Pouštní chrám", "desert_temple", "3696", 8, (int)WorldStructure::DesertTemple, -36, 13},
+        {"Iglú", "igloo", "1771", 8, (int)WorldStructure::Igloo, -8, 37},
+        {"Strážní věž", "watchtower", "2359", 8, (int)WorldStructure::Watchtower, -5, 5},
+        {"Vesnice u spawnu", "village", "2694", 8, (int)WorldStructure::Village, 24, 24},
+        {"Potopené ruiny", "drowned_ruins", "1169", 8, (int)WorldStructure::DrownedRuins, 23, 18},
+        {"Rozbitý portál", "broken_portal", "42", 8, (int)WorldStructure::BrokenPortal, -8, 6},
+        {"Zničená vesnice", "ruined_village", "590", 8, (int)WorldStructure::RuinedVillage, -25, -24},
+        {"Jeskynní kobka", "cave_dungeon", "589", 8, (int)WorldStructure::CaveDungeon, 6, 5},
+        {"Tábor", "camp", "1011", 8, (int)WorldStructure::Camp, 6, 5},
+        {"Bronzové síně", "temple", "10", 8, 100, 91, -91},
+        {"Zničená stanice", "bridges", "917", 8, (int)WorldStructure::RuinedStation, 13, 8},
         // The 2.5.0 preview ones (its sparser subway, and the wrecks): last, so 2.4.0 can leave them out.
-        {"Stanice metra", "concrete", "8072", 7, 102, 113, 108},
-        {"Ztracené město", "shattered", "3423", 7, 101, -47, -123},
-        {"Vrak vlaku", "cutters", "2810", 7, (int)WorldStructure::TrainWreck, 6, 2},
+        {"Stanice metra", "concrete", "8072", 8, 102, 113, 108},
+        {"Ztracené město", "shattered", "3423", 8, 101, -47, -123},
+        {"Vrak vlaku", "cutters", "2810", 8, (int)WorldStructure::TrainWreck, 6, 2},
     };
     constexpr int kAll = (int)(sizeof(kSeeds) / sizeof(kSeeds[0]));
-    count = kClassicEdition ? 0 : kFeatures250 ? kAll : kAll - 3;
+    count = kClassicEdition ? 0 : kFeatures250 ? kAll : kAll - 3;  // (kFeatures250: every edition but Classic)
     return kSeeds;
 }
 

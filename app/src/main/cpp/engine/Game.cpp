@@ -40,7 +40,7 @@ namespace vc {
 namespace vc {
 
 namespace {
-const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.5.0 Preview build 14" : "VoxelCraft 2.4.0";
+const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.6.0 Preview build 1" : "VoxelCraft 2.5.0";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -1262,9 +1262,11 @@ void Game::presentsScreen(float dt) {
     ui_.textCentered(W / 2, y, "VOXELSOFTWORKS PRESENTS", faded(dim, 0.0f), 1);
     y += 14;
     const float big = ui_.textWidth("VOXELCRAFT 1.8.0", 3) < W - 20 && H >= 260 ? 3 : 2;
-    ui_.textCentered(W / 2, y, "VOXELCRAFT 2.1.0", faded(gold, 0.2f), big);
+    // 2.5.0: the version and the name of the update (they stayed at 2.1.0 for a long time).
+    const char* title = kClassicEdition ? "VOXELCRAFT CLASSIC" : kPreviewEdition ? "VOXELCRAFT 2.6.0 PREVIEW" : "VOXELCRAFT 2.5.0";
+    ui_.textCentered(W / 2, y, title, faded(gold, 0.2f), ui_.textWidth(title, big) < W - 20 ? big : 2);
     y += 10 * big + 4;
-    ui_.textCentered(W / 2, y, "Trains & Bronze", faded(white, 0.5f), 1);
+    ui_.textCentered(W / 2, y, tr("Podzemí a metro"), faded(white, 0.5f), 1);
     y += 14;
     if (season != Season::None) {
         // The event that is on right now, in a coloured band.

@@ -100,7 +100,8 @@ struct GenConfig {
     // 1.6.0 (4) Caves and Tunes: deepstone, hardium, bigger caves, mossy caves with vines,
     // lava and tar pools, gravel floors, rotten mineshaft planks.
     // 1.8.0 (5) Concrete & Old World: bridges between the Celestial Reach's islands.
-    int generation = 7;  // 6 = 1.9.0: the new Celestial Reach rock, crystals and celestium; 7 = 2.4.0: villages follow the land, ruined stations
+    int generation = 8;  // 8 = 2.5.0: the subway network, the lost city, train wrecks
+    // 6 = 1.9.0: the new Celestial Reach rock, crystals and celestium; 7 = 2.4.0: villages follow the land, ruined stations
     // 1.8.0: an "Old World", made with the terrain generator of VoxelCraft 0.1-0.3 (see
     // World::generateOldWorld). Saved with the world, so it never changes after creation.
     bool oldWorld = false;

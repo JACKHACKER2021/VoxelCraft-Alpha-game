@@ -640,7 +640,7 @@ static int testJsonAndPacks() {
     GenConfig cfg = pm.buildConfig(&warn);
     CHECK(warn.empty() && cfg.biomes.size() == 8);
     // Worlds made in the game (from the packs) get the newest generator: deepstone, hardium, mossy caves.
-    CHECK(cfg.generation == 7);
+    CHECK(cfg.generation == 8);
 
     // A mod pack: glowstone Nether with a higher lava sea, a new biome, one removed biome and a recipe.
     std::string id = pm.createPack("Můj mod");
@@ -2752,7 +2752,7 @@ static int testUpdate12() {
         // 1.8.0: then "VoxelSoftworks presents" the version; a tap goes on to the menu.
         log.clear();
         game.frame(t += 1 / 30.0);
-        CHECK(drawn("VOXELSOFTWORKS PRESENTS") && drawn("VOXELCRAFT 2.1.0") && !drawn("Play"));
+        CHECK(drawn("VOXELSOFTWORKS PRESENTS") && (drawn("VOXELCRAFT 2.5.0") || drawn("VOXELCRAFT 2.6.0 PREVIEW")) && !drawn("Play"));
         for (int i = 0; i < 30; ++i) game.frame(t += 1 / 30.0);
         game.onTouch(0, TouchAction::Down, 1200, 540, t);
         game.onTouch(0, TouchAction::Up, 1200, 540, t);
@@ -4059,7 +4059,7 @@ static int testCaves160() {
     // pools, bigger caves than generation 3; old worlds unchanged; the new recipes and items.
     GenConfig g3 = GenConfig::defaults();
     g3.generation = 3;
-    CHECK(GenConfig::defaults().generation == 7);
+    CHECK(GenConfig::defaults().generation == 8);
     World nw(777, Dimension::Overworld), ow(777, Dimension::Overworld, g3);
     nw.ensureChunksAround(0, 0, 5, 100000);
     ow.ensureChunksAround(0, 0, 5, 100000);
@@ -4427,6 +4427,16 @@ static int testStructureSeeds250() {
         }
         if (!ok) { std::printf("FAIL structure seed %s (%s) moved\n", st.name, st.seed); return 1; }
         if (tr(st.name) == std::string()) return 1;
+    }
+    {
+        // A 2.4.0 world (generation 7) gets no subway network, lost city or wrecks in its new chunks.
+        GenConfig old = GenConfig::defaults();
+        old.generation = 7;
+        World w(seedFromText("8072"), Dimension::Overworld, old);
+        int x, z, k;
+        if (w.nearestMetroStation(0, 0, x, z, k)) { std::printf("FAIL subway in a 2.4.0 world\n"); return 1; }
+        for (const World::FoundStructure& f : w.structuresNear(0, 0, 400))
+            if (f.type == (int)WorldStructure::TrainWreck) { std::printf("FAIL wreck in a 2.4.0 world\n"); return 1; }
     }
     std::printf("structure seeds: %d fixed\n", n);
     return 0;

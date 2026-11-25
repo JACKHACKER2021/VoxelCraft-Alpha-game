@@ -1875,6 +1875,7 @@
 {"Village", "Vesnice", "Village", "Village", "Village"},
 {"Big dappled forest with taiga", "Velký strakatý les s tajgou", "Big dappled forest with taiga", "Big dappled forest with taiga", "Big dappled forest with taiga"},
 {"Mineshaft nearby", "Důl poblíž", "Mineshaft nearby", "Mineshaft nearby", "Mineshaft nearby"},
+{"The Underground and the Subway", "Podzemí a metro", "El subsuelo y el metro", "Подземье и метро", "Untergrund und U-Bahn"},
 {"train speed {0} m/s ({1} km/h)", "vlak jede {0} m/s ({1} km/h)", "train speed {0} m/s ({1} km/h)", "train speed {0} m/s ({1} km/h)", "train speed {0} m/s ({1} km/h)"},
 {"speed = 10 m ÷ the time between two marks", "rychlost = 10 m ÷ čas mezi dvěma značkami", "speed = 10 m ÷ the time between two marks", "speed = 10 m ÷ the time between two marks", "speed = 10 m ÷ the time between two marks"},
 {"Every structure in a row and the 5 developer buildings", "Všechny struktury v řadě a 5 developer staveb", "Every structure in a row and the 5 developer buildings", "Every structure in a row and the 5 developer buildings", "Every structure in a row and the 5 developer buildings"},

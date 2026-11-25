@@ -118,8 +118,8 @@ Do budoucna je to **v plánu**.
 
 ![Normální a preview](img/faq/preview.jpg)
 
-- **Normální verze** (teď **2.4.0**) je hotová verze. Může ji mít **kdokoli**.
-- **Preview** (teď **2.5.0 Preview**) je další update, který se ještě dělá. Má ji **jen developer**.
+- **Normální verze** (teď **2.5.0**) je hotová verze. Může ji mít **kdokoli**.
+- **Preview** (teď **2.6.0 Preview**) je další update, který se ještě dělá. Má ji **jen developer**.
 - Obě jsou samostatné aplikace, takže můžou být v telefonu **vedle sebe**.
 
 ### 🐞 Jak nahlásit chybu?
@@ -261,8 +261,8 @@ It is **planned** for the future.
 
 ![Normal and preview](img/faq/preview.jpg)
 
-- The **normal version** (now **2.4.0**) is the finished one. **Anyone** can have it.
-- The **preview** (now **2.5.0 Preview**) is the next update, still being made. **Only the developer** has it.
+- The **normal version** (now **2.5.0**) is the finished one. **Anyone** can have it.
+- The **preview** (now **2.6.0 Preview**) is the next update, still being made. **Only the developer** has it.
 - They are separate apps, so both can be installed **side by side**.
 
 ### 🐞 How do I report a bug?

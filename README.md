@@ -7,13 +7,13 @@
 **Kostičková hra pro Android s vlastním enginem v C++**
 *Hoppy_Hopsy21 · VoxelSoftworks · vytvořeno společně s Claude*
 
-![Verze](https://img.shields.io/badge/verze-2.4.0-2ea44f?style=for-the-badge)
-![Preview](https://img.shields.io/badge/preview-2.5.0-orange?style=for-the-badge)
+![Verze](https://img.shields.io/badge/verze-2.5.0-2ea44f?style=for-the-badge)
+![Preview](https://img.shields.io/badge/preview-2.6.0-orange?style=for-the-badge)
 ![Android](https://img.shields.io/badge/Android-arm64-3DDC84?style=for-the-badge&logo=android&logoColor=white)
 ![C++](https://img.shields.io/badge/C%2B%2B-17-00599C?style=for-the-badge&logo=cplusplus&logoColor=white)
 ![OpenGL ES](https://img.shields.io/badge/OpenGL%20ES-3.0-5586A4?style=for-the-badge&logo=opengl&logoColor=white)
 
-[⬇️ Stáhnout APK 2.4.0](release/VoxelCraft-2.4.0.apk) · [📦 Všechny verze](release/) · [❓ FAQ](docs/FAQ.md) · [🎬 Trailer (17 min)](trailers/t12_2.0.0.mp4) · [📜 Historie](docs/HISTORIE.md)
+[⬇️ Stáhnout APK 2.5.0](release/VoxelCraft-2.5.0.apk) · [📦 Všechny verze](release/) · [❓ FAQ](docs/FAQ.md) · [🎬 Trailer (17 min)](trailers/t12_2.0.0.mp4) · [📜 Historie](docs/HISTORIE.md)
 
 
 **[🇨🇿 Čeština](#cestina)** · **[🇬🇧 English](#english)**
@@ -27,7 +27,7 @@
 **VoxelCraft** is a block-building game for Android with its own C++ engine, by Hoppy_Hopsy21 and VoxelSoftworks, made together with Claude.
 All code, textures, models and music are our own: **no textures, sounds, music or code from Mojang**, and it is not connected with Mojang or Microsoft.
 
-**⬇️ [VoxelCraft 2.4.0](release/VoxelCraft-2.4.0.apk)** · **[📦 all versions](release/)** · **[❓ FAQ](docs/FAQ.md)**
+**⬇️ [VoxelCraft 2.5.0](release/VoxelCraft-2.5.0.apk)** · **[📦 all versions](release/)** · **[❓ FAQ](docs/FAQ.md)**
 
 #### 🆕 2.4.0
 - 🚇 **Subway**: a fast train with sliding doors (they open on the platform side), lit at night; the driver can open the doors by hand
@@ -37,7 +37,7 @@ All code, textures, models and music are our own: **no textures, sounds, music o
 - 🏛️ **Bronze Halls**: a big underground bronze dungeon with a treasury
 - 🪜 slab stairs in the towers, villages that follow the land, clouds above the mountains
 
-#### 🧪 2.5.0 Preview – the underground
+#### 🆕 2.5.0 – the underground
 - 🗺️ **The subway network**: east-west lines above, north-south below, tunnels between the stations
 - 🚏 four kinds of station: **stop**, **depot** with a workshop, **terminus** with a turning loop, two-level **interchange**
 - 🪨 cave-ins to dig through, 🌊 flooded tunnels, subway **tiles**, **station signs** you name yourself, **benches**
@@ -74,7 +74,7 @@ The rest of this page (history of every version, how to build) is in Czech.
 | 🪜 | **Věže** | schody z půlbloků ve strážních věžích i věžích Crimson Void |
 | 🌍 | **Svět** | vesnice kopírují krajinu, mraky jsou nad horami |
 
-## 🧪 2.5.0 Preview – Podzemí
+## 🆕 2.5.0 – Podzemí
 
 - 🗺️ **síť metra**: linky východ–západ nahoře, sever–jih dole, tunely mezi stanicemi
 - 🚏 **čtyři druhy stanic**: zastávka, depo s dílnou, konečná se smyčkou, přestupní uzel se dvěma patry
