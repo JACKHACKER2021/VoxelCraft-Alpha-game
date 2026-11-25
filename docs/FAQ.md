@@ -6,6 +6,8 @@
 
 *Hoppy_Hopsy21 · VoxelSoftworks*
 
+🎬 **[FAQ trailer (3 min)](../trailers/t13_faq.mp4)**
+
 </div>
 
 ---
