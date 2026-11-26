@@ -120,6 +120,7 @@ public class VoxelActivity extends NativeActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         unpackVoice();
+        unpackVc();
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)  // the notch: draw under it (Android 11+ constant)
@@ -446,6 +447,25 @@ public class VoxelActivity extends NativeActivity {
             marker.createNewFile();
         } catch (java.io.IOException e) {
             // No voice then: the Rozhlas still writes to the chat.
+        }
+    }
+
+    /** 2.8.0: the VC language's data (creature models, ...) into the game's folder, again after each update. */
+    private void unpackVc() {
+        java.io.File root = new java.io.File(getFilesDir(), "vc");
+        long code;
+        try {
+            code = getPackageManager().getPackageInfo(getPackageName(), 0).versionCode;
+        } catch (Exception e) {
+            code = 0;
+        }
+        java.io.File marker = new java.io.File(root, ".unpacked-" + code);
+        if (marker.exists()) return;
+        try {
+            copyAssetDir("vc", root);
+            marker.createNewFile();
+        } catch (java.io.IOException e) {
+            // No models then: the creatures keep their old bodies.
         }
     }
 

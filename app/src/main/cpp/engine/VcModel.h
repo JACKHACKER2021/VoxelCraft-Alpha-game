@@ -35,7 +35,8 @@ struct VcPart {
     std::string name;
     std::vector<float> tris;  // x, y, z, u, v per vertex, 3 vertices a triangle
     float pivot[3] = {0, 0, 0};
-    float swing = 0;          // +1 / -1: a leg (opposite legs in turn), 0: does not move
+    float swing = 0;          // radians per unit of the walk's swing (legs +-1, arms the other way), 0: does not move
+    float flap = 0;           // share of the wing beat, turning about z round `pivot` (wings), 0: none
 };
 
 struct VcModel {
@@ -43,6 +44,8 @@ struct VcModel {
     int texW = 64, texH = 64;
     std::vector<VcBone> bones;
     std::vector<VcPart> parts;  // 2.8.0: GLB models
+    bool animated = false;      // the GLB said how it moves ("extras": {"vc": ...})
+    float flapSpeed = 0, flapAmp = 0, flapRest = 0;  // the wing beat: sin(time * speed) * amp, rest on the ground
     int cubeCount() const;
     int bone(const std::string& name) const;  // -1 if none
 };
@@ -52,6 +55,8 @@ struct VcPose {
     std::map<std::string, Vec3> rotation;
     float walk = 0;  // radians: how far the legs of a GLB model swing now
     float fall = 0;  // radians: dying, the whole body tips over sideways round the feet
+    float flap = 0;  // radians: the wing beat now
+    std::vector<std::pair<int, int>> swaps;  // atlas tiles drawn as others (a villager's robe, a zombie face)
 };
 
 // Where the model's texture lies in the atlas (0..1).

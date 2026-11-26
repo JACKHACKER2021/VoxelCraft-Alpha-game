@@ -4,6 +4,7 @@
 // the texture (the terrain atlas for creatures, the 64 x 64 skin for the player) is packed into the file.
 // Build: g++ -std=c++17 -Iapp/src/main/cpp tools/export_models.cpp <engine objects> -lz -o export_models
 // Run:   ./export_models <out dir>
+#include <cmath>
 #include <cstdio>
 #include <algorithm>
 #include <cstring>
@@ -18,6 +19,7 @@
 #include "engine/PlayerModel.h"
 #include "engine/Png.h"
 #include "engine/Skin.h"
+#include "engine/VcBuiltin.h"
 #include "engine/TexturePack.h"
 
 using namespace vc;
@@ -33,7 +35,14 @@ std::vector<uint8_t> pngBytes(int w, int h, const std::vector<uint8_t>& rgba) {
 }
 
 // A GLB with one node per box (36 vertices), positions in blocks (16 model pixels = 1), y up.
-void writeGlb(const fs::path& file, const std::string& name, const std::vector<Vertex>& verts, const std::vector<uint8_t>& png, float scale) {
+// 2.8.0 build 6: how a box moves (the VC language's animation, in the node's "extras": {"vc": {...}}).
+struct BoxAnim {
+    float swing = 0, flap = 0;  // radians per unit of walk swing / share of the flap
+    float pivot[3] = {0, 0, 0};
+};
+
+void writeGlb(const fs::path& file, const std::string& name, const std::vector<Vertex>& verts, const std::vector<uint8_t>& png, float scale,
+              const std::vector<BoxAnim>& anims = {}, const std::string& rootExtras = "") {
     std::vector<uint8_t> bin;
     auto pad4 = [&](std::vector<uint8_t>& b, uint8_t fill) { while (b.size() % 4) b.push_back(fill); };
     struct View { size_t offset, length; };
@@ -65,7 +74,11 @@ void writeGlb(const fs::path& file, const std::string& name, const std::vector<V
                   << ",\"componentType\":5126,\"count\":" << count << ",\"type\":\"VEC2\"}";
         meshes << (b ? "," : "") << "{\"name\":\"cube_" << b << "\",\"primitives\":[{\"attributes\":{\"POSITION\":" << a << ",\"TEXCOORD_0\":" << a + 1
                << "},\"material\":0}]}";
-        nodes << ",{\"name\":\"cube_" << b << "\",\"mesh\":" << b << "}";
+        nodes << ",{\"name\":\"cube_" << b << "\",\"mesh\":" << b;
+        if (b < anims.size() && (anims[b].swing != 0 || anims[b].flap != 0))
+            nodes << ",\"extras\":{\"vc\":{\"swing\":" << anims[b].swing << ",\"flap\":" << anims[b].flap << ",\"pivot\":[" << anims[b].pivot[0] << ","
+                  << anims[b].pivot[1] << "," << anims[b].pivot[2] << "]}}";
+        nodes << "}";
     }
     pad4(bin, 0);
     const size_t imgOff = bin.size();
@@ -73,8 +86,8 @@ void writeGlb(const fs::path& file, const std::string& name, const std::vector<V
     views.push_back({imgOff, png.size()});
     pad4(bin, 0);
     std::ostringstream j;
-    j << "{\"asset\":{\"version\":\"2.0\",\"generator\":\"VoxelCraft export_models (2.8.0)\"},\"scene\":0,\"scenes\":[{\"nodes\":[0]}],\"nodes\":[{\"name\":\"" << name
-      << "\",\"children\":[";
+    j << "{\"asset\":{\"version\":\"2.0\",\"generator\":\"VoxelCraft export_models (2.8.0)\"},\"scene\":0,\"scenes\":[{\"nodes\":[0]}],\"nodes\":[{\"name\":\"" << name << "\"" << rootExtras
+      << ",\"children\":[";
     for (size_t b = 0; b < boxes; ++b) j << (b ? "," : "") << b + 1;
     j << "]}" << nodes.str() << "],\"meshes\":[" << meshes.str() << "],\"accessors\":[" << accessors.str() << "],\"bufferViews\":[";
     for (size_t i = 0; i < views.size(); ++i) j << (i ? "," : "") << "{\"buffer\":0,\"byteOffset\":" << views[i].offset << ",\"byteLength\":" << views[i].length << "}";
@@ -123,10 +136,47 @@ std::vector<uint8_t> compactTexture(std::vector<Vertex>& v, const std::vector<ui
     return pngBytes(sheet, sheet, rgba);
 }
 
+// The rotation of each box (36 vertices) from `a` to `b` about the x axis (axis 0) or the z axis (axis 2),
+// and the point it turns round. Boxes that only moved or did not move get 0.
+std::vector<std::pair<float, Vec3>> boxTurns(const std::vector<Vertex>& a, const std::vector<Vertex>& b, int axis) {
+    std::vector<std::pair<float, Vec3>> out;
+    for (size_t f = 0; f + 36 <= a.size() && f + 36 <= b.size(); f += 36) {
+        // Two coordinates in the plane of the turn: (y, z) about x, (x, y) about z.
+        auto c1 = [&](const Vertex& v) { return axis == 0 ? v.y : v.x; };
+        auto c2 = [&](const Vertex& v) { return axis == 0 ? v.z : v.y; };
+        size_t i = f, j = f;
+        float best = 0;
+        for (size_t k = f; k < f + 36; ++k) {
+            const float d = std::hypot(c1(a[k]) - c1(a[f]), c2(a[k]) - c2(a[f]));
+            if (d > best) best = d, j = k;
+        }
+        float ang = 0;
+        Vec3 piv;
+        if (best > 1e-4f) {
+            const float ax = c1(a[j]) - c1(a[i]), ay = c2(a[j]) - c2(a[i]), bx = c1(b[j]) - c1(b[i]), by = c2(b[j]) - c2(b[i]);
+            ang = std::atan2(ax * by - ay * bx, ax * bx + ay * by);
+            if (std::fabs(ang) > 0.01f) {
+                // (I - R) c = q - R p
+                const float cs = std::cos(ang), sn = std::sin(ang);
+                const float px = c1(a[i]), py = c2(a[i]), qx = c1(b[i]), qy = c2(b[i]);
+                const float rx = qx - (px * cs - py * sn), ry = qy - (px * sn + py * cs);
+                const float m00 = 1 - cs, m01 = sn, m10 = -sn, m11 = 1 - cs, det = m00 * m11 - m01 * m10;
+                const float cx = (rx * m11 - m01 * ry) / det, cy = (m00 * ry - m10 * rx) / det;
+                piv = axis == 0 ? Vec3(a[i].x, cx, cy) : Vec3(cx, cy, a[i].z);
+            } else {
+                ang = 0;
+            }
+        }
+        out.emplace_back(ang, piv);
+    }
+    return out;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
     if (argc < 2) return 1;
+    gVcLegacyMobs = true;  // the old bodies, as the code builds them
     const fs::path out = argv[1];
     fs::create_directories(out / "mobs"), fs::create_directories(out / "player");
     int size = 0;
@@ -156,8 +206,42 @@ int main(int argc, char** argv) {
                 for (size_t i = 0; same && i < v.size(); ++i) same = std::abs(stand[i].y - v[i].y) < 1e-4f;
                 if (same) continue;  // this creature does not sit
             }
+            // 2.8.0 build 6: the animation, measured from the engine itself: the walk (swing 0 against 0.5)
+            // and the wings (two moments of the flap).
+            std::vector<BoxAnim> anims(v.size() / 36);
+            std::string rootExtras = ",\"extras\":{\"vc\":{}}";  // says how it moves, even when it does not
+            auto pose = [&](float swing, float time) {
+                MobSystem m2;
+                m2.spawn((MobType)t, 0, Vec3(0, 0, 0));
+                Mob& mm = m2.mobs().back();
+                mm.yaw = 0, mm.pos = Vec3(0, 0, 0), mm.age = 0, mm.swing = swing, mm.onGround = false;
+                if (sit) mm.sitting = true, mm.sit = 1;
+                std::vector<Vertex> r;
+                m2.buildVertices(0, time, r);
+                return r;
+            };
+            if (!sit) {
+                const auto walk = boxTurns(pose(0, 0), pose(0.5f, 0), 0);
+                for (size_t k = 0; k < anims.size() && k < walk.size(); ++k)
+                    if (walk[k].first != 0) anims[k].swing = walk[k].first / 0.5f, anims[k].pivot[0] = walk[k].second.x, anims[k].pivot[1] = walk[k].second.y, anims[k].pivot[2] = walk[k].second.z;
+                struct Flap { MobType type; float speed, amp, rest; };
+                static const Flap kFlaps[] = {{MobType::Bat, 22, 0.9f, 0.9f}, {MobType::Chicken, 30, 0.9f, 0.1f}, {MobType::SkyDrifter, 2.2f, 0.35f, 0.35f},
+                                              {MobType::EmberMoth, 14, 0.7f, 0.7f}};
+                for (const Flap& fl : kFlaps) {
+                    if (fl.type != (MobType)t) continue;
+                    const auto turn = boxTurns(pose(0, 0), pose(0, 1.5707963f / fl.speed), 2);
+                    for (size_t k = 0; k < anims.size() && k < turn.size(); ++k)
+                        if (turn[k].first != 0) {
+                            anims[k].flap = turn[k].first / fl.amp;
+                            anims[k].pivot[0] = turn[k].second.x, anims[k].pivot[1] = turn[k].second.y, anims[k].pivot[2] = turn[k].second.z;
+                        }
+                    std::ostringstream e;
+                    e << ",\"extras\":{\"vc\":{\"flapSpeed\":" << fl.speed << ",\"flapAmp\":" << fl.amp << ",\"flapRest\":" << fl.rest << "}}";
+                    rootExtras = e.str();
+                }
+            }
             const std::vector<uint8_t> tex = compactTexture(v, atlas, size);
-            writeGlb(out / "mobs" / (std::string(kIds[t]) + (sit ? "_sit" : "") + ".glb"), kIds[t], v, tex, 1.0f);
+            writeGlb(out / "mobs" / (std::string(kIds[t]) + (sit ? "_sit" : "") + ".glb"), kIds[t], v, tex, 1.0f, anims, rootExtras);
             ++files;
         }
     for (const Skin& s : builtinSkins()) {

@@ -326,7 +326,16 @@ void Game::loadTextures() {
     if (kClassicEdition) applyClassicTiles(rgba, size);
     Atlas atlas = loadTexturePack(texturePackDir_, rgba, size);
     for (const std::string& dir : packs_.textureDirs()) atlas = loadTexturePack(dir, atlas.rgba, atlas.size);
-    blitBuiltinModelTextures(atlas.rgba, atlas.size);  // 2.8.0: the redesigned creatures (VC language)
+    // 2.8.0 preview (VC language): the creatures' GLB models, from the packs first, then the game's data.
+    {
+        std::vector<std::string> dirs = packs_.textureDirs();
+        std::reverse(dirs.begin(), dirs.end());
+        if (!texturePackDir_.empty()) dirs.insert(dirs.begin(), texturePackDir_);
+        dirs.push_back(dataDir_ + "/vc");
+        setVcModelDirs(dirs);
+        loadVcMobModels(rgba, size, &packWarnings_);
+        blitVcMobTextures(atlas.rgba, atlas.size);
+    }
     for (const auto& [tile, path] : ModRegistry::get().textures()) blitTextureFile(atlas, tile, path);  // mods
     texturesSeason_ = playSettings().season;
     // 2.6.0: only the season changes the look (the Winter addon brings its things, not the snow).

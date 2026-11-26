@@ -5,6 +5,7 @@
 #include <cstring>
 
 #include "Json.h"
+#include "Blocks.h"
 
 namespace vc {
 
@@ -122,6 +123,7 @@ bool parseVcGlb(const uint8_t* data, size_t size, VcModel& out, std::vector<uint
         const Json& node = nodes[n];
         if (!node["mesh"].isNumber()) continue;
         float t[3] = {0, 0, 0}, s[3] = {1, 1, 1};
+        const Json& ex = node["extras"]["vc"];
         if (node["translation"].isArray()) read3(node["translation"], t);
         if (node["scale"].isArray()) read3(node["scale"], s);
         const Json& prims = j["meshes"][(size_t)node["mesh"].num(0)]["primitives"];
@@ -141,6 +143,11 @@ bool parseVcGlb(const uint8_t* data, size_t size, VcModel& out, std::vector<uint
             }
             VcPart part;
             part.name = node["name"].str("part" + std::to_string(out.parts.size()));
+            if (ex.isObject()) {
+                part.swing = (float)ex["swing"].num(0), part.flap = (float)ex["flap"].num(0);
+                if (ex["pivot"].isArray()) read3(ex["pivot"], part.pivot);
+                out.animated = true;
+            }
             const size_t total = indexed ? ic : pc;
             for (size_t k = 0; k + 2 < total + 2 && k < total; ++k) {
                 size_t idx = k;
@@ -166,6 +173,13 @@ bool parseVcGlb(const uint8_t* data, size_t size, VcModel& out, std::vector<uint
         if (off + len <= binLen) png->assign(bin + off, bin + off + len);
     }
     out.id = j["nodes"][0]["name"].str("model");
+    for (size_t n = 0; n < nodes.size(); ++n) {
+        const Json& ex = nodes[n]["extras"]["vc"];
+        if (ex.isObject()) out.animated = true;  // its moves are given (none is an answer too)
+        if (!ex["flapSpeed"].isNumber()) continue;
+        out.flapSpeed = (float)ex["flapSpeed"].num(0), out.flapAmp = (float)ex["flapAmp"].num(0), out.flapRest = (float)ex["flapRest"].num(out.flapAmp);
+        out.animated = true;
+    }
     return true;
 }
 
@@ -263,6 +277,7 @@ void buildVcModel(const VcModel& model, const VcPose& pose, const VcTexRect& tex
     const float cw = std::cos(pose.walk), sw = std::sin(pose.walk), cf = std::cos(pose.fall), sf = std::sin(pose.fall);
     for (const VcPart& part : model.parts) {
         const float a = part.swing * pose.walk, ca = part.swing ? std::cos(a) : 1, sa = part.swing ? std::sin(a) : 0;
+        const float fa = part.flap * pose.flap, cfa = std::cos(fa), sfa = std::sin(fa);
         (void)cw, (void)sw;
         for (size_t i = 0; i + 15 <= part.tris.size(); i += 15) {
             Vec3 q[3];
@@ -274,6 +289,10 @@ void buildVcModel(const VcModel& model, const VcPose& pose, const VcTexRect& tex
                     const float y = p.y - part.pivot[1], z = p.z - part.pivot[2];
                     p = Vec3(p.x, part.pivot[1] + y * ca - z * sa, part.pivot[2] + y * sa + z * ca);
                 }
+                if (fa != 0) {
+                    const float x = p.x - part.pivot[0], y = p.y - part.pivot[1];
+                    p = Vec3(part.pivot[0] + x * cfa - y * sfa, part.pivot[1] + x * sfa + y * cfa, p.z);
+                }
                 if (pose.fall != 0) p = Vec3(p.x * cf - p.y * sf, p.x * sf + p.y * cf + sf * 0.3f, p.z);
                 q[k] = p, uv[k][0] = f[3], uv[k][1] = f[4];
             }
@@ -282,6 +301,14 @@ void buildVcModel(const VcModel& model, const VcPose& pose, const VcTexRect& tex
             const Vec3 nrm(e1.y * e2.z - e1.z * e2.y, e1.z * e2.x - e1.x * e2.z, e1.x * e2.y - e1.y * e2.x);
             const float ax = std::fabs(nrm.x), ay = std::fabs(nrm.y), az = std::fabs(nrm.z);
             const float shade = ay >= ax && ay >= az ? (nrm.y > 0 ? 1.0f : 0.5f) : az >= ax ? 0.8f : 0.6f;
+            float du = 0, dv = 0;
+            if (!pose.swaps.empty()) {
+                const float cu = (uv[0][0] + uv[1][0] + uv[2][0]) / 3, cv = (uv[0][1] + uv[1][1] + uv[2][1]) / 3;
+                const int tile = (int)(cv * kAtlasCols) * kAtlasCols + (int)(cu * kAtlasCols);
+                for (const auto& [from, to] : pose.swaps)
+                    if (tile == from) du = (float)(to % kAtlasCols - from % kAtlasCols) / kAtlasCols, dv = (float)(to / kAtlasCols - from / kAtlasCols) / kAtlasCols;
+            }
+            for (int k = 0; k < 3; ++k) uv[k][0] += du, uv[k][1] += dv;
             for (int k = 0; k < 3; ++k) {
                 const Vec3 w = feet + Vec3(q[k].x * cy - q[k].z * sy, q[k].y, q[k].x * sy + q[k].z * cy);
                 out.push_back(Vertex{w.x, w.y, w.z, tex.u0 + uv[k][0] * (tex.u1 - tex.u0), tex.v0 + uv[k][1] * (tex.v1 - tex.v0), shade * light});

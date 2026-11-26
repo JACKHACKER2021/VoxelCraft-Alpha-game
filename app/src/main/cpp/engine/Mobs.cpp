@@ -630,20 +630,32 @@ void MobSystem::buildVertices(int dim, float time, std::vector<Vertex>& out) con
         roll = 0;
         if (!m.alive() && !mobInfo(m.type).boss) b.light = std::max(b.light, 1.4f);  // a red-white flash as it dies
         {
-            // 2.8.0 preview (VC language): the redesigned creatures are GLB models; the Celestial Reach's
-            // pig and sheep and mod reskins keep the old bodies for now.
-            VcTexRect tex;
-            const bool keepOld = ModRegistry::get().mob(m.variant) || (m.dim == 3 && (m.type == MobType::Pig || m.type == MobType::Sheep));
-            if (const VcModel* model = keepOld ? nullptr : builtinMobModel(m.type, tex)) {
+            // 2.8.0 preview (VC language): every creature's body is a GLB model from models/mobs/ (see VcBuiltin.h).
+            // A few still have the old body: mod reskins, the Celestial Reach's pig and sheep, a fox in its collar,
+            // and the bosses and the slime whose moves (slams, squashing) the VC models cannot show yet.
+            const bool keepOld = ModRegistry::get().mob(m.variant) || (m.dim == 3 && (m.type == MobType::Pig || m.type == MobType::Sheep)) ||
+                                 (m.type == MobType::Fox && m.tamed && m.collar >= 0) || m.type == MobType::CornerstoneGolem ||
+                                 m.type == MobType::SkyGuardian || m.type == MobType::PumpkinSlime;
+            if (const VcModel* model = keepOld ? nullptr : builtinMobModel(m.type, m.sit > 0.5f)) {
                 VcPose pose;
-                pose.walk = m.swing;
+                pose.walk = m.sit > 0.5f ? 0 : m.swing;
                 pose.fall = b.fall;
+                if (model->flapSpeed > 0)
+                    pose.flap = std::sin(time * model->flapSpeed + m.age * 3) * (m.onGround ? model->flapRest : model->flapAmp);
+                if (m.type == MobType::Villager) {
+                    // The robe of the villager's trade.
+                    const int robe = m.profession == Profession::Smith ? T_VILLAGER_SMITH : m.profession == Profession::Farmer ? T_VILLAGER_FARMER : T_VILLAGER_ROBE;
+                    for (int r : {T_VILLAGER_SMITH, T_VILLAGER_FARMER, T_VILLAGER_ROBE})
+                        if (r != robe) pose.swaps.emplace_back(r, robe);
+                }
+                if (m.type == MobType::ForgottenMan && zombieSkin) pose.swaps.emplace_back(T_FORGOTTEN_FACE, T_ZOMBIE_FACE);
                 Vec3 at = feet;
+                float l = light;
                 if (m.type == MobType::Ghost) {
                     at.y += std::sin(time * 2.0f + m.age) * 1.2f / 16.0f;  // it bobs in the air
-                    light = std::max(light, 3.2f);                          // and glows pale in the dark
+                    l = std::max(l, 3.2f);                                  // and glows pale in the dark
                 }
-                buildVcModel(*model, pose, tex, at, yaw, light, out);
+                buildVcModel(*model, pose, VcTexRect{}, at, yaw, l, out);
                 continue;
             }
         }

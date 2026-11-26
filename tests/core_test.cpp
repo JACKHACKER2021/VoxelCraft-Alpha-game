@@ -3417,26 +3417,36 @@ static int testUpdate14() {
             std::printf("vc model: %zu vertices, top %.3f, swung %.3f\n", v.size(), top, top2);
         }
         {
-            // 2.8.0 preview: the vanilla VC creatures (GLB models in the engine): legs found, textures in the atlas.
+            // 2.8.0 preview: every creature is a GLB file (assets/vc/models/mobs), read into the atlas, animated.
+            int asz = 0;
+            const std::vector<uint8_t> base = buildFallbackAtlas(asz);
+            setVcModelDirs({"app/src/main/assets/vc"});
+            std::vector<std::string> vw;
+            const int loadedModels = loadVcMobModels(base, asz, &vw);
+            for (const std::string& x : vw) std::printf("model warning: %s\n", x.c_str());
+            CHECK(kFeatures280 ? loadedModels >= 26 && vw.empty() : loadedModels == 0);
             int found = 0;
-            for (MobType t : {MobType::Pig, MobType::Sheep, MobType::Chicken, MobType::Cow, MobType::Ghost}) {
-                VcTexRect tex;
-                const VcModel* m = builtinMobModel(t, tex);
+            for (int ti = 0; ti < (int)MobType::Count; ++ti) {
+                const MobType t = (MobType)ti;
+                const VcModel* m = builtinMobModel(t);
                 CHECK((m != nullptr) == kFeatures280);
                 if (!m) continue;
-                int legs = 0;
-                for (const VcPart& part : m->parts) legs += part.swing != 0;
-                CHECK(m->parts.size() >= 10 && (t == MobType::Ghost ? legs == 0 : legs >= 2) && tex.v0 >= kVcBuiltinRow / (float)kAtlasCols);
-                std::vector<Vertex> still, walk;
+                int moving = 0;
+                for (const VcPart& part : m->parts) moving += part.swing != 0 || part.flap != 0;
+                const bool still = t == MobType::Ghost || t == MobType::PumpkinSlime || t == MobType::Snowman;
+                if (still ? moving != 0 : moving < 2) std::printf("FAIL model %s: %d moving parts\n", vcMobModelId(t), moving), std::exit(1);
+                std::vector<Vertex> a1, a2;
                 VcPose pose;
-                buildVcModel(*m, pose, tex, Vec3(0, 0, 0), 0, 1, still);
-                pose.walk = 0.5f;
-                buildVcModel(*m, pose, tex, Vec3(0, 0, 0), 0, 1, walk);
+                buildVcModel(*m, pose, VcTexRect{}, Vec3(0, 0, 0), 0, 1, a1);
+                pose.walk = 0.5f, pose.flap = 0.5f;
+                buildVcModel(*m, pose, VcTexRect{}, Vec3(0, 0, 0), 0, 1, a2);
                 bool moved = false;
-                for (size_t i = 0; i < still.size(); ++i) moved |= std::abs(still[i].z - walk[i].z) > 1e-3f;
-                CHECK(still.size() == walk.size() && moved == (t != MobType::Ghost));
+                for (size_t i = 0; i < a1.size(); ++i) moved |= std::abs(a1[i].z - a2[i].z) + std::abs(a1[i].y - a2[i].y) > 1e-3f;
+                for (const Vertex& q : a1) CHECK(q.u >= 0 && q.u <= 1 && q.v >= 0 && q.v <= 1);
+                CHECK(a1.size() == a2.size() && moved == !still);
                 ++found;
             }
+            CHECK(!kFeatures280 || (builtinMobModel(MobType::Fox, true) != builtinMobModel(MobType::Fox, false)));
             std::printf("vanilla VC models: %d\n", found);
             CHECK(kFirstModTile >= T_COUNT);
         }

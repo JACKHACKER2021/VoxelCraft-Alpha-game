@@ -11,6 +11,12 @@
 #include "VcBuiltin.h"
 
 namespace vc {
+namespace {
+#include "ForgottenTiles280.inc"
+}
+}  // namespace vc
+
+namespace vc {
 
 namespace {
 #include "TrainPalette.inc"
@@ -2923,7 +2929,16 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
         }
         a.put(T_HARDIUM_ORE, 3, 4, Hl), a.put(T_HARDIUM_ORE, 10, 3, Hl), a.put(T_HARDIUM_ORE, 7, 11, Hl), a.put(T_HARDIUM_ORE, 12, 9, Hl);
     }
-    blitBuiltinModelTextures(a.image(), size);  // 2.8.0: the redesigned creatures' textures
+    if (kFeatures280) {
+        // 2.8.0: the Forgotten man's improved skin: matted hair, sunken glowing eyes, a stitched mouth,
+        // a torn tunic with moss stains and a rope belt.
+        static const int kTiles[3] = {T_FORGOTTEN_FACE, T_FORGOTTEN_SHIRT, T_FORGOTTEN_SKIN};
+        std::vector<uint8_t>& img = a.image();
+        for (int k = 0; k < 3; ++k)
+            for (int y = 0; y < 16; ++y)
+                std::copy_n(&kForgottenTiles[k][y * 16 * 4], 16 * 4,
+                            &img[((size_t)((kTiles[k] / kAtlasCols) * 16 + y) * size + (kTiles[k] % kAtlasCols) * 16) * 4]);
+    }
     return a.image();
 }
 

@@ -9,3 +9,11 @@ Kopie kódu, jak hra stavěla modely **před** VcModel. Jen pro srovnání, neko
 
 Nový formát: `engine/VcModel.h` – kosti (pivot, rotace, rodič) a kostky (origin, size, uv, inflate),
 čte geo.json 1.12+, starší `geometry.*` i vlastní `*.vcmodel.json`. Referenční modely: `assets_src/models_2.8.0` (GLB).
+
+## 2.8.0 build 6: tvorové jako GLB
+
+Všech 26 tvorů se v preview kreslí z GLB souborů `app/src/main/assets/vc/models/mobs/*.glb`
+(do hry se rozbalí do `<data>/vc`, resource pack je může nahradit vlastním `models/mobs/<id>.glb`).
+Pohyb je v GLB uzlech: `"extras": {"vc": {"swing", "flap", "pivot"}}`. Stará těla v `Mobs.cpp` (kopie zde)
+zůstávají jen jako záloha: normální edice, módy s přebarvením, nebeské prase a ovce, liška s obojkem,
+bossové a dýňový sliz, a když GLB chybí.
