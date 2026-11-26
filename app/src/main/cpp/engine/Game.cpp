@@ -42,7 +42,7 @@ namespace vc {
 namespace vc {
 
 namespace {
-const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.8.0 Preview build 3" : "VoxelCraft 2.7.1";
+const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.8.0 Preview build 4" : "VoxelCraft 2.7.1";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
