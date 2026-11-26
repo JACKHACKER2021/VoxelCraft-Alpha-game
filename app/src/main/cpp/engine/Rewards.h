@@ -53,6 +53,10 @@ bool isVip(const Profile& p, long long now);
 // "winter", "halloween", "anniversary": owned (and switched on) or won for a while.
 std::set<std::string> activeAddons(const Profile& p, long long now);
 bool addonOwned(const Profile& p, const std::string& id, long long now);  // id: "addon:winter"
+// 2.7.0: whether an addon the player can use is switched on. The developer's test access starts switched off
+// (developer mode used to turn on Winter, Halloween and the Anniversary at once); bought ones start on.
+bool addonSwitchedOn(const Profile& p, const std::string& id, long long now);
+void setAddonOn(Profile& p, const std::string& id, bool on, long long now);
 long long nowSeconds();
 
 }  // namespace vc

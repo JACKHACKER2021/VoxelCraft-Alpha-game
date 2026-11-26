@@ -226,10 +226,34 @@ bool addonOwned(const Profile& p, const std::string& id, long long now) {
     return it != p.until.end() && it->second > now;
 }
 
+namespace {
+bool testAccessOnly(const Profile& p, const std::string& id, long long now) {
+    if (!p.isDeveloper() || p.owns(id)) return false;
+    auto it = p.until.find(id);
+    return !(it != p.until.end() && it->second > now);
+}
+}  // namespace
+
+bool addonSwitchedOn(const Profile& p, const std::string& id, long long now) {
+    if (!addonOwned(p, id, now)) return false;
+    if (testAccessOnly(p, id, now)) return p.addonsOff.count("on:" + id) > 0;
+    return !p.addonsOff.count(id);
+}
+
+void setAddonOn(Profile& p, const std::string& id, bool on, long long now) {
+    if (testAccessOnly(p, id, now)) {
+        if (on) p.addonsOff.insert("on:" + id);
+        else p.addonsOff.erase("on:" + id);
+        return;
+    }
+    if (on) p.addonsOff.erase(id);
+    else p.addonsOff.insert(id);
+}
+
 std::set<std::string> activeAddons(const Profile& p, long long now) {
     std::set<std::string> out;
     for (const char* a : kAddons)
-        if (addonOwned(p, a, now) && !p.addonsOff.count(a)) out.insert(std::string(a).substr(6));
+        if (addonSwitchedOn(p, a, now)) out.insert(std::string(a).substr(6));
     return out;
 }
 

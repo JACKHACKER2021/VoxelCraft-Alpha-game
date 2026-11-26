@@ -7275,3 +7275,76 @@ SHOT(z09_walk) {
         std::printf("%s after lava: %s\n", mobInfo(type).name, s.mobs().mobs().empty() ? "gone" : ("health " + std::to_string(s.mobs().mobs().back().health)).c_str());
     }
 }
+
+// 2.7.0 preview: inside the subway car: along the aisle both ways, at the doors, and from a seat at the table.
+SHOT(z10_subway_inside) {
+    Director d(out, "z10");
+    d.openWorld("Subway", 4242, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    World& w = s.currentWorld();
+    Player& p = s.player();
+    const int x = (int)std::floor(p.pos.x), z = (int)std::floor(p.pos.z) - 4, y = feetY(w, x, z);
+    trainTrack(w, x, y, z);
+    s.trains().place(w, s.dimIndex(), CarKind::SubwayLocomotive, x, y, z - 14, 0);
+    s.trains().place(w, s.dimIndex(), CarKind::SubwayCar, x, y, z - 7, 0);
+    const TrainCar& car = s.trains().trains()[0].cars[1];
+    p.flying = true;
+    d.settings().hideGui = true;
+    struct View { const char* name; Vec3 at, look; };
+    const Vec3 c = car.pos;
+    const View views[] = {
+        {"z10_aisle_a", c + Vec3(0, 0.6f, 1.6f), c + Vec3(0, 1.4f, -3)},
+        {"z10_aisle_b", c + Vec3(0, 0.6f, -1.6f), c + Vec3(0, 1.4f, 3)},
+        {"z10_door_l", c + Vec3(0, 0.6f, 0), c + Vec3(-3, 1.2f, -1.0f)},
+        {"z10_door_r", c + Vec3(0, 0.6f, 0), c + Vec3(3, 1.2f, 1.0f)},
+        {"z10_outside", c + Vec3(4.5f, 0.6f, 0), c + Vec3(0, 1.2f, 0)},
+    };
+    for (const View& v : views) {
+        p.pos = v.at;
+        d.idle(8);
+        d.lookNow(v.look);
+        d.shot(v.name);
+        d.frames(1, [&](int) { p.pos = v.at; d.lookNow(v.look); });
+    }
+    // The locomotive: its doors and the driver's seat at the desk.
+    {
+        const TrainCar& loco = s.trains().trains()[0].cars[0];
+        const Vec3 l = loco.pos;
+        const View lv[] = {
+            {"z10_loco_out_l", l + Vec3(-4.5f, 0.6f, 0), l + Vec3(0, 1.2f, 0)},
+            {"z10_loco_out_r", l + Vec3(4.5f, 0.6f, 0), l + Vec3(0, 1.2f, 0)},
+            {"z10_loco_aisle", l + Vec3(0, 0.6f, -1.4f), l + Vec3(0, 1.2f, 3)},
+            {"z10_loco_aisle2", l + Vec3(0, 0.6f, 1.0f), l + Vec3(0, 1.2f, -3)},
+        };
+        for (const View& v : lv) {
+            p.pos = v.at;
+            d.idle(8);
+            d.lookNow(v.look);
+            d.shot(v.name);
+            d.frames(1, [&](int) { p.pos = v.at; d.lookNow(v.look); });
+        }
+        const Vec3 sp = s.trains().seatPos(loco, 0);
+        for (int k = 0; k < 4; ++k) {
+            const float yaw = k * 1.5708f;
+            const Vec3 look = sp + Vec3(std::sin(yaw) * 2, 1.5f, std::cos(yaw) * 2);
+            p.pos = sp;
+            d.idle(4);
+            d.lookNow(look);
+            d.shot("z10_loco_seat" + std::to_string(k));
+            d.frames(1, [&](int) { p.pos = sp; d.lookNow(look); });
+        }
+    }
+    if (std::getenv("VC_LOCO_ONLY")) return;
+    // Seated: every seat, looking ahead and to the side.
+    for (int seat = 0; seat < s.trains().seatCount(CarKind::SubwayCar); seat += 2) {
+        const Vec3 sp = s.trains().seatPos(car, seat);
+        for (int k = 0; k < 2; ++k) {
+            p.pos = sp;
+            const Vec3 look = sp + (k == 0 ? Vec3(0, 0.3f, sp.z > c.z ? -2.0f : 2.0f) : Vec3(-2, 0.2f, 0));
+            d.idle(4);
+            d.lookNow(look);
+            d.shot("z10_seat" + std::to_string(seat) + (k ? "_side" : "_ahead"));
+            d.frames(1, [&](int) { p.pos = sp; d.lookNow(look); });
+        }
+    }
+}

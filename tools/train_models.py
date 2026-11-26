@@ -424,7 +424,24 @@ with open(OUT, "w") as o:
             # Only the side doorways slide (|z| 0.4..2); the end doors of the gangway stay shut in the body.
             def sliding(t):
                 cz = abs(sum(v[2] for v in t) / 3)
-                return t[0][3] == dc and 0.4 < cz < 2.0
+                cx = abs(sum(v[0] for v in t) / 3)
+                return t[0][3] == dc and 0.4 < cz < 2.0 and cx > 0.8  # 2.7.0: only the side walls' doors
+
+            if name == "subway_locomotive":
+                # 2.7.0: the cab's door across the car stood right where the driver sits (z 1.66..1.72):
+                # the driver sat in a door and looked through it. The cab is open to the car now.
+                tris = [t for t in tris if not (t[0][3] == dc and sum(v[2] for v in t) / 3 > 1.5
+                                                and abs(sum(v[0] for v in t) / 3) < 0.9)]
+                # ...and the cab's back wall with its window (flat at z 1.33..1.4): from the aisle the driver's
+                # seat looked as if it stood in a dark doorway. The desk and the seat stay.
+                tris = [t for t in tris if not (all(1.3 <= v[2] <= 1.45 for v in t) and all(abs(v[0]) < 0.96 for v in t)
+                                                and all(0.45 <= v[1] <= 2.45 for v in t))]
+                # The dark cab box around the driver (frame colour, z 1.4..2.1): its back face and its upper part
+                # go, so from the aisle you see the driver's seat and the desk, not a dark wall.
+                frame_ci = palette.index((52, 58, 66, 255))
+                tris = [t for t in tris if not (t[0][3] == frame_ci and all(abs(v[0]) < 0.96 and 1.38 <= v[2] <= 2.12 for v in t)
+                                                and (all(v[2] <= 1.42 for v in t) or min(v[1] for v in t) >= 1.15 or max(v[1] for v in t) >= 1.15
+                                                     or max(v[0] for v in t) - min(v[0] for v in t) < 0.15))]
             zs = sorted((min(v[2] for v in t), max(v[2] for v in t)) for t in tris if sliding(t))
             spans = []
             for z0, z1 in zs:

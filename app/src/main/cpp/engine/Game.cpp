@@ -41,7 +41,7 @@ namespace vc {
 namespace vc {
 
 namespace {
-const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.7.0 Preview build 1" : "VoxelCraft 2.6.0";
+const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.7.0 Preview build 2" : "VoxelCraft 2.6.0";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -768,8 +768,11 @@ void Game::nextMenuWorld() {
         int best = 0, bestY = 64, run = 0;
         for (int yy = 1; yy < kChunkHeight; ++yy) {
             if (w.getBlock(8, yy, 8) == AIR) {
-                if (++run > best) best = run, bestY = yy - run + 1;
+                ++run;
             } else {
+                // 2.7.0: only air with a ceiling over it counts: the open sky above the Cornerstone's roof
+                // was the longest run, and the camera turned over the roof.
+                if (run > best) best = run, bestY = yy - run;
                 run = 0;
             }
         }
@@ -1377,11 +1380,22 @@ void Game::presentsScreen(float dt) {
         "Noví tvorové v Cornerstone",
         "Rozhlas s lepším hlasem",
     };
-    const char* const* kNew = kFeatures250 ? kNew250 : kNew240;
+    static const char* const kNew260[] = {
+        "Noví tvorové a rudy v Cornerstone, ochočitelný lišák",
+        "Halloween a Vánoce: dýně, duchové, stromek a sněhulák",
+        "Bílá zimní tráva a sezónní vzhled",
+        "Nová klidná hudba a vajíčka pro všechny tvory",
+        "Čitelný export světa a režim Slabé zařízení",
+    };
+    static const char* const kNext260[] = {
+        "Jízdenky, hlášení stanic a opuštěné nádraží",
+        "Deník hráče, peněženka a obojek pro lišáka",
+    };
+    const char* const* kNew = kFeatures260 ? kNew260 : kFeatures250 ? kNew250 : kNew240;
     const int kNewCount = 5;
-    const char* const* kNext = kFeatures250 ? kNext250 : kNext240;
+    const char* const* kNext = kFeatures260 ? kNext260 : kFeatures250 ? kNext250 : kNext240;
     const int kNextCount = kFeatures250 ? 2 : 3;
-    const char* nextTitle = kFeatures250 ? "PŘIPRAVUJEME VE 2.6.0" : "PŘIPRAVUJEME VE 2.5.0";
+    const char* nextTitle = kFeatures260 ? "PŘIPRAVUJEME VE 2.7.0" : kFeatures250 ? "PŘIPRAVUJEME VE 2.6.0" : "PŘIPRAVUJEME VE 2.5.0";
     // Long lines wrap at word boundaries (they used to be cut off). On a small screen the two lists
     // sit side by side.
     auto wrap = [&](const std::string& prefix, const char* source, float width) {
@@ -1947,7 +1961,7 @@ void Game::titleScreen() {
         // 2.5.0: on a low screen there is no room under the menu: the button goes to the top left corner.
         const bool under = ny + 20 < H - 12;
         const float bx = under ? (W - nw) / 2 : 4, by = under ? ny : 4;
-        if (ui_.menuButton(bx, by, nw, 20, kFeatures250 ? "Novinky 2.5.0" : "Novinky 2.4.0", St::Primary, Font::Star, live)) newsOpen_ = true;
+        if (ui_.menuButton(bx, by, nw, 20, kFeatures260 ? "Novinky 2.6.0" : kFeatures250 ? "Novinky 2.5.0" : "Novinky 2.4.0", St::Primary, Font::Star, live)) newsOpen_ = true;
     }
     if (newsOpen_) newsPanel();
     ui_.text(3, H - 10, kVersion, kText);
@@ -4142,11 +4156,10 @@ void Game::storeScreen() {
             return trf("zbývá {0} h", {std::to_string((u->second - nowS + 3599) / 3600)});
         };
         if (it.kind == StoreItem::Kind::Addon && (owned || addonOwned(profile_, it.id, nowS))) {
-            bool on = !profile_.addonsOff.count(it.id);
+            bool on = addonSwitchedOn(profile_, it.id, nowS);
             ui_.text(bx + 6, by + cardH - 15, owned ? tr("Vlastníš") : left(), kAccent, 1, false, cardW - 90);
             if (ui_.button(bx + cardW - 76, by + cardH - 19, 70, 16, on ? "Zapnuto" : "Vypnuto", true, on)) {
-                if (on) profile_.addonsOff.insert(it.id);
-                else profile_.addonsOff.erase(it.id);
+                setAddonOn(profile_, it.id, !on, nowS);
                 profile_.save(profilePath_);
             }
         } else if (it.id == "addon:anniversary") {
