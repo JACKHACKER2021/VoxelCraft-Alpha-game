@@ -347,6 +347,9 @@ private:
     std::set<std::string> journalKeys_;
     float journalTimer_ = 0;
     void journalTick(float dt);
+    void announceTick(float dt);  // 2.8.0: "Next station" in the subway
+    float announceTimer_ = 0;
+    long long announcedNext_ = 0, announcedHere_ = 0;
     void checkAchievements();
     BoatSystem boats_;
     // 2.1.0 preview: trains. Where the player sits in one (-1: not in a train); seat 0 of a
@@ -428,6 +431,7 @@ private:
 public:
     int wantsBlockEditor = 0;  // 1 command block, 2 structure block, 3 Rozhlas, 4 station sign (Game opens the editor)
     std::function<void(const std::string& text)> onRadio;  // 2.2.0: a Rozhlas reads out its text
+    std::function<void(const std::string& czech, const std::string& english)> onAnnounce;  // 2.8.0: the subway's announcements
     FurnaceKey blockEditorKey;
     std::string blockText(const FurnaceKey& key) const;
     std::string setBlockText(const FurnaceKey& key, const std::string& text);  // returns a message

@@ -370,6 +370,10 @@ enum BlockId : uint16_t {
     LEATHER = 60300,             // 2.7.0: from cows; for the backpack and the wallet
     WALLET = 60301,              // 2.7.0: holds up to 500 items and blocks (its number in `damage`)
     STEEL_MIX = 60308,
+    TICKET_MACHINE = 60314,      // 2.8.0: sells subway tickets for ancient coins
+    TURNSTILE = 60315,           // 2.8.0: closed; TURNSTILE + 1 open for a few seconds after a valid ticket
+    METRO_TICKET = 60317,        // 2.8.0: one ride (its station's number in `damage`)
+    DAY_TICKET = 60318,          // 2.8.0: rides for one game day (the day in `damage`)
     STEEL_AGED = 60309,          // 2.7.0: 60309..60313: steel rusting (waxed, rusty, waxed rusty, very rusty, waxed very rusty)           // 2.7.0: iron and coal, smelted into steel
     BACKPACK = 60302,            // 2.7.0: 60302..60307: leather, steel, steel-bronze, bronze-ruby, hardium, celestium
     RAIL_SWITCH8 = 60212,        // 60212..60243: 2.3.0 the flexible switch: entry port * 4 + left * 2 + state   // 2.3.0: a chest of the Bronze Halls
@@ -685,6 +689,7 @@ bool modIsEmissive(ItemId id);
 int modFood(ItemId id);
 inline bool isNewBlock(ItemId id) {
     if (id >= STEEL_AGED && id < STEEL_AGED + 5) return true;  // 2.7.0: rusting steel
+    if (id >= TICKET_MACHINE && id <= TURNSTILE + 1) return true;  // 2.8.0: the subway's ticket machine and turnstile
     if (id >= kExtIdBase && id <= kExtLastBlock && !(id >= LOCOMOTIVE && id <= FREIGHT_WAGON) && id != DRILL_CAR && id != STARBERRIES && id != SUBWAY_LOCOMOTIVE && id != SUBWAY_CAR && id != METRO_MAP && id != EMBER_DUST && !(id >= JOURNAL && id < JOURNAL + 12)) return true;  // the engine's own range
     if (isModId(id)) return modIsBlock(id);
     return isStairs(id) || isSlab(id) || (id >= TAR && id <= SNOW_LAYER) || isStainedGlass(id) || (id >= WALL_CABLE && id < WALL_CABLE + 8) || (id >= WALL_SWITCH && id < WALL_SWITCH + 8) ||
@@ -820,6 +825,7 @@ enum Tile : uint16_t {
     T_STEEL_MIX,
     T_HAZARD,  // 2.7.0: yellow and black stripes (the buffer stop)
     T_STEEL_RUST1, T_STEEL_RUST2,
+    T_TICKET_MACHINE, T_TICKET_MACHINE_SIDE, T_TURNSTILE, T_METRO_TICKET, T_DAY_TICKET,  // 2.8.0
     T_TRAIN_TEX2, T_TRAIN_TEX2_LAST = T_TRAIN_TEX2 + 15,  // 2.3.0 preview build 7: more train colours (the subway)
     T_COUNT
 };
@@ -931,7 +937,7 @@ inline bool isShaped(ItemId id) {
     return isDoor(id) || isTrapdoor(id) || isChest(id) || isFence(id) || isSkeletonHead(id) || id == CACTUS || isBed(id) || isCable(id) ||
            isSwitch(id) || id == CAKE || id == FARMLAND || isStairs(id) || (isSlab(id) && !isDoubleSlab(id)) ||
            isBalloon(id) || id == PARTY_LANTERN || id == SNOW_LAYER || isTorch(id) || isCarpet(id) || id == CAMPFIRE || id == LEAF_LITTER || isRail(id) || id == CUSHION || id == BENCH || isBufferStop(id) || isCrossingSignal(id) || isCrossingGate(id) ||
-           id == GRAVESTONE || id == BAT_LANTERN || id == STOCKING;
+           id == GRAVESTONE || id == BAT_LANTERN || id == STOCKING || id == TICKET_MACHINE || id == TURNSTILE || id == TURNSTILE + 1;
 }
 inline bool isLeaves(ItemId id) { return id == LEAVES || id == SPRUCE_LEAVES || id == VOID_LEAVES || id == NETHERPERK_CAP || id == CELESTIAL_LEAVES ||
                                          (id >= RED_LEAVES && id <= YELLOW_LEAVES) || id == CRIMSONIUM_LEAVES || id == GLOWCAP_LEAVES; }
@@ -1084,6 +1090,10 @@ inline int tileFor(ItemId id, Face face) {
         case BRONZE_BLOCK: return T_BRONZE_BLOCK;
         case STEEL_BLOCK: return T_STEEL_BLOCK;
         case STEEL_AGED: return T_STEEL_BLOCK;
+        case TICKET_MACHINE: return face == F_SOUTH ? T_TICKET_MACHINE : T_TICKET_MACHINE_SIDE;
+        case TURNSTILE: case TURNSTILE + 1: return T_TURNSTILE;
+        case METRO_TICKET: return T_METRO_TICKET;
+        case DAY_TICKET: return T_DAY_TICKET;
         case STEEL_AGED + 1: case STEEL_AGED + 2: return T_STEEL_RUST1;
         case STEEL_AGED + 3: case STEEL_AGED + 4: return T_STEEL_RUST2;
         case RUBY_BLOCK: return T_RUBY_BLOCK;

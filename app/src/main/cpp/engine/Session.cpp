@@ -275,6 +275,31 @@ void Session::journal(const std::string& key, const std::string& czechTemplate, 
     if (journal_.size() > 400) journal_.erase(journal_.begin());
 }
 
+void Session::announceTick(float dt) {
+    // 2.8.0: riding the subway: "Next station" (in Czech, then in English) when a station is near ahead,
+    // and its name on arrival.
+    if (!kFeatures280 || (announceTimer_ -= dt) > 0) return;
+    announceTimer_ = 1;
+    if (trainSeatTrain_ < 0 || world_ != &overworld_ || trainSeatTrain_ >= (int)trains_.trains().size()) return;
+    const auto& cars = trains_.trains()[(size_t)trainSeatTrain_].cars;
+    if (trainSeatCar_ >= (int)cars.size()) return;
+    const CarKind kind = cars[(size_t)trainSeatCar_].kind;
+    if (kind != CarKind::SubwayCar && kind != CarKind::SubwayLocomotive) return;
+    int mx, mz, k;
+    const int px = (int)std::floor(player_.pos.x), pz = (int)std::floor(player_.pos.z);
+    if (!overworld_.nearestMetroStation(px, pz, mx, mz, k)) return;
+    const float d = std::hypot((float)(mx - px), (float)(mz - pz));
+    const long long key = ((long long)mx << 32) ^ (unsigned)mz;
+    const std::string name = overworld_.metroStationName(mx, mz);
+    if (d < 12 && announcedHere_ != key) {
+        announcedHere_ = key;
+        if (onAnnounce) onAnnounce("Stanice " + name + ".", "Station " + name + ".");
+    } else if (d < 80 && d >= 12 && announcedNext_ != key) {
+        announcedNext_ = key;
+        if (onAnnounce) onAnnounce("Příští stanice: " + name + ".", "Next station: " + name + ".");
+    }
+}
+
 void Session::journalTick(float dt) {
     // Every two seconds: the first time in a dimension, and the structures walked into.
     if (!kFeatures280 || (journalTimer_ -= dt) > 0) return;
@@ -1186,6 +1211,8 @@ void Session::updateBlockPhysics(float dt) {
                 w.setBlock(t.x, t.y, t.z, AIR);
                 fallingBlocks_.push_back({t.dim, Vec3(t.x + 0.5f, (float)t.y, t.z + 0.5f), 0, b});
             }
+        } else if (b == TURNSTILE + 1) {
+            w.setBlock(t.x, t.y, t.z, TURNSTILE);  // 2.8.0: the turnstile closes again
         } else if (b == FIRE) {
             tickFire(t.dim, t.x, t.y, t.z);
         } else if (liquids) {
@@ -3023,6 +3050,49 @@ void Session::useItem(const RayHit& hit) {
                 return;
             }
         }
+        if (kFeatures280 && block == TICKET_MACHINE) {
+            // 2.8.0: an ancient coin buys a ticket, three a day ticket (sneaking); free in creative.
+            const bool day = player_.sneaking;
+            const int price = day ? 3 : 1;
+            if (survival() && countInInventory(state_.inventory, ANCIENT_COIN) < price) {
+                if (onMessage) onMessage(trf("Jízdenka stojí {0} starou minci, celodenní {1}.", {"1", "3"}));
+                return;
+            }
+            if (survival()) {
+                int left = price;
+                for (int k = 0; k < kInventorySize && left > 0; ++k)
+                    while (left > 0 && state_.inventory.slots[k].id == ANCIENT_COIN) state_.inventory.removeOne(k), --left;
+            }
+            int mx = hit.x, mz = hit.z, kind;
+            std::string station = tr("bez stanice");
+            if (world_ == &overworld_ && overworld_.nearestMetroStation(hit.x, hit.z, mx, mz, kind) && std::hypot((float)(mx - hit.x), (float)(mz - hit.z)) < 60) {
+                station = overworld_.metroStationName(mx, mz);
+                journal("ticket:" + std::to_string(mx) + ":" + std::to_string(mz), "Jízdenka ze stanice {0}.", {station});
+                int stations = 0;
+                for (const std::string& k2 : journalKeys_) stations += k2.rfind("ticket:", 0) == 0 ? 1 : 0;
+                if (kFeatures280 && stations >= 5) achieve("traveller");
+            }
+            const int today = (int)(state_.dayTime / 24000.0);
+            giveItem({day ? (ItemId)DAY_TICKET : (ItemId)METRO_TICKET, 1, (uint16_t)(day ? today : (unsigned)(mx * 31 + mz) & 0xffff)});
+            sound(Sound::Coin);
+            if (onMessage) onMessage(day ? trf("Celodenní jízdenka na den {0}, stanice {1}.", {std::to_string(today + 1), station})
+                                         : trf("Jízdenka ze stanice {0}.", {station}));
+            return;
+        }
+        if (kFeatures280 && block == TURNSTILE) {
+            // 2.8.0: a valid ticket opens the turnstile for three seconds (a single ticket is used up).
+            const int today = (int)(state_.dayTime / 24000.0);
+            const bool dayOk = held.id == DAY_TICKET && held.damage == today;
+            if (held.id == METRO_TICKET || dayOk || !survival()) {
+                if (held.id == METRO_TICKET && survival() && --held.count == 0) held = {};
+                w.setBlock(hit.x, hit.y, hit.z, TURNSTILE + 1);
+                blockTicks_.push_back({dimIndex(), hit.x, hit.y, hit.z, 3.0f});
+                sound(Sound::DoorIron);
+            } else if (onMessage) {
+                onMessage(tr(held.id == DAY_TICKET ? "Celodenní jízdenka už neplatí." : "Turniket pustí jen s jízdenkou."));
+            }
+            return;
+        }
         if (block == CELESTIAL_FRAME && held.id == CRIMSON_HEAD) {
             // 1.7.0 preview: a head on a frame block, like an eye on the End's frame. The ring of
             // twelve frames lies round a 3 x 3 hole; with every head in place the hole lights up.
@@ -3941,6 +4011,7 @@ void Session::travelThroughPortal() {
 
 void Session::update(float dt, double time, float guiW, float guiH, const Settings& settings) {
     journalTick(dt);
+    announceTick(dt);
     if (kFeatures250 && world_ == &overworld_ && (int)(time * 2) != (int)((time - dt) * 2)) {
         // 2.5.0: a subway station the player stands in (deep down near its entrance) counts as found.
         int ex, ez, kind;

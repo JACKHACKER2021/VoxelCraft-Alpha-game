@@ -291,6 +291,19 @@ int blockBoxes(const World& world, int x, int y, int z, ItemId id, bool collisio
         out[0] = {1 / 16.0f, 0, 1 / 16.0f, 15 / 16.0f, 6 / 16.0f, 15 / 16.0f};
         return 1;
     }
+    if (id == TICKET_MACHINE) {  // 2.8.0: a tall box on a foot
+        out[0] = {2 / 16.0f, 0, 3 / 16.0f, 14 / 16.0f, 1, 13 / 16.0f};
+        return 1;
+    }
+    if (id == TURNSTILE || id == TURNSTILE + 1) {
+        // 2.8.0: two posts and, when closed, the arms across (collision: the posts, the arms when closed).
+        int n = 0;
+        out[n++] = {0, 0, 6 / 16.0f, 3 / 16.0f, 15 / 16.0f, 10 / 16.0f};
+        out[n++] = {13 / 16.0f, 0, 6 / 16.0f, 1, 15 / 16.0f, 10 / 16.0f};
+        if (id == TURNSTILE) out[n++] = {3 / 16.0f, 8 / 16.0f, 7 / 16.0f, 13 / 16.0f, 10 / 16.0f, 9 / 16.0f};
+        if (id == TURNSTILE && collision) out[n - 1].y0 = 0, out[n - 1].y1 = 1.5f;
+        return n;
+    }
     if (isBufferStop(id)) {
         // 2.0.0: a rail piece with a frame and a bumper plate at the end the track runs into
         // (facing 0: the plate on the north edge, then clockwise).

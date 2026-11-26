@@ -767,6 +767,11 @@ void Game::startSession(const WorldInfo& info, const PlayerState& player) {
         lan_.sendChat("[Rozhlas] " + text);
         speakRadio(text);
     };
+    // 2.8.0: the subway's announcements: in the chat in both languages, read out in Czech and then English.
+    session_->onAnnounce = [this](const std::string& cz, const std::string& en) {
+        addChat("§b[" + tr("Metro") + "]§r " + cz + " · " + en);
+        speakAnnouncement(cz, en);
+    };
     session_->save();  // writes level.dat right away so the world shows up in the list
     // Items from the daily rewards, and a present every day while the Winter addon is on.
     for (auto [id, n] : profile_.pendingItems)
@@ -4084,6 +4089,32 @@ void Game::speakRadio(const std::string& text) {
     const std::string path = soundsDir_ + "/radio.wav";
     const std::string dataDir = soundsDir_.substr(0, soundsDir_.size() - 7);  // <data>/sounds -> <data>, holds espeak-ng-data
     const std::vector<uint8_t> wav = synthesizeVoice(text, dataDir, settings_.language);
+    if (FILE* f = std::fopen(path.c_str(), "wb")) {
+        std::fwrite(wav.data(), 1, wav.size(), f);
+        std::fclose(f);
+        onPlayFile(path, settings_.soundVolume);
+    }
+}
+
+void Game::speakAnnouncement(const std::string& czech, const std::string& english) {
+    if (!onPlayFile || settings_.soundVolume <= 0) return;
+    const std::string dataDir = soundsDir_.substr(0, soundsDir_.size() - 7);
+    std::vector<float> pcm = synthesizeVoiceSamples(czech, dataDir, "cs");
+    pcm.insert(pcm.end(), 22050 / 2, 0.0f);  // half a second between the two languages
+    const std::vector<float> en = synthesizeVoiceSamples(english, dataDir, "en");
+    pcm.insert(pcm.end(), en.begin(), en.end());
+    // A mono 16-bit WAV at 22050 Hz.
+    std::vector<uint8_t> wav(44);
+    auto put32 = [&](size_t at, uint32_t v) { for (int i = 0; i < 4; ++i) wav[at + i] = (uint8_t)(v >> (8 * i)); };
+    auto put16 = [&](size_t at, uint16_t v) { wav[at] = (uint8_t)v, wav[at + 1] = (uint8_t)(v >> 8); };
+    std::memcpy(&wav[0], "RIFF", 4), std::memcpy(&wav[8], "WAVEfmt ", 8), std::memcpy(&wav[36], "data", 4);
+    put32(16, 16), put16(20, 1), put16(22, 1), put32(24, 22050), put32(28, 44100), put16(32, 2), put16(34, 16);
+    for (float f : pcm) {
+        const int16_t v = (int16_t)std::clamp(f * 32767.0f, -32768.0f, 32767.0f);
+        wav.push_back((uint8_t)v), wav.push_back((uint8_t)(v >> 8));
+    }
+    put32(4, (uint32_t)wav.size() - 8), put32(40, (uint32_t)wav.size() - 44);
+    const std::string path = soundsDir_ + "/announce.wav";
     if (FILE* f = std::fopen(path.c_str(), "wb")) {
         std::fwrite(wav.data(), 1, wav.size(), f);
         std::fclose(f);

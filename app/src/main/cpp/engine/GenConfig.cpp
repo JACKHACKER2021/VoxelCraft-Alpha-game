@@ -621,6 +621,13 @@ const char* kUpdate270 = R"({
   ]
 })";
 
+const char* kUpdate280 = R"({
+  "recipes": [
+    {"type": "shaped", "pattern": ["SSS", "SGS", "SPS"], "key": {"S": "steel_ingot", "G": "glass", "P": "powerstone_dust"}, "result": "ticket_machine"},
+    {"type": "shaped", "pattern": ["S.S", "SSS", "S.S"], "key": {"S": "steel_ingot"}, "result": "turnstile", "count": 2}
+  ]
+})";
+
 const char* kUpdate250 = R"({
   "recipes": [
     {"type": "shaped", "pattern": ["CC", "CC"], "key": {"C": "hardened_concrete"}, "result": "metro_tile", "count": 4},
@@ -903,7 +910,8 @@ const std::vector<std::pair<std::string, std::string>>& defaultPackFiles() {
     if (kFeatures240) f.push_back({"recipes/update_2_4_0.json", kUpdate240});  // 2.4.0: stations and bridges
     if (kFeatures250) f.push_back({"recipes/update_2_5_0_preview.json", kUpdate250});
     if (kFeatures260) f.push_back({"recipes/update_2_6_0_preview.json", kUpdate260});
-    if (kFeatures270) f.push_back({"recipes/update_2_7_0_preview.json", kUpdate270});  // 2.7.0 preview: wallet  // 2.6.0 preview  // 2.5.0 preview: the subway network
+    if (kFeatures270) f.push_back({"recipes/update_2_7_0_preview.json", kUpdate270});  // 2.7.0 preview: wallet
+    if (kFeatures280) f.push_back({"recipes/update_2_8_0_preview.json", kUpdate280});  // 2.8.0 preview: tickets  // 2.6.0 preview  // 2.5.0 preview: the subway network
     return f;
     }();
     return files;

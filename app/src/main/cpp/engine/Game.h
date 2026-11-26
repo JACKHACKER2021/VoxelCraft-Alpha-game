@@ -270,6 +270,7 @@ private:
     void chestScreen();
     void backpackScreen();  // 2.7.0
     void journalScreen();   // 2.8.0
+    void speakAnnouncement(const std::string& czech, const std::string& english);
     void tradeScreen();
     int tradeMob_ = -1;
     int tradeProfession_ = 0;

@@ -73,8 +73,9 @@ const Achievement kAchievements[] = {
     {"big_chest", "Velká truhla", "Otevři dvojitou truhlu.", 20},
     {"wax_steel", "Proti rzi", "Navoskuj ocel medem.", 30},
     {"steel_mix", "Ocelář", "Upeč ocel z ocelové směsi.", 40},
+    {"traveller", "Cestovatel", "Kup jízdenku v pěti různých stanicích metra.", 120},
 };
-constexpr int kAchievements280 = 9;
+constexpr int kAchievements280 = 10;
 const int kAchievementCount = (int)(sizeof(kAchievements) / sizeof(kAchievements[0])) - (kFeatures280 ? 0 : kAchievements280);
 
 const Achievement* findAchievement(const std::string& id) {

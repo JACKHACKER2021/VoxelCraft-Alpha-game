@@ -2838,6 +2838,35 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
                     }
                 }
         }
+        if (kFeatures280) {
+            // 2.8.0: the ticket machine (a screen, a coin slot, a ticket slot), its sides, the turnstile's
+            // steel, a ticket and a day ticket.
+            for (int y = 0; y < 16; ++y)
+                for (int x = 0; x < 16; ++x) {
+                    const int n = (int)(hash3(x, y, T_TICKET_MACHINE, 2) % 7) - 3;
+                    Rgb body = Rgb{200, 40, 50}.plus(n);
+                    if (x == 0 || x == 15 || y == 0 || y == 15) body = body.scaled(0.6f);
+                    Rgb front = body;
+                    if (x >= 3 && x <= 12 && y >= 2 && y <= 6) front = (x == 3 || x == 12 || y == 2 || y == 6) ? Rgb{40, 40, 44} : Rgb{80, 170, 230};
+                    if (x >= 5 && x <= 10 && y == 4) front = Rgb{230, 240, 250};
+                    if (x >= 10 && x <= 12 && y >= 9 && y <= 10) front = Rgb{30, 30, 30};   // the coin slot
+                    if (x >= 4 && x <= 9 && y == 12) front = Rgb{20, 20, 20};               // the ticket slot
+                    a.put(T_TICKET_MACHINE, x, y, front);
+                    a.put(T_TICKET_MACHINE_SIDE, x, y, y == 7 ? Rgb{240, 240, 240} : body);
+                    a.put(T_TURNSTILE, x, y, (((x + y) / 3) % 2 ? Rgb{170, 176, 186} : Rgb{140, 146, 156}).plus(n));
+                }
+            static const char* const kTicket[16] = {"................", "................", "................", "................", ".11111111111111.", ".12222222222221.", ".12333333322221.", ".12222222222221.", ".12333332222221.", ".12222222222221.", ".11111111111111.", "................", "................", "................", "................", "................"};
+            for (int t = 0; t < 2; ++t) {
+                const int tile = t ? T_DAY_TICKET : T_METRO_TICKET;
+                clearTile(tile);
+                for (int y = 0; y < 16; ++y)
+                    for (int x = 0; x < 16; ++x) {
+                        const char c = kTicket[y][x];
+                        if (c == '.') continue;
+                        a.put(tile, x, y, c == '1' ? Rgb{60, 50, 40} : c == '2' ? (t ? Rgb{250, 220, 110} : Rgb{235, 235, 225}) : Rgb{200, 40, 50});
+                    }
+            }
+        }
         // Rusting steel: the steel block with orange-brown rust spreading over it.
         for (int stage = 1; stage <= 2; ++stage) {
             const int t = stage == 1 ? T_STEEL_RUST1 : T_STEEL_RUST2;
