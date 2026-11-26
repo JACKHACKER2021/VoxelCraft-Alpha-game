@@ -7371,3 +7371,23 @@ SHOT(z11_collar) {
     d.shot("z11_collar");
     d.frames(2, [&](int) { d.lookNow(look); for (Mob& m : s.mobs().mobs()) m.wanderTimer = 999, m.vel = {}, m.wandering = false; });
 }
+
+// 2.7.0 preview: the six backpacks on the back (seen from behind), and one under a chestplate.
+SHOT(z12_backpack) {
+    Director d(out, "z12");
+    d.openWorld("Studio", 1, GameMode::Creative, [](GenConfig& g) { g.flat = true; g.devMap = 6; });
+    Session& s = d.s();
+    Player& p = s.player();
+    p.flying = false;
+    d.settings().hideGui = true;
+    d.settings().cameraMode = 1;  // from behind
+    p.pos = Vec3(0.5f, 5.0f, 8.5f);
+    for (int t = 0; t < 7; ++t) {
+        s.back() = {(ItemId)(BACKPACK + std::min(t, 5)), 1, 1};
+        s.armor()[1] = t == 6 ? ItemStack{(ItemId)(HARDIUM_ARMOR + 1), 1, 0} : ItemStack{};
+        p.yaw = 2.6f, p.pitch = -0.15f;
+        d.idle(6);
+        d.shot("z12_bag" + std::to_string(t));
+        d.frames(1, [&](int) { p.yaw = 2.6f, p.pitch = -0.15f; });
+    }
+}

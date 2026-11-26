@@ -41,7 +41,7 @@ namespace vc {
 namespace vc {
 
 namespace {
-const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.7.0 Preview build 5" : "VoxelCraft 2.6.0";
+const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.7.0 Preview build 6" : "VoxelCraft 2.6.0";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -4700,6 +4700,7 @@ ItemStack* Game::stackAt(SlotRef ref) {
         case SlotArea::Grid: return &grid_[ref.index];
         case SlotArea::Armor: return &session_->armor()[ref.index];
         case SlotArea::Offhand: return &session_->offhand();
+        case SlotArea::Back: return &session_->back();
         case SlotArea::Chest: {
             ChestContents* c = screen_ == Screen::Chest ? session_->chest(session_->openChest) : nullptr;
             return c ? &(*c)[ref.index] : nullptr;
@@ -4770,6 +4771,22 @@ void Game::tapSlot(SlotRef ref) {
         held_ = {};
         return;
     }
+    // 2.7.0: a backpack put on the chestplate goes onto the back (a chestplate can go over it);
+    // the back takes only a backpack.
+    if (kFeatures270 && ref.area == SlotArea::Armor && ref.index == 1 && isBackpack(from->id) && session_->back().empty()) {
+        ref = {SlotArea::Back, 0};
+        target = stackAt(ref);
+    }
+    if (ref.area == SlotArea::Back && !isBackpack(from->id)) {
+        slotHint_ = "Na záda patří jen batoh";
+        held_ = {};
+        return;
+    }
+    if (held_.area == SlotArea::Back && !target->empty() && !isBackpack(target->id)) {
+        slotHint_ = "Na záda patří jen batoh";
+        held_ = {};
+        return;
+    }
     // Armour slots take only their own piece; a piece taken off can go anywhere.
     if (ref.area == SlotArea::Armor && armorPiece(from->id) != ref.index) {
         slotHint_ = "Sem patří jen odpovídající kus brnění";
@@ -4815,7 +4832,12 @@ void Game::craftOnce() {
     if (r.empty()) return;
     Inventory& inv = session_->inventory();
     Inventory trial = inv;  // only craft when the result fits
-    if (trial.add(r.id, r.count) > 0) return;
+    // 2.7.0: an upgraded backpack keeps its things (its number goes along).
+    uint16_t keep = 0;
+    if (isBackpack(r.id))
+        for (int i = 0; i < gridSize_ * gridSize_; ++i)
+            if (isBackpack(grid_[i].id)) keep = grid_[i].damage;
+    if (keep ? trial.add(ItemStack{r.id, (uint8_t)r.count, keep}) > 0 : trial.add(r.id, r.count) > 0) return;
     inv = trial;
     for (int i = 0; i < gridSize_ * gridSize_; ++i)
         if (!grid_[i].empty() && --grid_[i].count == 0) grid_[i] = {};
@@ -5060,6 +5082,18 @@ void Game::survivalInventoryScreen() {
         const float ox = gx + kSlot + 2 + 50 - kSlot, oy = gy + top - kSlot;
         slot(ox, oy, {SlotArea::Offhand, 0});
         if (session_->offhand().empty()) ui_.tile(ox + 2, oy + 2, kSlot - 4, T_SHIELD, {1, 1, 1, 0.35f});
+        if (kFeatures270) {
+            // 2.7.0: the back: a backpack (put it on the chestplate slot or here); tap "Batoh" to open it.
+            const float bx = gx + kSlot + 2 + 50 - kSlot, by = gy;
+            slot(bx, by, {SlotArea::Back, 0});
+            if (session_->back().empty()) ui_.tile(bx + 2, by + 2, kSlot - 4, T_BACKPACK, {1, 1, 1, 0.35f});
+            else if (ui_.button(gx + kSlot + 4, gy + 2, 30, 12, "Batoh")) {
+                returnCraftingGrid();
+                session_->openBackpack(session_->back());
+                setScreen(Screen::Chest);
+                return;
+            }
+        }
     }
     if (int points = session_->armorPoints(); points > 0) {
         ui_.icon(gx + kSlot + 5, gy + top - 11, Font::ArmorFull, {0.85f, 0.85f, 0.9f, 1});
@@ -5085,6 +5119,10 @@ void Game::chestScreen() {
     float gx, gy;
     const float top = 3 * kSlot;
     const bool wallet = kFeatures270 && session_->openChest.dim == Session::kWalletDim;
+    if (kFeatures270 && session_->openChest.dim == Session::kBackpackDim) {
+        backpackScreen();
+        return;
+    }
     if (wallet) {
         // 2.7.0: a wallet holds at most 500 things and never another wallet: the rest goes back.
         ChestContents& c = *session_->chest(session_->openChest);
@@ -5108,6 +5146,59 @@ void Game::chestScreen() {
                          top + 6 + 3 * kSlot + 4 + kSlot, gx, gy)) return;
     for (int i = 0; i < kChestSize; ++i) slot(gx + (i % 9) * kSlot, gy + (i / 9) * kSlot, {SlotArea::Chest, i});
     playerSlots(gx, gy + top + 6);
+}
+
+// 2.7.0: a backpack: its pages of 27 slots (as many slots as the tier gives), a crafting grid and,
+// from bronze-ruby on, its own furnace.
+void Game::backpackScreen() {
+    ItemStack* bag = session_->openBag;
+    if (!bag || !isBackpack(bag->id) || bag->damage != session_->openChest.x) {
+        setScreen(Screen::Playing);
+        return;
+    }
+    const int tier = backpackTier(bag->id), slots = backpackSlots(bag->id), pages = (slots + kChestSize - 1) / kChestSize;
+    int page = std::clamp(session_->openChest.y, 0, pages - 1);
+    FurnaceKey key{Session::kBackpackDim, bag->damage, page, 0};
+    if (!session_->chest(key)) session_->setChest(key, ChestContents{});
+    session_->openChest = key;
+    ChestContents& c = *session_->chest(key);
+    for (ItemStack& s : c)
+        if (isBackpack(s.id)) session_->giveItem(s), s = {};  // no backpack inside a backpack
+    float gx, gy;
+    const float top = 3 * kSlot;
+    std::string title = itemName(bag->id);
+    if (pages > 1) title += "  " + std::to_string(page + 1) + "/" + std::to_string(pages);
+    if (!containerWindow(title, top + 6 + 3 * kSlot + 4 + kSlot, gx, gy)) return;
+    const int here = std::min(kChestSize, slots - page * kChestSize);
+    for (int i = 0; i < kChestSize; ++i) {
+        const float x = gx + (i % 9) * kSlot, y = gy + (i / 9) * kSlot;
+        if (i < here) slot(x, y, {SlotArea::Chest, i});
+        else ui_.fill(x + 1, y + 1, kSlot - 2, kSlot - 2, {0, 0, 0, 0.35f});
+    }
+    playerSlots(gx, gy + top + 6);
+    // The buttons along the top edge of the window.
+    float bx = gx + 9 * kSlot - 2;
+    if (pages > 1) {
+        bx -= 16;
+        if (ui_.button(bx, gy - 15, 14, 12, ">", page + 1 < pages)) session_->openChest.y = page + 1;
+        bx -= 16;
+        if (ui_.button(bx, gy - 15, 14, 12, "<", page > 0)) session_->openChest.y = page - 1;
+    }
+    if (tier >= 3) {
+        bx -= 34;
+        if (ui_.button(bx, gy - 15, 32, 12, "Pec")) {
+            session_->openFurnaceAt({Session::kBackpackDim, bag->damage, 99, 0});
+            setScreen(Screen::Furnace);
+            return;
+        }
+    }
+    bx -= 44;
+    if (ui_.button(bx, gy - 15, 42, 12, "Výroba")) {
+        // 2x2 in the leather and steel ones (the inventory's grid), 3x3 from steel-bronze on.
+        if (tier >= 2) setScreen(Screen::Crafting);
+        else setScreen(Screen::Inventory);
+        return;
+    }
 }
 
 void Game::tradeScreen() {

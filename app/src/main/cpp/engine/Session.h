@@ -76,7 +76,8 @@ public:
     bool oldMode() const { return overworld_.config().oldWorld; }
     Inventory& inventory() { return state_.inventory; }
     std::array<ItemStack, 4>& armor() { return state_.armor; }
-    ItemStack& offhand() { return state_.offhand; }  // 1.5.7: the off hand (shield, torch...)
+    ItemStack& offhand() { return state_.offhand; }
+    ItemStack& back() { return state_.back; }  // 2.7.0: the backpack on the back  // 1.5.7: the off hand (shield, torch...)
     void swapOffhand() { std::swap(state_.offhand, state_.inventory.slots[state_.selectedSlot]); }
     int armorPoints() const;
     // Puts on the armour piece from the selected slot (swapping with what is worn).
@@ -168,6 +169,9 @@ public:
     void openChestAt(const FurnaceKey& key);
     static constexpr int kWalletDim = -9;  // 2.7.0: wallets keep their things as chests in this "dimension"
     bool openWallet();                     // the wallet in the hand: opens it (a new one gets its number)
+    static constexpr int kBackpackDim = -8;  // 2.7.0: backpacks' pages (y = page) and furnace (y = 99)
+    bool openBackpack(ItemStack& bag);       // opens a backpack (in the hand or on the back)
+    ItemStack* openBag = nullptr;            // the backpack whose window is open
     // Doors and trapdoors: opens or closes the one at (x, y, z) (both halves of a door).
     bool toggleDoor(int x, int y, int z);
     FurnaceKey openFurnace;

@@ -53,6 +53,7 @@ struct PlayerState {
     Inventory inventory;
     std::array<ItemStack, 4> armor{};  // helmet, chestplate, leggings, boots
     ItemStack offhand{};               // 1.5.7: the off hand
+    ItemStack back{};                  // 2.7.0: a backpack worn on the back (under a chestplate)
     // Places on the minimap
     bool hasDeath = false;
     int deathX = 0, deathZ = 0;

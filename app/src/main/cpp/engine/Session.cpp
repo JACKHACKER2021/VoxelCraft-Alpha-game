@@ -516,6 +516,10 @@ void Session::updateFurnaces(float dt) {
     // Furnaces keep smelting while their window is closed.
     if (settings_.expFastFurnace) dt *= 4;  // experiment
     for (auto& [k, f] : furnaces_) {
+        if (k.dim < 0) {  // 2.7.0: a backpack's furnace: an ordinary one, carried along
+            f.update(dt);
+            continue;
+        }
         World& w = worldAt(k.dim);
         const ItemId here = w.getBlock(k.x, k.y, k.z);
         const bool ps = isPowerstoneFurnace(here);
@@ -1552,6 +1556,10 @@ void Session::respawn() {
         if (!state_.offhand.empty()) {
             drops_.spawn(dimIndex(), player_.pos + Vec3(0, 0.8f, 0), {0, 3.5f, 0}, state_.offhand);
             state_.offhand = {};
+        }
+        if (!state_.back.empty()) {
+            drops_.spawn(dimIndex(), player_.pos + Vec3(0, 0.8f, 0), {0, 4.0f, 0.5f}, state_.back);
+            state_.back = {};
         }
     }
     world_ = &overworld_;
@@ -2813,6 +2821,25 @@ bool Session::openWallet() {
     return true;
 }
 
+bool Session::openBackpack(ItemStack& bag) {
+    if (!isBackpack(bag.id)) return false;
+    if (bag.damage == 0) {
+        int top = 0;
+        for (const auto& [k, c] : chests_)
+            if (k.dim == kBackpackDim) top = std::max(top, k.x);
+        for (const auto& [k, f] : furnaces_)
+            if (k.dim == kBackpackDim) top = std::max(top, k.x);
+        bag.damage = (uint16_t)std::min(top + 1, 65535);
+    }
+    const FurnaceKey key{kBackpackDim, bag.damage, 0, 0};
+    if (!chests_.count(key)) chests_[key] = ChestContents{};
+    openChest = key;
+    openBag = &bag;
+    wantsChest = true;
+    sound(Sound::Click);
+    return true;
+}
+
 void Session::useItem(const RayHit& hit) {
     ItemStack& held = state_.inventory.slots[state_.selectedSlot];
     World& w = *world_;
@@ -2820,6 +2847,10 @@ void Session::useItem(const RayHit& hit) {
     if (kFeatures270 && held.id == WALLET) {
         const ItemId at = hit.hit ? w.getBlock(hit.x, hit.y, hit.z) : AIR;
         if (!(isChest(at) || at == BARREL || at == CRAFTING_TABLE || isFurnace(at)) && openWallet()) return;
+    }
+    if (kFeatures270 && isBackpack(held.id)) {
+        const ItemId at = hit.hit ? w.getBlock(hit.x, hit.y, hit.z) : AIR;
+        if (!(isChest(at) || at == BARREL || at == CRAFTING_TABLE || isFurnace(at)) && openBackpack(held)) return;
     }
 
     // Tapping a crafting table or a furnace opens it, like in Pocket Edition.
@@ -4454,6 +4485,7 @@ PlayerPose Session::pose() const {
     pose.place = hand_.placeProgress();
     pose.held = hand_.shown();
     for (int i = 0; i < 4; ++i) pose.armor[i] = state_.armor[i].empty() ? (ItemId)0 : state_.armor[i].id;
+    pose.back = state_.back.empty() ? (ItemId)0 : state_.back.id;
     // 1.5.7: only a shield or a torch shows in the off hand.
     if (state_.offhand.id == SHIELD || state_.offhand.id == TORCH) pose.offhand = state_.offhand.id;
     pose.sneaking = player_.sneaking && !player_.flying && riding_ < 0;

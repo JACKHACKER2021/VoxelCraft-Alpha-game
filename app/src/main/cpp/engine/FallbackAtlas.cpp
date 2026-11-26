@@ -3317,6 +3317,17 @@ void drawUpdate157(Canvas& a, int tile) {
             a.sprite(tile, kWal, {130, 78, 44}, {230, 200, 90});
             return;
         }
+        case T_BACKPACK ... T_BACKPACK_LAST: {
+            // 2.7.0: the backpacks: a bag with straps, a pocket and a flap, in their tier's colours.
+            static const char* const kBag[16] = {
+                "................", "......2222......", ".....2....2.....", "...1111111111...", "...3333333333...",
+                "...1111111111...", "...1111111111...", "...1133333311...", "...1131111311...", "...1131133311...",
+                "...1133333311...", "...1111111111...", "...1111111111...", "....11111111....", "................", "................"};
+            static const Rgb kMain[6] = {{140, 88, 48}, {150, 160, 172}, {150, 160, 172}, {196, 124, 60}, {60, 70, 82}, {210, 225, 250}};
+            static const Rgb kAcc[6] = {{90, 55, 30}, {95, 100, 110}, {196, 124, 60}, {200, 40, 56}, {110, 210, 190}, {120, 170, 255}};
+            a.sprite(tile, kBag, kMain[tile - T_BACKPACK], kAcc[tile - T_BACKPACK]);
+            return;
+        }
         case T_EGG_HOGMAN: a.sprite(tile, eggArt(kSprite_egg15), {226, 150, 140}, {60, 200, 220}); return;
         default: break;
     }

@@ -18,6 +18,7 @@ struct PlayerPose {
     float place = 1;         // 0..1 progress of a placing push
     ItemId held = 0;        // item in the right hand (0 = empty)
     ItemId armor[4] = {};   // worn helmet, chestplate, leggings, boots
+    ItemId back = 0;        // 2.7.0: a backpack
     bool riding = false;     // sitting in a boat
     ItemId offhand = 0;      // 1.5.7: a shield or torch in the left hand (0 = none shown)
     bool sneaking = false;   // 1.5.7: crouched, the shield raised in front

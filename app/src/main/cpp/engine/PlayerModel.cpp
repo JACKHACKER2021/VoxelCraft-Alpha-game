@@ -208,6 +208,18 @@ std::vector<Vertex> buildPlayerExtras(const PlayerPose& pose) {
     if (pose.swim > 0.5f) rl = 0.35f * std::sin(pose.time * 8.0f), ll = -rl;
     // Armour: the material's block texture, a little outside the skin.
     static const int kMaterialTile[8] = {T_PLANKS, T_COBBLE, T_BRONZE_BLOCK, T_STEEL_BLOCK, T_RUBY_BLOCK, T_HARDIUM_PLATE, T_CELESTIUM_PLATE, T_WINGS_PLATE};
+    if (isBackpack(pose.back)) {
+        // 2.7.0: the backpack on the back, bigger with each tier, a pocket and a flap in the trim colour.
+        static const int kBag[6] = {T_WOOL + 12, T_STEEL_BLOCK, T_STEEL_BLOCK, T_BRONZE_BLOCK, T_HARDIUM_PLATE, T_CELESTIUM_PLATE};
+        static const int kTrim[6] = {T_PLANKS, T_WOOL + 7, T_BRONZE_BLOCK, T_RUBY_BLOCK, T_HARDIUM_PLATE, T_BRONZE_BLOCK};
+        const int t = backpackTier(pose.back);
+        const float hw = 3.0f + 0.25f * t, d = 2.6f + 0.35f * t, top = 22.5f + 0.2f * t;
+        const float z0 = 2 + (pose.armor[1] ? 0.8f : 0);
+        box(kBag[t], {-hw, 13.5f, z0}, {hw, top, z0 + d}, neck, 0, 0.95f);
+        box(kTrim[t], {-hw + 1, 14.5f, z0 + d}, {hw - 1, 18.5f, z0 + d + 1}, neck, 0, 0.95f);   // the pocket
+        box(kTrim[t], {-hw - 0.2f, top - 1.5f, z0 - 0.2f}, {hw + 0.2f, top + 0.3f, z0 + d + 0.3f}, neck, 0, 0.95f);  // the flap
+        if (t >= 3) box(T_FURNACE_FRONT_LIT, {hw, 14, z0 + 0.5f}, {hw + 1.2f, 18, z0 + d - 0.5f}, neck, 0, 1.0f);  // the furnace
+    }
     for (int piece = 0; piece < 4; ++piece) {
         ItemId id = pose.armor[piece];
         if (!isArmor(id)) continue;

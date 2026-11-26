@@ -143,6 +143,7 @@ bool saveLevel(const WorldInfo& info, const PlayerState& p) {
         o << "\narmor=";
         for (int i = 0; i < 4; ++i) o << (i ? "," : "") << (int)p.armor[i].id << ":" << (int)p.armor[i].count << ":" << p.armor[i].damage;
         if (!p.offhand.empty()) o << "\noffhand=" << (int)p.offhand.id << ":" << (int)p.offhand.count << ":" << p.offhand.damage;
+        if (!p.back.empty()) o << "\nback=" << (int)p.back.id << ":1:" << p.back.damage;
         o << "\n";
     }
     return writeFileAtomic(info.folder + "/level.dat", o.str());
@@ -234,6 +235,8 @@ bool loadLevel(const std::string& folder, WorldInfo& info, PlayerState& p) {
     }
     if (int id = 0, count = 0, damage = 0; std::sscanf(kv["offhand"].c_str(), "%d:%d:%d", &id, &count, &damage) >= 2 && count > 0 && id > 0)
         p.offhand = {(ItemId)id, (uint8_t)std::min(count, maxStack((ItemId)id)), (uint16_t)std::max(0, damage)};
+    if (int id = 0, count = 0, damage = 0; std::sscanf(kv["back"].c_str(), "%d:%d:%d", &id, &count, &damage) >= 2 && isBackpack((ItemId)id))
+        p.back = {(ItemId)id, 1, (uint16_t)std::max(0, damage)};
     return true;
 }
 

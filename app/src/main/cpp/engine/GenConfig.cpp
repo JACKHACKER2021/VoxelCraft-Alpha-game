@@ -607,7 +607,13 @@ const char* kUpdate260 = R"({
 
 const char* kUpdate270 = R"({
   "recipes": [
-    {"type": "shaped", "pattern": ["LSL", "L.L", "LLL"], "key": {"L": "leather", "S": "string"}, "result": "wallet"}
+    {"type": "shaped", "pattern": ["LSL", "L.L", "LLL"], "key": {"L": "leather", "S": "string"}, "result": "wallet"},
+    {"type": "shaped", "pattern": ["LSL", "LCL", "LLL"], "key": {"L": "leather", "S": "string", "C": "chest"}, "result": "leather_backpack"},
+    {"type": "shaped", "pattern": [".I.", "IBI", ".I."], "key": {"I": "steel_ingot", "B": "leather_backpack"}, "result": "steel_backpack"},
+    {"type": "shaped", "pattern": [".I.", "IBI", ".I."], "key": {"I": "bronze_ingot", "B": "steel_backpack"}, "result": "steelbronze_backpack"},
+    {"type": "shaped", "pattern": [".I.", "IBI", ".I."], "key": {"I": "ruby", "B": "steelbronze_backpack"}, "result": "bronzeruby_backpack"},
+    {"type": "shaped", "pattern": [".I.", "IBI", ".I."], "key": {"I": "hardium", "B": "bronzeruby_backpack"}, "result": "hardium_backpack"},
+    {"type": "shaped", "pattern": [".I.", "IBI", ".I."], "key": {"I": "celestium", "B": "hardium_backpack"}, "result": "celestium_backpack"}
   ]
 })";
 

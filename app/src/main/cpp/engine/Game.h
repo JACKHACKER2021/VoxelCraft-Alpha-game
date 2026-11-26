@@ -140,7 +140,7 @@ private:
     };
 
     // A slot in any open container, so items can be moved between them.
-    enum class SlotArea { Inventory, Grid, Result, FurnaceInput, FurnaceFuel, FurnaceOutput, Armor, Chest, Offhand };
+    enum class SlotArea { Inventory, Grid, Result, FurnaceInput, FurnaceFuel, FurnaceOutput, Armor, Chest, Offhand, Back };
     struct SlotRef {
         SlotArea area = SlotArea::Inventory;
         int index = -1;
@@ -244,6 +244,7 @@ private:
     void craftingScreen();
     void furnaceScreen();
     void chestScreen();
+    void backpackScreen();  // 2.7.0
     void tradeScreen();
     int tradeMob_ = -1;
     int tradeProfession_ = 0;
