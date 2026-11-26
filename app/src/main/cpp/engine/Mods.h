@@ -16,7 +16,8 @@ namespace vc {
 //    "blocks": [{"id": "ruby_bricks", "name": "Ruby Bricks", "name_cs": "Rubínové cihly",
 //                "texture": "ruby_bricks.png"  or  "textures": {"top": ..., "side": ..., "bottom": ...},
 //                "hardness": 1.5, "tool": "pickaxe", "transparent": false, "light": false,
-//                "drop": "mymod:ruby_dust"}],
+//                "drop": "mymod:ruby_dust",
+//                "model": "lamp.geo.json", "model_texture": "lamp.png"}],   (2.8.0, models/ of the pack)
 //    "items":  [{"id": "ruby_apple", "name": "Ruby Apple", "texture": "ruby_apple.png", "food": 6, "stack": 64}],
 //    "mobs":   [{"id": "ruby_pig", "name": "Ruby Pig", "base": "pig", "texture": "ruby_pig.png",
 //                "face": "ruby_pig_face.png", "health": 12, "spawn": 0.2,
@@ -33,6 +34,8 @@ struct ModBlock {
     std::string tool;                // "pickaxe", "axe", "shovel" or ""
     bool transparent = false, light = false;
     std::string drop;                // key of what breaking it gives ("" = itself)
+    int model = -1;                  // 2.8.0: its own shape (ModRegistry::model), -1 = a full cube
+    VcTexRect modelTex;
 };
 struct ModItem {
     std::string key, name, nameCs;

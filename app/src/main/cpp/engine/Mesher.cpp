@@ -4,6 +4,8 @@
 #include <vector>
 
 #include "BlockShapes.h"
+#include "VcModel.h"
+#include "Mods.h"
 #include "Blocks.h"
 #include "Trains.h"
 #include <cmath>
@@ -352,6 +354,18 @@ void buildChunkMesh(const World& world, const Chunk& chunk, ChunkMesh& out) {
                         orientedBox(out.opaque, at, tip, 0.02f, 0.12f, 0.42f, tileFor(POWERSTONE_BLOCK, F_TOP), light, glowHere);
                     }
                     continue;
+                }
+                if (isModId(id)) {
+                    // 2.8.0 (VC language): a mod block with its own model, standing in the middle of its cell.
+                    const ModBlock* mb = ModRegistry::get().block(id);
+                    if (const VcModel* model = mb ? ModRegistry::get().model(mb->model) : nullptr) {
+                        const size_t first = out.opaque.size();
+                        const float l = nether ? 0.7f : sky.at(x, y, z);
+                        buildVcModel(*model, VcPose{}, mb->modelTex, Vec3(wx + 0.5f, (float)y, wz + 0.5f), 0, l, out.opaque);
+                        const float g = isEmissive(id) ? 1.0f : glow.at(x, y, z);
+                        for (size_t i = first; i < out.opaque.size(); ++i) out.opaque[i].block = g;
+                        continue;
+                    }
                 }
                 if (isShaped(id)) {
                     // Doors, trapdoors, fences, chests, cactus: a few textured boxes.

@@ -133,6 +133,25 @@ void ModRegistry::load(const std::vector<std::string>& packDirs, const std::stri
             }
             return tileFor(tex + file);
         };
+        // 2.8.0 (VC language): a model file of the pack and its texture -> models_ and a block of atlas tiles.
+        auto loadModel = [&](const std::string& mf, const std::string& tf, int& index, VcTexRect& rect) {
+            if (mf.empty() || mf.find("..") != std::string::npos) return;
+            Json md;
+            std::string err;
+            std::vector<VcModel> found;
+            std::ifstream in(dir + "/models/" + mf);
+            std::stringstream ss;
+            ss << in.rdbuf();
+            int tw = 0, th = 0;
+            if (!in || !Json::parse(ss.str(), md, err) || !parseVcModels(md, found, err)) {
+                warn(trf("Model {0} nejde načíst: {1}", {ns + "/" + mf, err}));
+            } else if (tf.empty() || tf.find("..") != std::string::npos || !imageSize(tex + tf, tw, th) || !tileBlockFor(tex + tf, tw, th, rect)) {
+                warn(trf("Textura modelu {0} chybí nebo se nevejde", {ns + "/" + tf}));
+            } else {
+                index = (int)models_.size();
+                models_.push_back(found[0]);
+            }
+        };
         const Json& blocks = doc["blocks"];
         for (size_t i = 0; i < blocks.size(); ++i) {
             const Json& b = blocks[i];
@@ -156,6 +175,9 @@ void ModRegistry::load(const std::vector<std::string>& packDirs, const std::stri
             m.transparent = b["transparent"].boolean(false);
             m.light = b["light"].boolean(false);
             m.drop = b["drop"].str("");
+            // 2.8.0: a block with its own shape (VcModel); it never hides its neighbours' faces.
+            loadModel(b["model"].str(""), b["model_texture"].str(b["texture"].str("")), m.model, m.modelTex);
+            if (m.model >= 0) m.transparent = true;
             const ItemId at = idFor(m.key);
             if (at == AIR) continue;
             entries_.push_back({at, true, blocks_.size()});
@@ -196,24 +218,7 @@ void ModRegistry::load(const std::vector<std::string>& packDirs, const std::stri
             m.face = texture(mb["face"], -1);
             m.health = std::clamp((float)mb["health"].num(mobInfo(m.base).health), 1.0f, 500.0f);
             // 2.8.0: its own model (a geo.json or .vcmodel.json in models/) with its texture as a block of tiles.
-            if (const std::string mf = mb["model"].str(""); !mf.empty() && mf.find("..") == std::string::npos) {
-                Json md;
-                std::string err;
-                std::vector<VcModel> found;
-                std::ifstream in(dir + "/models/" + mf);
-                std::stringstream ss;
-                ss << in.rdbuf();
-                const std::string tf = mb["texture"].str("");
-                int tw = 0, th = 0;
-                if (!in || !Json::parse(ss.str(), md, err) || !parseVcModels(md, found, err)) {
-                    warn(trf("Model {0} nejde načíst: {1}", {ns + "/" + mf, err}));
-                } else if (tf.empty() || !imageSize(tex + tf, tw, th) || !tileBlockFor(tex + tf, tw, th, m.modelTex)) {
-                    warn(trf("Textura modelu {0} chybí nebo se nevejde", {ns + "/" + tf}));
-                } else {
-                    m.model = (int)models_.size();
-                    models_.push_back(found[0]);
-                }
-            }
+            loadModel(mb["model"].str(""), mb["texture"].str(""), m.model, m.modelTex);
             m.spawn = std::clamp((float)mb["spawn"].num(0.1), 0.0f, 1.0f);
             const Json& drops = mb["drops"];
             for (size_t k = 0; k < drops.size(); ++k)

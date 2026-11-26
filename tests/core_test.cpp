@@ -60,6 +60,7 @@
 #include "engine/Trees.h"
 #include "engine/Trading.h"
 #include "engine/Mods.h"
+#include "engine/VcModel.h"
 #include "engine/JavaImport.h"
 #include "engine/BedrockImport.h"
 #include "engine/WorldFiles.h"
@@ -3379,6 +3380,40 @@ static int testUpdate14() {
             CHECK(Json::parse([&] { std::ifstream f(root / "zoo/content.json"); std::stringstream ss; ss << f.rdbuf(); return ss.str(); }(), zc, zerr));
             CHECK(zc["namespace"].str("") == "zoo" && zc["mobs"][0]["base"].str("") == "cow" && zc["mobs"][0]["name"].str("") == "Zebra" &&
                   zc["blocks"][0]["texture"].str("") == "block_hay_bale.png" && zc["mobs"][0]["health"].num(0) == 14);
+            // 2.8.0 (VC language): the geometry comes along as the creature's own model.
+            CHECK(zc["mobs"][0]["model"].str("") == "zebra.geo.json" && fs::exists(root / "zoo/models/zebra.geo.json"));
+        }
+        {
+            // 2.8.0: VcModel: a geo.json with a parent bone, a rotated bone and a 32 x 16 texture, as a mob and as a block.
+            fs::create_directories(root / "vcm/models"), fs::create_directories(root / "vcm/textures/mod");
+            std::vector<uint8_t> t32(32 * 16 * 4, 255);
+            writePng((root / "vcm/textures/mod/lamp.png").string(), 32, 16, t32);
+            const char* geo = R"({"format_version": "1.12.0", "minecraft:geometry": [{"description": {"identifier": "geometry.lamp", "texture_width": 32, "texture_height": 16},
+                "bones": [{"name": "base", "pivot": [0, 0, 0], "cubes": [{"origin": [-4, 0, -4], "size": [8, 2, 8], "uv": [0, 0]}]},
+                          {"name": "leg0", "parent": "base", "pivot": [0, 2, 0], "rotation": [0, 45, 0], "cubes": [{"origin": [-1, 2, -1], "size": [2, 10, 2], "uv": [0, 10]}]}]}]})";
+            std::ofstream(root / "vcm/models/lamp.geo.json") << geo;
+            std::ofstream(root / "vcm/content.json") << R"({"namespace": "vcm", "blocks": [{"id": "lamp", "texture": "lamp.png", "model": "lamp.geo.json"}],
+                "mobs": [{"id": "walker", "base": "pig", "texture": "lamp.png", "model": "lamp.geo.json"}]})";
+            std::vector<std::string> w;
+            mods.load({(root / "vcm").string()}, (root / "mod_ids.txt").string(), &w);
+            const ItemId lamp = itemFromKey("vcm:lamp");
+            const ModBlock* lb = mods.block(lamp);
+            CHECK(w.empty() && lb && lb->model >= 0 && !isOpaque(lamp) && mods.mobs().size() == 1 && mods.mobs()[0].model >= 0);
+            const VcModel* vm = mods.model(lb->model);
+            CHECK(vm && vm->bones.size() == 2 && vm->cubeCount() == 2 && vm->texW == 32 && vm->bones[1].parentIndex == 0);
+            std::vector<Vertex> v;
+            buildVcModel(*vm, VcPose{}, lb->modelTex, Vec3(10, 5, 10), 0, 1, v);
+            float top = 0;
+            for (const Vertex& q : v) top = std::max(top, q.y);
+            CHECK(v.size() == 72 && std::abs(top - (5 + 12 / 16.0f)) < 1e-4f && std::abs(v[0].x - 10.25f) < 1e-4f);
+            VcPose swing;
+            swing.rotation["leg0"] = Vec3(90, 0, 0);
+            std::vector<Vertex> v2;
+            buildVcModel(*vm, swing, lb->modelTex, Vec3(10, 5, 10), 0, 1, v2);
+            float top2 = 0;
+            for (const Vertex& q : v2) top2 = std::max(top2, q.y);
+            CHECK(top2 < top - 0.3f);  // the swung leg lies down
+            std::printf("vc model: %zu vertices, top %.3f, swung %.3f\n", v.size(), top, top2);
         }
         JavaImportReport rep = convertJavaMod(java.string(), (root / "jmod").string());
         std::printf("java import '%s': %d blocks, %d items, %d recipes, %d textures, %d drops; skipped %d minecraft files, %d shapes, %d recipes, %d classes\n",
