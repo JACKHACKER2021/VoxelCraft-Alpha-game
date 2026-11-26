@@ -36,7 +36,7 @@ android {
             dimension = "edition"
             applicationIdSuffix = ".preview"
             versionName = "2.7.0"  // the preview runs ahead of the normal edition
-            versionCode = 64
+            versionCode = 65
             versionNameSuffix = "-preview"
             resValue("string", "app_name", "VoxelCraft Preview")
             ndk { abiFilters += listOf("arm64-v8a", "x86_64") }

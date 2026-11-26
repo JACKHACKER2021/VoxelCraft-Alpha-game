@@ -367,6 +367,7 @@ enum BlockId : uint16_t {
     EGG_GHOST = 60298,
     EGG_SNOWMAN = 60299,
     LEATHER = 60300,             // 2.7.0: from cows; for the backpack and the wallet
+    WALLET = 60301,              // 2.7.0: holds up to 500 items and blocks (its number in `damage`)
     RAIL_SWITCH8 = 60212,        // 60212..60243: 2.3.0 the flexible switch: entry port * 4 + left * 2 + state   // 2.3.0: a chest of the Bronze Halls
     RAIL_SWITCH_L = 60203,       // 60203..60210: 2.3.0 the mirrored switch, its branch to the left (facing * 2 + state)
     RAIL_GENTLE = 60187,         // 60187..60202: a gentle slope, 4 pieces per block of height: facing * 4 + piece
@@ -809,6 +810,7 @@ enum Tile : uint16_t {
     T_LOLLIPOP, T_CARAMEL, T_GINGERBREAD, T_SLED, T_GHOST, T_GHOST_FACE, T_SNOWMAN_FACE,
     T_EGG2, T_EGG2_LAST = T_EGG2 + 10,  // 2.6.0: the new spawn eggs
     T_LEATHER,  // 2.7.0
+    T_WALLET,
     T_TRAIN_TEX2, T_TRAIN_TEX2_LAST = T_TRAIN_TEX2 + 15,  // 2.3.0 preview build 7: more train colours (the subway)
     T_COUNT
 };
@@ -1187,6 +1189,7 @@ inline int tileFor(ItemId id, Face face) {
                 case SLED: return T_SLED;
                 case EGG_CELESTLING ... EGG_SNOWMAN: return T_EGG2 + (id - EGG_CELESTLING);
                 case LEATHER: return T_LEATHER;
+                case WALLET: return T_WALLET;
                 case GLOWCAP_LEAVES: return T_GLOWCAP_LEAVES;
                 case STARBERRY_BUSH: return T_STARBERRY_BUSH;
                 case VOID_TRUFFLE: return T_VOID_TRUFFLE;

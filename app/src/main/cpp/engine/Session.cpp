@@ -2796,9 +2796,31 @@ RayHit Session::pick(float sx, float sy) const {
 
 // ---------------------------------------------------------------- blocks
 
+bool Session::openWallet() {
+    ItemStack& held = state_.inventory.slots[state_.selectedSlot];
+    if (held.id != WALLET) return false;
+    if (held.damage == 0) {
+        int top = 0;
+        for (const auto& [k, c] : chests_)
+            if (k.dim == kWalletDim) top = std::max(top, k.x);
+        held.damage = (uint16_t)std::min(top + 1, 65535);
+    }
+    const FurnaceKey key{kWalletDim, held.damage, 0, 0};
+    if (!chests_.count(key)) chests_[key] = ChestContents{};
+    openChest = key;
+    wantsChest = true;
+    sound(Sound::Click);
+    return true;
+}
+
 void Session::useItem(const RayHit& hit) {
     ItemStack& held = state_.inventory.slots[state_.selectedSlot];
     World& w = *world_;
+    // 2.7.0: a wallet in the hand opens (unless the tap was on a chest, a table or a furnace).
+    if (kFeatures270 && held.id == WALLET) {
+        const ItemId at = hit.hit ? w.getBlock(hit.x, hit.y, hit.z) : AIR;
+        if (!(isChest(at) || at == BARREL || at == CRAFTING_TABLE || isFurnace(at)) && openWallet()) return;
+    }
 
     // Tapping a crafting table or a furnace opens it, like in Pocket Edition.
     if (hit.hit) {

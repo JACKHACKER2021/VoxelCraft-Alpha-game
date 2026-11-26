@@ -41,7 +41,7 @@ namespace vc {
 namespace vc {
 
 namespace {
-const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.7.0 Preview build 4" : "VoxelCraft 2.6.0";
+const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.7.0 Preview build 5" : "VoxelCraft 2.6.0";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -5084,7 +5084,28 @@ void Game::chestScreen() {
     }
     float gx, gy;
     const float top = 3 * kSlot;
-    if (!containerWindow("Truhla", top + 6 + 3 * kSlot + 4 + kSlot, gx, gy)) return;
+    const bool wallet = kFeatures270 && session_->openChest.dim == Session::kWalletDim;
+    if (wallet) {
+        // 2.7.0: a wallet holds at most 500 things and never another wallet: the rest goes back.
+        ChestContents& c = *session_->chest(session_->openChest);
+        int total = 0;
+        for (ItemStack& s : c) {
+            if (s.id == WALLET) session_->giveItem(s), s = {};
+            total += s.empty() ? 0 : s.count;
+        }
+        for (int i = kChestSize - 1; i >= 0 && total > kWalletLimit; --i) {
+            ItemStack& s = c[i];
+            if (s.empty()) continue;
+            const int back = std::min<int>(s.count, total - kWalletLimit);
+            session_->giveItem({s.id, (uint8_t)back, s.damage});
+            s.count = (uint8_t)(s.count - back);
+            if (!s.count) s = {};
+            total -= back;
+        }
+        walletTotal_ = total;
+    }
+    if (!containerWindow(wallet ? trf("Peněženka {0} / {1}", {std::to_string(walletTotal_), std::to_string(kWalletLimit)}) : std::string("Truhla"),
+                         top + 6 + 3 * kSlot + 4 + kSlot, gx, gy)) return;
     for (int i = 0; i < kChestSize; ++i) slot(gx + (i % 9) * kSlot, gy + (i / 9) * kSlot, {SlotArea::Chest, i});
     playerSlots(gx, gy + top + 6);
 }

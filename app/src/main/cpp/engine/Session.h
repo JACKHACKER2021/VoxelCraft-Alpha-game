@@ -166,6 +166,8 @@ public:
     World& worldAt(int dim) { return dim == 1 ? nether_ : dim == 2 ? void_ : dim == 3 ? celestial_ : overworld_; }
     // Opens the chest at the key; a structure chest is filled with its loot the first time.
     void openChestAt(const FurnaceKey& key);
+    static constexpr int kWalletDim = -9;  // 2.7.0: wallets keep their things as chests in this "dimension"
+    bool openWallet();                     // the wallet in the hand: opens it (a new one gets its number)
     // Doors and trapdoors: opens or closes the one at (x, y, z) (both halves of a door).
     bool toggleDoor(int x, int y, int z);
     FurnaceKey openFurnace;

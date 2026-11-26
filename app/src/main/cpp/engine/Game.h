@@ -299,6 +299,8 @@ private:
 
     std::string dataDir_, worldsDir_, settingsPath_, texturePackDir_;
     std::string gpuName_;
+    static constexpr int kWalletLimit = 500;  // 2.7.0
+    int walletTotal_ = 0;
     float perfTime_ = 0;  // 2.7.0: the shader guard's window
     int perfFrames_ = 0;  // 2.6.0: GL_RENDERER
     Font font_;

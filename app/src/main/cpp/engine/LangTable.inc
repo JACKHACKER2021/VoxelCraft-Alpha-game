@@ -1475,6 +1475,8 @@
 {"Shaders off: the device can't keep up", "Shadery vypnuty: zařízení je nestíhá", "Shaders apagados: el dispositivo no da abasto", "Шейдеры выключены: устройство не справляется", "Shader aus: das Gerät kommt nicht mit"},
 {"Leather", "Kůže", "Cuero", "Кожа", "Leder"},
 {"The collar has a new colour.", "Obojek má novou barvu.", "El collar tiene un color nuevo.", "У ошейника новый цвет.", "Das Halsband hat eine neue Farbe."},
+{"Wallet", "Peněženka", "Cartera", "Кошелёк", "Geldbörse"},
+{"Wallet {0} / {1}", "Peněženka {0} / {1}", "Cartera {0} / {1}", "Кошелёк {0} / {1}", "Geldbörse {0} / {1}"},
 {"Spawn Egg: Hogman", "Vejce: Prasák", "Huevo: Cerdo guerrero", "Яйцо: Свинолюд", "Spawn-Ei: Schweinemann"},
 {"Hogman", "Prasák", "Cerdo guerrero", "Свинолюд", "Schweinemann"},
 {"Light in the Dark", "Světlo do tmy", "Luz en la oscuridad", "Свет во тьме", "Licht im Dunkeln"},
