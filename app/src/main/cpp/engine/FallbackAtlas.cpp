@@ -2818,6 +2818,26 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
             if (m.leg && m.cooked) a.put(m.tile, 6, 5, m.c1.scaled(0.7f)), a.put(m.tile, 8, 4, m.c1.scaled(0.7f)), a.put(m.tile, 9, 6, m.c1.scaled(0.7f));
             if (m.bone) a.put(m.tile, 12, 4, {245, 240, 225}), a.put(m.tile, 13, 3, {245, 240, 225}), a.put(m.tile, 13, 4, {220, 214, 196});
         }
+        // The arrow: a steel point, a wooden shaft, white feathers in a V at the tail.
+        {
+            static const char* const kArrow[16] = {".............aa.", "...........aabca", "..........abccba", "..........abbba.", "..........adbba.", ".........adeaa..", "........adea....", ".......adea.....",
+                                                   "......adea......", "...aaadea.......", "aaafgdea........", "ffggdga.........", "aggdgfa.........", ".adgga..........", "ahagfa..........", ".a.afa.........."};
+            clearTile(T_ARROW);
+            for (int y = 0; y < 16; ++y)
+                for (int x = 0; x < 16; ++x) {
+                    switch (kArrow[y][x]) {
+                        case 'a': a.put(T_ARROW, x, y, {26, 20, 18}); break;
+                        case 'b': a.put(T_ARROW, x, y, {150, 160, 176}); break;
+                        case 'c': a.put(T_ARROW, x, y, {230, 236, 245}); break;
+                        case 'd': a.put(T_ARROW, x, y, {160, 110, 64}); break;
+                        case 'e': a.put(T_ARROW, x, y, {110, 72, 40}); break;
+                        case 'f': a.put(T_ARROW, x, y, {196, 194, 186}); break;
+                        case 'g': a.put(T_ARROW, x, y, {240, 238, 230}); break;
+                        case 'h': a.put(T_ARROW, x, y, {70, 46, 26}); break;
+                        default: break;
+                    }
+                }
+        }
         // Ingots, style A: a bevelled bar with a bright top and a shine.
         static const char* const kIngot[16] = {"................", "................", "................", "................", "................", "......4444......", ".....411114.....", "....41111114....",
                                                "...4222222223...", "...4222222223...", "...4222222223...", "....33333333....", "................", "................", "................", "................"};
