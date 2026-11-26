@@ -5,6 +5,7 @@
 
 #include "Blocks.h"
 #include "Mobs.h"
+#include "VcModel.h"
 
 namespace vc {
 
@@ -42,6 +43,8 @@ struct ModMob {
     std::string key, name, nameCs;
     MobType base = MobType::Pig;
     int skin = -1, face = -1;  // atlas tiles
+    int model = -1;            // 2.8.0: its own VcModel (ModRegistry::model), -1 = the base creature's body
+    VcTexRect modelTex;        // 2.8.0: the model's texture in the atlas
     float health = 10, spawn = 0.1f;
     std::vector<std::pair<std::string, int>> drops;  // item key, count
 };
@@ -58,6 +61,7 @@ public:
     const ModItem* item(ItemId id) const;
     const std::vector<ModMob>& mobs() const { return mobs_; }
     const ModMob* mob(int variant) const;  // Mob::variant (1-based), null for 0
+    const VcModel* model(int index) const { return index >= 0 && index < (int)models_.size() ? &models_[(size_t)index] : nullptr; }
     ItemId find(const std::string& key) const;  // "namespace:id", AIR if unknown
     const char* name(ItemId id) const;          // in the current language
     const char* key(ItemId id) const;
@@ -79,6 +83,10 @@ private:
     };
     ItemId idFor(const std::string& key);
     int tileFor(const std::string& path);
+    // 2.8.0: a texture of w x h pixels as a block of atlas tiles (16 pixels each), from the bottom of the atlas up.
+    bool tileBlockFor(const std::string& path, int w, int h, VcTexRect& rect);
+    std::vector<VcModel> models_;
+    int blockRow_ = kAtlasCols, blockCol_ = 0, blockRowH_ = 0;
     std::vector<ModBlock> blocks_;
     std::vector<ModItem> items_;
     std::vector<ModMob> mobs_;

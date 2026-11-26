@@ -1,4 +1,5 @@
 #include "Mobs.h"
+#include "VcModel.h"
 
 #include <algorithm>
 #include <cmath>
@@ -627,6 +628,24 @@ void MobSystem::buildVertices(int dim, float time, std::vector<Vertex>& out) con
         b.fall = roll;
         roll = 0;
         if (!m.alive() && !mobInfo(m.type).boss) b.light = std::max(b.light, 1.4f);  // a red-white flash as it dies
+        if (const ModMob* mod = ModRegistry::get().mob(m.variant); mod && mod->model >= 0) {
+            // 2.8.0: a creature with its own model (VcModel, from a geo.json or .vcmodel.json): the legs
+            // swing as it walks (bones named leg..., the left and right ones in turn), arms the other way.
+            if (const VcModel* model = ModRegistry::get().model(mod->model)) {
+                VcPose pose;
+                const float swing = m.swing * 50.0f;  // degrees
+                for (const VcBone& bone : model->bones) {
+                    std::string n = bone.name;
+                    for (char& ch : n) ch = (char)std::tolower((unsigned char)ch);
+                    if (n.find("leg") == std::string::npos && n.find("arm") == std::string::npos) continue;
+                    const bool odd = n.find("right") != std::string::npos || n.find("1") != std::string::npos || n.find("2") != std::string::npos;
+                    const float sign = (odd ? 1.0f : -1.0f) * (n.find("arm") != std::string::npos ? -1.0f : 1.0f);
+                    pose.rotation[bone.name] = Vec3(swing * sign, 0, 0);
+                }
+                buildVcModel(*model, pose, mod->modelTex, feet, yaw, light, out);
+                continue;
+            }
+        }
         if (const ModMob* mod = ModRegistry::get().mob(m.variant); mod && mod->skin >= 0) {
             b.skin = mod->skin;
             b.face = mod->face;

@@ -389,6 +389,18 @@ BedrockImportReport convertBedrockAddon(const std::string& bedrockDir, const std
             if (ce) {
                 const std::string file = copyTexture(ce->rp, ce->texture, "mob_" + localId(id));
                 if (!file.empty()) vm.set("texture", Json::string(file)), vm.set("face", Json::string(file));
+                // 2.8.0: the whole geometry comes along as the creature's own model (VcModel).
+                if (!file.empty() && geometries.count(ce->geometry)) {
+                    fs::create_directories(pack / "models", ec);
+                    Json one = Json::object(), list = Json::array();
+                    list.push(geometries[ce->geometry]);
+                    one.set("format_version", Json::string("1.12.0"));
+                    one.set("minecraft:geometry", list);
+                    std::ofstream(pack / "models" / (localId(id) + ".geo.json")) << one.dump();
+                    vm.set("model", Json::string(localId(id) + ".geo.json"));
+                    modelNote.clear();
+                    line('+', "geo.json", "{0} > VC model ({1} kostí)", {ce->geometry, std::to_string(geometries[ce->geometry]["bones"].size())});
+                }
             } else {
                 line('!', rel, "{0}: chybí vzhled (resource pack)", {id});
             }

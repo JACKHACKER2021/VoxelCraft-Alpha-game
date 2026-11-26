@@ -789,6 +789,15 @@ void blitTile(Atlas& atlas, int tile, const uint8_t* src, int srcStride, int sx,
 
 bool blitTextureFile(Atlas& atlas, int tile, const std::string& path) {
     if (tile < 0 || tile >= kAtlasCols * kAtlasCols || atlas.size <= 0) return false;
+    if (const size_t hash = path.rfind('#'); hash != std::string::npos) {
+        // 2.8.0: a part of a bigger picture (a model's texture): "file#x,y,side".
+        int x = 0, y = 0, side = 16;
+        if (std::sscanf(path.c_str() + hash + 1, "%d,%d,%d", &x, &y, &side) != 3) return false;
+        Image img = loadImage(path.substr(0, hash));
+        if (!img.valid() || x < 0 || y < 0 || side <= 0 || x + side > img.w || y + side > img.h) return false;
+        blitTile(atlas, tile, img.rgba.data(), img.w, x, y, side, 0);
+        return true;
+    }
     Image img = loadImage(path);
     if (!img.valid()) return false;
     blitTile(atlas, tile, img.rgba.data(), img.w, 0, 0, std::min(img.w, img.h), 0);

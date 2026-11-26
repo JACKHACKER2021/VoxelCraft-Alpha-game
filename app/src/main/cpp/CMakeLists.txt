@@ -102,6 +102,7 @@ add_library(voxelcraft SHARED
     engine/JavaImport.cpp
     engine/BedrockImport.cpp
     engine/GameAddons.cpp
+    engine/VcModel.cpp
     engine/WorldFiles.cpp)
 
 target_include_directories(voxelcraft PRIVATE

@@ -1,4 +1,5 @@
 #include "Mods.h"
+#include "TexturePack.h"
 
 #include <algorithm>
 #include <cctype>
@@ -49,6 +50,8 @@ void ModRegistry::clear() {
     textures_.clear();
     summaries_.clear();
     nextTile_ = T_COUNT;
+    models_.clear();
+    blockRow_ = kAtlasCols, blockCol_ = 0, blockRowH_ = 0;
 }
 
 ItemId ModRegistry::idFor(const std::string& key) {
@@ -60,6 +63,25 @@ ItemId ModRegistry::idFor(const std::string& key) {
     ids_.emplace_back(key, next);
     idsChanged_ = true;
     return next;
+}
+
+bool ModRegistry::tileBlockFor(const std::string& path, int w, int h, VcTexRect& rect) {
+    const int tw = std::clamp((w + 15) / 16, 1, 8), th = std::clamp((h + 15) / 16, 1, 8);
+    if (blockCol_ + tw > kAtlasCols || blockRowH_ == 0) {
+        blockRow_ -= blockRowH_ ? blockRowH_ : 0;
+        blockCol_ = 0, blockRowH_ = 0;
+    }
+    if (blockRowH_ < th) blockRow_ -= th - blockRowH_, blockRowH_ = th;
+    if (blockRow_ * kAtlasCols <= nextTile_) return false;  // no room left between the mods' tiles and these blocks
+    // Every tile of the block gets the matching part of the picture ("path#x,y,side").
+    for (int y = 0; y < th; ++y)
+        for (int x = 0; x < tw; ++x)
+            textures_.emplace_back((blockRow_ + y) * kAtlasCols + blockCol_ + x,
+                                   path + "#" + std::to_string(x * w / tw) + "," + std::to_string(y * h / th) + "," + std::to_string(w / tw));
+    rect.u0 = (float)blockCol_ / kAtlasCols, rect.v0 = (float)blockRow_ / kAtlasCols;
+    rect.u1 = (float)(blockCol_ + tw) / kAtlasCols, rect.v1 = (float)(blockRow_ + th) / kAtlasCols;
+    blockCol_ += tw;
+    return true;
 }
 
 int ModRegistry::tileFor(const std::string& path) {
@@ -173,6 +195,25 @@ void ModRegistry::load(const std::vector<std::string>& packDirs, const std::stri
             m.skin = texture(mb["texture"], -1);
             m.face = texture(mb["face"], -1);
             m.health = std::clamp((float)mb["health"].num(mobInfo(m.base).health), 1.0f, 500.0f);
+            // 2.8.0: its own model (a geo.json or .vcmodel.json in models/) with its texture as a block of tiles.
+            if (const std::string mf = mb["model"].str(""); !mf.empty() && mf.find("..") == std::string::npos) {
+                Json md;
+                std::string err;
+                std::vector<VcModel> found;
+                std::ifstream in(dir + "/models/" + mf);
+                std::stringstream ss;
+                ss << in.rdbuf();
+                const std::string tf = mb["texture"].str("");
+                int tw = 0, th = 0;
+                if (!in || !Json::parse(ss.str(), md, err) || !parseVcModels(md, found, err)) {
+                    warn(trf("Model {0} nejde načíst: {1}", {ns + "/" + mf, err}));
+                } else if (tf.empty() || !imageSize(tex + tf, tw, th) || !tileBlockFor(tex + tf, tw, th, m.modelTex)) {
+                    warn(trf("Textura modelu {0} chybí nebo se nevejde", {ns + "/" + tf}));
+                } else {
+                    m.model = (int)models_.size();
+                    models_.push_back(found[0]);
+                }
+            }
             m.spawn = std::clamp((float)mb["spawn"].num(0.1), 0.0f, 1.0f);
             const Json& drops = mb["drops"];
             for (size_t k = 0; k < drops.size(); ++k)
