@@ -100,6 +100,8 @@ add_library(voxelcraft SHARED
     engine/Trading.cpp
     engine/Mods.cpp
     engine/JavaImport.cpp
+    engine/BedrockImport.cpp
+    engine/GameAddons.cpp
     engine/WorldFiles.cpp)
 
 target_include_directories(voxelcraft PRIVATE

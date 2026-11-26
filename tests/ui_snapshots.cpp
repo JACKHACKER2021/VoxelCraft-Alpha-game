@@ -176,7 +176,7 @@ int main(int argc, char** argv) {
     shot("19_skins");
     game.onBack();
     frames(1);
-    tap(300, 177);  // Balíčky a doplňky
+    tap(220, 176);  // Balíčky a doplňky (the button moved in 2.5.0)
     shot("05_packs");
     tap(426, 168);  // Upravit soubory JSON
     shot("06_pack_files");
@@ -418,6 +418,17 @@ int main(int argc, char** argv) {
     setLanguage(Language::Russian);
     tap(103, 91);   // Video tab
     shot("32_settings_video_ru");
+    // 2.7.0: the add-on manager and its tabs (Czech).
+    if (kFeatures270) {
+        setLanguage(Language::Czech);
+        for (int k = 0; k < 3; ++k) game.onBack(), frames(1);
+        tap(220, 176);  // Módy a balíčky
+        shot("40_addons");
+        for (int t = 1; t < 5; ++t) {
+            tap(70 + t * 88, 42);
+            shot(("4" + std::to_string(t) + "_addons_tab").c_str());
+        }
+    }
     setLanguage(Language::Czech);
     fs::remove_all(data);
     return 0;

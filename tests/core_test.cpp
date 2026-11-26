@@ -61,6 +61,7 @@
 #include "engine/Trading.h"
 #include "engine/Mods.h"
 #include "engine/JavaImport.h"
+#include "engine/BedrockImport.h"
 #include "engine/WorldFiles.h"
 #include "engine/BlockShapes.h"
 
@@ -3343,6 +3344,42 @@ static int testUpdate14() {
             "result": {"item": "minecraft:stick", "count": 4}})";
         std::ofstream(java / "data/gems/recipe/smelt.json") << R"({"type": "minecraft:smelting", "ingredient": {"item": "gems:topaz_log"}, "result": "minecraft:coal"})";
         std::ofstream(java / "data/gems/loot_table/blocks/topaz_log.json") << R"({"pools": [{"entries": [{"type": "item", "name": "gems:topaz"}]}]})";
+        {
+            // 2.7.0: a Bedrock add-on (behaviour + resource pack, comments in the JSON, a script, UI):
+            // a block, an item and an entity come across; the script and the UI are reported, not lost.
+            const fs::path br = root / "zoo" / "bedrock";
+            for (const char* d : {"BP/blocks", "BP/items", "BP/entities", "RP/textures/blocks", "RP/textures/items", "RP/textures/entity", "RP/entity", "RP/models/entity", "RP/texts", "RP/ui"})
+                fs::create_directories(br / d);
+            std::ofstream(br / "BP/manifest.json") << R"({"format_version": 2, "header": {"name": "Zoo"}, "modules": [{"type": "data"}]})";
+            std::ofstream(br / "RP/manifest.json") << R"({"format_version": 2, "header": {"name": "Zoo RP"}, "modules": [{"type": "resources"}]})";
+            std::ofstream(br / "BP/blocks/hay.json") << "// a comment\n" << R"({"minecraft:block": {"description": {"identifier": "zoo:hay_bale"},
+                "components": {"minecraft:material_instances": {"*": {"texture": "zoo_hay"}}, "minecraft:destructible_by_mining": {"seconds_to_destroy": 0.8}}}})";
+            std::ofstream(br / "BP/items/hide.json") << R"({"minecraft:item": {"description": {"identifier": "zoo:zebra_hide"}, "components": {"minecraft:icon": "zoo_hide"}}})";
+            std::ofstream(br / "BP/entities/zebra.json") << R"({"minecraft:entity": {"description": {"identifier": "zoo:zebra"},
+                "components": {"minecraft:health": {"value": 14, "max": 14}, "minecraft:type_family": {"family": ["zebra", "mob"]}, "minecraft:jump.static": {}}}})";
+            std::ofstream(br / "RP/textures/terrain_texture.json") << R"({"texture_data": {"zoo_hay": {"textures": "textures/blocks/hay"}}})";
+            std::ofstream(br / "RP/textures/item_texture.json") << R"({"texture_data": {"zoo_hide": {"textures": "textures/items/hide"}}})";
+            writePng((br / "RP/textures/blocks/hay.png").string(), 16, 16, red);
+            writePng((br / "RP/textures/items/hide.png").string(), 16, 16, green);
+            writePng((br / "RP/textures/entity/zebra.png").string(), 16, 16, green);
+            std::ofstream(br / "RP/entity/zebra.json") << R"({"minecraft:client_entity": {"description": {"identifier": "zoo:zebra",
+                "textures": {"default": "textures/entity/zebra"}, "geometry": {"default": "geometry.zebra"}}}})";
+            std::ofstream(br / "RP/models/entity/zebra.geo.json") << R"({"minecraft:geometry": [{"description": {"identifier": "geometry.zebra", "visible_bounds_height": 1.8},
+                "bones": [{"name": "body"}, {"name": "head"}, {"name": "leg0"}, {"name": "leg1"}, {"name": "leg2"}, {"name": "leg3"}]}]})";
+            std::ofstream(br / "RP/texts/en_US.lang") << "entity.zoo:zebra.name=Zebra\ntile.zoo:hay_bale.name=Hay Bale\n";
+            std::ofstream(br / "scripts.txt") << 2;
+            const BedrockImportReport bre = convertBedrockAddon(br.string(), (root / "zoo").string());
+            std::printf("bedrock import: %d blocks, %d items, %d mobs, %d textures, %d errors, %d warnings\n", bre.blocks, bre.items, bre.mobs, bre.textures, bre.errors(), bre.warnings());
+            CHECK(bre.blocks == 1 && bre.items == 1 && bre.mobs == 1 && bre.textures == 3 && bre.models == 1);
+            CHECK(bre.errors() == 2 && readImportLines((root / "zoo").string()).size() == bre.lines.size());  // the scripts and the UI
+            for (const ImportLine& l : bre.lines)
+                if (!hasTranslation(l.text)) std::printf("FAIL untranslated import line: %s\n", l.text.c_str()), std::exit(1);
+            Json zc;
+            std::string zerr;
+            CHECK(Json::parse([&] { std::ifstream f(root / "zoo/content.json"); std::stringstream ss; ss << f.rdbuf(); return ss.str(); }(), zc, zerr));
+            CHECK(zc["namespace"].str("") == "zoo" && zc["mobs"][0]["base"].str("") == "cow" && zc["mobs"][0]["name"].str("") == "Zebra" &&
+                  zc["blocks"][0]["texture"].str("") == "block_hay_bale.png" && zc["mobs"][0]["health"].num(0) == 14);
+        }
         JavaImportReport rep = convertJavaMod(java.string(), (root / "jmod").string());
         std::printf("java import '%s': %d blocks, %d items, %d recipes, %d textures, %d drops; skipped %d minecraft files, %d shapes, %d recipes, %d classes\n",
                     rep.name.c_str(), rep.blocks, rep.items, rep.recipes, rep.textures, rep.drops, rep.skippedMinecraft, rep.skippedShapes,

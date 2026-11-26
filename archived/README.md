@@ -12,6 +12,10 @@ Sem odkládáme věci, které hra už nepoužívá, když přijde čas změny: s
 | `caves_theme_2.5.0.mp3` | Hudba jeskyní (Echoes of Caves) | nová klidnější „Caves“ (2.6.0 Preview) |
 | `cornerstone_theme_2.5.0.mp3` | Hudba Cornerstone Dimension | nová klidnější „Cornerstone“ (2.6.0 Preview) |
 
+## 🖼️ ui_2.6.0/ a trailers/
+
+Starý tvůrce doplňků, staré textury a zarážedlo (nahrazeno ve 2.7.0) a návod, jak starý vzhled natočit.
+
 Stará hudba Crimson Void (`void_theme.mp3`) archivovaná není: hraje dál v boss arénách.
 
 ---

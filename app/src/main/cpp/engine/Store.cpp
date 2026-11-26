@@ -160,7 +160,8 @@ bool writeTexturePack(PackManager& packs, const std::string& id, const std::stri
 
 const std::vector<StoreItem>& storeCatalog() {
     using K = StoreItem::Kind;
-    static const std::vector<StoreItem> items = {
+    static const std::vector<StoreItem> items = [&] {
+    std::vector<StoreItem> v = {
         item("skin:knight", K::Skin, "Rytíř", "RYTÍŘ", "SKIN", "Plná zbroj s červeným erbem. Pro hrdiny jeskyní.", 300, 4.8f, 0.36f, 0.38f, 0.42f),
         item("skin:robot", K::Skin, "Robot V-01", "ROBOT", "SKIN", "Kovový pomocník se svítícíma očima.", 450, 4.7f, 0.12f, 0.3f, 0.36f),
         item("skin:astronaut", K::Skin, "Astronautka", "ASTRONAUT", "SKIN", "Skafandr pro výpravy do neznáma.", 500, 4.9f, 0.13f, 0.2f, 0.38f),
@@ -183,6 +184,12 @@ const std::vector<StoreItem>& storeCatalog() {
         item("addon:anniversary", K::Addon, "Výroční balíček", "1. NAROZENINY", "JEN S KÓDEM",
              "První narozeniny VoxelCraftu: konfety, dort a slavnostní menu. Kód vyhraješ v kole štěstí.", 0, 5.0f, 0.6f, 0.2f, 0.45f),
     };
+    // 2.7.0: the Pre-Alpha Style (the textures and menus of VoxelCraft 0.1-0.3) is sold with the textures.
+    if (kFeatures270)
+        v.push_back(item("textures:pre_alpha", K::Textures, "Pre-Alpha Style", "PRE-ALPHA", "TEXTURY",
+                         "Textury a menu jako ve VoxelCraftu 0.1-0.3.", 400, 4.9f, 0.3f, 0.26f, 0.2f));
+    return v;
+    }();
     return items;
 }
 
@@ -204,6 +211,10 @@ bool installStoreItem(const StoreItem& it, PackManager& packs, std::string& erro
     else if (it.id == "textures:night") ok = writeTexturePack(packs, id, it.title, it.description, night, error);
     else if (it.id == "textures:pastel") ok = writeTexturePack(packs, id, it.title, it.description, pastel, error);
     else if (it.id == "textures:sepia") ok = writeTexturePack(packs, id, it.title, it.description, sepia, error);
+    else if (it.id == "textures:pre_alpha") {
+        packs.setEnabled("pre_alpha_style", true);  // the built-in pack, now unlocked
+        return true;
+    }
     else {
         error = "neznámá položka";
         return false;

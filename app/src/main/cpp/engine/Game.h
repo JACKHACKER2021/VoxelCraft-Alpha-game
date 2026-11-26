@@ -1,4 +1,6 @@
 #pragma once
+#include <map>
+#include "BedrockImport.h"
 #include <array>
 #include <atomic>
 #include <functional>
@@ -152,7 +154,7 @@ private:
                     PromptStructureImported = 9, PromptDevName = 10, PromptDevPassword = 11, PromptMusicEnded = 12,
                     PromptJoinAddress = 13, PromptChat = 14, PromptCode = 15, PromptPublicIp = 16, PromptWorldImported = 17,
                     PromptShaderPackName = 18, PromptWaypoint = 19, PromptBookPage = 20, PromptBookTitle = 21,
-                    PromptBlockText = 22, PromptBugTitle = 23, PromptBugText = 24 };  // 2.5.0: the bug report  // 1.9.5 build 3: command and structure blocks
+                    PromptBlockText = 22, PromptBugTitle = 23, PromptBugText = 24, PromptCreatorName = 25 };  // 2.5.0: the bug report  // 1.9.5 build 3: command and structure blocks
 
     void setScreen(Screen s);
     Settings playSettings() const;  // settings_ without developer options for normal players
@@ -213,6 +215,27 @@ private:
     void confirmDeleteScreen();
     void settingsScreen();
     void packsScreen();
+    // 2.7.0: the add-on manager (GameAddons.cpp).
+    struct AddonInfo {
+        std::string origin;
+        int kind = 0;  // 0 VC, 1 Java, 2 Bedrock, 3 store, 4 broken
+        int blocks = 0, items = 0, mobs = 0, textures = 0, errors = 0, warnings = 0;
+        std::vector<ImportLine> lines;
+    };
+    AddonInfo addonInfo(const PackInfo& p);
+    void addonManagerScreen();
+    void addonTabs(float x, float y, float w);
+    void addonListTab(float x, float y, float w, float h);
+    void addonReportScreen(float x, float y, float w, float h);
+    void addonFilesTab(float x, float y, float w, float h, bool resource);
+    void addonStoreTab(float x, float y, float w, float h);
+    void addonCreatorTab(float x, float y, float w, float h);
+    void saveCreation();
+    std::map<std::string, AddonInfo> addonInfo_;
+    std::vector<uint32_t> creatorPixels_;
+    std::string creatorName_;
+    bool creatorMob_ = false, creatorFill_ = false, creatorLight_ = false;
+    int creatorColor_ = 0, creatorHard_ = 1, creatorBase_ = 0, creatorHealth_ = 12;
     void packFilesScreen();
     void jsonEditorScreen();
     void pauseScreen();
@@ -300,6 +323,8 @@ private:
 
     std::string dataDir_, worldsDir_, settingsPath_, texturePackDir_;
     std::string gpuName_;
+    std::string addonReportPack_;  // 2.7.0: the pack whose import report is shown
+    int addonTab_ = 0;              // 2.7.0: the add-on manager's tab
     static constexpr int kWalletLimit = 500;  // 2.7.0
     int walletTotal_ = 0;
     float perfTime_ = 0;  // 2.7.0: the shader guard's window

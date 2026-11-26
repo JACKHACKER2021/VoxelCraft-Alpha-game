@@ -18,6 +18,7 @@
 #include "McWorld.h"
 #include <fstream>
 #include "JavaImport.h"
+#include "BedrockImport.h"
 #include "Mods.h"
 #include "Achievements.h"
 #include "Commands.h"
@@ -452,6 +453,7 @@ bool Game::preAlphaPack() const {
 }
 
 void Game::rebuildFromPacks() {
+    addonInfo_.clear();
     packList_ = packs_.list();
     packWarnings_.clear();
     // Mods first: recipes name their blocks and items.
@@ -982,6 +984,7 @@ void Game::frame(double time) {
             if (id == PromptWorldName) newWorldName_ = text.substr(0, 40);
             else if (id == PromptSeed) newWorldSeed_ = text.substr(0, 40), newWorldStructSeed_ = 0;
             else if (id == PromptJson) editorApply(text, true);
+            else if (id == PromptCreatorName) creatorName_ = text.substr(0, 32);
             else if (id == PromptPackImported) {
                 std::string packId = text;
                 if (packId.rfind("java:", 0) == 0) {
@@ -993,6 +996,18 @@ void Game::frame(double time) {
                                             {std::to_string(rep.blocks), std::to_string(rep.items), std::to_string(rep.recipes)})
                                       : tr("Z tohoto souboru nešlo nic převést");
                     toastUntil_ = time + 8;
+                }
+                if (packId.rfind("bedrock:", 0) == 0) {
+                    // 2.7.0: a Bedrock add-on: converted into VC content, with a report of every step.
+                    packId = packId.substr(8);
+                    const std::string dir = packs_.packDir(packId);
+                    const BedrockImportReport rep = convertBedrockAddon(dir + "/bedrock", dir);
+                    toast_ = rep.ok() ? trf("Import Bedrock: {0} bloků, {1} předmětů, {2} mobů · chyby {3}, varování {4}",
+                                            {std::to_string(rep.blocks), std::to_string(rep.items), std::to_string(rep.mobs),
+                                             std::to_string(rep.errors()), std::to_string(rep.warnings())})
+                                      : tr("Z doplňku nešlo nic převést – podívej se na chyby");
+                    toastUntil_ = time + 8;
+                    addonReportPack_ = packId;  // the report opens right away
                 }
                 if (packId.rfind("shaders:", 0) == 0) {
                     // 1.5.5: a shader pack; old ones of other games keep their files for reference.
@@ -2069,7 +2084,7 @@ void Game::newsPanel() {
         {"Rudy", "Železná, bronzová a ocelová ruda Cornerstone; krystalium v Karmínové poušti"},
         {"Halloween", "Dýně s obličeji, pavučiny, náhrobky, duchové v noci a koleda u vesničanů"},
         {"Vánoce", "Stromek a punčocha s dárkem každé ráno, světýlka, perník, sáně a sněhulák"},
-        {"Zima", "Bílá tráva a sníh, který zasype i květiny; sezónní vzhled si vybereš"},
+        {"Zimní svět", "Bílá tráva a sníh, který zasype i květiny; sezónní vzhled si vybereš"},
         {"Hudba", "Čtyři nové klidné skladby, které se plynule prolínají"},
         {"Vajíčka", "Spawn vajíčko pro každého tvora, všechna v novém vzhledu"},
     };
@@ -3140,6 +3155,10 @@ void Game::settingsScreen() {
 }
 
 void Game::packsScreen() {
+    if (kFeatures270) {  // 2.7.0: the new add-on manager; the old screen stays in the older editions
+        addonManagerScreen();
+        return;
+    }
     float x, y, w, h;
     menuWindow(x, y, w, h, false);
     ui_.text(x + 2, y + 2, "Módy a balíčky", kTitle, 1, false);

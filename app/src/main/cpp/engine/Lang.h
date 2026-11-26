@@ -1,4 +1,5 @@
 #pragma once
+#include <vector>
 #include <initializer_list>
 #include <string>
 
@@ -20,6 +21,7 @@ std::string tr(const std::string& czech);
 // Like tr, then {0}, {1}, ... are replaced by `args`, so every language can put them
 // where its grammar wants them.
 std::string trf(const std::string& czech, std::initializer_list<std::string> args);
+std::string trf(const std::string& czech, const std::vector<std::string>& args);
 
 // For tests: whether `czech` has an entry, and how many entries there are.
 bool hasTranslation(const std::string& czech);

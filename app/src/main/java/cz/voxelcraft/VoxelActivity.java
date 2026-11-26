@@ -992,6 +992,25 @@ public class VoxelActivity extends NativeActivity {
                 if (candidate != null && (prefix == null || candidate.length() < prefix.length())) prefix = candidate;
             }
             String base = slug(displayName(uri).replaceAll("\\.(zip|mcpack|mcaddon|jar)$", ""));
+            // 2.7.0: a Bedrock add-on (.mcaddon / .mcpack): behaviour and resource packs with manifests
+            // that list "modules". Its files go to packs/<id>/bedrock; the game converts them.
+            boolean bedrock = displayName(uri).toLowerCase(java.util.Locale.ROOT).endsWith(".mcaddon");
+            for (Enumeration<? extends ZipEntry> e = zip.entries(); e.hasMoreElements() && !bedrock; ) {
+                ZipEntry entry = e.nextElement();
+                String name = entry.getName().replace('\\', '/');
+                if (name.endsWith("terrain_texture.json") || name.endsWith("item_texture.json") || name.startsWith("entities/")
+                        || name.contains("/entities/") || name.endsWith(".geo.json")) bedrock = true;
+                else if (name.endsWith("manifest.json") && entry.getSize() < 65536) {
+                    try (InputStream in = zip.getInputStream(entry)) {
+                        java.io.ByteArrayOutputStream buf = new java.io.ByteArrayOutputStream();
+                        byte[] chunk = new byte[4096];
+                        int r;
+                        while ((r = in.read(chunk)) > 0) buf.write(chunk, 0, r);
+                        if (buf.toString("UTF-8").contains("\"modules\"")) bedrock = true;
+                    }
+                }
+            }
+            if (bedrock) return installBedrockAddon(zip, base);
             if (prefix == null && java && !shaders) return installJavaMod(zip, base);
             if (prefix == null) throw new IOException(str(R.string.modpack_invalid));
 
@@ -1070,6 +1089,55 @@ public class VoxelActivity extends NativeActivity {
         if (count == 0) throw new IOException(str(R.string.modpack_invalid));
         writeBytes(new File(root, "classes.txt"), Integer.toString(classes).getBytes(StandardCharsets.UTF_8));
         return "java:" + id;
+    }
+
+    /** 2.7.0: copies a Bedrock add-on into packs/<id>/bedrock (an .mcaddon's inner .mcpack files are unpacked too). */
+    private String installBedrockAddon(ZipFile zip, String base) throws IOException {
+        File packs = new File(getFilesDir(), "packs");
+        String id = base;
+        for (int n = 2; new File(packs, id).exists(); n++) id = base + "_" + n;
+        File root = new File(new File(packs, id), "bedrock");
+        int count = 0, scripts = 0;
+        for (Enumeration<? extends ZipEntry> e = zip.entries(); e.hasMoreElements() && count < MAX_FILES; ) {
+            ZipEntry entry = e.nextElement();
+            String name = entry.getName().replace('\\', '/');
+            if (entry.isDirectory() || name.contains("..") || name.startsWith("/")) continue;
+            if (name.endsWith(".js") || name.endsWith(".ts")) {
+                scripts++;
+                continue;
+            }
+            if (name.endsWith(".mcpack") || name.endsWith(".zip")) {
+                // A pack inside the add-on: unpack it into its own folder.
+                String sub = name.replaceAll("\\.(mcpack|zip)$", "").replace('/', '_');
+                try (ZipInputStream inner = new ZipInputStream(zip.getInputStream(entry))) {
+                    ZipEntry ie;
+                    while ((ie = inner.getNextEntry()) != null && count < MAX_FILES) {
+                        String n2 = ie.getName().replace('\\', '/');
+                        if (ie.isDirectory() || n2.contains("..") || n2.startsWith("/")) continue;
+                        if (n2.endsWith(".js") || n2.endsWith(".ts")) {
+                            scripts++;
+                            continue;
+                        }
+                        File target = new File(new File(root, sub), n2);
+                        File parent = target.getParentFile();
+                        if (parent != null && !parent.isDirectory() && !parent.mkdirs()) throw new IOException("mkdir");
+                        copy(inner, target);
+                        count++;
+                    }
+                }
+                continue;
+            }
+            File target = new File(root, name);
+            File parent = target.getParentFile();
+            if (parent != null && !parent.isDirectory() && !parent.mkdirs()) throw new IOException("mkdir");
+            try (InputStream in = zip.getInputStream(entry)) {
+                copy(in, target);
+            }
+            count++;
+        }
+        if (count == 0) throw new IOException(str(R.string.modpack_invalid));
+        writeBytes(new File(root, "scripts.txt"), Integer.toString(scripts).getBytes(StandardCharsets.UTF_8));
+        return "bedrock:" + id;
     }
 
     private String displayName(Uri uri) {

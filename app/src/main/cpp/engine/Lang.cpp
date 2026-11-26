@@ -65,6 +65,16 @@ std::string trf(const std::string& czech, std::initializer_list<std::string> arg
     return s;
 }
 
+// 2.7.0: the same with the arguments in a vector (import reports read from a file).
+std::string trf(const std::string& czech, const std::vector<std::string>& args) {
+    std::string s = tr(czech);
+    for (size_t i = 0; i < args.size(); ++i) {
+        const std::string mark = "{" + std::to_string(i) + "}";
+        for (size_t p = s.find(mark); p != std::string::npos; p = s.find(mark, p + args[i].size())) s.replace(p, mark.size(), args[i]);
+    }
+    return s;
+}
+
 bool hasTranslation(const std::string& czech) { return index().count(czech) > 0; }
 int translationCount() { return (int)index().size(); }
 
