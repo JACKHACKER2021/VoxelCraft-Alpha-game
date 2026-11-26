@@ -58,6 +58,18 @@ All code, textures, models and music are our own: **no textures, sounds, music o
 - 🎵 four new calm **songs**, 🥚 a **spawn egg** for every creature in a new look
 - 📦 **world export** to a readable zip, 🗺️ the subway pink on the map, 🐢 **weak device mode** (Mali, PowerVR)
 
+#### 🧪 2.7.0 Preview – coming
+- 🚇 subway fix: no seat in the doorway, the view at the table no longer sees through the wall
+- 🐢 faster chunk loading and less memory for weak devices
+- 🦊 a collar for the tamed fox in the colour you pick
+- 🏆 new achievements (tame a fox, build a snowman and more)
+- 📓 the player's journal that writes down where you went and what you found
+- 👛 a wallet for items and blocks with 500 slots, so they don't fill the inventory
+- 🏚️ abandoned station with a ticket office and a waiting room
+- 🔧 a depot to repair and repaint wagons
+- 📢 "Next station…" announcements in Czech and English
+- 🎫 subway tickets: machine, turnstile, day ticket, the station's name on the ticket and the "Traveller" achievement
+
 The rest of this page (history of every version, how to build) is in Czech.
 
 </details>
@@ -124,6 +136,19 @@ The rest of this page (history of every version, how to build) is in Czech.
 ! schody a desky si drží směr, ploché světy zůstanou ploché
 - moby, obsah truhel a dveře se zatím nepřenesou
 ```
+
+## 🧪 2.7.0 Preview – připravuje se
+
+- 🚇 oprava metra: žádná sedačka ve dveřích, pohled u stolu už neprojde stěnou
+- 🐢 rychlejší načítání chunků a menší spotřeba paměti pro slabá zařízení
+- 🦊 obojek pro ochočeného lišáka v barvě, kterou si vybereš
+- 🏆 nové úspěchy (ochoč lišáka, postav sněhuláka a další)
+- 📓 deník hráče, který si sám zapisuje, kde jsi byl a co jsi našel
+- 👛 peněženka na itemy a bloky s 500 místy, aby nezabírala inventář
+- 🏚️ opuštěné nádraží s pokladnou a čekárnou
+- 🔧 depo, kde opravíš a přebarvíš vagony
+- 📢 hlášení „Příští stanice…“ česky i anglicky
+- 🎫 jízdenka do metra: automat, turniket, celodenní jízdenka, jméno stanice na jízdence a úspěch „Cestovatel“
 
 ## 🗺️ Čtyři dimenze
 

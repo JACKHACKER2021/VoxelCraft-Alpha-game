@@ -11,9 +11,33 @@ Nejnovější je **2.6.0**. Preview další verze (2.7.0) je jen pro vývojáře
 > Světy přeneseš přes *Export světa* ve staré aplikaci a *Import* v nové.
 > APK verzí 2.2.0 a 2.3.x tu nejsou: jejich sestavení se ztratilo; všechno z nich obsahuje 2.4.0.
 
+### 🧪 2.7.0 Preview – připravuje se
+- 🚇 oprava metra: žádná sedačka ve dveřích, pohled u stolu už neprojde stěnou
+- 🐢 rychlejší načítání chunků a menší spotřeba paměti pro slabá zařízení
+- 🦊 obojek pro ochočeného lišáka v barvě, kterou si vybereš
+- 🏆 nové úspěchy (ochoč lišáka, postav sněhuláka a další)
+- 📓 deník hráče, který si sám zapisuje, kde jsi byl a co jsi našel
+- 👛 peněženka na itemy a bloky s 500 místy, aby nezabírala inventář
+- 🏚️ opuštěné nádraží s pokladnou a čekárnou
+- 🔧 depo, kde opravíš a přebarvíš vagony
+- 📢 hlášení „Příští stanice…“ česky i anglicky
+- 🎫 jízdenka do metra: automat, turniket, celodenní jízdenka, jméno stanice na jízdence a úspěch „Cestovatel“
+
 <a id="en"></a>
 All VoxelCraft APKs. Newest: **2.6.0**. The preview of the next version (2.7.0) is for developers only, so it is not here. From 2.4.0 the app has a new id and a new
 signature, so it installs **next to** an older one (move worlds with *Export* / *Import*). The 2.2.0 and 2.3.x APKs were lost; 2.4.0 has all of them.
+
+### 🧪 2.7.0 Preview – coming
+- 🚇 subway fix: no seat in the doorway, the view at the table no longer sees through the wall
+- 🐢 faster chunk loading and less memory for weak devices
+- 🦊 a collar for the tamed fox in the colour you pick
+- 🏆 new achievements (tame a fox, build a snowman and more)
+- 📓 the player's journal that writes down where you went and what you found
+- 👛 a wallet for items and blocks with 500 slots, so they don't fill the inventory
+- 🏚️ abandoned station with a ticket office and a waiting room
+- 🔧 a depot to repair and repaint wagons
+- 📢 "Next station…" announcements in Czech and English
+- 🎫 subway tickets: machine, turnstile, day ticket, the station's name on the ticket and the "Traveller" achievement
 
 | Verze | APK | Co přinesla |
 |---|---|---|
