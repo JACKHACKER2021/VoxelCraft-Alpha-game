@@ -252,6 +252,23 @@ int main(int argc, char** argv) {
         shot("13_furnace");
         game.onBack();
         frames(1);
+        if (kFeatures270) {
+            // 2.7.0: a bronze-ruby backpack (crafting and furnace buttons, two pages) and a large chest.
+            s->back() = {(ItemId)(BACKPACK + 3), 1, 0};
+            s->openBackpack(s->back());
+            frames(2);
+            shot("13c_backpack");
+            game.onBack();
+            frames(1);
+            s->back() = {};
+            s->currentWorld().setBlock(x, y, z, CHEST);
+            s->currentWorld().setBlock(x + 1, y, z, CHEST);
+            s->openChestAt({0, x, y, z});
+            frames(2);
+            shot("13d_large_chest");
+            game.onBack();
+            frames(1);
+        }
         // 1.5.0: reading a page of the old documents, and the fortress compass in hand.
         s->readDocument(6);
         frames(2);

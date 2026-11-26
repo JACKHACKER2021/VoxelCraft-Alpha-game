@@ -4,44 +4,30 @@
 
 <a id="cz"></a>
 Všechna APK VoxelCraftu. Hra pro Android od Hoppy_Hopsy21 a VoxelSoftworks, vytvořená společně s Claude.
-Nejnovější je **2.6.0**. Preview další verze (2.7.0) je jen pro vývojáře, proto tu není. Neoficiální fanouškovský projekt, bez obsahu od Mojangu.
+Nejnovější je **2.7.0**. Preview další verze (2.8.0) je jen pro vývojáře, proto tu není. Neoficiální fanouškovský projekt, bez obsahu od Mojangu.
 
 > [!IMPORTANT]
 > Od verze **2.4.0** má hra nové ID (`cz.voxelsoftworks.voxelcraft`) a nový podpis. Nainstaluje se **vedle** starší verze.
 > Světy přeneseš přes *Export světa* ve staré aplikaci a *Import* v nové.
 > APK verzí 2.2.0 a 2.3.x tu nejsou: jejich sestavení se ztratilo; všechno z nich obsahuje 2.4.0.
 
-### 🧪 2.7.0 Preview – připravuje se
-- 🚇 oprava metra: žádná sedačka ve dveřích, pohled u stolu už neprojde stěnou
-- 🐢 rychlejší načítání chunků a menší spotřeba paměti pro slabá zařízení
-- 🦊 obojek pro ochočeného lišáka v barvě, kterou si vybereš
-- 🏆 nové úspěchy (ochoč lišáka, postav sněhuláka a další)
-- 📓 deník hráče, který si sám zapisuje, kde jsi byl a co jsi našel
-- 👛 peněženka na itemy a bloky s 500 místy, aby nezabírala inventář
-- 🏚️ opuštěné nádraží s pokladnou a čekárnou
-- 🔧 depo, kde opravíš a přebarvíš vagony
-- 📢 hlášení „Příští stanice…“ česky i anglicky
-- 🎫 jízdenka do metra: automat, turniket, celodenní jízdenka, jméno stanice na jízdence a úspěch „Cestovatel“
+### 🧪 2.8.0 Preview – připravuje se
+- 📓 deník hráče, 🏆 nové úspěchy
+- 🏚️ opuštěné nádraží s pokladnou a čekárnou, 🔧 depo na opravu a přebarvení vagonů
+- 📢 hlášení „Příští stanice…“, 🎫 jízdenky do metra a úspěch „Cestovatel“
 
 <a id="en"></a>
-All VoxelCraft APKs. Newest: **2.6.0**. The preview of the next version (2.7.0) is for developers only, so it is not here. From 2.4.0 the app has a new id and a new
+All VoxelCraft APKs. Newest: **2.7.0**. The preview of the next version (2.8.0) is for developers only, so it is not here. From 2.4.0 the app has a new id and a new
 signature, so it installs **next to** an older one (move worlds with *Export* / *Import*). The 2.2.0 and 2.3.x APKs were lost; 2.4.0 has all of them.
 
-### 🧪 2.7.0 Preview – coming
-- 🚇 subway fix: no seat in the doorway, the view at the table no longer sees through the wall
-- 🐢 faster chunk loading and less memory for weak devices
-- 🦊 a collar for the tamed fox in the colour you pick
-- 🏆 new achievements (tame a fox, build a snowman and more)
-- 📓 the player's journal that writes down where you went and what you found
-- 👛 a wallet for items and blocks with 500 slots, so they don't fill the inventory
-- 🏚️ abandoned station with a ticket office and a waiting room
-- 🔧 a depot to repair and repaint wagons
-- 📢 "Next station…" announcements in Czech and English
-- 🎫 subway tickets: machine, turnstile, day ticket, the station's name on the ticket and the "Traveller" achievement
+### 🧪 2.8.0 Preview – coming
+- 📓 the player's journal, 🏆 new achievements, 🏚️ an abandoned station, 🔧 a wagon depot
+- 📢 "Next station…" announcements, 🎫 subway tickets and the "Traveller" achievement
 
 | Verze | APK | Co přinesla |
 |---|---|---|
-| **2.6.0** | [VoxelCraft-2.6.0.apk](VoxelCraft-2.6.0.apk) | The Cornerstone and the holidays: golem, moss lurker, sporeling, ember moth, ash fox, the tameable fox, Cornerstone ores, Halloween and Christmas blocks, ghosts, snowman, sled, white winter grass, seasonal look, four new songs, spawn eggs for every creature, readable world export, weak device mode. |
+| **2.7.0** | [VoxelCraft-2.7.0.apk](VoxelCraft-2.7.0.apk) | Backpacks and add-ons: six backpack tiers worn on the back, a wallet, a dyeable fox collar, leather, steel mix and rusting steel, a large chest, the new add-on manager with Bedrock conversion and a block and mob creator, redrawn eggs, meat, arrow, string, ingots and hardium ore, a concrete buffer stop, device power modes, Pre-Alpha Style in the store. |
+| 2.6.0 | [VoxelCraft-2.6.0.apk](VoxelCraft-2.6.0.apk) | The Cornerstone and the holidays: golem, moss lurker, sporeling, ember moth, ash fox, the tameable fox, Cornerstone ores, Halloween and Christmas blocks, ghosts, snowman, sled, white winter grass, seasonal look, four new songs, spawn eggs for every creature, readable world export, weak device mode. |
 | 2.5.0 | [VoxelCraft-2.5.0.apk](VoxelCraft-2.5.0.apk) | The underground: subway network with four kinds of station, the automatic subway, subway map, the lost city, explorer's journals, train wrecks, every structure on the map, structure seeds, new pixel skins and Captain Sea, crouching, swimming and waving, Voxel Bucks, Report a bug, Android 5.0 and newer. |
 | 2.4.0 | [VoxelCraft-2.4.0.apk](VoxelCraft-2.4.0.apk) | Subway with sliding doors and night lights, spinning wheels, stations (concrete track bed, platforms), lattice bridges, crossings, ruined stations, Bronze Halls, slab stairs in towers, villages that follow the land. |
 | Classic 0.0.3 | [VoxelCraft-Classic-0.0.3.apk](VoxelCraft-Classic-0.0.3.apk) | The old game as its own small app: the first textures, creative and survival, small inventory. |

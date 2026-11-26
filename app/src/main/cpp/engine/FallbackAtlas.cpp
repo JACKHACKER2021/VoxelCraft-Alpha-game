@@ -2854,6 +2854,24 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
                 const int n = (int)(hash3(x, y, T_HAZARD, 3) % 9) - 4;
                 a.put(T_HAZARD, x, y, (((x + y) / 4) % 2 ? Rgb{36, 34, 32} : Rgb{240, 200, 40}).plus(n));
             }
+        // The steel set takes the iron look (its colour was liked better; iron things are no longer made):
+        // the steel pickaxe, axe, shovel and sword are the iron ones, the steel armour is recoloured to iron.
+        const std::pair<int, int> ironToSteel[] = {{T_IRON_PICKAXE, T_FIRST_NEW_TOOL + 3}, {T_IRON_AXE, T_FIRST_NEW_TOOL + 4},
+                                                   {T_IRON_SHOVEL, T_FIRST_NEW_TOOL + 5}, {T_FIRST_SWORD + 2, T_FIRST_SWORD + 4}};
+        for (const auto& [from, to] : ironToSteel)
+            for (int y = 0; y < 16; ++y)
+                for (int x = 0; x < 16; ++x) std::copy_n(px4(from, x, y), 4, px4(to, x, y));
+        for (int piece = 0; piece < 4; ++piece) {
+            const int t = T_FIRST_ARMOR + 3 * 4 + piece;
+            for (int y = 0; y < 16; ++y)
+                for (int x = 0; x < 16; ++x) {
+                    uint8_t* q = px4(t, x, y);
+                    if (!q[3]) continue;
+                    q[0] = (uint8_t)std::min(255, q[0] * kIron.r / kSteel.r);
+                    q[1] = (uint8_t)std::min(255, q[1] * kIron.g / kSteel.g);
+                    q[2] = (uint8_t)std::min(255, q[2] * kIron.b / kSteel.b);
+                }
+        }
         // Ingots, style A: a bevelled bar with a bright top and a shine.
         static const char* const kIngot[16] = {"................", "................", "................", "................", "................", "......4444......", ".....411114.....", "....41111114....",
                                                "...4222222223...", "...4222222223...", "...4222222223...", "....33333333....", "................", "................", "................", "................"};

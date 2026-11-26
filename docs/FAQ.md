@@ -120,8 +120,8 @@ Do budoucna je to **v plánu**.
 
 ![Normální a preview](img/faq/preview.jpg)
 
-- **Normální verze** (teď **2.6.0**) je hotová verze. Může ji mít **kdokoli**.
-- **Preview** (teď **2.7.0 Preview**) je další update, který se ještě dělá. Má ji **jen developer**.
+- **Normální verze** (teď **2.7.0**) je hotová verze. Může ji mít **kdokoli**.
+- **Preview** (teď **2.8.0 Preview**) je další update, který se ještě dělá. Má ji **jen developer**.
 - Obě jsou samostatné aplikace, takže můžou být v telefonu **vedle sebe**.
 
 ### 🐞 Jak nahlásit chybu?
@@ -150,6 +150,34 @@ Nebo založ nový **Issue** přímo tady na GitHubu ([Issues](../../../issues)) 
 - Starší verze byly podepsané **jiným klíčem**. Android update s jiným klíčem nepovolí.
 - Od verze **2.4.0** má hra **nové ID aplikace** (`cz.voxelsoftworks.voxelcraft`) a **trvalý klíč**.
 - Každé nové APK se od 2.4.0 nainstaluje přes předchozí, bez odinstalování.
+
+## 🛠️ Změny ve 2.7.0
+
+### ⛓️ Proč bylo odstraněno železo?
+
+- Železo se od 2.7.0 **na nic nevyrábí**. Ve všech receptech je místo něj **ocel**.
+- Železný ingot dáš s uhlím do výroby a vznikne **ocelová směs**. V peci z ní je ocel.
+- Železné nástroje a brnění se už nevyrábí. Úplně zmizí ve **3.0.0**. VoxelCraft je vlastní hra a nechce kopírovat cizí sady nástrojů.
+- Železo mělo hezčí barvu, a tak ji dostala **ocelová sada**: krumpáč, sekera, lopata, meč i brnění.
+
+### 🎨 Proč většina věcí dostala nový vzhled?
+
+- Hra roste a staré obrázky z prvních verzí vedle nových věcí působily chudě.
+- Ve 2.7.0 se překreslila **vajíčka** (každý tvor má svůj vzor), **maso**, **šíp**, **provázek**, **ingoty**, **hardiová ruda**, **bronzové dveře** a **zarážedlo na koleji**.
+- Staré textury jsou schované v `archived/ui_2.6.0/` a hrají dál ve verzi 2.6.0, třeba na natáčení.
+
+### 🖌️ Proč byly textury dřív tak jednoduché?
+
+- VoxelCraft nepoužívá žádné obrázky od Mojangu. Všechny textury **kreslí přímo kód hry** pixel po pixelu.
+- V prvních verzích šlo hlavně o to, aby věci fungovaly. Obrázky byly rychlé, s pár barvami a tečkami.
+- Teď je čas je vyladit: stínování, obrys, odlesk a vzor, který je hned poznat.
+
+### 🐾 Jaké chyby měli tvorové a kaktusy?
+
+- Tvorové brali **napadaný sníh** jako celý blok a vylézali na něj. Teď jím projdou.
+- V **lávě** dřív poskakovali, protože je láva odhazovala jako úder. Teď do ní zapadnou a pálí je. Žhavá můra, popelavý lišák a prasák lávu snesou.
+- **Kaktusy** jednu dobu nepíchaly. Opraveno ve 2.5.0.
+- Tyhle chyby se rády vrací. Když uvidíš tvora levitovat, skákat v lávě nebo kaktus, který nepíchá, **nahlaš to přes Nahlásit chybu** v nastavení (otevře GitHub Issues).
 
 </details>
 
@@ -263,8 +291,8 @@ It is **planned** for the future.
 
 ![Normal and preview](img/faq/preview.jpg)
 
-- The **normal version** (now **2.6.0**) is the finished one. **Anyone** can have it.
-- The **preview** (now **2.7.0 Preview**) is the next update, still being made. **Only the developer** has it.
+- The **normal version** (now **2.7.0**) is the finished one. **Anyone** can have it.
+- The **preview** (now **2.8.0 Preview**) is the next update, still being made. **Only the developer** has it.
 - They are separate apps, so both can be installed **side by side**.
 
 ### 🐞 How do I report a bug?
@@ -293,6 +321,34 @@ Or open a new **issue** right here on GitHub ([Issues](../../../issues)) and wri
 - Older versions were signed with **another key**, and Android refuses an update signed with a different key.
 - Since **2.4.0** the game has a **new app id** (`cz.voxelsoftworks.voxelcraft`) and a **lasting key**.
 - From 2.4.0 on, every new APK installs over the previous one without uninstalling.
+
+## 🛠️ Changes in 2.7.0
+
+### ⛓️ Why was iron removed?
+
+- From 2.7.0 iron is **not made into anything**; every recipe takes **steel** instead.
+- An iron ingot and coal make a **steel mix**, which the furnace turns into steel.
+- Iron tools and armour are no longer made and go completely in **3.0.0**: VoxelCraft is its own game and does not copy other games' tool sets.
+- Iron had the nicer colour, so the **steel set** (pickaxe, axe, shovel, sword, armour) took it.
+
+### 🎨 Why did most things get a new look?
+
+- The game grew and the pictures of the first versions looked poor next to the new things.
+- 2.7.0 redraws the **spawn eggs** (a pattern per creature), **meat**, **arrow**, **string**, **ingots**, **hardium ore**, **bronze door** and the **buffer stop**.
+- The old textures are kept in `archived/ui_2.6.0/` and still play in 2.6.0, for filming.
+
+### 🖌️ Why were the textures so simple before?
+
+- VoxelCraft uses no Mojang pictures: **the game's code draws every texture** pixel by pixel.
+- The first versions were about making things work; the pictures were quick, a few colours and dots.
+- Now is the time to polish them: shading, an outline, a shine and a pattern you recognise at once.
+
+### 🐾 What problems did the creatures and cacti have?
+
+- Creatures took **fallen snow** for a whole block and climbed onto it; now they walk through it.
+- In **lava** they bounced, because lava pushed them like a hit; now they sink and burn. The ember moth, ash fox and hogman don't mind lava.
+- **Cacti** did not hurt for a while; fixed in 2.5.0.
+- These bugs like to come back. If you see a creature float, bounce in lava or a cactus that doesn't hurt, **report it with Report a bug** in the settings (it opens GitHub Issues).
 
 </details>
 

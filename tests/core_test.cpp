@@ -2751,7 +2751,7 @@ static int testUpdate12() {
         // 1.8.0: then "VoxelSoftworks presents" the version; a tap goes on to the menu.
         log.clear();
         game.frame(t += 1 / 30.0);
-        CHECK(drawn("VOXELSOFTWORKS PRESENTS") && (drawn("VOXELCRAFT 2.6.0") || drawn("VOXELCRAFT 2.7.0 PREVIEW")) && !drawn("Play"));
+        CHECK(drawn("VOXELSOFTWORKS PRESENTS") && (drawn("VOXELCRAFT 2.7.0") || drawn("VOXELCRAFT 2.8.0 PREVIEW")) && !drawn("Play"));
         for (int i = 0; i < 30; ++i) game.frame(t += 1 / 30.0);
         game.onTouch(0, TouchAction::Down, 1200, 540, t);
         game.onTouch(0, TouchAction::Up, 1200, 540, t);

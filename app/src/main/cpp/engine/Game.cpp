@@ -42,7 +42,7 @@ namespace vc {
 namespace vc {
 
 namespace {
-const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.7.0 Preview build 8" : "VoxelCraft 2.6.0";
+const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.8.0 Preview build 1" : "VoxelCraft 2.7.0";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -1410,10 +1410,10 @@ void Game::presentsScreen(float dt) {
     y += 14;
     const float big = ui_.textWidth("VOXELCRAFT 1.8.0", 3) < W - 20 && H >= 260 ? 3 : 2;
     // 2.5.0: the version and the name of the update (they stayed at 2.1.0 for a long time).
-    const char* title = kClassicEdition ? "VOXELCRAFT CLASSIC" : kPreviewEdition ? "VOXELCRAFT 2.7.0 PREVIEW" : "VOXELCRAFT 2.6.0";
+    const char* title = kClassicEdition ? "VOXELCRAFT CLASSIC" : kPreviewEdition ? "VOXELCRAFT 2.8.0 PREVIEW" : "VOXELCRAFT 2.7.0";
     ui_.textCentered(W / 2, y, title, faded(gold, 0.2f), ui_.textWidth(title, big) < W - 20 ? big : 2);
     y += 10 * big + 4;
-    ui_.textCentered(W / 2, y, tr("Cornerstone a svátky"), faded(white, 0.5f), 1);
+    ui_.textCentered(W / 2, y, tr(kFeatures270 ? "Batohy a doplňky" : "Cornerstone a svátky"), faded(white, 0.5f), 1);
     y += 14;
     if (season != Season::None) {
         // The event that is on right now, in a coloured band.
@@ -1462,15 +1462,26 @@ void Game::presentsScreen(float dt) {
         "Nová klidná hudba a vajíčka pro všechny tvory",
         "Čitelný export světa a režim Slabé zařízení",
     };
+    static const char* const kNew270[] = {
+        "Batohy v šesti úrovních a peněženka",
+        "Nový správce doplňků a převod z Bedrocku",
+        "Tvůrce bloků a mobů bez JSON",
+        "Obojek pro lišáka, rezavějící ocel, velká truhla",
+        "Nové textury a režim pro slabá zařízení",
+    };
+    static const char* const kNext270[] = {
+        "Jízdenky, hlášení stanic a opuštěné nádraží",
+        "Deník hráče a nové úspěchy",
+    };
     static const char* const kNext260[] = {
         "Jízdenky, hlášení stanic a opuštěné nádraží",
         "Deník hráče, peněženka a obojek pro lišáka",
     };
-    const char* const* kNew = kFeatures260 ? kNew260 : kFeatures250 ? kNew250 : kNew240;
+    const char* const* kNew = kFeatures270 ? kNew270 : kFeatures260 ? kNew260 : kFeatures250 ? kNew250 : kNew240;
     const int kNewCount = 5;
-    const char* const* kNext = kFeatures260 ? kNext260 : kFeatures250 ? kNext250 : kNext240;
+    const char* const* kNext = kFeatures270 ? kNext270 : kFeatures260 ? kNext260 : kFeatures250 ? kNext250 : kNext240;
     const int kNextCount = kFeatures250 ? 2 : 3;
-    const char* nextTitle = kFeatures260 ? "PŘIPRAVUJEME VE 2.7.0" : kFeatures250 ? "PŘIPRAVUJEME VE 2.6.0" : "PŘIPRAVUJEME VE 2.5.0";
+    const char* nextTitle = kFeatures270 ? "PŘIPRAVUJEME VE 2.8.0" : kFeatures260 ? "PŘIPRAVUJEME VE 2.7.0" : kFeatures250 ? "PŘIPRAVUJEME VE 2.6.0" : "PŘIPRAVUJEME VE 2.5.0";
     // Long lines wrap at word boundaries (they used to be cut off). On a small screen the two lists
     // sit side by side.
     auto wrap = [&](const std::string& prefix, const char* source, float width) {
@@ -2036,7 +2047,7 @@ void Game::titleScreen() {
         // 2.5.0: on a low screen there is no room under the menu: the button goes to the top left corner.
         const bool under = ny + 20 < H - 12;
         const float bx = under ? (W - nw) / 2 : 4, by = under ? ny : 4;
-        if (ui_.menuButton(bx, by, nw, 20, kFeatures260 ? "Novinky 2.6.0" : kFeatures250 ? "Novinky 2.5.0" : "Novinky 2.4.0", St::Primary, Font::Star, live)) newsOpen_ = true;
+        if (ui_.menuButton(bx, by, nw, 20, kFeatures270 ? "Novinky 2.7.0" : kFeatures260 ? "Novinky 2.6.0" : kFeatures250 ? "Novinky 2.5.0" : "Novinky 2.4.0", St::Primary, Font::Star, live)) newsOpen_ = true;
     }
     if (newsOpen_) newsPanel();
     ui_.text(3, H - 10, kVersion, kText);
@@ -2055,7 +2066,7 @@ void Game::newsPanel() {
     const float pw = std::min(420.0f, W - 20), ph = std::min(260.0f, H - 20), px = (W - pw) / 2, py = (H - ph) / 2;
     ui_.roundPanel(px, py, pw, ph);
     const Color gold{1.0f, 0.82f, 0.43f, 1};
-    ui_.textCentered(W / 2, py + 8, kFeatures260 ? "Co je nového ve VoxelCraftu 2.6.0" : kFeatures250 ? "Co je nového ve VoxelCraftu 2.5.0" : "Co je nového ve VoxelCraftu 2.4.0", gold);
+    ui_.textCentered(W / 2, py + 8, kFeatures270 ? "Co je nového ve VoxelCraftu 2.7.0" : kFeatures260 ? "Co je nového ve VoxelCraftu 2.6.0" : kFeatures250 ? "Co je nového ve VoxelCraftu 2.5.0" : "Co je nového ve VoxelCraftu 2.4.0", gold);
     struct Row { const char* head; const char* text; };
     static const Row rows250[] = {
         {"Síť metra", "Linky východ-západ nahoře a sever-jih dole, tunely mezi stanicemi"},
@@ -2077,6 +2088,24 @@ void Game::newsPanel() {
         {"Voxel Bucks", "Mince jsou Voxel Bucks s ikonou kostičky; v obchodě balíčky za Kč"},
         {"Úspěchy", "Každý nový survival svět začíná úspěchy od nuly"},
         {"Chyby", "Nahlásit chybu v nastavení otevře GitHub Issues s vyplněnými údaji"},
+    };
+    static const Row rows270[] = {
+        {"Batohy", "Šest úrovní od kůže po celestium, výroba uvnitř, pec od rubínu, nošení na zádech"},
+        {"Peněženka", "Až 500 věcí a bloků mimo inventář"},
+        {"Doplňky", "Nový správce: Bedrock doplňky se převedou do VC, každá chyba je vidět"},
+        {"Tvůrce", "Blok nebo mob bez psaní JSON: malování textury a uložení"},
+        {"Lišák", "Obojek, který obarvíš barvivem; kůže z krav"},
+        {"Ocel", "Ocelová směs ze železa a uhlí; ocel rezaví, med ji navoskuje"},
+        {"Truhly", "Dvě truhly vedle sebe jsou velká truhla s 54 místy"},
+        {"Výkon", "Plný, Smoother+ a Slabé: hra se přizpůsobí telefonu i tabletu"},
+    };
+    static const Row rows270b[] = {
+        {"Textury", "Nová vajíčka, maso, šíp, provázek, ingoty a hardiová ruda"},
+        {"Metro", "Otevřená kabina řidiče bez dveří přes sedačku"},
+        {"Koleje", "Betonové zarážedlo s hydraulickými nárazníky"},
+        {"Obchod", "Pre-Alpha Style mezi texturami"},
+        {"Železo", "Železo se už na nic nevyrábí; ocelová sada má jeho barvu"},
+        {"Opravy", "Vývojářský režim už nezapíná doplňky, menu ukazuje správnou verzi"},
     };
     static const Row rows260[] = {
         {"Cornerstone", "Úhelný golem, mechový plaz, sporovka, žhavá můra a popelavý lišák"},
@@ -2108,8 +2137,8 @@ void Game::newsPanel() {
     };
     const int pages = kFeatures250 ? 2 : 1;
     newsPage_ = std::clamp(newsPage_, 0, pages - 1);
-    const Row* rows = kFeatures260 ? (newsPage_ == 0 ? rows260 : rows260b) : kFeatures250 ? (newsPage_ == 0 ? rows250 : rows250b) : rows240;
-    const int rowCount = kFeatures260 ? (newsPage_ == 0 ? 8 : 7) : kFeatures250 ? 8 : 7;
+    const Row* rows = kFeatures270 ? (newsPage_ == 0 ? rows270 : rows270b) : kFeatures260 ? (newsPage_ == 0 ? rows260 : rows260b) : kFeatures250 ? (newsPage_ == 0 ? rows250 : rows250b) : rows240;
+    const int rowCount = kFeatures270 ? (newsPage_ == 0 ? 8 : 6) : kFeatures260 ? (newsPage_ == 0 ? 8 : 7) : kFeatures250 ? 8 : 7;
     float y = py + 24;
     // 2.5.0: the heads' column as wide as the widest head (English ones are longer).
     float headW = 90;
@@ -5191,38 +5220,38 @@ void Game::backpackScreen() {
         if (isBackpack(s.id)) session_->giveItem(s), s = {};  // no backpack inside a backpack
     float gx, gy;
     const float top = 3 * kSlot;
-    std::string title = itemName(bag->id);
+    std::string title = tr(itemName(bag->id));
     if (pages > 1) title += "  " + std::to_string(page + 1) + "/" + std::to_string(pages);
-    if (!containerWindow(title, top + 6 + 3 * kSlot + 4 + kSlot, gx, gy)) return;
+    const float bar = 22;  // the row of buttons between the bag and the inventory
+    if (!containerWindow(title, top + bar + 6 + 3 * kSlot + 4 + kSlot, gx, gy)) return;
     const int here = std::min(kChestSize, slots - page * kChestSize);
     for (int i = 0; i < kChestSize; ++i) {
         const float x = gx + (i % 9) * kSlot, y = gy + (i / 9) * kSlot;
         if (i < here) slot(x, y, {SlotArea::Chest, i});
         else ui_.fill(x + 1, y + 1, kSlot - 2, kSlot - 2, {0, 0, 0, 0.35f});
     }
-    playerSlots(gx, gy + top + 6);
-    // The buttons along the top edge of the window.
-    float bx = gx + 9 * kSlot - 2;
-    if (pages > 1) {
-        bx -= 16;
-        if (ui_.button(bx, gy - 15, 14, 12, ">", page + 1 < pages)) session_->openChest.y = page + 1;
-        bx -= 16;
-        if (ui_.button(bx, gy - 15, 14, 12, "<", page > 0)) session_->openChest.y = page - 1;
+    playerSlots(gx, gy + top + bar + 6);
+    // The buttons in their own row under the bag: crafting, the furnace (from bronze-ruby on), the pages.
+    const float by = gy + top + 4, bh = 16;
+    float bx = gx;
+    if (ui_.button(bx, by, 70, bh, "Výroba")) {
+        // 2x2 in the leather and steel ones (the inventory's grid), 3x3 from steel-bronze on.
+        if (tier >= 2) setScreen(Screen::Crafting);
+        else setScreen(Screen::Inventory);
+        return;
     }
+    bx += 74;
     if (tier >= 3) {
-        bx -= 34;
-        if (ui_.button(bx, gy - 15, 32, 12, "Pec")) {
+        if (ui_.button(bx, by, 64, bh, "Pec")) {
             session_->openFurnaceAt({Session::kBackpackDim, bag->damage, 99, 0});
             setScreen(Screen::Furnace);
             return;
         }
     }
-    bx -= 44;
-    if (ui_.button(bx, gy - 15, 42, 12, "Výroba")) {
-        // 2x2 in the leather and steel ones (the inventory's grid), 3x3 from steel-bronze on.
-        if (tier >= 2) setScreen(Screen::Crafting);
-        else setScreen(Screen::Inventory);
-        return;
+    if (pages > 1) {
+        const float px = gx + 9 * kSlot - 2 * 22 - 4;
+        if (ui_.button(px, by, 22, bh, "<", page > 0)) session_->openChest.y = page - 1;
+        if (ui_.button(px + 26, by, 22, bh, ">", page + 1 < pages)) session_->openChest.y = page + 1;
     }
 }
 

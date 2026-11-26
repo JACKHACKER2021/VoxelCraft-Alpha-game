@@ -37,6 +37,7 @@ import android.view.WindowManager;
 import android.widget.Toast;
 
 import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -994,7 +995,7 @@ public class VoxelActivity extends NativeActivity {
             String base = slug(displayName(uri).replaceAll("\\.(zip|mcpack|mcaddon|jar)$", ""));
             // 2.7.0: a Bedrock add-on (.mcaddon / .mcpack): behaviour and resource packs with manifests
             // that list "modules". Its files go to packs/<id>/bedrock; the game converts them.
-            boolean bedrock = displayName(uri).toLowerCase(java.util.Locale.ROOT).endsWith(".mcaddon");
+            boolean bedrock = displayName(uri).toLowerCase(Locale.ROOT).endsWith(".mcaddon");
             for (Enumeration<? extends ZipEntry> e = zip.entries(); e.hasMoreElements() && !bedrock; ) {
                 ZipEntry entry = e.nextElement();
                 String name = entry.getName().replace('\\', '/');
@@ -1002,7 +1003,7 @@ public class VoxelActivity extends NativeActivity {
                         || name.contains("/entities/") || name.endsWith(".geo.json")) bedrock = true;
                 else if (name.endsWith("manifest.json") && entry.getSize() < 65536) {
                     try (InputStream in = zip.getInputStream(entry)) {
-                        java.io.ByteArrayOutputStream buf = new java.io.ByteArrayOutputStream();
+                        ByteArrayOutputStream buf = new ByteArrayOutputStream();
                         byte[] chunk = new byte[4096];
                         int r;
                         while ((r = in.read(chunk)) > 0) buf.write(chunk, 0, r);
