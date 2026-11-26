@@ -43,7 +43,7 @@ namespace vc {
 namespace vc {
 
 namespace {
-const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.8.0 Preview build 5" : "VoxelCraft 2.7.1";
+const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.8.0 Preview build 6" : "VoxelCraft 2.7.1";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -1021,6 +1021,9 @@ void Game::frame(double time) {
             else if (id == PromptSeed) newWorldSeed_ = text.substr(0, 40), newWorldStructSeed_ = 0;
             else if (id == PromptJson) editorApply(text, true);
             else if (id == PromptCreatorName) creatorName_ = text.substr(0, 32);
+            else if (id == PromptAddonName) creatorPackName_ = text.substr(0, 40);
+            else if (id == PromptAddonText) creatorPackText_ = text.substr(0, 120);
+            else if (id == PromptShaderName) creatorShaderName_ = text.substr(0, 32);
             else if (id == PromptPackImported) {
                 std::string packId = text;
                 if (packId.rfind("java:", 0) == 0) {

@@ -155,7 +155,7 @@ private:
                     PromptStructureImported = 9, PromptDevName = 10, PromptDevPassword = 11, PromptMusicEnded = 12,
                     PromptJoinAddress = 13, PromptChat = 14, PromptCode = 15, PromptPublicIp = 16, PromptWorldImported = 17,
                     PromptShaderPackName = 18, PromptWaypoint = 19, PromptBookPage = 20, PromptBookTitle = 21,
-                    PromptBlockText = 22, PromptBugTitle = 23, PromptBugText = 24, PromptCreatorName = 25 };  // 2.5.0: the bug report  // 1.9.5 build 3: command and structure blocks
+                    PromptBlockText = 22, PromptBugTitle = 23, PromptBugText = 24, PromptCreatorName = 25, PromptAddonName = 26, PromptAddonText = 27, PromptShaderName = 28 };  // 2.5.0: the bug report  // 1.9.5 build 3: command and structure blocks
 
     void setScreen(Screen s);
     Settings playSettings() const;  // settings_ without developer options for normal players
@@ -237,6 +237,18 @@ private:
     std::string creatorName_;
     bool creatorMob_ = false, creatorFill_ = false, creatorLight_ = false;
     int creatorColor_ = 0, creatorHard_ = 1, creatorBase_ = 0, creatorHealth_ = 12;
+    // 2.8.0 preview: the VC editor (GameCreator.cpp): blocks, items, mobs, models, recipes, shaders and the pack.
+    void vcCreatorTab(float x, float y, float w, float h);
+    void creatorPainter(float x, float y, float gw);
+    void saveVcCreation();
+    std::vector<std::string> creatorModels() const;  // the models of "moje_tvorba" (models/*.geo.json)
+    std::vector<std::string> creatorItems() const;   // the keys of what "moje_tvorba" adds
+    int creatorMode_ = 0, creatorFood_ = 0, creatorStack_ = 64, creatorSpawn_ = 1, creatorDrop_ = 0, creatorShape_ = -1;
+    std::vector<std::array<int, 6>> creatorBoxes_;  // the model's boxes: x, y, z, width, height, depth (pixels)
+    int creatorBox_ = 0, creatorAxis_ = 0;
+    int creatorGrid_[9] = {-1, -1, -1, -1, -1, -1, -1, -1, -1}, creatorResult_ = 0, creatorCount_ = 1, creatorIngredient_ = 0;
+    int creatorShader_[6] = {100, 100, 0, 20, 30, 100};  // saturation, contrast, warmth, vignette, glow, fog (in hundredths)
+    std::string creatorShaderName_ = "Můj shader", creatorPackName_ = "Moje tvorba", creatorPackText_ = "Vytvořeno v Tvůrci";
     void packFilesScreen();
     void jsonEditorScreen();
     void pauseScreen();

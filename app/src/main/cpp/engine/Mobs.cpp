@@ -673,6 +673,8 @@ void MobSystem::buildVertices(int dim, float time, std::vector<Vertex>& out) con
                     const float sign = (odd ? 1.0f : -1.0f) * (n.find("arm") != std::string::npos ? -1.0f : 1.0f);
                     pose.rotation[bone.name] = Vec3(swing * sign, 0, 0);
                 }
+                pose.walk = m.swing, pose.fall = b.fall;  // GLB parts: their legs and wings
+                if (model->flapSpeed > 0) pose.flap = std::sin(time * model->flapSpeed + m.age * 3) * (m.onGround ? model->flapRest : model->flapAmp);
                 buildVcModel(*model, pose, mod->modelTex, feet, yaw, light, out);
                 continue;
             }

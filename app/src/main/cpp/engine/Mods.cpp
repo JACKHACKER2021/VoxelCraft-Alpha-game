@@ -25,6 +25,9 @@ MobType baseMob(const std::string& name) {
     if (name == "zombie" || name == "forgotten_man") return MobType::ForgottenMan;
     if (name == "slime" || name == "pumpkin_slime") return MobType::PumpkinSlime;
     if (name == "villager") return MobType::Villager;
+    if (kFeatures280)  // 2.8.0: any creature of the game by its model's name ("fox", "ghost", ...)
+        for (int t = 0; t < (int)MobType::Count; ++t)
+            if (name == vcMobModelId((MobType)t)) return (MobType)t;
     return MobType::Pig;
 }
 
@@ -140,11 +143,23 @@ void ModRegistry::load(const std::vector<std::string>& packDirs, const std::stri
             Json md;
             std::string err;
             std::vector<VcModel> found;
-            std::ifstream in(dir + "/models/" + mf);
+            std::ifstream in(dir + "/models/" + mf, std::ios::binary);
             std::stringstream ss;
             ss << in.rdbuf();
             int tw = 0, th = 0;
-            if (!in || !Json::parse(ss.str(), md, err) || !parseVcModels(md, found, err)) {
+            bool read = false;
+            if (in && mf.size() > 4 && mf.compare(mf.size() - 4, 4, ".glb") == 0) {
+                // 2.8.0: a GLB (Blockbench, Blender, our own creatures); its texture is the "texture" file.
+                const std::string bytes = ss.str();
+                VcModel g;
+                if ((read = parseVcGlb((const uint8_t*)bytes.data(), bytes.size(), g, nullptr, err))) {
+                    if (!g.animated) guessVcLegs(g);
+                    found.push_back(std::move(g));
+                }
+            } else {
+                read = in && Json::parse(ss.str(), md, err) && parseVcModels(md, found, err);
+            }
+            if (!read) {
                 warn(trf("Model {0} nejde načíst: {1}", {ns + "/" + mf, err}));
             } else if (tf.empty() || tf.find("..") != std::string::npos || !imageSize(tex + tf, tw, th) || !tileBlockFor(tex + tf, tw, th, rect)) {
                 warn(trf("Textura modelu {0} chybí nebo se nevejde", {ns + "/" + tf}));

@@ -3415,6 +3415,25 @@ static int testUpdate14() {
             for (const Vertex& q : v2) top2 = std::max(top2, q.y);
             CHECK(top2 < top - 0.3f);  // the swung leg lies down
             std::printf("vc model: %zu vertices, top %.3f, swung %.3f\n", v.size(), top, top2);
+            // 2.8.0 build 6: a mod mob with a GLB body (what the VC editor saves): the game's fox, its texture beside it.
+            if (kFeatures280) {
+                std::ifstream gin("app/src/main/assets/vc/models/mobs/fox.glb", std::ios::binary);
+                const std::string bytes{std::istreambuf_iterator<char>(gin), {}};
+                VcModel fx;
+                std::vector<uint8_t> fpng;
+                std::string ferr;
+                CHECK(parseVcGlb((const uint8_t*)bytes.data(), bytes.size(), fx, &fpng, ferr) && !fpng.empty());
+                std::ofstream(root / "vcm/models/my_fox.glb", std::ios::binary) << bytes;
+                std::ofstream(root / "vcm/textures/mod/my_fox.png", std::ios::binary).write((const char*)fpng.data(), (std::streamsize)fpng.size());
+                std::ofstream(root / "vcm/content.json") << R"({"namespace": "vcm", "mobs": [{"id": "my_fox", "base": "fox", "texture": "my_fox.png", "model": "my_fox.glb"}]})";
+                std::vector<std::string> w2;
+                mods.load({(root / "vcm").string()}, (root / "mod_ids.txt").string(), &w2);
+                CHECK(w2.empty() && mods.mobs().size() == 1 && mods.mobs()[0].base == MobType::Fox && mods.mobs()[0].model >= 0);
+                const VcModel* fm = mods.model(mods.mobs()[0].model);
+                int legs = 0;
+                for (const VcPart& part : fm->parts) legs += part.swing != 0;
+                CHECK(fm && fm->animated && legs == 4);
+            }
         }
         {
             // 2.8.0 preview: every creature is a GLB file (assets/vc/models/mobs), read into the atlas, animated.

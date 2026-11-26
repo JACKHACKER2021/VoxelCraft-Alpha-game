@@ -102,6 +102,7 @@ add_library(voxelcraft SHARED
     engine/JavaImport.cpp
     engine/BedrockImport.cpp
     engine/GameAddons.cpp
+    engine/GameCreator.cpp
     engine/VcModel.cpp
     engine/VcBuiltin.cpp
     engine/WorldFiles.cpp)

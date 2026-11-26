@@ -279,6 +279,10 @@ void Game::addonStoreTab(float x, float y, float w, float h) {
 }
 
 void Game::addonCreatorTab(float x, float y, float w, float h) {
+    if (kFeatures280) {
+        vcCreatorTab(x, y, w, h);  // 2.8.0: the VC editor with everything (GameCreator.cpp)
+        return;
+    }
     // Left: the form; middle: the 16x16 picture; right: the preview and saving.
     if (creatorPixels_.empty()) creatorPixels_.assign(256, 0xF0F0F0);
     const float fw = std::floor(w * 0.3f);

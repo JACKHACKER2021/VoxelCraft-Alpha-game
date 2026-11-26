@@ -18,6 +18,12 @@
 
 using namespace vc;
 
+#ifndef VC_EDITOR_X0
+#define VC_EDITOR_X0 65
+#define VC_EDITOR_DX 78
+#define VC_EDITOR_Y 63
+#endif
+
 void writePng(const std::string& path, int w, int h, const std::vector<uint8_t>& rgba);  // core_test.cpp helper copy below
 
 namespace {
@@ -454,12 +460,26 @@ int main(int argc, char** argv) {
     // 2.7.0: the add-on manager and its tabs (Czech).
     if (kFeatures270) {
         setLanguage(Language::Czech);
-        for (int k = 0; k < 3; ++k) game.onBack(), frames(1);
+        if (kFeatures280) {
+            tap(506, 22);   // 2.8.0: close the journal first,
+            tap(300, 196);  // then Uložit a odejít
+            frames(30);
+        } else {
+            for (int k = 0; k < 3; ++k) game.onBack(), frames(1);
+        }
         tap(220, 176);  // Módy a balíčky
         shot("40_addons");
         for (int t = 1; t < 5; ++t) {
             tap(70 + t * 88, 42);
             shot(("4" + std::to_string(t) + "_addons_tab").c_str());
+        }
+        if (kFeatures280) {
+            // 2.8.0: the VC editor, every mode.
+            tap(70 + 3 * 88, 42);
+            for (int mode = 0; mode < 7; ++mode) {
+                tap(VC_EDITOR_X0 + mode * VC_EDITOR_DX, VC_EDITOR_Y);
+                shot(("45_editor_" + std::to_string(mode)).c_str());
+            }
         }
     }
     setLanguage(Language::Czech);
