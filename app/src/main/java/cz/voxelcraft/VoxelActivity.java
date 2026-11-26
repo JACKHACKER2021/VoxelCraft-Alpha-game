@@ -992,7 +992,7 @@ public class VoxelActivity extends NativeActivity {
                 }
                 if (candidate != null && (prefix == null || candidate.length() < prefix.length())) prefix = candidate;
             }
-            String base = slug(displayName(uri).replaceAll("\\.(zip|mcpack|mcaddon|jar)$", ""));
+            String base = slug(displayName(uri).replaceAll("\\.(zip|mcpack|mcaddon|jar|vcpack|vcaddon)$", ""));
             // 2.7.0: a Bedrock add-on (.mcaddon / .mcpack): behaviour and resource packs with manifests
             // that list "modules". Its files go to packs/<id>/bedrock; the game converts them.
             boolean bedrock = displayName(uri).toLowerCase(Locale.ROOT).endsWith(".mcaddon");

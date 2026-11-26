@@ -151,6 +151,147 @@ Nebo založ nový **Issue** přímo tady na GitHubu ([Issues](../../../issues)) 
 - Od verze **2.4.0** má hra **nové ID aplikace** (`cz.voxelsoftworks.voxelcraft`) a **trvalý klíč**.
 - Každé nové APK se od 2.4.0 nainstaluje přes předchozí, bez odinstalování.
 
+## 🎮 Hra, výkon a soubory
+
+### 🧱 Co se dá ve VoxelCraftu dělat?
+
+![Co se dá dělat](img/faq/play.jpg)
+
+- **Stavět a vyrábět**: stovky bloků, nástroje, brnění, batohy, peněženka, vlaky, koleje i metro.
+- **Prozkoumávat**: čtyři dimenze, vesnice, metro, ztracené město, vraky, chrámy, doly a tábory.
+- **Bojovat a starat se**: tvorové, bossové Crimson Man a Sky Guardian, farma, zvířata, ochočený lišák.
+- **Tvořit a hrát s ostatními**: kreativ, doplňky a Tvůrce, struktury, LAN multiplayer, vlastní skiny.
+
+### 🦊 Jak ochočím lišáka a co umí?
+
+![Lišák](img/faq/fox.jpg)
+
+- Klepni na lišáka **syrovým masem** (vepřové, hovězí, skopové nebo kuřecí). Je tvůj a dostane červený obojek.
+- Chodí za tebou a **kouše příšery**. Klepnutím v **plížení** si sedne a čeká, dalším klepnutím jde zase s tebou.
+- Klepnutím **barvivem** obojek přebarvíš (16 barev).
+- Ochočit jde i **popelavý lišák** z Cornerstone.
+
+### 🗺️ Kde najdu metro, ztracené město a další stavby?
+
+![Stavby na mapě](img/faq/structures.jpg)
+
+- Na **mapě** má každá stavba svůj domeček a barvu: metro **růžové**, rozpadlé nádraží **bílé**, ztracené město **mátové**, vesnice **zelené**, vraky vlaků **červenohnědé**.
+- Metro se na mapě ukáže, když jsi do **300 bloků** od něj.
+- Příkaz `/locate metro` (a `/locate city`, `/locate station`…) ukáže nejbližší místo.
+
+### 🟫 Jak funguje rezavění oceli a bronzu?
+
+![Rez a vosk](img/faq/rust.jpg)
+
+- Ocelové a bronzové bloky časem **zrezaví**, zhruba o stupeň za herní den.
+- **Med** blok navoskuje a ten už nikdy nezrezaví.
+- **Sekera** oškrábe vosk, nebo rez o jeden stupeň.
+
+### 🌌 Jak se dostanu do všech čtyř dimenzí?
+
+![Čtyři dimenze](img/faq/dimensions4.jpg)
+
+- **Cornerstone**: postav rám z **obsidiánu** a zapal ho **křesadlem**.
+- **Crimson Void**: v Cornerstone postav rám z **void stone** a zapal ho **void křesadlem**. Čeká tam boss **Crimson Man**.
+- **Celestial Reach**: polož **12 hlav Karmínového muže** na nebeský rám. Čeká tam **Sky Guardian**.
+
+### 🐢 Hra se mi seká, co mám dělat?
+
+![Výkon zařízení](img/faq/performance.jpg)
+
+- **Nastavení > Grafika > Výkon zařízení**: **Plný**, **Smoother+** nebo **Slabé**. Hra ho nastaví sama podle grafického čipu a paměti.
+- **Slabé** má lehkou grafiku, 30 FPS a kratší dohled. Hodí se třeba pro Teclast P30T nebo Galaxy A14.
+- **Smoother+** zkrátí dohled a nechá shadery, dokud je telefon stíhá. Hodí se pro Redmi Note 13 5G.
+- **Úspora baterie** se zapne sama při 35 % a méně.
+
+### ✨ Proč se mi vypnuly shadery?
+
+![Shadery](img/faq/shaders.jpg)
+
+- Když hra drží **8 sekund pod 24 FPS**, shadery se **samy vypnou** a ukáže se zpráva.
+- V **Nastavení > Grafika** je zapneš znovu tlačítkem **Zkusit znovu**, nebo přepnutím Grafiky na Vylepšenou.
+
+### 💾 Jak zálohuju a přenesu svět?
+
+![Záloha světa](img/faq/backup.jpg)
+
+- V seznamu světů **Upravit > Exportovat svět** uloží celý svět do jednoho souboru **.vcworld**.
+- Na jiném telefonu nebo po přeinstalaci ho přidáš přes **Import**.
+- **Aktualizace hry uložené světy nemění.** Nové stavby a rudy se objeví jen v nových světech.
+
+### ⛏️ Můžu si otevřít svět z Minecraftu?
+
+![Svět z Minecraftu](img/faq/minecraft.jpg)
+
+- Ano, bloky se převedou na naše: deepslate na hlubinný kámen, redstone na powerstone, měď na bronz, quartz na bílý beton.
+- Schody a desky si drží směr a ploché světy zůstanou ploché.
+- Tvorové, obsah truhel a dveře se **zatím nepřenesou**.
+
+### 🧩 Proč mód z Bedrocku nebo Javy nefunguje úplně?
+
+![Co se převede](img/faq/partial.jpg)
+
+- Převést jde **data a vzhled**: bloky, předměty, tvory, recepty, textury a atlasy.
+- **Kód** (třídy Javy, skripty Bedrocku) VoxelCraft spustit neumí, a tak se přeskočí.
+- **UI** cizích módů se nepřebírá. Takový doplněk má štítek **un-UI**.
+- Co přesně se stalo, ukáže tlačítko **Chyby** ve Správci doplňků.
+
+### 🖼️ Jak udělám vlastní texture pack?
+
+![Texture pack](img/faq/texturepack.jpg)
+
+- Nakresli obrázky **PNG 16×16**, jeden na blok nebo předmět. Dej je do složek `blocks/` a `items/`, nebo udělej jeden starý `terrain.png`.
+- Zabal je do **.zip**, **.mcpack** nebo **.vcpack**.
+- Nahraješ je v **Nastavení > Globální zdroje** nebo tlačítkem **+ Importovat** ve Správci doplňků. Co chybí, zůstane v našem vzhledu.
+
+### 🛡️ Je modování bezpečné?
+
+![Bezpečné modování](img/faq/safe.jpg)
+
+- Doplňky VoxelCraftu jsou **jen data a obrázky**. Žádný kód se nespouští.
+- Doplněk nemůže nic posílat na internet.
+- Každý doplněk jde kdykoli **vypnout** nebo **smazat**.
+
+### 📂 Co jsou .vcworld, .vcr, .vct, .vcstructure, .vcpack a .vcaddon?
+
+![Soubory VoxelCraftu](img/faq/files.jpg)
+
+| Soubor | Co to je | Jak to funguje |
+|---|---|---|
+| **.vcworld** | celý svět v jednom souboru | zip se světem: `level.dat`, tvorové, truhly, regiony; vznikne exportem, nahraje se importem |
+| **.vcr** | region světa (32 × 32 chunků) | binární a komprimovaný; tak hra ukládá svět v telefonu |
+| **.vct** | stejný region jako čitelný text | ve .vcworld místo .vcr; jde otevřít a přečíst, při importu se převede zpět na .vcr |
+| **.vcstructure** | uložená stavba | ukládá ji **structure block**, jde ji vložit do jiného světa (a umíme i `.mcstructure`) |
+| **.vcpack** | doplněk jen se **vzhledem** (Resource Voxel) | zip s `manifest.json` a texturami, atlasy, modely nebo shadery |
+| **.vcaddon** | doplněk se **vzhledem i chováním** | zip s `manifest.json`, `content.json` (bloky, předměty, tvorové), recepty a texturami |
+
+## 🛠️ Vývoj
+
+### 🔁 Jak vzniká nová verze?
+
+![Jak vzniká verze](img/faq/versions_made.jpg)
+
+1. **Nápady**: co se má změnit, se nejdřív nakreslí jako návrh a schválí.
+2. **Preview buildy**: každý build se otestuje, nahraje na GitHub a dostane číslo (build 1, 2, 3…).
+3. **Vydání**: hotové APK jde do `release/` pro všechny a preview se posune na další verzi.
+4. **Archiv**: stará hudba, UI a textury zůstávají v `archived/` a staré verze v `release/`.
+
+### 🚫 Proč hra nepoužívá nic od Mojangu?
+
+![Vlastní hra](img/faq/own.jpg)
+
+- VoxelCraft má **vlastní engine** v C++ a OpenGL ES.
+- Každou texturu **kreslí kód hry** pixel po pixelu a hudba je naše vlastní.
+- Je to neoficiální fanouškovský projekt, který nechce nic kopírovat.
+
+### 🔮 Co bude ve 3.0.0?
+
+![3.0.0](img/faq/v300.jpg)
+
+- **Železné věci zmizí** a ocel je nahradí natrvalo.
+- Plán velkého updatu zveřejníme, až bude hotový.
+- Tvoje světy zůstanou, jak jsou.
+
 ## 🛠️ Změny ve 2.7.0
 
 ### ⛓️ Proč bylo odstraněno železo?
@@ -363,6 +504,145 @@ Or open a new **issue** right here on GitHub ([Issues](../../../issues)) and wri
 - Older versions were signed with **another key**, and Android refuses an update signed with a different key.
 - Since **2.4.0** the game has a **new app id** (`cz.voxelsoftworks.voxelcraft`) and a **lasting key**.
 - From 2.4.0 on, every new APK installs over the previous one without uninstalling.
+
+## 🎮 The game, performance and files
+
+### 🧱 What can you do in VoxelCraft?
+
+![What you can do](img/faq/play.jpg)
+
+- **Build and craft**: hundreds of blocks, tools, armour, backpacks, a wallet, trains, rails and the subway.
+- **Explore**: four dimensions, villages, the subway, the lost city, wrecks, temples, mines and camps.
+- **Fight and look after**: creatures, the bosses Crimson Man and Sky Guardian, a farm, animals, a tamed fox.
+- **Create and play together**: creative mode, add-ons and the Creator, structures, LAN multiplayer, your own skins.
+
+### 🦊 How do I tame a fox and what does it do?
+
+![The fox](img/faq/fox.jpg)
+
+- Tap a fox with **raw meat** (pork, beef, mutton or chicken): it is yours and gets a red collar.
+- It follows you and **bites monsters**; tap it while **sneaking** to make it sit and wait, again to take it along.
+- Tap it with a **dye** to recolour the collar (16 colours). The Cornerstone's **ash fox** can be tamed too.
+
+### 🗺️ Where do I find the subway, the lost city and other structures?
+
+![Structures on the map](img/faq/structures.jpg)
+
+- On the **map** every structure has its house and colour: subway **pink**, ruined station **white**, lost city **mint**, villages **green**, train wrecks **red-brown**.
+- The subway shows on the map within **300 blocks**.
+- `/locate metro` (and `/locate city`, `/locate station`…) shows the nearest one.
+
+### 🟫 How do steel and bronze rust?
+
+![Rust and wax](img/faq/rust.jpg)
+
+- Steel and bronze blocks **rust** over time, about a stage per game day.
+- **Honey** waxes a block: it never rusts again.
+- An **axe** scrapes the wax off, or the rust by one stage.
+
+### 🌌 How do I get into all four dimensions?
+
+![Four dimensions](img/faq/dimensions4.jpg)
+
+- **Cornerstone**: build an **obsidian** frame and light it with **flint and steel**.
+- **Crimson Void**: in the Cornerstone build a **void stone** frame and light it with **void flint and steel**; the boss **Crimson Man** waits there.
+- **Celestial Reach**: put **12 Crimson Man heads** on the celestial frame; the **Sky Guardian** waits there.
+
+### 🐢 The game stutters, what do I do?
+
+![Device power](img/faq/performance.jpg)
+
+- **Settings > Graphics > Device power**: **Full**, **Smoother+** or **Weak**. The game picks it by itself from the graphics chip and the memory.
+- **Weak**: light graphics, 30 FPS, a shorter view (Teclast P30T, Galaxy A14).
+- **Smoother+**: a shorter view, shaders while the phone keeps up (Redmi Note 13 5G).
+- The **battery saver** turns on by itself at 35 % and less.
+
+### ✨ Why did my shaders switch off?
+
+![Shaders](img/faq/shaders.jpg)
+
+- If the game stays **under 24 FPS for 8 seconds**, the shaders **switch off by themselves** and a message says so.
+- In **Settings > Graphics** press **Try again**, or switch Graphics to Enhanced.
+
+### 💾 How do I back up and move a world?
+
+![World backup](img/faq/backup.jpg)
+
+- In the world list, **Edit > Export world** saves the whole world as one **.vcworld** file.
+- On another phone or after a reinstall add it with **Import**.
+- **Game updates never change saved worlds**: new structures and ores show up in new worlds.
+
+### ⛏️ Can I open a Minecraft world?
+
+![A Minecraft world](img/faq/minecraft.jpg)
+
+- Yes: blocks become ours (deepslate > deepstone, redstone > powerstone, copper > bronze, quartz > white concrete).
+- Stairs and slabs keep their direction, flat worlds stay flat.
+- Mobs, chest contents and doors do **not come across yet**.
+
+### 🧩 Why does a Bedrock or Java mod not work fully?
+
+![What converts](img/faq/partial.jpg)
+
+- **Data and look** convert: blocks, items, creatures, recipes, textures and atlases.
+- **Code** (Java classes, Bedrock scripts) cannot run in VoxelCraft, so it is skipped.
+- Other games' **UI** is not taken: such an add-on is marked **un-UI**. The **Errors** button in the Add-on Manager shows exactly what happened.
+
+### 🖼️ How do I make my own texture pack?
+
+![Texture pack](img/faq/texturepack.jpg)
+
+- Draw **16×16 PNG** pictures, one per block or item, in `blocks/` and `items/` (or one old `terrain.png`).
+- Zip them as **.zip**, **.mcpack** or **.vcpack**.
+- Load them in **Settings > Global resources** or with **+ Import** in the Add-on Manager. Anything missing keeps our look.
+
+### 🛡️ Is modding safe?
+
+![Safe modding](img/faq/safe.jpg)
+
+- VoxelCraft add-ons are **only data and pictures**: no code runs.
+- An add-on cannot send anything to the internet.
+- Every add-on can be **switched off** or **deleted** at any time.
+
+### 📂 What are .vcworld, .vcr, .vct, .vcstructure, .vcpack and .vcaddon?
+
+![VoxelCraft files](img/faq/files.jpg)
+
+| File | What it is | How it works |
+|---|---|---|
+| **.vcworld** | a whole world in one file | a zip of the world: `level.dat`, creatures, chests, regions; made by Export, loaded by Import |
+| **.vcr** | a world region (32 × 32 chunks) | binary and compressed: how the game keeps the world on the phone |
+| **.vct** | the same region as readable text | in a .vcworld instead of .vcr; you can open and read it; Import turns it back into .vcr |
+| **.vcstructure** | a saved build | saved by the **structure block**, placed into another world (`.mcstructure` works too) |
+| **.vcpack** | an add-on with the **look** only (Resource Voxel) | a zip with `manifest.json` and textures, atlases, models or shaders |
+| **.vcaddon** | an add-on with **look and behaviour** | a zip with `manifest.json`, `content.json` (blocks, items, creatures), recipes and textures |
+
+## 🛠️ Development
+
+### 🔁 How is a new version made?
+
+![How a version is made](img/faq/versions_made.jpg)
+
+1. **Ideas**: what changes is drawn as a proposal and approved first.
+2. **Preview builds**: every build is tested, put on GitHub and numbered (build 1, 2, 3…).
+3. **Release**: the finished APK goes to `release/` for everyone; the preview moves on.
+4. **Archive**: old music, UI and textures stay in `archived/`, old versions in `release/`.
+
+### 🚫 Why does the game use nothing from Mojang?
+
+![Our own game](img/faq/own.jpg)
+
+- VoxelCraft has **its own engine** in C++ and OpenGL ES.
+- **The game's code draws every texture** pixel by pixel; the music is our own.
+- It is an unofficial fan project that does not want to copy anything.
+
+### 🔮 What comes in 3.0.0?
+
+![3.0.0](img/faq/v300.jpg)
+
+- **Iron things go**, steel takes their place for good.
+- The plan of the big update is shared when it is ready.
+- Your worlds stay as they are.
 
 ## 🛠️ Changes in 2.7.0
 
