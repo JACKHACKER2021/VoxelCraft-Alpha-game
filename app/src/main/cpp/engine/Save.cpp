@@ -352,6 +352,8 @@ Settings loadSettings(const std::string& path) {
     s.waves = flag("waves", s.waves);
     s.batterySaver = std::clamp((int)num(kv, "batterySaver", 1), 0, 2);
     s.weakDevice = std::clamp((int)num(kv, "weakDevice", -1), -1, 1);
+    s.perfTier = std::clamp((int)num(kv, "perfTier", -1), -1, 2);
+    s.shadersAutoOff = num(kv, "shadersAutoOff", 0) != 0;
     s.musicVolume = std::clamp(num(kv, "musicVolume", s.musicVolume), 0.0f, 1.0f);
     s.soundVolume = std::clamp(num(kv, "soundVolume", s.soundVolume), 0.0f, 1.0f);
     s.uiSounds = flag("uiSounds", s.uiSounds);
@@ -388,7 +390,7 @@ void saveSettings(const std::string& path, const Settings& s) {
       << "\nguiScale=" << s.guiScale << "\nbrightness=" << s.brightness << "\nfov=" << s.fov
       << "\nrenderDistance=" << s.renderDistance << "\nhideGui=" << s.hideGui << "\nclouds=" << s.clouds << "\ncameraMode=" << s.cameraMode
       << "\nviewBobbing=" << s.viewBobbing << "\nmusicVolume=" << s.musicVolume << "\nsoundVolume=" << s.soundVolume
-      << "\nuiSounds=" << s.uiSounds << "\nlanguage=" << s.language << "\nshowMap=" << s.showMap << "\ngraphics=" << (int)s.graphics << "\nshadows=" << s.shadows << "\nwaves=" << s.waves << "\nbatterySaver=" << s.batterySaver << "\nweakDevice=" << s.weakDevice
+      << "\nuiSounds=" << s.uiSounds << "\nlanguage=" << s.language << "\nshowMap=" << s.showMap << "\ngraphics=" << (int)s.graphics << "\nshadows=" << s.shadows << "\nwaves=" << s.waves << "\nbatterySaver=" << s.batterySaver << "\nweakDevice=" << s.weakDevice << "\nperfTier=" << s.perfTier << "\nshadersAutoOff=" << (s.shadersAutoOff ? 1 : 0)
       << "\ndevGodMode=" << s.devGodMode << "\ndevFly=" << s.devFly << "\ndevInstantMine=" << s.devInstantMine
       << "\ndevDebug=" << s.devDebug << "\ndevNoclip=" << s.devNoclip << "\ndevSpeed=" << s.devSpeed
       << "\nexpDayNight=" << s.expDayNight << "\nexpFastFurnace=" << s.expFastFurnace << "\nexpOreMap=" << s.expOreMap << "\nexpFastGrowth=" << s.expFastGrowth << "\nexpLowGravity=" << s.expLowGravity

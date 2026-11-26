@@ -41,7 +41,7 @@ namespace vc {
 namespace vc {
 
 namespace {
-const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.7.0 Preview build 2" : "VoxelCraft 2.6.0";
+const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.7.0 Preview build 3" : "VoxelCraft 2.6.0";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -111,6 +111,10 @@ Game::~Game() { endSession(); }
 bool Game::onSurfaceCreated() {
     if (!renderer_.init()) return false;
     gpuName_ = renderer_.gpuName();
+    if (kFeatures270 && settings_.perfTier < 0) {
+        settings_.perfTier = detectPerfTier(gpuName_, deviceMemoryMb());
+        saveSettings(settingsPath_, settings_);
+    }
     if (kFeatures260 && settings_.weakDevice < 0) {
         // 2.6.0: first start: Mali-G31/G51/G52/G57, Mali-T and PowerVR chips play light by default
         const std::string& g = gpuName_;
@@ -589,9 +593,40 @@ void Game::updateMusic(float dt) {
     play(own.empty() ? "asset:music/overworld.mp3" : own, true);
 }
 
+// 2.7.0: the memory of the device in MB (0 when not known), from /proc/meminfo.
+int deviceMemoryMb() {
+    std::ifstream f("/proc/meminfo");
+    std::string key;
+    long kb = 0;
+    while (f >> key >> kb) {
+        if (key == "MemTotal:") return (int)(kb / 1024);
+        f.ignore(256, '\n');
+    }
+    return 0;
+}
+
+// 2.7.0: how much the device can do, from its graphics chip and memory:
+// 1 weak (Teclast P30T: Mali-G57 MC1 and 4 GB; Galaxy A14: Mali-G52), 2 Smoother+ (Redmi Note 13 5G: Mali-G57 MC2
+// and 6-8 GB), 0 full. A Mali-G57 with little memory is the single-core one of cheap tablets.
+int detectPerfTier(const std::string& gpu, int memMb) {
+    auto has = [&](const char* s) { return gpu.find(s) != std::string::npos; };
+    const bool knownMem = memMb > 0;
+    if (knownMem && memMb < 3500) return 1;
+    if (has("Mali-T") || has("PowerVR") || has("Mali-G31") || has("Mali-G51") || has("Mali-G52") || has("Mali-4") ||
+        has("Adreno (TM) 3") || has("Adreno (TM) 4") || has("Adreno (TM) 50") || has("Adreno (TM) 51"))
+        return 1;
+    if (has("Mali-G57")) return knownMem && memMb >= 5500 ? 2 : 1;
+    if (has("Mali-G68") || has("Mali-G72") || has("Mali-G76") || has("Adreno (TM) 6") || has("Adreno (TM) 5") || has("IMG"))
+        return 2;
+    if (knownMem && memMb < 5500) return 2;
+    return 0;
+}
+
 bool Game::saverActive() const {
     const int level = batteryLevel_;
-    if (kFeatures260 && settings_.weakDevice == 1) return true;  // 2.6.0: a weak device always plays light
+    if (kFeatures270) {
+        if (settings_.perfTier == 1) return true;  // 2.7.0: a weak device always plays light
+    } else if (kFeatures260 && settings_.weakDevice == 1) return true;  // 2.6.0: a weak device always plays light
     return settings_.batterySaver == 2 || (settings_.batterySaver == 1 && level >= 0 && level <= 35 && !charging_);
 }
 
@@ -604,6 +639,15 @@ Settings Game::playSettings() const {
         s.shadows = s.waves = false;
         s.fallingLeaves = false;
         s.graphics = GraphicsMode::Classic;
+    }
+    if (kFeatures270 && !saverActive()) {
+        // 2.7.0 Smoother+: a little shorter view, no swaying or falling leaves; the shaders stay while they keep up.
+        if (s.perfTier == 2) {
+            s.renderDistance = std::min(s.renderDistance, 5);
+            s.waves = s.fallingLeaves = false;
+        }
+        // The shaders went off by themselves (the device could not keep up): the plain look until switched on again.
+        if (s.shadersAutoOff) s.graphics = GraphicsMode::Classic, s.shadows = false;
     }
     if (kClassicEdition) {
         // Classic 0.0.3: no seasons, addons or clouds; the plain old look.
@@ -834,6 +878,22 @@ void Game::frame(double time) {
             toastUntil_ = time + 5;
         }
         saverWasOn_ = saver;
+        // 2.7.0: the shaders watch the frame rate: if the device keeps under 24 FPS for 8 seconds in a world,
+        // they switch off by themselves (and say so); the player can switch them on again in the settings.
+        if (kFeatures270 && session_ && !saver && eff.graphics == GraphicsMode::Enhanced && !settings_.shadersAutoOff) {
+            perfTime_ += dt, ++perfFrames_;
+            if (perfTime_ >= 8) {
+                if (perfFrames_ / perfTime_ < 24) {
+                    settings_.shadersAutoOff = true;
+                    saveSettings(settingsPath_, settings_);
+                    toast_ = tr("Shadery vypnuty: zařízení je nestíhá");
+                    toastUntil_ = time + 6;
+                }
+                perfTime_ = 0, perfFrames_ = 0;
+            }
+        } else {
+            perfTime_ = 0, perfFrames_ = 0;
+        }
     }
     if (textureReload_.exchange(false) || texturesWinter_ != ((playSettings().addonWinter && !kFeatures260) || snowySeason(playSettings().season)) ||
         texturesSeason_ != playSettings().season)
@@ -2924,7 +2984,24 @@ void Game::settingsScreen() {
         // 1.5.5: Classic or Enhanced graphics, and the shader pack that tunes Enhanced.
         // 1.5.7: the battery saver.
         {
-            if (kFeatures260) {
+            if (kFeatures270) {
+                // 2.7.0: the device's power: Full, Smoother+ or Weak; found by itself on the first start.
+                static const char* kTier[3] = {"Plný", "Slabé", "Smoother+"};
+                static const char* kTierText[3] = {"Vše zapnuto", "Lehčí grafika a 30 FPS", "Plynulost: kratší dohled, shadery když stíhá"};
+                const int tier = std::clamp(settings_.perfTier, 0, 2);
+                row("Výkon zařízení", gpuName_.empty() ? tr(kTierText[tier]) : tr(kTierText[tier]) + std::string(" · ") + gpuName_);
+                if (ui_.dropdown(cx - 100, ry + 4, 100, 18, kTier[tier])) {
+                    static const int kNext[3] = {2, 0, 1};  // Full -> Smoother+ -> Weak -> Full
+                    settings_.perfTier = kNext[tier];
+                    saveSettings(settingsPath_, settings_);
+                }
+                endRow();
+                if (settings_.shadersAutoOff) {
+                    row("Shadery", tr("Vypnuly se samy: zařízení je nestíhalo"));
+                    if (ui_.dropdown(cx - 100, ry + 4, 100, 18, "Zkusit znovu")) settings_.shadersAutoOff = false, saveSettings(settingsPath_, settings_);
+                    endRow();
+                }
+            } else if (kFeatures260) {
                 // 2.6.0: weak phones and tablets (Mali-G52/G57 and the like): light graphics and 30 FPS for good.
                 row("Slabé zařízení", gpuName_.empty() ? tr("Lehčí grafika a 30 FPS") : gpuName_);
                 if (ui_.dropdown(cx - 100, ry + 4, 100, 18, settings_.weakDevice == 1 ? "Ano" : "Ne")) {
@@ -2941,6 +3018,7 @@ void Game::settingsScreen() {
         row("Grafika", settings_.graphics == GraphicsMode::Enhanced ? tr("Vibrant shadery, živější barvy") : tr("Původní vzhled"));
         if (ui_.dropdown(cx - 100, ry + 4, 100, 18, settings_.graphics == GraphicsMode::Enhanced ? "Vylepšená" : "Klasická")) {
             settings_.graphics = settings_.graphics == GraphicsMode::Enhanced ? GraphicsMode::Classic : GraphicsMode::Enhanced;
+            if (settings_.graphics == GraphicsMode::Enhanced) settings_.shadersAutoOff = false;  // 2.7.0: tried again
             shadersDirty_ = true;
         }
         endRow();

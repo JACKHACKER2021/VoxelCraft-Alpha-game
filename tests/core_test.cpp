@@ -4057,6 +4057,10 @@ static int testCaves160() {
     // pools, bigger caves than generation 3; old worlds unchanged; the new recipes and items.
     GenConfig g3 = GenConfig::defaults();
     g3.generation = 3;
+    // 2.7.0: the user's devices: Teclast P30T (Mali-G57 MC1, 4 GB) and Galaxy A14 (Mali-G52) weak,
+    // Redmi Note 13 5G (Mali-G57 MC2, 8 GB) Smoother+.
+    CHECK(detectPerfTier("Mali-G57", 3900) == 1 && detectPerfTier("Mali-G52 MC2", 4000) == 1 &&
+          detectPerfTier("Mali-G57 MC2", 7600) == 2 && detectPerfTier("Adreno (TM) 740", 11000) == 0);
     CHECK(GenConfig::defaults().generation == (kFeatures260 ? 9 : 8));
     World nw(777, Dimension::Overworld), ow(777, Dimension::Overworld, g3);
     nw.ensureChunksAround(0, 0, 5, 100000);

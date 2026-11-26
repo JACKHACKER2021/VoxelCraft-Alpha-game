@@ -1,3 +1,4 @@
+#include <chrono>
 #include <set>
 #include <tuple>
 #include "Session.h"
@@ -4118,8 +4119,21 @@ void Session::update(float dt, double time, float guiW, float guiH, const Settin
 
     pcx = floorDiv((int)std::floor(player_.pos.x), kChunkSize);
     pcz = floorDiv((int)std::floor(player_.pos.z), kChunkSize);
-    world_->ensureChunksAround(pcx, pcz, settings.renderDistance + 1, 2);
-    world_->unloadFarChunks(pcx, pcz, settings.renderDistance + 3);
+    if (kFeatures270) {
+        // 2.7.0: new chunks as long as the frame has time (about 4 ms; 2.5 ms on a weak device), at least one:
+        // the world fills in faster on a good phone and never stutters a weak one. A weak device keeps fewer
+        // chunks in memory.
+        const auto t0 = std::chrono::steady_clock::now();
+        const double budget = settings.perfTier == 1 ? 2.5 : 4.0;
+        for (int k = 0; k < 8; ++k) {
+            if (!world_->ensureChunksAround(pcx, pcz, settings.renderDistance + 1, 1)) break;
+            if (std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count() > budget) break;
+        }
+        world_->unloadFarChunks(pcx, pcz, settings.renderDistance + (settings.perfTier == 1 ? 2 : 3));
+    } else {
+        world_->ensureChunksAround(pcx, pcz, settings.renderDistance + 1, 2);
+        world_->unloadFarChunks(pcx, pcz, settings.renderDistance + 3);
+    }
 
     if ((autosaveTimer_ += dt) >= kAutosave) {
         autosaveTimer_ = 0;
@@ -4164,7 +4178,17 @@ void Session::updateCamera(float dt, bool walking) {
 void Session::render(Renderer& renderer, Ui& ui, const Settings& settings, bool hud) {
     renderer.dropUnloadedMeshes(*world_);
     renderer.setMeshFocus(player_.pos.x, player_.pos.z);
-    renderer.updateMeshes(*world_, 3);
+    if (kFeatures270) {
+        // 2.7.0: meshes the same way: as many as fit in about 4 ms (2.5 ms on a weak device), at least one.
+        const auto t0 = std::chrono::steady_clock::now();
+        const double budget = settings.perfTier == 1 ? 2.5 : 4.0;
+        for (int k = 0; k < 8; ++k) {
+            if (!renderer.updateMeshes(*world_, 1)) break;
+            if (std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count() > budget) break;
+        }
+    } else {
+        renderer.updateMeshes(*world_, 3);
+    }
     if (world_ == &overworld_ && oldMode()) {
         // 1.8.0 Old World: the sky of 0.3: always day, one pale blue that the distance fades into
         // (the same fog: from 60 % of the view distance), no sun, moon, stars, clouds or shadows.

@@ -23,6 +23,9 @@
 #include "World.h"
 
 namespace vc {
+int detectPerfTier(const std::string& gpu, int memMb);  // 2.7.0: 0 full, 1 weak, 2 Smoother+
+int deviceMemoryMb();
+
 
 enum class TouchAction { Down, Move, Up };
 
@@ -295,7 +298,9 @@ private:
     void refreshStructures();
 
     std::string dataDir_, worldsDir_, settingsPath_, texturePackDir_;
-    std::string gpuName_;  // 2.6.0: GL_RENDERER
+    std::string gpuName_;
+    float perfTime_ = 0;  // 2.7.0: the shader guard's window
+    int perfFrames_ = 0;  // 2.6.0: GL_RENDERER
     Font font_;
     Ui ui_;
     Renderer renderer_;
