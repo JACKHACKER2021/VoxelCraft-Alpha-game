@@ -695,6 +695,7 @@ const TileSource kSources[] = {
     /* egg_fox          */ {-1, "items", {"vc_spawn_egg_fox"}, 0},
     /* egg_ghost        */ {-1, "items", {"vc_spawn_egg_ghost"}, 0},
     /* egg_snowman      */ {-1, "items", {"vc_spawn_egg_snowman"}, 0},
+    /* leather          */ {-1, "items", {"vc_leather"}, 0},
     /* train_tex_14     */ {-1, "entity", {"vc_train_tex_14"}, 0},
     /* train_tex_15     */ {-1, "entity", {"vc_train_tex_15"}, 0},
     /* train_tex_16     */ {-1, "entity", {"vc_train_tex_16"}, 0},

@@ -63,6 +63,7 @@ struct Mob {
     float love = 0;          // 1.9.0 build 3 (2.0 preview): seconds an animal looks for a mate after being fed
     float barter = 0;        // 1.5.7 hog man: > 0 while it looks over the powerstone, then it pays
     float angry = 0;         // 2.6.0: the golem (its ore dug) and the moss lurker (sprung): seconds it hunts
+    int8_t collar = -1;      // 2.7.0: a tamed fox's collar colour (wool colour 0..15), -1 none
     bool tamed = false;      // 2.6.0: a fox fed raw meat follows the player and defends them
     bool sitting = false;    // 2.6.0: sits (resting now and then; a tamed fox when told to)
     float sit = 0;           // 2.6.0: the sitting pose, 0 standing .. 1 sat down

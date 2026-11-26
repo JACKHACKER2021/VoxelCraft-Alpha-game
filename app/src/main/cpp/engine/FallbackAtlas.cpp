@@ -3299,6 +3299,15 @@ void drawUpdate157(Canvas& a, int tile) {
             a.sprite(tile, kSprite_eggA, kEgg[tile - T_EGG2][0], kEgg[tile - T_EGG2][1]);
             return;
         }
+        case T_LEATHER: {
+            // 2.7.0: a tanned hide with ragged edges and stitch marks.
+            static const char* const kHide[16] = {
+                "................", "................", "...11.....11....", "..1111111111....", "...111111111....",
+                "..11111111111...", "..11131111311...", "...1111111111...", "...1111111111...", "..11131111311...",
+                "..11111111111...", "...111111111....", "..1111111111....", "...11.....11....", "................", "................"};
+            a.sprite(tile, kHide, {150, 92, 52}, {214, 170, 110});
+            return;
+        }
         case T_EGG_HOGMAN: a.sprite(tile, eggArt(kSprite_egg15), {226, 150, 140}, {60, 200, 220}); return;
         default: break;
     }

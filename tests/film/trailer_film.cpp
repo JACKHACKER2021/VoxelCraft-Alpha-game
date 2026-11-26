@@ -7348,3 +7348,26 @@ SHOT(z10_subway_inside) {
         }
     }
 }
+
+// 2.7.0 preview: tamed foxes with dyed collars, and leather.
+SHOT(z11_collar) {
+    Director d(out, "z11");
+    d.openWorld("Studio", 1, GameMode::Creative, [](GenConfig& g) { g.flat = true; g.devMap = 6; });
+    Session& s = d.s();
+    Player& p = s.player();
+    p.flying = true;
+    d.settings().hideGui = true;
+    s.mobs().mobs().clear();
+    const int colours[5] = {14, 11, 5, 1, 2};
+    for (int k = 0; k < 5; ++k) {
+        s.mobs().spawn(k == 4 ? MobType::AshFox : MobType::Fox, 0, Vec3(-3.0f + k * 1.5f, 5.0f, 8.5f));
+        Mob& m = s.mobs().mobs().back();
+        m.tamed = true, m.collar = (int8_t)colours[k], m.sitting = k % 2 == 1, m.sitTimer = 99, m.yaw = 0.5f, m.wanderTimer = 999;
+    }
+    p.pos = Vec3(0.0f, 5.0f, 5.8f);
+    d.idle(20);
+    const Vec3 look(0.0f, 5.3f, 8.5f);
+    d.lookNow(look);
+    d.shot("z11_collar");
+    d.frames(2, [&](int) { d.lookNow(look); for (Mob& m : s.mobs().mobs()) m.wanderTimer = 999, m.vel = {}, m.wandering = false; });
+}

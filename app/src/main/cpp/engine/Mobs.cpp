@@ -977,6 +977,12 @@ void MobSystem::buildVertices(int dim, float time, std::vector<Vertex>& out) con
                     f6[2] = faceT;
                     const float lift = 1.5f * sit;
                     bx(-3, 7 + lift, -10, 3, 12 + lift, -6, f6);
+                    if (m.tamed && m.collar >= 0) {
+                        // 2.7.0: the collar, in the colour it was dyed, round the neck.
+                        int col6[6];
+                        tilesAll(T_WOOL + m.collar, col6);
+                        bx(-3.7f, 5.4f + lift, -7.0f, 3.7f, 8.4f + lift, -5.0f, col6);
+                    }
                     // The muzzle: fur on top, white below, a small black nose at its tip.
                     int snout6[6];
                     tilesAll(fur, snout6);
@@ -1096,12 +1102,12 @@ void MobSystem::buildVertices(int dim, float time, std::vector<Vertex>& out) con
 
 void MobSystem::save(const std::string& folder) const {
     std::ostringstream o;
-    o << "VCMOBS4\n";  // 2.6.0: + tamed
+    o << "VCMOBS5\n";  // 2.6.0: + tamed; 2.7.0: + collar
     for (const Mob& m : mobs_)
         if (!mobInfo(m.type).hostile && m.alive())
             o << (int)m.type << " " << m.dim << " " << m.pos.x << " " << m.pos.y << " " << m.pos.z << " " << m.yaw << " " << m.health
               << " " << (int)m.profession << " " << (m.hasHome ? 1 : 0) << " " << m.home.x << " " << m.home.y << " " << m.home.z
-              << " " << m.variant << " " << (m.tamed ? 1 : 0) << "\n";
+              << " " << m.variant << " " << (m.tamed ? 1 : 0) << " " << (int)m.collar << "\n";
     std::ofstream(folder + "/mobs.dat") << o.str();
 }
 
@@ -1109,8 +1115,9 @@ void MobSystem::load(const std::string& folder) {
     mobs_.clear();
     std::ifstream in(folder + "/mobs.dat");
     std::string magic;
-    if (!std::getline(in, magic) || (magic != "VCMOBS1" && magic != "VCMOBS2" && magic != "VCMOBS3" && magic != "VCMOBS4")) return;
-    const bool v2 = magic != "VCMOBS1", v3 = magic == "VCMOBS3" || magic == "VCMOBS4", v4 = magic == "VCMOBS4";
+    if (!std::getline(in, magic) || (magic != "VCMOBS1" && magic != "VCMOBS2" && magic != "VCMOBS3" && magic != "VCMOBS4" && magic != "VCMOBS5")) return;
+    const bool v5 = magic == "VCMOBS5";
+    const bool v2 = magic != "VCMOBS1", v3 = magic == "VCMOBS3" || magic == "VCMOBS4" || v5, v4 = magic == "VCMOBS4" || v5;
     int type, dim;
     float x, y, z, yaw, health;
     while (in >> type >> dim >> x >> y >> z >> yaw >> health) {
@@ -1121,6 +1128,8 @@ void MobSystem::load(const std::string& folder) {
         if (v3 && !(in >> variant)) break;
         int tamed = 0;
         if (v4 && !(in >> tamed)) break;
+        int collar = -1;
+        if (v5 && !(in >> collar)) break;
         if (type < 0 || type >= (int)MobType::Count || mobInfo((MobType)type).hostile) continue;
         if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(z)) continue;
         Mob m;
@@ -1135,6 +1144,8 @@ void MobSystem::load(const std::string& folder) {
         m.home = Vec3(hx, hy, hz);
         m.variant = (uint16_t)(ModRegistry::get().mob(variant) ? variant : 0);
         m.tamed = tamed != 0;
+        m.collar = (int8_t)std::clamp(collar, -1, 15);
+        if (m.tamed && m.collar < 0 && kFeatures270) m.collar = 14;  // 2.7.0: foxes tamed before get a red collar
         if (m.tamed) m.sitting = true;  // a tamed fox waits where it was left
         m.uid = nextUid_++;
         mobs_.push_back(m);
@@ -1154,7 +1165,9 @@ std::vector<std::pair<ItemId, int>> mobDrops(MobType type, float roll) {
             return roll < 0.12f ? std::vector<std::pair<ItemId, int>>{{IRON_INGOT, 1}, {COAL, 1}}
                                 : std::vector<std::pair<ItemId, int>>{{COAL, 1 + (int)(roll * 2)}};
         case MobType::Chicken: return {{RAW_CHICKEN, 1}, {FEATHER, (int)(roll * 3)}};
-        case MobType::Cow: return {{RAW_BEEF, 1 + (int)(roll * 3)}};
+        case MobType::Cow:
+            if (kFeatures270 && roll > 0.3f) return {{RAW_BEEF, 1 + (int)(roll * 3)}, {LEATHER, 1 + (int)(roll * 1.8f)}};  // 2.7.0: hide
+            return {{RAW_BEEF, 1 + (int)(roll * 3)}};
         case MobType::Spider: return {{STRING, 1 + (int)(roll * 2.5f)}};
         case MobType::TntZombie: return {{roll < 0.5f ? (ItemId)TNT : (ItemId)COAL, 1}};
         case MobType::TarMonster: return {{TAR_BALL, 1 + (int)(roll * 2.5f)}};

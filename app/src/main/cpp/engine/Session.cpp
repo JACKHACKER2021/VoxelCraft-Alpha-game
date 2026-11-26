@@ -1892,10 +1892,17 @@ void Session::touchUp(int id, float x, float y, double time) {
                     // 2.6.0: raw meat tames a fox: from now on it follows the player and defends them.
                     Mob& f = mobs_.mobs()[mob];
                     f.tamed = true, f.panic = 0, f.sitting = false, f.health = mobInfo(f.type).health;
+                    if (kFeatures270) f.collar = 14;  // 2.7.0: a red collar to start with
                     if (survival() && --heldNow.count == 0) heldNow = {};
                     hand_.use();
                     sound(Sound::Eat);
                     if (onMessage) onMessage(tr("Lišák je ochočený! Klepnutím v plížení si sedne nebo vstane."));
+                } else if (kFeatures270 && mob >= 0 && mobs_.mobs()[mob].tamed && isDye(heldNow.id)) {
+                    // 2.7.0: a dye colours the tamed fox's collar.
+                    mobs_.mobs()[mob].collar = (int8_t)(heldNow.id - DYE);
+                    if (survival() && --heldNow.count == 0) heldNow = {};
+                    hand_.use();
+                    if (onMessage) onMessage(tr("Obojek má novou barvu."));
                 } else if (mob >= 0 && mobs_.mobs()[mob].tamed && player_.sneaking) {
                     // 2.6.0: a tap while sneaking tells a tamed fox to sit and wait, or to come along.
                     Mob& f = mobs_.mobs()[mob];

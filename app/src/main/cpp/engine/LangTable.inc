@@ -1473,6 +1473,8 @@
 {"Switched off by themselves: the device could not keep up", "Vypnuly se samy: zařízení je nestíhalo", "Se apagaron solos: el dispositivo no daba abasto", "Отключились сами: устройство не справлялось", "Haben sich selbst abgeschaltet: das Gerät kam nicht mit"},
 {"Try again", "Zkusit znovu", "Reintentar", "Попробовать снова", "Erneut versuchen"},
 {"Shaders off: the device can't keep up", "Shadery vypnuty: zařízení je nestíhá", "Shaders apagados: el dispositivo no da abasto", "Шейдеры выключены: устройство не справляется", "Shader aus: das Gerät kommt nicht mit"},
+{"Leather", "Kůže", "Cuero", "Кожа", "Leder"},
+{"The collar has a new colour.", "Obojek má novou barvu.", "El collar tiene un color nuevo.", "У ошейника новый цвет.", "Das Halsband hat eine neue Farbe."},
 {"Spawn Egg: Hogman", "Vejce: Prasák", "Huevo: Cerdo guerrero", "Яйцо: Свинолюд", "Spawn-Ei: Schweinemann"},
 {"Hogman", "Prasák", "Cerdo guerrero", "Свинолюд", "Schweinemann"},
 {"Light in the Dark", "Světlo do tmy", "Luz en la oscuridad", "Свет во тьме", "Licht im Dunkeln"},
