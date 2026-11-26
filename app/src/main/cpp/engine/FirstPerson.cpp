@@ -226,7 +226,7 @@ void buildFirstPerson(const HandAnimator& hand, float light, std::vector<Vertex>
         heldFlat(base, id, light, atlas);
         return;
     }
-    if (isItemOnly(id) || isPlant(id)) {
+    if (isItemOnly(id) || isPlant(id) || (kFeatures270 && id == BRONZE_DOOR_ITEM)) {
         Transform base;
         base.t = {0.48f, -0.36f, -0.72f};
         base.ry = -0.45f;

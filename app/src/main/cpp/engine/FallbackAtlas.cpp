@@ -1,3 +1,4 @@
+#include <functional>
 #include <array>
 #include "Items.h"
 #include <algorithm>
@@ -2710,6 +2711,133 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
                 const uint8_t* from = stone ? px4(T_NETHERRACK, x, y) : px4(T_MOSSY_CORNERSTONE, (x + y * 5) % 16, (y + x) % 3);
                 std::copy_n(from, 4, px4(T_MOSSY_CORNERSTONE_TOP, x, y));
             }
+    }
+    if (kFeatures270) {
+        // 2.7.0: the redrawn items: smooth shaded spawn eggs with each creature's own pattern, the meats
+        // (fat and marbling raw, grill marks cooked), string as a ball, the bronze door with a window,
+        // the ingots (style A) and hardium ore with veins.
+        std::vector<uint8_t>& img = a.image();
+        auto px4 = [&](int tile, int x, int y) { return &img[((size_t)((tile / kAtlasCols) * 16 + y) * size + (tile % kAtlasCols) * 16 + x) * 4]; };
+        auto clearTile = [&](int t) { for (int y = 0; y < 16; ++y) for (int x = 0; x < 16; ++x) a.clear(t, x, y); };
+        auto outline = [&](int t, Rgb c) {
+            bool in[16][16];
+            for (int y = 0; y < 16; ++y) for (int x = 0; x < 16; ++x) in[y][x] = a.filled(t, x, y);
+            for (int y = 0; y < 16; ++y)
+                for (int x = 0; x < 16; ++x) {
+                    if (in[y][x]) continue;
+                    if ((x > 0 && in[y][x - 1]) || (x < 15 && in[y][x + 1]) || (y > 0 && in[y - 1][x]) || (y < 15 && in[y + 1][x])) a.put(t, x, y, c);
+                }
+        };
+        auto art = [&](int t, const char* const rows[16], const std::function<Rgb(char)>& pal, Rgb line) {
+            clearTile(t);
+            for (int y = 0; y < 16; ++y)
+                for (int x = 0; x < 16; ++x)
+                    if (rows[y][x] != '.') a.put(t, x, y, pal(rows[y][x]));
+            outline(t, line);
+        };
+        // Spawn eggs.
+        static const char* const kEgg[16] = {"................", "......XXXX......", ".....XXXXXX.....", "....XXXXXXXX....", "...XXXXXXXXXX...", "...XXXXXXXXXX...", "..XXXXXXXXXXXX..", "..XXXXXXXXXXXX..",
+                                             "..XXXXXXXXXXXX..", "..XXXXXXXXXXXX..", "..XXXXXXXXXXXX..", "...XXXXXXXXXX...", "...XXXXXXXXXX...", "....XXXXXXXX....", ".....XXXXXX.....", "................"};
+        auto pattern = [](int kind, int x, int y) {
+            switch (kind) {
+                case 0: return (x - 9.5f) * (x - 9.5f) / 4 + (y - 9) * (y - 9) / 3.0f < 1.2f;                       // snout
+                case 1: return (x - 5) * (x - 5) + (y - 8) * (y - 8) < 5 || (x - 11) * (x - 11) + (y - 11) * (y - 11) < 4 || (x - 10) * (x - 10) + (y - 4) * (y - 4) < 2;  // spots
+                case 2: return (y == 8 && x >= 4 && x <= 11) || (y == 6 && (x == 6 || x == 9));                      // eyes and a line
+                case 3: return y >= 10 - (x % 4 < 2 ? 1 : 0);                                                        // zigzag bottom
+                case 4: return ((x == 6 || x == 10) && (y == 7 || y == 8)) || (y == 11 && x >= 7 && x <= 9);       // face
+                case 5: return y == 8 || y == 9;                                                                     // band
+                case 6: return (x >= 4 && x <= 5 && y >= 5 && y <= 6) || (x >= 10 && x <= 11 && y >= 7 && y <= 8) || (x >= 6 && x <= 7 && y >= 11 && y <= 12) || (x >= 10 && x <= 11 && y >= 12 && y <= 13);  // big dots
+                case 7: return y <= 3 || (x == 8 && y == 8);                                                         // comb and beak
+                case 8: return (x <= 4 || x >= 11) && y >= 6 && y <= 10;                                             // wings
+                case 9: return (x == 8 && y >= 6 && y <= 10) || (y == 8 && x >= 6 && x <= 10);                       // star
+                case 10: return y >= 11 || (y == 10 && x % 3 != 0);                                                 // cloud
+                default: return ((x >= 7 && x <= 9) && y == 8) || (x == 8 && y == 9) || (y == 11 && x >= 4 && x <= 11);  // carrot and scarf
+            }
+        };
+        struct EggLook { int tile; Rgb base, second; int kind; };
+        const EggLook eggs[] = {
+            {T_EGG_PIG, {240, 160, 170}, {200, 100, 120}, 0}, {T_EGG_SHEEP, {236, 236, 228}, {196, 186, 172}, 6}, {T_EGG_SLIME, {214, 118, 22}, {60, 30, 10}, 4},
+            {T_EGG_FORGOTTEN, {96, 112, 96}, {40, 40, 56}, 4}, {T_EGG_CHICKEN, {240, 240, 236}, {220, 40, 40}, 7}, {T_EGG_COW, {240, 240, 236}, {60, 46, 38}, 1},
+            {T_EGG_VILLAGER, {150, 110, 80}, {80, 180, 90}, 5}, {T_EGG_SPIDER, {60, 50, 46}, {200, 30, 30}, 2}, {T_EGG_BAT, {90, 72, 56}, {36, 30, 28}, 8},
+            {T_EGG_TNT_ZOMBIE, {96, 130, 80}, {210, 50, 40}, 5}, {T_EGG_TAR_MONSTER, {34, 30, 36}, {170, 120, 220}, 6}, {T_EGG_HUSKING, {150, 132, 100}, {230, 110, 30}, 5},
+            {T_EGG_HOGMAN, {226, 150, 140}, {60, 200, 220}, 0}, {T_EGG2 + 0, {200, 220, 255}, {250, 230, 120}, 9}, {T_EGG2 + 1, {60, 50, 90}, {170, 120, 255}, 2},
+            {T_EGG2 + 2, {180, 230, 240}, {255, 255, 255}, 10}, {T_EGG2 + 3, {120, 70, 60}, {230, 120, 50}, 5}, {T_EGG2 + 4, {70, 110, 60}, {150, 200, 90}, 1},
+            {T_EGG2 + 5, {160, 110, 170}, {230, 210, 120}, 6}, {T_EGG2 + 6, {90, 60, 50}, {255, 150, 40}, 8}, {T_EGG2 + 7, {90, 90, 95}, {255, 110, 40}, 3},
+            {T_EGG2 + 8, {236, 120, 40}, {250, 246, 236}, 3}, {T_EGG2 + 9, {236, 236, 250}, {70, 70, 90}, 4}, {T_EGG2 + 10, {246, 250, 255}, {250, 140, 40}, 11}};
+        for (const EggLook& e : eggs) {
+            clearTile(e.tile);
+            for (int y = 0; y < 16; ++y)
+                for (int x = 0; x < 16; ++x) {
+                    if (kEgg[y][x] != 'X') continue;
+                    const float d = std::sqrt((float)((x - 6) * (x - 6) + (y - 5) * (y - 5)));
+                    a.put(e.tile, x, y, (pattern(e.kind, x, y) ? e.second : e.base).scaled(1.18f - d * 0.045f));
+                }
+            a.put(e.tile, 5, 3, {255, 255, 255}), a.put(e.tile, 6, 3, {255, 255, 255}), a.put(e.tile, 5, 4, {255, 255, 255});
+            a.put(e.tile, 4, 5, e.base.scaled(1.5f));
+            outline(e.tile, e.base.scaled(0.3f));
+        }
+        // String: a ball of thread with a loose end.
+        clearTile(T_STRING);
+        for (int y = 0; y < 16; ++y)
+            for (int x = 0; x < 16; ++x) {
+                const float dx = x - 7.5f, dy = y - 7.5f;
+                if (dx * dx + dy * dy > 30) continue;
+                const int band = ((int)((dx * 0.7f + dy) * 0.9f) % 3 + 3) % 3;
+                const float k = 1.12f - std::sqrt((dx + 2) * (dx + 2) + (dy + 2) * (dy + 2)) * 0.03f;
+                a.put(T_STRING, x, y, (band ? Rgb{236, 230, 214} : Rgb{196, 188, 170}).scaled(k));
+            }
+        a.put(T_STRING, 12, 12, {220, 214, 196}), a.put(T_STRING, 13, 13, {220, 214, 196}), a.put(T_STRING, 14, 13, {220, 214, 196}), a.put(T_STRING, 14, 14, {220, 214, 196});
+        outline(T_STRING, {80, 72, 62});
+        // The bronze door: panels, a window, a handle.
+        static const char* const kDoor[16] = {"................", "....dddddddd....", "....dGGGGGGd....", "....dGwwwwGd....", "....dGwwwwGd....", "....dGGGGGGd....", "....dBBBBBBd....", "....dBbbbbBd....",
+                                              "....dBbBBbBd....", "....dBbbbbBk....", "....dBBBBBBk....", "....dBbbbbBd....", "....dBbBBbBd....", "....dBbbbbBd....", "....dddddddd....", "................"};
+        art(T_BRONZE_DOOR_ITEM, kDoor, [](char c) {
+            switch (c) { case 'd': return Rgb{120, 70, 34}; case 'G': return Rgb{196, 124, 60}; case 'w': return Rgb{170, 210, 230};
+                         case 'B': return Rgb{205, 130, 64}; case 'b': return Rgb{160, 96, 44}; default: return Rgb{240, 220, 120}; } }, {28, 22, 20});
+        // Meats: a slab (pork, mutton, beef) or a drumstick (chicken), raw or cooked.
+        static const char* const kSlab[16] = {"................", "................", "................", "....11111.......", "..111111111.....", ".11112111111....", ".11121111111f...", ".1121111111ff...",
+                                              ".111111111fff...", "..1111111fff....", "...11111fff.....", ".....ffff.......", "................", "................", "................", "................"};
+        static const char* const kLeg[16] = {"................", "................", "......1111......", ".....122111.....", "....11211111....", "....11111111....", "....1111111.....", ".....111111.....",
+                                             "......1111......", ".......bb.......", ".......bb.......", "......bbbb......", "......b..b......", "................", "................", "................"};
+        struct MeatLook { int tile; bool leg, cooked, bone; Rgb c1, c2; };
+        const MeatLook meats[] = {
+            {T_RAW_PORK, false, false, false, {240, 150, 160}, {255, 190, 196}}, {T_COOKED_PORK, false, true, false, {190, 110, 60}, {230, 170, 100}},
+            {T_RAW_MUTTON, false, false, true, {210, 70, 80}, {250, 140, 140}}, {T_COOKED_MUTTON, false, true, true, {150, 90, 50}, {110, 64, 36}},
+            {T_RAW_BEEF, false, false, false, {200, 40, 50}, {240, 110, 110}}, {T_STEAK, false, true, false, {120, 70, 40}, {90, 48, 30}},
+            {T_RAW_CHICKEN, true, false, false, {250, 200, 190}, {255, 226, 214}}, {T_COOKED_CHICKEN, true, true, false, {214, 140, 50}, {240, 180, 80}}};
+        for (const MeatLook& m : meats) {
+            const Rgb fat = m.cooked ? Rgb{236, 200, 140} : Rgb{250, 240, 226};
+            art(m.tile, m.leg ? kLeg : kSlab, [&](char c) { return c == '1' ? m.c1 : c == '2' ? m.c2 : c == 'b' ? Rgb{245, 240, 225} : fat; }, {28, 22, 20});
+            if (!m.leg && m.cooked)
+                for (int i = 0; i < 3; ++i)
+                    for (int k = 0; k < 5; ++k) {
+                        const int x = 3 + i * 3 + k / 2, y = 4 + k;
+                        if (a.filled(m.tile, x, y)) a.put(m.tile, x, y, m.c1.scaled(0.55f));
+                    }
+            if (!m.leg && !m.cooked) for (int i = 0; i < 5; ++i) a.put(m.tile, (int[]){4, 5, 8, 9, 7}[i], (int[]){6, 7, 5, 6, 8}[i], m.c2);
+            if (m.leg && m.cooked) a.put(m.tile, 6, 5, m.c1.scaled(0.7f)), a.put(m.tile, 8, 4, m.c1.scaled(0.7f)), a.put(m.tile, 9, 6, m.c1.scaled(0.7f));
+            if (m.bone) a.put(m.tile, 12, 4, {245, 240, 225}), a.put(m.tile, 13, 3, {245, 240, 225}), a.put(m.tile, 13, 4, {220, 214, 196});
+        }
+        // Ingots, style A: a bevelled bar with a bright top and a shine.
+        static const char* const kIngot[16] = {"................", "................", "................", "................", "................", "......4444......", ".....411114.....", "....41111114....",
+                                               "...4222222223...", "...4222222223...", "...4222222223...", "....33333333....", "................", "................", "................", "................"};
+        const std::pair<int, Rgb> ingots[] = {{T_IRON_INGOT, kIron}, {T_STEEL_INGOT, kSteel}, {T_BRONZE_INGOT, kBronze}};
+        for (const auto& [t, base] : ingots) {
+            art(t, kIngot, [&, b = base](char c) { return c == '1' ? b.scaled(1.3f) : c == '2' ? b : c == '3' ? b.scaled(0.62f) : b.scaled(0.35f); }, base.scaled(0.25f));
+            a.put(t, 6, 6, {255, 255, 255}), a.put(t, 7, 6, base.scaled(1.55f));
+            for (int x = 4; x <= 10; ++x) a.put(t, x, 8, base.scaled(1.12f));
+        }
+        // Hardium ore: deepstone with slanted teal veins.
+        for (int y = 0; y < 16; ++y)
+            for (int x = 0; x < 16; ++x) std::copy_n(px4(T_DEEPSTONE, x, y), 4, px4(T_HARDIUM_ORE, x, y));
+        const int veins[16][2] = {{2, 3}, {3, 4}, {4, 4}, {5, 5}, {9, 2}, {10, 3}, {11, 3}, {12, 4}, {6, 10}, {7, 11}, {8, 11}, {9, 12}, {12, 9}, {13, 10}, {2, 12}, {3, 13}};
+        const Rgb H{70, 215, 190}, Hd{30, 120, 110}, Hl{190, 255, 240};
+        for (const auto& v : veins) {
+            a.put(T_HARDIUM_ORE, v[0], v[1], H);
+            if (v[0] < 15) a.put(T_HARDIUM_ORE, v[0] + 1, v[1], Hd);
+            if (v[1] < 15) a.put(T_HARDIUM_ORE, v[0], v[1] + 1, Hd.scaled(0.7f));
+        }
+        a.put(T_HARDIUM_ORE, 3, 4, Hl), a.put(T_HARDIUM_ORE, 10, 3, Hl), a.put(T_HARDIUM_ORE, 7, 11, Hl), a.put(T_HARDIUM_ORE, 12, 9, Hl);
     }
     return a.image();
 }

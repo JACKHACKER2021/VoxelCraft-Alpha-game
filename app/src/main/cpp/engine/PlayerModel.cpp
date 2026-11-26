@@ -249,7 +249,7 @@ std::vector<Vertex> buildPlayerExtras(const PlayerPose& pose) {
     // The item in the right hand: the 3D item model standing forward out of the fist, or a small block.
     if (pose.held) {
         const Vec3 hand{4 + arm / 2, 13, -1};  // in the fist at the bottom of the right arm
-        if (isItemOnly(pose.held) || isPlant(pose.held) || isDoor(pose.held)) {
+        if (isItemOnly(pose.held) || isPlant(pose.held) || isDoor(pose.held) || (kFeatures270 && pose.held == BRONZE_DOOR_ITEM)) {
             // 1.5.1: a tool is gripped at the end of its handle (sprite pixel 2, 13) and points forward
             // and up out of the fist; other items sit in the hand by their lower middle.
             const ToolKind kind = toolKind(pose.held);

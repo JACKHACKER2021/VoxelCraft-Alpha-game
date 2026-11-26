@@ -102,7 +102,7 @@ void DropSystem::buildVertices(int dim, float time, std::vector<Vertex>& out) co
             out.insert(out.end(), {va, vb, vc, va, vc, vd});
         };
         const float h = kHalf;
-        const bool flat = isItemOnly(d.stack.id) || isPlant(d.stack.id);
+        const bool flat = isItemOnly(d.stack.id) || isPlant(d.stack.id) || (kFeatures270 && d.stack.id == BRONZE_DOOR_ITEM);
         const int copies = d.stack.count > 16 ? 3 : d.stack.count > 1 ? 2 : 1;  // a pile shows more than one
         for (int k = 0; k < copies; ++k) {
             const float ox = k * 0.07f, oy = k * 0.05f, oz = -k * 0.06f;

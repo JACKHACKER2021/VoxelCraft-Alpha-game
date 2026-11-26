@@ -91,6 +91,7 @@ void Ui::tile(float x, float y, float size, int t, Color c) {
 void Ui::item(float x, float y, float size, ItemId id) {
     if (id == AIR) return;
     if (isItemOnly(id) || isLiquid(id) || isPlant(id) || isLeaves(id) || id == GLASS || id == POWERSTONE_GLASS || isDoor(id) || isTorch(id) ||
+        (kFeatures270 && id == BRONZE_DOOR_ITEM) ||  // 2.7.0: the bronze door is a flat icon like the other doors
         isRail(id) || isBufferStop(id) || isCrossingSignal(id) || isCrossingGate(id)) {  // a torch is a flat icon; 2.0.0: rails and buffer stops too
         // Flat icon, like items and see-through blocks in the original inventory.
         float pad = size * 0.1f;
