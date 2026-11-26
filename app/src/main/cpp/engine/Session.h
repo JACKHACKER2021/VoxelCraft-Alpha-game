@@ -337,6 +337,16 @@ private:
     float fps_ = 60;
     float achievementTimer_ = 0;
     void achieve(const char* id) const { if (survival() && onAchievement) onAchievement(id); }
+public:
+    // 2.8.0 preview: the player's journal: what happened on which day, written by itself.
+    struct JournalEntry { int day; std::string text; std::vector<std::string> args; };
+    void journal(const std::string& key, const std::string& czechTemplate, std::vector<std::string> args = {});
+    const std::vector<JournalEntry>& journalEntries() const { return journal_; }
+private:
+    std::vector<JournalEntry> journal_;
+    std::set<std::string> journalKeys_;
+    float journalTimer_ = 0;
+    void journalTick(float dt);
     void checkAchievements();
     BoatSystem boats_;
     // 2.1.0 preview: trains. Where the player sits in one (-1: not in a train); seat 0 of a

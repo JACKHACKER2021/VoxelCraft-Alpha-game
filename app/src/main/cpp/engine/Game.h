@@ -138,7 +138,8 @@ private:
         Cutter,                // 1.7.2 build 2: the stonecutter
         Encyclopedia,          // 1.7.2 build 3
         HowToCraft,            // 1.9.0 build 3: every recipe, how and where to make it
-        MetroMap               // 2.5.0: the map of the subway
+        MetroMap,              // 2.5.0: the map of the subway
+        Journal                // 2.8.0 preview: the player's journal
     };
 
     // A slot in any open container, so items can be moved between them.
@@ -268,6 +269,7 @@ private:
     void furnaceScreen();
     void chestScreen();
     void backpackScreen();  // 2.7.0
+    void journalScreen();   // 2.8.0
     void tradeScreen();
     int tradeMob_ = -1;
     int tradeProfession_ = 0;
@@ -327,6 +329,7 @@ private:
     int addonTab_ = 0;              // 2.7.0: the add-on manager's tab
     static constexpr int kWalletLimit = 500;  // 2.7.0
     int walletTotal_ = 0;
+    int journalPage_ = 0;  // 2.8.0
     float perfTime_ = 0;  // 2.7.0: the shader guard's window
     float perfGrace_ = 20;  // 2.7.1: seconds left before the guard watches (a world or a dimension loading)
     int perfBad_ = 0, perfDim_ = -1;

@@ -42,7 +42,7 @@ namespace vc {
 namespace vc {
 
 namespace {
-const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.8.0 Preview build 2" : "VoxelCraft 2.7.1";
+const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.8.0 Preview build 3" : "VoxelCraft 2.7.1";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -888,6 +888,10 @@ void Game::frame(double time) {
             toastUntil_ = time + 5;
         }
         saverWasOn_ = saver;
+        if (kFeatures280 && session_ && isBackpack(session_->back().id)) {
+            unlockAchievement("wear_backpack");
+            if (session_->back().id == BACKPACK + 5) unlockAchievement("celestium_backpack");
+        }
         // 2.7.0: the shaders watch the frame rate: if the device keeps under 24 FPS for 8 seconds in a world,
         // they switch off by themselves (and say so); the player can switch them on again in the settings.
         // 2.7.1: not while a world or a dimension is still loading (the first 20 seconds the chunks are being
@@ -1333,6 +1337,7 @@ void Game::frame(double time) {
         case Screen::Crafting: craftingScreen(); break;
         case Screen::Furnace: furnaceScreen(); break;
         case Screen::Chest: chestScreen(); break;
+        case Screen::Journal: journalScreen(); break;
         case Screen::Trade: tradeScreen(); break;
         case Screen::Death: deathScreen(); break;
         case Screen::Invite: inviteScreen(); break;
@@ -1560,6 +1565,7 @@ void Game::unlockAchievement(const std::string& id) {
         const int coins = profile_.unlock(id);
         if (coins > 0) profile_.save(profilePath_);
         achievementBanner_ = findAchievement(id)->name;
+        session_->journal("a:" + id, "Úspěch: {0}.", {findAchievement(id)->name});
         achievementCoins_ = std::max(0, coins);
         achievementUntil_ = now_ + 4;
         playSound(Sound::Coin);
@@ -3514,7 +3520,7 @@ void Game::pauseScreen() {
     ui_.fill(0, 0, W, H, {0, 0, 0, 0.45f});
     const bool creative = !session_->survival(), developer = profile_.isDeveloper();
     const bool client = lan_.role() == Multiplayer::Role::Client, hosting = lan_.role() == Multiplayer::Role::Host;
-    const int buttons = 3 + (creative ? 1 : 0) + (developer ? 1 : 0) + (client ? 0 : 1);
+    const int buttons = 3 + (creative ? 1 : 0) + (developer ? 1 : 0) + (client ? 0 : 1) + (kFeatures280 ? 1 : 0);
     float pw = std::min(240.0f, W - 20), ph = 28 + buttons * 28, px = std::floor((W - pw) / 2), py = std::floor((H - ph) / 2);
     ui_.fill(px + 2, py + 2, pw, ph, {0, 0, 0, 0.5f});
     ui_.frame(px, py, pw, ph, kPanel, kBorder);
@@ -3527,6 +3533,10 @@ void Game::pauseScreen() {
         setScreen(Screen::Settings);
     }
     by += 28;
+    if (kFeatures280) {
+        if (ui_.button(bx, by, bw, 22, "Deník")) journalPage_ = 0, setScreen(Screen::Journal);
+        by += 28;
+    }
     if (creative) {
         if (ui_.button(bx, by, bw, 22, "Struktury")) setScreen(Screen::Structures);
         by += 28;
@@ -4814,6 +4824,7 @@ void Game::tapSlot(SlotRef ref) {
     if (ref.area == SlotArea::FurnaceOutput && !held_.valid()) {
         // Smelted items go straight into the inventory.
         if (!target->empty()) {
+            if (kFeatures280 && target->id == STEEL_INGOT) unlockAchievement("steel_mix");
             int left = inv.add(*target);
             if (left == 0) *target = {};
             else target->count = (uint8_t)left;
@@ -5209,6 +5220,7 @@ void Game::chestScreen() {
             total -= back;
         }
         walletTotal_ = total;
+        if (kFeatures280 && total >= kWalletLimit) unlockAchievement("full_wallet");
     }
     const bool big = kFeatures270 && !wallet && session_->hasChest2 && session_->chest(session_->openChest2);
     const float rows = big ? 6 * kSlot : top;
@@ -5269,6 +5281,59 @@ void Game::backpackScreen() {
         if (ui_.button(px, by, 22, bh, "<", page > 0)) session_->openChest.y = page - 1;
         if (ui_.button(px + 26, by, 22, bh, ">", page + 1 < pages)) session_->openChest.y = page + 1;
     }
+}
+
+// 2.8.0 preview: the player's journal, an open book of two pages; the newest entries first.
+void Game::journalScreen() {
+    const float W = ui_.width(), H = ui_.height();
+    ui_.fill(0, 0, W, H, {0, 0, 0, 0.55f});
+    const float pw = std::min(440.0f, W - 16), ph = std::min(250.0f, H - 16), px = std::floor((W - pw) / 2), py = std::floor((H - ph) / 2);
+    const Color paper{0.93f, 0.88f, 0.74f, 1}, ink{0.25f, 0.18f, 0.1f, 1}, dim{0.5f, 0.4f, 0.28f, 1};
+    ui_.frame(px - 4, py - 4, pw + 8, ph + 8, Color{0.42f, 0.26f, 0.14f, 1}, kBorderDark);  // the cover
+    ui_.fill(px, py, pw / 2 - 2, ph, paper);
+    ui_.fill(px + pw / 2 + 2, py, pw / 2 - 2, ph, paper);
+    ui_.fill(px + pw / 2 - 2, py, 4, ph, Color{0.7f, 0.62f, 0.48f, 1});
+    std::vector<Session::JournalEntry> list(session_->journalEntries().rbegin(), session_->journalEntries().rend());
+    // Lines per page: an entry takes its wrapped lines and a gap.
+    const float lineH = 10, colW = pw / 2 - 20;
+    std::vector<std::vector<std::string>> blocks;
+    for (const auto& e : list) {
+        std::vector<std::string> args;
+        for (const std::string& a : e.args) args.push_back(tr(a));  // names of structures and achievements too
+        std::vector<std::string> lines = wrapText(trf(e.text, args), colW);
+        lines.insert(lines.begin(), trf("Den {0}", {std::to_string(e.day)}));
+        blocks.push_back(lines);
+    }
+    // Split into pages.
+    std::vector<std::vector<int>> pages(1);
+    float used = 0;
+    const float pageH = ph - 34;
+    for (size_t i = 0; i < blocks.size(); ++i) {
+        const float h = blocks[i].size() * lineH + 6;
+        if (used + h > pageH && !pages.back().empty()) pages.push_back({}), used = 0;
+        pages.back().push_back((int)i);
+        used += h;
+    }
+    journalPage_ = std::clamp(journalPage_, 0, std::max(0, ((int)pages.size() - 1) / 2 * 2));
+    for (int side = 0; side < 2; ++side) {
+        const int pg = journalPage_ + side;
+        const float x = px + 10 + side * (pw / 2 + 2);
+        float y = py + 10;
+        if (side == 0) ui_.text(x, y, tr("Deník"), ink, 1, false), y += 14;
+        if (pg >= (int)pages.size()) continue;
+        for (int bi : pages[pg]) {
+            for (size_t l = 0; l < blocks[bi].size(); ++l) {
+                ui_.text(x, y, blocks[bi][l], l == 0 ? dim : ink, 1, false, colW);
+                y += lineH;
+            }
+            y += 6;
+        }
+        ui_.text(x + colW - 16, py + ph - 14, std::to_string(pg + 1), dim, 1, false);
+    }
+    if (list.empty()) ui_.text(px + 10, py + 30, tr("Zatím prázdný. Vydej se do světa: deník si sám zapíše, co objevíš."), ink, 1, false, colW);
+    if (ui_.button(px + 4, py + ph - 20, 20, 16, "<", journalPage_ > 0)) journalPage_ -= 2;
+    if (ui_.button(px + pw - 24, py + ph - 20, 20, 16, ">", journalPage_ + 2 < (int)pages.size())) journalPage_ += 2;
+    if (ui_.button(px + pw - 22, py + 4, 18, 16, "X")) setScreen(Screen::Pause);
 }
 
 void Game::tradeScreen() {

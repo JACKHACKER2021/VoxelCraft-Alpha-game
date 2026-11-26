@@ -432,7 +432,7 @@ static int testMenuFlow() {
 
     CHECK(game.onBack());  // playing -> pause
     frames(2);
-    tap(300, 184);   // "Uložit a odejít"
+    tap(300, kFeatures280 ? 198 : 184);   // "Uložit a odejít" (2.8.0: the journal button above it)
     CHECK(!game.onBack());            // on the title screen back closes the app
     fs::remove_all(root);
     return 0;
@@ -1370,14 +1370,14 @@ static int testStructures() {
     int bricksBefore = countBlocks(BRICKS);
     game.onBack();  // pause
     frames(2);
-    tap(300, 142);  // Struktury
+    tap(300, kFeatures280 ? 156 : 142);  // Struktury (2.8.0: the journal button above it)
     tap(436, 222);  // Umístit před sebe (the first entry: the wooden house)
     int bricksAfter = countBlocks(BRICKS);
     std::printf("structures: house placed, bricks %d -> %d\n", bricksBefore, bricksAfter);
     CHECK(bricksAfter > bricksBefore + 30);
     game.onBack();
     frames(2);
-    tap(300, 142);  // Struktury
+    tap(300, kFeatures280 ? 156 : 142);  // Struktury
     tap(164, 246);  // Vrátit zpět
     CHECK(countBlocks(BRICKS) == bricksBefore);
     tap(300, 246);  // Importovat soubor -> the platform picker
@@ -1394,7 +1394,7 @@ static int testStructures() {
     CHECK(fs::exists(root / "structures" / "nova.mcstructure") && !fs::exists(root / "structures" / "zla.vcstructure"));
     game.onBack();
     frames(2);
-    tap(300, 198);  // Uložit a odejít
+    tap(300, kFeatures280 ? 212 : 198);  // Uložit a odejít
     fs::remove_all(root);
     return 0;
 }
@@ -1875,7 +1875,7 @@ static int testEnglishEverywhere() {
     frames(2);
     game.onBack();  // pause
     frames(2);
-    tap(300, 142);  // Structures
+    tap(300, kFeatures280 ? 156 : 142);  // Structures
     game.onBack();
     frames(2);
     game.onTextResult(10, "Hoppy_Hopsy21");
@@ -1963,7 +1963,7 @@ static int testMusic() {
     // Back in the menu: the theme again.
     game.onBack();
     frames(2);
-    tap(300, 184);  // save and quit
+    tap(300, kFeatures280 ? 198 : 184);  // save and quit
     frames(2);
     CHECK(game.musicSource() == "asset:music/menu_theme.mp3");
     fs::remove_all(root);

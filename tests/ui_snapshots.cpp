@@ -269,6 +269,22 @@ int main(int argc, char** argv) {
             game.onBack();
             frames(1);
         }
+        if (kFeatures280) {
+            // 2.8.0: the journal, from the pause menu.
+            s->journal("t1", "Poprvé v Dimenzi úhelného kamene.");
+            s->journal("t2", "Našel jsem {0} na X {1}, Z {2}.", {"stanici metra", "-1604", "696"});
+            s->journal("t3", "Úspěch: {0}.", {"Liščí kamarád"});
+            s->journal("t4", "Zemřel jsem na X {0}, Z {1}.", {"120", "-48"});
+            game.onBack();
+            frames(1);
+            tap(300, 142);  // Deník
+            frames(2);
+            shot("13e_journal");
+            game.onBack();
+            frames(1);
+            game.onBack();
+            frames(1);
+        }
         // 1.5.0: reading a page of the old documents, and the fortress compass in hand.
         s->readDocument(6);
         frames(2);

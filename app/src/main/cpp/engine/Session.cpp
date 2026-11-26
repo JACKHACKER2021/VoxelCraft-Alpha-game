@@ -156,6 +156,22 @@ Session::Session(const WorldInfo& info, const PlayerState& player)
     }
     rng_ ^= info.seed | 1;
     furnaces_ = loadFurnaces(info.folder);
+    if (kFeatures280) {
+        std::ifstream jf(info.folder + "/journal.txt");
+        std::string line;
+        while (std::getline(jf, line)) {
+            const size_t a = line.find('|'), b = a == std::string::npos ? a : line.find('|', a + 1);
+            if (b == std::string::npos) continue;
+            JournalEntry e{std::atoi(line.substr(0, a).c_str()), line.substr(a + 1, b - a - 1), {}};
+            std::stringstream args(line.substr(b + 1));
+            std::string arg;
+            while (std::getline(args, arg, '\t')) e.args.push_back(arg);
+            journal_.push_back(e);
+        }
+        std::ifstream kf(info.folder + "/journal_keys.txt");
+        while (std::getline(kf, line))
+            if (!line.empty()) journalKeys_.insert(line);
+    }
     drops_.load(info.folder);
     chests_ = loadChests(info.folder);
     boats_.load(info.folder);
@@ -227,6 +243,55 @@ void Session::landFallingBlocks() {
     fallingBlocks_.clear();
 }
 
+namespace {
+const char* journalStructure(int type) {
+    switch ((WorldStructure)type) {
+        case WorldStructure::Village: return "vesnici";
+        case WorldStructure::RuinedVillage: return "zničenou vesnici";
+        case WorldStructure::Ruin: return "zříceninu";
+        case WorldStructure::Watchtower: return "strážní věž";
+        case WorldStructure::DesertTemple: return "pouštní chrám";
+        case WorldStructure::Igloo: return "iglú";
+        case WorldStructure::Shipwreck: return "vrak lodi";
+        case WorldStructure::DrownedRuins: return "utopené ruiny";
+        case WorldStructure::Mineshaft: return "opuštěný důl";
+        case WorldStructure::Dungeon: case WorldStructure::CaveDungeon: return "kobku";
+        case WorldStructure::BrokenPortal: return "rozbitý portál";
+        case WorldStructure::Camp: return "tábor";
+        case WorldStructure::RuinedStation: return "rozpadlé nádraží";
+        case WorldStructure::TrainWreck: return "vrak vlaku";
+        default: break;
+    }
+    if (type == 100) return "Bronzové síně";
+    if (type == 101) return "ztracené město";
+    if (type == 102) return "stanici metra";
+    return "stavbu";
+}
+}  // namespace
+
+void Session::journal(const std::string& key, const std::string& czechTemplate, std::vector<std::string> args) {
+    if (!kFeatures280 || !journalKeys_.insert(key).second) return;
+    journal_.push_back({(int)(state_.dayTime / 24000.0) + 1, czechTemplate, std::move(args)});
+    if (journal_.size() > 400) journal_.erase(journal_.begin());
+}
+
+void Session::journalTick(float dt) {
+    // Every two seconds: the first time in a dimension, and the structures walked into.
+    if (!kFeatures280 || (journalTimer_ -= dt) > 0) return;
+    journalTimer_ = 2;
+    static const char* const kDims[4] = {"Poprvé v Overworldu.", "Poprvé v Dimenzi úhelného kamene.", "Poprvé v Karmínové prázdnotě.", "Poprvé v Nebeské říši."};
+    journal("dim:" + std::to_string(dimIndex()), kDims[dimIndex()]);
+    if (world_ != &overworld_) return;
+    const int px = (int)std::floor(player_.pos.x), pz = (int)std::floor(player_.pos.z);
+    for (const MapMarker& m : foundMarkers_) {
+        if (std::abs(m.x - px) > 24 || std::abs(m.z - pz) > 24) continue;
+        journal("s:" + std::to_string(m.x) + ":" + std::to_string(m.z), "Našel jsem {0} na X {1}, Z {2}.", {journalStructure(m.type), std::to_string(m.x), std::to_string(m.z)});
+    }
+    int mx, mz, kind;
+    if (overworld_.nearestMetroStation(px, pz, mx, mz, kind) && std::abs(mx - px) < 16 && std::abs(mz - pz) < 16)
+        journal("m:" + std::to_string(mx) + ":" + std::to_string(mz), "Našel jsem {0} na X {1}, Z {2}.", {"stanici metra", std::to_string(mx), std::to_string(mz)});
+}
+
 void Session::save() {
     landFallingBlocks();
     state_.pos = player_.pos;
@@ -248,6 +313,16 @@ void Session::save() {
     mobs_.save(info_.folder);
     paperMaps_.save(info_.folder);
     saveTimers();
+    if (kFeatures280) {
+        std::ofstream jf(info_.folder + "/journal.txt");
+        for (const JournalEntry& e : journal_) {
+            jf << e.day << "|" << e.text << "|";
+            for (size_t i = 0; i < e.args.size(); ++i) jf << (i ? "\t" : "") << e.args[i];
+            jf << "\n";
+        }
+        std::ofstream kf(info_.folder + "/journal_keys.txt");
+        for (const std::string& k : journalKeys_) kf << k << "\n";
+    }
     saveFlow();
     {
         std::ofstream out(info_.folder + "/waypoints.txt");
@@ -344,6 +419,7 @@ void Session::openChestAt(const FurnaceKey& key) {
                 if (o[0] < 0 || o[1] < 0) openChest2 = key, openChest = other;
                 else openChest2 = other;
                 hasChest2 = true;
+                if (kFeatures280) achieve("big_chest");
                 break;
             }
     }
@@ -1559,6 +1635,8 @@ void Session::kill() {
 
 void Session::respawn() {
     riding_ = -1;
+    if (dead_) journal("death:" + std::to_string((int)state_.dayTime) + ":" + std::to_string((int)player_.pos.x), "Zemřel jsem na X {0}, Z {1}.",
+                       {std::to_string((int)std::floor(player_.pos.x)), std::to_string((int)std::floor(player_.pos.z))});
     if (survival() && !info_.keepInventory && dead_) {
         // The inventory scatters where the player died and can be collected again.
         for (int i = 0; i < kInventorySize; ++i) {
@@ -1923,6 +2001,7 @@ void Session::touchUp(int id, float x, float y, double time) {
                     Mob& f = mobs_.mobs()[mob];
                     f.tamed = true, f.panic = 0, f.sitting = false, f.health = mobInfo(f.type).health;
                     if (kFeatures270) f.collar = 14;  // 2.7.0: a red collar to start with
+                    if (kFeatures280) achieve("tame_fox");
                     if (survival() && --heldNow.count == 0) heldNow = {};
                     hand_.use();
                     sound(Sound::Eat);
@@ -1930,6 +2009,7 @@ void Session::touchUp(int id, float x, float y, double time) {
                 } else if (kFeatures270 && mob >= 0 && mobs_.mobs()[mob].tamed && isDye(heldNow.id)) {
                     // 2.7.0: a dye colours the tamed fox's collar.
                     mobs_.mobs()[mob].collar = (int8_t)(heldNow.id - DYE);
+                    if (kFeatures280) achieve("dye_collar");
                     if (survival() && --heldNow.count == 0) heldNow = {};
                     hand_.use();
                     if (onMessage) onMessage(tr("Obojek má novou barvu."));
@@ -2928,7 +3008,10 @@ void Session::useItem(const RayHit& hit) {
             // 2.7.0: honey waxes steel (no more rust); an axe scrapes the wax off, or the rust down a stage.
             const int stage = steelStage(block);
             ItemId to = block;
-            if (held.id == HONEY_BALL && !steelWaxed(block)) to = steelVariant(stage, true);
+            if (held.id == HONEY_BALL && !steelWaxed(block)) {
+                to = steelVariant(stage, true);
+                if (kFeatures280) achieve("wax_steel");
+            }
             else if (held.id != HONEY_BALL && steelWaxed(block)) to = steelVariant(stage, false);
             else if (held.id != HONEY_BALL && stage > 0) to = steelVariant(stage - 1, false);
             if (to != block) {
@@ -3392,6 +3475,7 @@ void Session::useItem(const RayHit& hit) {
         mobs_.spawn(MobType::Snowman, dimIndex(), Vec3(x + 0.5f, (float)(y - 2), z + 0.5f));
         mobs_.mobs().back().yaw = player_.yaw + kPi;
         particles_.spawnBurst(w, x, y - 1, z, SNOW_BLOCK);
+        if (kFeatures280) achieve("build_snowman");
         if (onMessage) onMessage(tr("Sněhulák ožil! Bude házet koule po příšerách."));
     }
     if (survival()) state_.inventory.removeOne(state_.selectedSlot);
@@ -3856,6 +3940,7 @@ void Session::travelThroughPortal() {
 // ---------------------------------------------------------------- frame
 
 void Session::update(float dt, double time, float guiW, float guiH, const Settings& settings) {
+    journalTick(dt);
     if (kFeatures250 && world_ == &overworld_ && (int)(time * 2) != (int)((time - dt) * 2)) {
         // 2.5.0: a subway station the player stands in (deep down near its entrance) counts as found.
         int ex, ez, kind;

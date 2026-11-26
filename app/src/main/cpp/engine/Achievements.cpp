@@ -1,4 +1,5 @@
 #include "Achievements.h"
+#include "Blocks.h"
 
 namespace vc {
 
@@ -62,12 +63,23 @@ const Achievement kAchievements[] = {
     // 1.7.0 preview
     {"celestial_reach", "Nad oblaky", "Vstup do Nebeské říše.", 120},
     {"celestial_portal", "Brána do nebes", "Vlož dvanáct hlav Karmínového muže do rámu nebeského portálu.", 100},
+    // 2.8.0 preview: the things of 2.6.0 and 2.7.0 (counted only in the preview until 2.8.0 is out)
+    {"tame_fox", "Liščí kamarád", "Ochoč lišáka syrovým masem.", 40},
+    {"dye_collar", "Nový obojek", "Obarvi lišákovi obojek barvivem.", 20},
+    {"build_snowman", "Sněhulák", "Postav sněhuláka: dýni na dva sněhové bloky.", 30},
+    {"wear_backpack", "Na zádech", "Nos batoh na zádech.", 30},
+    {"celestium_backpack", "Nebeský nosič", "Vylepši batoh až na celestiový.", 150},
+    {"full_wallet", "Plná peněženka", "Naplň peněženku 500 věcmi.", 60},
+    {"big_chest", "Velká truhla", "Otevři dvojitou truhlu.", 20},
+    {"wax_steel", "Proti rzi", "Navoskuj ocel medem.", 30},
+    {"steel_mix", "Ocelář", "Upeč ocel z ocelové směsi.", 40},
 };
-const int kAchievementCount = sizeof(kAchievements) / sizeof(kAchievements[0]);
+constexpr int kAchievements280 = 9;
+const int kAchievementCount = (int)(sizeof(kAchievements) / sizeof(kAchievements[0])) - (kFeatures280 ? 0 : kAchievements280);
 
 const Achievement* findAchievement(const std::string& id) {
-    for (const Achievement& a : kAchievements)
-        if (id == a.id) return &a;
+    for (int i = 0; i < kAchievementCount; ++i)
+        if (id == kAchievements[i].id) return &kAchievements[i];
     return nullptr;
 }
 
