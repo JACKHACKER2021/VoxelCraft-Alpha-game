@@ -704,6 +704,7 @@ const TileSource kSources[] = {
     /* backpack_4       */ {-1, "items", {"vc_hardium_backpack"}, 0},
     /* backpack_5       */ {-1, "items", {"vc_celestium_backpack"}, 0},
     /* steel_mix        */ {-1, "items", {"vc_steel_mix"}, 0},
+    /* hazard           */ {-1, "blocks", {"vc_hazard_stripes"}, 0},
     /* train_tex_14     */ {-1, "entity", {"vc_train_tex_14"}, 0},
     /* train_tex_15     */ {-1, "entity", {"vc_train_tex_15"}, 0},
     /* train_tex_16     */ {-1, "entity", {"vc_train_tex_16"}, 0},

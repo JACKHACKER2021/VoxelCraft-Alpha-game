@@ -2838,6 +2838,12 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
                     }
                 }
         }
+        // Yellow and black hazard stripes.
+        for (int y = 0; y < 16; ++y)
+            for (int x = 0; x < 16; ++x) {
+                const int n = (int)(hash3(x, y, T_HAZARD, 3) % 9) - 4;
+                a.put(T_HAZARD, x, y, (((x + y) / 4) % 2 ? Rgb{36, 34, 32} : Rgb{240, 200, 40}).plus(n));
+            }
         // Ingots, style A: a bevelled bar with a bright top and a shine.
         static const char* const kIngot[16] = {"................", "................", "................", "................", "................", "......4444......", ".....411114.....", "....41111114....",
                                                "...4222222223...", "...4222222223...", "...4222222223...", "....33333333....", "................", "................", "................", "................"};

@@ -371,6 +371,11 @@ void buildChunkMesh(const World& world, const Chunk& chunk, ChunkMesh& out) {
                             float block = isEmissive(id) ? 1.0f
                                                          : fd.shade * (onEdge ? glow.at(x + fd.dx, y + fd.dy, z + fd.dz) : glow.at(x, y, z));
                             int tile = tileFor(id, (Face)f);
+                            if (kFeatures270 && isBufferStop(id)) {
+                                // 2.7.0: each part of the buffer stop its own material.
+                                static const int kPart[7] = {T_BUFFER_STOP, T_CONCRETE + 8, T_HAZARD, T_BUFFER_STOP, T_BUFFER_STOP, T_STEEL_BLOCK, T_STEEL_BLOCK};
+                                tile = b == 0 ? (f == F_TOP ? ((id - BUFFER_STOP) % 2 ? T_RAIL_EW : T_RAIL_NS) : T_BUFFER_STOP) : kPart[std::min(b, 6)];
+                            }
                             if (isCable(id)) {
                                 // The wire itself (the item icon keeps the cross).
                                 tile = cableOn(id) ? T_CABLE_LINE_ON : T_CABLE_LINE;

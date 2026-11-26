@@ -815,6 +815,7 @@ enum Tile : uint16_t {
     T_WALLET,
     T_BACKPACK, T_BACKPACK_LAST = T_BACKPACK + 5,
     T_STEEL_MIX,
+    T_HAZARD,  // 2.7.0: yellow and black stripes (the buffer stop)
     T_TRAIN_TEX2, T_TRAIN_TEX2_LAST = T_TRAIN_TEX2 + 15,  // 2.3.0 preview build 7: more train colours (the subway)
     T_COUNT
 };

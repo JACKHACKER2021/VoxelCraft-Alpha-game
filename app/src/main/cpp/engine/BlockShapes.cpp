@@ -304,6 +304,19 @@ int blockBoxes(const World& world, int x, int y, int z, ItemId id, bool collisio
             return b;
         };
         int count = 0;
+        if (kFeatures270) {
+            // 2.7.0: a concrete block across the track, a yellow-and-black band facing the train and two
+            // hydraulic buffers with steel plates (their tiles: bufferStopTile).
+            const float u = 1 / 16.0f;
+            out[count++] = {0, 0, 0, 1, u, 1};                                   // the track bed with its rails
+            out[count++] = rot({1 * u, u, 0, 15 * u, 9 * u, 7 * u});           // the block
+            out[count++] = rot({1 * u, 6 * u, 7 * u, 15 * u, 9 * u, 7.5f * u}); // the band
+            out[count++] = rot({3 * u, 3 * u, 7 * u, 5 * u, 5 * u, 10 * u});    // the buffers
+            out[count++] = rot({11 * u, 3 * u, 7 * u, 13 * u, 5 * u, 10 * u});
+            out[count++] = rot({2.5f * u, 2.5f * u, 10 * u, 5.5f * u, 5.5f * u, 10.8f * u});  // their plates
+            out[count++] = rot({10.5f * u, 2.5f * u, 10 * u, 13.5f * u, 5.5f * u, 10.8f * u});
+            return count;
+        }
         out[count++] = {0, 0, 0, 1, 1 / 16.0f, 1};                       // the track bed
         out[count++] = rot({2 / 16.0f, 1 / 16.0f, 2 / 16.0f, 4 / 16.0f, 12 / 16.0f, 4 / 16.0f});   // two posts
         out[count++] = rot({12 / 16.0f, 1 / 16.0f, 2 / 16.0f, 14 / 16.0f, 12 / 16.0f, 4 / 16.0f});
