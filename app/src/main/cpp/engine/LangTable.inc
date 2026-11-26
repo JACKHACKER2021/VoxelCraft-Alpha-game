@@ -1485,6 +1485,7 @@
 {"Celestium Backpack", "Celestiový batoh", "Mochila de celestio", "Целестиевый рюкзак", "Celestium-Rucksack"},
 {"Backpack", "Batoh", "Mochila", "Рюкзак", "Rucksack"},
 {"Only a backpack goes on the back", "Na záda patří jen batoh", "En la espalda solo va una mochila", "На спину — только рюкзак", "Auf den Rücken gehört nur ein Rucksack"},
+{"Steel Mix", "Ocelová směs", "Mezcla de acero", "Стальная смесь", "Stahlmischung"},
 {"Spawn Egg: Hogman", "Vejce: Prasák", "Huevo: Cerdo guerrero", "Яйцо: Свинолюд", "Spawn-Ei: Schweinemann"},
 {"Hogman", "Prasák", "Cerdo guerrero", "Свинолюд", "Schweinemann"},
 {"Light in the Dark", "Světlo do tmy", "Luz en la oscuridad", "Свет во тьме", "Licht im Dunkeln"},

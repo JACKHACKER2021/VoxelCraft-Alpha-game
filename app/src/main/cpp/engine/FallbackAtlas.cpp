@@ -500,6 +500,43 @@ const char* const kSprite_bucket[16] = {
     "................",
     "................",
 };
+// 2.7.0: the new ingots: a bar seen from above at an angle: a bright top, a front face, a dark end and an
+// outline. Iron is plain and matte, bronze has a warm sheen, steel a cool bright edge and a stamped mark.
+void drawIngot270(Canvas& a, int tile, Rgb base, int kind) {
+    static const char* const kBar[16] = {
+        "................",
+        "................",
+        "................",
+        "................",
+        "......44444444..",
+        ".....4111111154.",
+        "....41111111134.",
+        "...411111111334.",
+        "..4555555553334.",
+        "..422222222333 4",
+        "..422222222334..",
+        "..42222222234...",
+        "..4444444444....",
+        "................",
+        "................",
+        "................"};
+    for (int y = 0; y < 16; ++y)
+        for (int x = 0; x < 16; ++x) {
+            const char c = kBar[y][x];
+            if (c == '.' || c == ' ') { a.clear(tile, x, y); continue; }
+            const int n = (int)(hash3(x, y, tile, 31) % 7) - 3;
+            Rgb col = base;
+            if (c == '1') col = base.scaled(kind == 0 ? 1.12f : 1.25f);
+            else if (c == '2') col = base.scaled(0.92f);
+            else if (c == '3') col = base.scaled(0.62f);
+            else if (c == '4') col = base.scaled(0.32f);
+            else if (c == '5') col = kind == 2 ? Rgb{236, 244, 255} : base.scaled(1.4f);
+            a.put(tile, x, y, col.plus(kind == 0 ? n * 2 : n));
+        }
+    if (kind == 1) for (int x = 5; x <= 9; ++x) a.put(tile, x, 6, base.scaled(1.5f));   // bronze: a warm sheen on top
+    if (kind == 2) { a.put(tile, 6, 10, base.scaled(0.6f)); a.put(tile, 7, 10, base.scaled(0.6f)); a.put(tile, 6, 11, base.scaled(0.6f)); }  // steel: the stamp
+}
+
 const char* const kSprite_eggA[16] = {  // 2.6.0: the new spawn egg: a round egg in the creature's colours, spotted
     "................",
     "......1111......",
@@ -1597,9 +1634,9 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
                 a.sprite(tile, shapes[kind], colors[mat]);
                 break;
             }
-            case T_IRON_INGOT: a.sprite(tile, kSprite_ingot, kIron); break;
-            case T_BRONZE_INGOT: a.sprite(tile, kSprite_ingot, kBronze); break;
-            case T_STEEL_INGOT: a.sprite(tile, kSprite_ingot, kSteel); break;
+            case T_IRON_INGOT: if (kFeatures270) drawIngot270(a, tile, kIron, 0); else a.sprite(tile, kSprite_ingot, kIron); break;
+            case T_BRONZE_INGOT: if (kFeatures270) drawIngot270(a, tile, kBronze, 1); else a.sprite(tile, kSprite_ingot, kBronze); break;
+            case T_STEEL_INGOT: if (kFeatures270) drawIngot270(a, tile, kSteel, 2); else a.sprite(tile, kSprite_ingot, kSteel); break;
             case T_RUBY: a.sprite(tile, kSprite_gem, kRuby, {255, 170, 186}); break;
             case T_OAK_DOOR_ITEM: a.sprite(tile, kSprite_door, kWood, {60, 60, 64}); break;
             case T_IRON_DOOR_ITEM: a.sprite(tile, kSprite_door, kIron, {90, 90, 96}); break;
@@ -3326,6 +3363,15 @@ void drawUpdate157(Canvas& a, int tile) {
             static const Rgb kMain[6] = {{140, 88, 48}, {150, 160, 172}, {150, 160, 172}, {196, 124, 60}, {60, 70, 82}, {210, 225, 250}};
             static const Rgb kAcc[6] = {{90, 55, 30}, {95, 100, 110}, {196, 124, 60}, {200, 40, 56}, {110, 210, 190}, {120, 170, 255}};
             a.sprite(tile, kBag, kMain[tile - T_BACKPACK], kAcc[tile - T_BACKPACK]);
+            return;
+        }
+        case T_STEEL_MIX: {
+            // 2.7.0: a heap of grey iron filings and black coal grit.
+            static const char* const kMix[16] = {
+                "................", "................", "................", "................", "................",
+                "......1311......", ".....131131.....", "....11311131....", "...1311131131...", "..131113111311..",
+                "..113131113131..", "...1111111111...", "................", "................", "................", "................"};
+            a.sprite(tile, kMix, {170, 172, 176}, {40, 40, 44});
             return;
         }
         case T_EGG_HOGMAN: a.sprite(tile, eggArt(kSprite_egg15), {226, 150, 140}, {60, 200, 220}); return;

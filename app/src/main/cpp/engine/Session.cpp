@@ -1788,6 +1788,8 @@ void Session::touchDown(int id, float x, float y, double time) {
         sound(Sound::Click);
     } else if (in(l.hotbarX + l.slot * 9, l.hotbarY, l.slot, l.slot)) {
         t->kind = Touch::InventoryButton;
+    } else if (kFeatures270 && isBackpack(state_.back.id) && in(l.hotbarX + l.slot * 9, l.hotbarY - l.slot - 2, l.slot, l.slot)) {
+        t->kind = Touch::BackpackButton;  // 2.7.0: the backpack on the back, opened right from the game
     } else if (in(l.pauseX, l.pauseY, l.pauseSize, l.pauseSize)) {
         t->kind = Touch::Pause;
     } else if (in(l.chatX, l.pauseY, l.pauseSize, l.pauseSize)) {
@@ -2008,6 +2010,9 @@ void Session::touchUp(int id, float x, float y, double time) {
             break;
         case Touch::InventoryButton:
             if (in(l.hotbarX + l.slot * 9, l.hotbarY, l.slot, l.slot)) wantsInventory = true;
+            break;
+        case Touch::BackpackButton:
+            if (in(l.hotbarX + l.slot * 9, l.hotbarY - l.slot - 2, l.slot, l.slot)) openBackpack(state_.back);
             break;
         case Touch::Pause:
             if (in(l.pauseX, l.pauseY, l.pauseSize, l.pauseSize)) (kClassicEdition && oldMode() ? wantsInventory : wantsPause) = true;
@@ -5102,6 +5107,13 @@ void Session::drawHud(Ui& ui) const {
     for (const Touch& t : touches_) invHeld |= t.id >= 0 && t.kind == Touch::InventoryButton;
     ui.hudButton(l.hotbarX + l.slot * 9 + 1, l.hotbarY, l.slot, l.slot, invHeld);
     ui.textCentered(l.hotbarX + l.slot * 9.5f + 1, l.hotbarY + 6, "...", theme::kTextBright);
+    if (kFeatures270 && isBackpack(state_.back.id)) {
+        // 2.7.0: the backpack button above the inventory button.
+        bool bagHeld = false;
+        for (const Touch& t : touches_) bagHeld |= t.id >= 0 && t.kind == Touch::BackpackButton;
+        ui.hudButton(l.hotbarX + l.slot * 9 + 1, l.hotbarY - l.slot - 2, l.slot, l.slot, bagHeld);
+        ui.item(l.hotbarX + l.slot * 9 + 3, l.hotbarY - l.slot, l.slot - 4, state_.back.id);
+    }
 
     // Name of the item just selected, fading out.
     const ItemStack& held = state_.inventory.slots[state_.selectedSlot];

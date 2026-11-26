@@ -607,6 +607,7 @@ const char* kUpdate260 = R"({
 
 const char* kUpdate270 = R"({
   "recipes": [
+    {"type": "shapeless", "ingredients": ["iron_ingot", "coal"], "result": "steel_mix"},
     {"type": "shaped", "pattern": ["LSL", "L.L", "LLL"], "key": {"L": "leather", "S": "string"}, "result": "wallet"},
     {"type": "shaped", "pattern": ["LSL", "LCL", "LLL"], "key": {"L": "leather", "S": "string", "C": "chest"}, "result": "leather_backpack"},
     {"type": "shaped", "pattern": [".I.", "IBI", ".I."], "key": {"I": "steel_ingot", "B": "leather_backpack"}, "result": "steel_backpack"},
@@ -614,6 +615,9 @@ const char* kUpdate270 = R"({
     {"type": "shaped", "pattern": [".I.", "IBI", ".I."], "key": {"I": "ruby", "B": "steelbronze_backpack"}, "result": "bronzeruby_backpack"},
     {"type": "shaped", "pattern": [".I.", "IBI", ".I."], "key": {"I": "hardium", "B": "bronzeruby_backpack"}, "result": "hardium_backpack"},
     {"type": "shaped", "pattern": [".I.", "IBI", ".I."], "key": {"I": "celestium", "B": "hardium_backpack"}, "result": "celestium_backpack"}
+  ],
+  "smelting": [
+    {"input": "steel_mix", "output": "steel_ingot"}
   ]
 })";
 

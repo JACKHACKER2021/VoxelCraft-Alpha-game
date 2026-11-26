@@ -461,12 +461,12 @@ static int testCrafting() {
     g = grid({PLANKS, PLANKS, AIR, PLANKS, STICK, AIR, AIR, STICK, AIR});
     CHECK(matchRecipe(g.data(), 3).id == WOOD_AXE);
     g = grid({AIR, IRON_INGOT, IRON_INGOT, AIR, STICK, IRON_INGOT, AIR, STICK, AIR});  // mirrored axe
-    CHECK(matchRecipe(g.data(), 3).id == IRON_AXE);
+    CHECK(kFeatures270 ? matchRecipe(g.data(), 3).empty() : matchRecipe(g.data(), 3).id == IRON_AXE);  // 2.7.0: no iron tools
     g = grid({AIR, AIR, PLANKS, AIR, AIR, STICK, AIR, AIR, STICK});
     CHECK(matchRecipe(g.data(), 3).id == WOOD_SHOVEL);
     g = grid({COBBLESTONE, COBBLESTONE, COBBLESTONE, COBBLESTONE, AIR, COBBLESTONE, COBBLESTONE, COBBLESTONE, COBBLESTONE});
     CHECK(matchRecipe(g.data(), 3).id == FURNACE);
-    g = grid({FLINT, AIR, AIR, AIR, AIR, AIR, AIR, AIR, IRON_INGOT});
+    g = grid({FLINT, AIR, AIR, AIR, AIR, AIR, AIR, AIR, kFeatures270 ? (ItemId)STEEL_INGOT : (ItemId)IRON_INGOT});
     CHECK(matchRecipe(g.data(), 3).id == FLINT_AND_STEEL);
     g = grid({COBBLESTONE, COBBLESTONE, COBBLESTONE, AIR, STICK, AIR, AIR, AIR, AIR});  // pickaxe without second stick
     CHECK(matchRecipe(g.data(), 3).empty());
@@ -614,7 +614,7 @@ static int testJsonAndPacks() {
     std::vector<std::string> warn;
     GenConfig round = GenConfig::fromJson(def.toJson(), &warn);
     CHECK(warn.empty() && round.biomes.size() == 8 && round.biomes[2].surface == def.biomes[2].surface);
-    CHECK(RecipeBook::defaults().shaped.size() == 12 + 35 + 6 + 2 + 16 + 6 + 24 + 16 + 3 + 10 + 12 + 5 + 3 + 8 + 7 + 1 + 10 + 33 + 16 + 11 + 7 + 18 + 8 + 2 + 5 + (kFeatures250 ? 3 : 0) + (kFeatures260 ? 4 : 0) + (kFeatures270 ? 7 : 0) && RecipeBook::defaults().shapeless.size() == 2 + 4 + 1 + 1 + 6 + 1 + 1 + 3 + 1 + 3 + 3 + 1 + 2 + 49 + 1 + 1 + 4 + (kFeatures250 ? 3 : 0) + (kFeatures260 ? 10 : 0));  // 1.8.0: concrete, gray planks, 10 stairs and slabs  // 1.5.7: + book and quill; 1.6.0: + 3: torch, shield, lamp; crimson planks  // 1.5.1: no planks from Eye Logs
+    CHECK(RecipeBook::defaults().shaped.size() == 12 + 35 + 6 + 2 + 16 + 6 + 24 + 16 + 3 + 10 + 12 + 5 + 3 + 8 + 7 + 1 + 10 + 33 + 16 + 11 + 7 + 18 + 8 + 2 + 5 + (kFeatures250 ? 3 : 0) + (kFeatures260 ? 4 : 0) + (kFeatures270 ? 7 - 5 : 0) && RecipeBook::defaults().shapeless.size() == 2 + 4 + 1 + 1 + 6 + 1 + 1 + 3 + 1 + 3 + 3 + 1 + 2 + 49 + 1 + 1 + 4 + (kFeatures250 ? 3 : 0) + (kFeatures260 ? 10 : 0) + (kFeatures270 ? 1 : 0));  // 1.8.0: concrete, gray planks, 10 stairs and slabs  // 1.5.7: + book and quill; 1.6.0: + 3: torch, shield, lamp; crimson planks  // 1.5.1: no planks from Eye Logs  // 2.7.0: +7 (wallet, backpacks) -5 (iron things no longer made)
 
     // Biomes really show up in the world: deserts are sandy, forests have trees.
     World w(1234, Dimension::Overworld);
@@ -3581,7 +3581,7 @@ static int testUpdate15() {
         CHECK(matchRecipe(fence, 3).id == SPRUCE_FENCE && matchRecipe(fence, 3).count == 3);
         ItemStack brush[9] = {};
         brush[1] = {FEATHER, 1};
-        brush[4] = {IRON_INGOT, 1};
+        brush[4] = {kFeatures270 ? (ItemId)STEEL_INGOT : (ItemId)IRON_INGOT, 1};
         brush[7] = {STICK, 1};
         CHECK(matchRecipe(brush, 3).id == BRUSHER);
         CHECK(recipes().smelting.count(POWERSTONE_BRICKS) && recipes().smelting.at(POWERSTONE_BRICKS) == CRACKED_POWERSTONE_BRICKS);
@@ -4169,7 +4169,7 @@ static int testWorld159() {
     }
     size_t total = 0;
     for (int c = 0; c < CatCount; ++c) total += creativeCategoryItems(c).size();
-    CHECK(total == (size_t)kCreativeItemCount + 7 + (kFeatures250 ? 6 : 0) + (kFeatures260 ? 15 : 0) + (kFeatures270 ? 8 : 0) && creativeGroup(STAINED_GLASS) && !creativeGroup(STONE));
+    CHECK(total == (size_t)kCreativeItemCount + 7 + (kFeatures250 ? 6 : 0) + (kFeatures260 ? 15 : 0) + (kFeatures270 ? 9 : 0) && creativeGroup(STAINED_GLASS) && !creativeGroup(STONE));
     return 0;
 }
 

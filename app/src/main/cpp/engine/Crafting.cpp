@@ -1,9 +1,11 @@
+#include <cstring>
 #include "Crafting.h"
 #include "Lang.h"
 
 #include "GenConfig.h"
 
 #include <algorithm>
+#include "Items.h"
 #include <string>
 #include <vector>
 
@@ -97,6 +99,8 @@ void RecipeBook::addJson(const Json& doc, std::vector<std::string>* w) {
     }
 }
 
+static void steelInsteadOfIron(RecipeBook& b);
+
 const RecipeBook& RecipeBook::defaults() {
     static const RecipeBook book = [] {
         RecipeBook b;
@@ -106,13 +110,39 @@ const RecipeBook& RecipeBook::defaults() {
             std::string err;
             if (Json::parse(text, j, err)) b.addJson(j);
         }
+        steelInsteadOfIron(b);
         return b;
     }();
     return book;
 }
 
 const RecipeBook& recipes() { return current(); }
-void setRecipes(RecipeBook book) { current() = std::move(book); }
+// 2.7.0: iron is no longer crafted into anything: everything that took iron ingots takes steel now; iron only
+// goes with coal into the steel mix (smelted into steel). Iron things themselves go in 3.0.0.
+static void steelInsteadOfIron(RecipeBook& b) {
+    if (!kFeatures270) return;
+    // Iron tools, armour and other iron things are no longer made at all (steel has its own).
+    auto ironThing = [](ItemId id) { return std::strstr(itemKey(id), "iron") != nullptr; };
+    auto usesIron = [](const std::vector<ItemId>& v) { return std::find(v.begin(), v.end(), (ItemId)IRON_INGOT) != v.end(); };
+    b.shaped.erase(std::remove_if(b.shaped.begin(), b.shaped.end(), [&](const ShapedRecipe& r) { return usesIron(r.cells) && ironThing(r.result.id); }), b.shaped.end());
+    b.shapeless.erase(std::remove_if(b.shapeless.begin(), b.shapeless.end(), [&](const ShapelessRecipe& r) {
+        return r.result.id != STEEL_MIX && usesIron(r.ingredients) && ironThing(r.result.id); }), b.shapeless.end());
+    for (ShapedRecipe& r : b.shaped)
+        if (r.result.id != STEEL_MIX)
+            for (ItemId& c : r.cells)
+                if (c == IRON_INGOT) c = STEEL_INGOT;
+    for (ShapelessRecipe& r : b.shapeless)
+        if (r.result.id != STEEL_MIX) {
+            for (ItemId& c : r.ingredients)
+                if (c == IRON_INGOT) c = STEEL_INGOT;
+            std::sort(r.ingredients.begin(), r.ingredients.end());
+        }
+}
+
+void setRecipes(RecipeBook book) {
+    steelInsteadOfIron(book);
+    current() = std::move(book);
+}
 
 namespace {
 // 1.9.0 build 3: every wood works for the basic wooden things (crafting table, sticks, chest,

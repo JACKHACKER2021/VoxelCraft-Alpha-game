@@ -252,7 +252,7 @@ public:
 private:
     struct Touch {
         int id = -1;
-        enum Kind { None, DPad, Look, Jump, FlyDown, Hotbar, InventoryButton, Pause, Chat, Map, Sneak, Joystick, Camera } kind = None;
+        enum Kind { None, DPad, Look, Jump, FlyDown, Hotbar, InventoryButton, BackpackButton, Pause, Chat, Map, Sneak, Joystick, Camera } kind = None;
         float startX = 0, startY = 0, x = 0, y = 0, lastX = 0, lastY = 0;
         double startTime = 0, lastBreak = 0;
         bool moved = false;
