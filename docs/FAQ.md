@@ -155,6 +155,8 @@ Nebo založ nový **Issue** přímo tady na GitHubu ([Issues](../../../issues)) 
 
 ### ⛓️ Proč bylo odstraněno železo?
 
+![Ingoty a hardiová ruda](img/faq/iron.jpg)
+
 - Železo se od 2.7.0 **na nic nevyrábí**. Ve všech receptech je místo něj **ocel**.
 - Železný ingot dáš s uhlím do výroby a vznikne **ocelová směs**. V peci z ní je ocel.
 - Železné nástroje a brnění se už nevyrábí. Úplně zmizí ve **3.0.0**. VoxelCraft je vlastní hra a nechce kopírovat cizí sady nástrojů.
@@ -162,15 +164,55 @@ Nebo založ nový **Issue** přímo tady na GitHubu ([Issues](../../../issues)) 
 
 ### 🎨 Proč většina věcí dostala nový vzhled?
 
+![Nové textury 2.7.0](img/faq/redesign.jpg)
+
 - Hra roste a staré obrázky z prvních verzí vedle nových věcí působily chudě.
 - Ve 2.7.0 se překreslila **vajíčka** (každý tvor má svůj vzor), **maso**, **šíp**, **provázek**, **ingoty**, **hardiová ruda**, **bronzové dveře** a **zarážedlo na koleji**.
 - Staré textury jsou schované v `archived/ui_2.6.0/` a hrají dál ve verzi 2.6.0, třeba na natáčení.
 
 ### 🖌️ Proč byly textury dřív tak jednoduché?
 
+![Textury do 2.6.0](img/faq/old_textures.jpg)
+
 - VoxelCraft nepoužívá žádné obrázky od Mojangu. Všechny textury **kreslí přímo kód hry** pixel po pixelu.
 - V prvních verzích šlo hlavně o to, aby věci fungovaly. Obrázky byly rychlé, s pár barvami a tečkami.
 - Teď je čas je vyladit: stínování, obrys, odlesk a vzor, který je hned poznat.
+
+### 🎒 Jak fungují batohy?
+
+![Batohy na zádech](img/faq/backpacks.jpg)
+
+- Šest úrovní: **kůže, ocel, ocelobronz, bronzorubín, hardium, celestium**. Od 9 do 54 míst.
+- Uvnitř je **výroba** (2×2, od ocelobronzu 3×3) a od bronzorubínu i **pec**. Tlačítka jsou v řádku pod místy batohu.
+- Batoh polož do slotu pro hrudní brnění: přesune se **na záda** a brnění můžeš nasadit přes něj. Ve hře ho otevřeš tlačítkem nad „…“.
+- Vylepšení: batoh doprostřed a kolem 4× kov další úrovně. **Obsah zůstane.**
+
+![Okno batohu](img/faq/backpack_window.jpg)
+
+### 🧩 Jak funguje nové modování?
+
+![Správce doplňků](img/faq/addons.jpg)
+
+- Menu > **Módy a balíčky** otevře **Správce doplňků** se záložkami **Doplňky, Behavior, Resource, Tvůrce, Obchod**.
+- Barevný proužek ukazuje původ: zelená VC, oranžová Java, modrá Bedrock, zlatá Obchod, červená chyba.
+- **+ Importovat** vezme `.vcaddon`, `.vcpack`, `.mcaddon`, `.mcpack`, `.jar` i `.zip`.
+- **Behavior Voxel** je chování (bloky, předměty, moby, recepty, svět), **Resource Voxel** je vzhled (textury, atlasy, modely, shadery).
+
+### 🔄 Co se stane s módem z Bedrocku nebo Javy?
+
+![Převod Bedrock > VC](img/faq/bedrock.jpg)
+
+- Hra ho **převede do VC jazyka**: bloky, předměty, moby, textury, atlasy `terrain_texture.json` a `item_texture.json`, z `geo.json` pozná tělo tvora.
+- Ke každému souboru napíše, co se stalo: **+ převedeno, ! částečně, x nejde**. Najdeš to pod tlačítkem **Chyby**. Nic už neselže potichu.
+- **Kód** (Java třídy, Bedrock skripty) spustit nejde a **UI** cizích módů se nepřebírá. Takový doplněk má štítek **un-UI**.
+
+### 🖌️ Jak si udělám vlastní blok nebo moba?
+
+![Tvůrce](img/faq/creator.jpg)
+
+- Záložka **Tvůrce**: přepni **Blok** nebo **Mob**, napiš název, nastav tvrdost a světlo (blok) nebo tělo a životy (mob).
+- Namaluj texturu 16×16 **štětcem** nebo **výplní** z 12 barev a stiskni **Uložit do .vcaddon**.
+- Všechno se uloží do doplňku **Moje tvorba** a hned je ve hře.
 
 ### 🐾 Jaké chyby měli tvorové a kaktusy?
 
@@ -326,6 +368,8 @@ Or open a new **issue** right here on GitHub ([Issues](../../../issues)) and wri
 
 ### ⛓️ Why was iron removed?
 
+![Ingots and hardium ore](img/faq/iron.jpg)
+
 - From 2.7.0 iron is **not made into anything**; every recipe takes **steel** instead.
 - An iron ingot and coal make a **steel mix**, which the furnace turns into steel.
 - Iron tools and armour are no longer made and go completely in **3.0.0**: VoxelCraft is its own game and does not copy other games' tool sets.
@@ -333,15 +377,55 @@ Or open a new **issue** right here on GitHub ([Issues](../../../issues)) and wri
 
 ### 🎨 Why did most things get a new look?
 
+![The new textures of 2.7.0](img/faq/redesign.jpg)
+
 - The game grew and the pictures of the first versions looked poor next to the new things.
 - 2.7.0 redraws the **spawn eggs** (a pattern per creature), **meat**, **arrow**, **string**, **ingots**, **hardium ore**, **bronze door** and the **buffer stop**.
 - The old textures are kept in `archived/ui_2.6.0/` and still play in 2.6.0, for filming.
 
 ### 🖌️ Why were the textures so simple before?
 
+![The textures up to 2.6.0](img/faq/old_textures.jpg)
+
 - VoxelCraft uses no Mojang pictures: **the game's code draws every texture** pixel by pixel.
 - The first versions were about making things work; the pictures were quick, a few colours and dots.
 - Now is the time to polish them: shading, an outline, a shine and a pattern you recognise at once.
+
+### 🎒 How do backpacks work?
+
+![Backpacks on the back](img/faq/backpacks.jpg)
+
+- Six tiers: **leather, steel, steel-bronze, bronze-ruby, hardium, celestium**, from 9 to 54 slots.
+- Inside there is **crafting** (2×2, 3×3 from steel-bronze) and from bronze-ruby a **furnace**; the buttons are in a row under the slots.
+- Put a backpack on the chestplate slot: it goes **on the back** and a chestplate fits over it. In the game the button above "…" opens it.
+- Upgrade: the backpack in the middle and 4 metals of the next tier around it. **The contents stay.**
+
+![The backpack window](img/faq/backpack_window.jpg)
+
+### 🧩 How does the new modding work?
+
+![The add-on manager](img/faq/addons.jpg)
+
+- Menu > **Mods and Packs** opens the **Add-on Manager** with the tabs **Add-ons, Behavior, Resource, Creator, Store**.
+- The coloured stripe shows the origin: green VC, orange Java, blue Bedrock, gold Store, red error.
+- **+ Import** takes `.vcaddon`, `.vcpack`, `.mcaddon`, `.mcpack`, `.jar` and `.zip`.
+- **Behavior Voxel** is the behaviour (blocks, items, mobs, recipes, the world), **Resource Voxel** the look (textures, atlases, models, shaders).
+
+### 🔄 What happens to a Bedrock or Java mod?
+
+![Bedrock > VC conversion](img/faq/bedrock.jpg)
+
+- The game **converts it into the VC language**: blocks, items, mobs, textures, the `terrain_texture.json` and `item_texture.json` atlases, and from `geo.json` it picks the creature's body.
+- For every file it writes what happened: **+ converted, ! partly, x not possible**, under the **Errors** button. Nothing fails silently any more.
+- **Code** (Java classes, Bedrock scripts) cannot run and the **UI** of other games' mods is not taken: such an add-on is marked **un-UI**.
+
+### 🖌️ How do I make my own block or mob?
+
+![The Creator](img/faq/creator.jpg)
+
+- The **Creator** tab: switch **Block** or **Mob**, type a name, set hardness and light (block) or body and health (mob).
+- Paint the 16×16 texture with the **brush** or **fill** in 12 colours and press **Save to .vcaddon**.
+- It goes into the add-on **My Creations** and is in the game at once.
 
 ### 🐾 What problems did the creatures and cacti have?
 

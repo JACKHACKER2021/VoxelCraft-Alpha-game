@@ -29,6 +29,22 @@ All code, textures, models and music are our own: **no textures, sounds, music o
 
 **⬇️ [VoxelCraft 2.7.0](release/VoxelCraft-2.7.0.apk)** · **[📦 all versions](release/)** · **[❓ FAQ](docs/FAQ.md)**
 
+#### 🆕 2.7.0 – backpacks and add-ons
+- 🎒 **backpacks** in six tiers (9–54 slots, crafting inside, a furnace from ruby on, worn on the back), 👛 a **wallet** for 500 things
+- 🦊 a dyeable **fox collar**, 🐄 **leather**; ⚙️ **steel mix**, **rusting steel**, 📦 a **large chest**
+- 🧩 the new **add-on manager**: Bedrock add-ons converted to VC with every error shown, a **block and mob creator**
+- 🎨 new eggs, meat, arrow, string, ingots, hardium ore, buffer stop; 🐢 **device power** (Full, Smoother+, Weak)
+
+#### 🧪 2.8.0 Preview – coming
+- 📓 the player's journal, 🏆 new achievements, 🏚️ an abandoned station, 🔧 a wagon depot
+- 📢 "Next station…" announcements, 🎫 subway tickets and the "Traveller" achievement
+
+The rest of this page (history of every version, how to build) is in Czech.
+
+
+<details>
+<summary>Older versions 2.4.0 – 2.6.0</summary>
+
 #### 🆕 2.4.0
 - 🚇 **Subway**: a fast train with sliding doors (they open on the platform side), lit at night; the driver can open the doors by hand
 - 🛞 **Wheels** that spin, bogies that steer into curves
@@ -58,17 +74,7 @@ All code, textures, models and music are our own: **no textures, sounds, music o
 - 🎵 four new calm **songs**, 🥚 a **spawn egg** for every creature in a new look
 - 📦 **world export** to a readable zip, 🗺️ the subway pink on the map, 🐢 **weak device mode** (Mali, PowerVR)
 
-#### 🆕 2.7.0 – backpacks and add-ons
-- 🎒 **backpacks** in six tiers (9–54 slots, crafting inside, a furnace from ruby on, worn on the back), 👛 a **wallet** for 500 things
-- 🦊 a dyeable **fox collar**, 🐄 **leather**; ⚙️ **steel mix**, **rusting steel**, 📦 a **large chest**
-- 🧩 the new **add-on manager**: Bedrock add-ons converted to VC with every error shown, a **block and mob creator**
-- 🎨 new eggs, meat, arrow, string, ingots, hardium ore, buffer stop; 🐢 **device power** (Full, Smoother+, Weak)
-
-#### 🧪 2.8.0 Preview – coming
-- 📓 the player's journal, 🏆 new achievements, 🏚️ an abandoned station, 🔧 a wagon depot
-- 📢 "Next station…" announcements, 🎫 subway tickets and the "Traveller" achievement
-
-The rest of this page (history of every version, how to build) is in Czech.
+</details>
 
 </details>
 
@@ -79,61 +85,6 @@ The rest of this page (history of every version, how to build) is in Czech.
 > **neobsahuje žádné textury, zvuky, hudbu ani kód od Mojangu** a není spojený s Mojangem ani Microsoftem.
 
 ---
-
-## 🆕 v2.4.0 – Metro a stanice
-
-| | Novinka | Co umí |
-|:-:|---|---|
-| 🚇 | **Metro** | rychlý vlak s posuvnými dveřmi; otevřou se na straně nástupiště, řidič je otevře i ručně; v noci svítí |
-| 🛞 | **Kola** | točí se a podvozky se natáčejí do oblouku |
-| 🚉 | **Stanice** | betonové kolejové lože a nástupiště |
-| 🌉 | **Mosty a křížení** | příhradový nosník, rovné i šikmé křížení kolejí |
-| 🏚️ | **Rozpadlé nádraží** | nová struktura s truhlou součástek, vidět na mapě (`/locate station`) |
-| 🏛️ | **Bronzové síně** | velký podzemní dungeon z bronzu s pokladnicí |
-| 🪜 | **Věže** | schody z půlbloků ve strážních věžích i věžích Crimson Void |
-| 🌍 | **Svět** | vesnice kopírují krajinu, mraky jsou nad horami |
-
-## 🆕 2.5.0 – Podzemí
-
-- 🗺️ **síť metra**: linky východ–západ nahoře, sever–jih dole, tunely mezi stanicemi
-- 🚏 **čtyři druhy stanic**: zastávka, depo s dílnou, konečná se smyčkou, přestupní uzel se dvěma patry
-- 🪨 **závaly** k prokopání, 🌊 **zatopené tunely**, **obklady**, **cedule stanic** (pojmenuješ si je) a **lavičky**
-- 🤖 **automatické metro** (staví u každého nástupiště), 🗺️ **mapa metra** s nalezenými stanicemi
-- 🏙️ **ztracené podzemní město** na konci linky (`/locate city`) a 📓 **deníky mrtvého průzkumníka** ve všech strukturách
-- 🚂 rezavé **vraky vlaků** (vagony metra a parní lokomotivy) po celém světě a **každá struktura na mapě**
-- 🌱 **seedy struktur**: v menu nového světa pevný seed pro každou strukturu, spawn přímo u ní
-- 🧍 nové **pixelové skiny** všech postav a nový **Kapitán Moře**; přikrčení, plavání a zamávání (`/wave`)
-- 🧊 mince jsou teď **Voxel Bucks**, ⚙️ **Nahlásit chybu** v nastavení otevře GitHub Issues, 🏆 úspěchy pro každý survival svět
-- 📱 hra běží od **Androidu 5.0**
-
-## 🆕 2.6.0 – Cornerstone a svátky
-
-- 🪨 nové **tvory Cornerstone**: úhelný golem, mechový plaz, sporovka, žhavá můra a popelavý lišák; **železná, bronzová a ocelová ruda** Cornerstone
-- 🦊 **lišák** ze sněžné tajgy a Dappled forest: ochočíš ho syrovým masem, chodí za tebou, kouše příšery, na povel si sedne
-- 🎃 **Halloween**: dýně s obličeji, pavučiny, náhrobky, netopýří lucerny, duchové v noci a koleda u vesničanů
-- 🎄 **Vánoce**: stromek a punčocha s dárkem každé ráno, světýlka, perník, sáně a **sněhulák**
-- ❄️ bílá tráva a sníh, který zasype i květiny; **sezónní vzhled** si vybereš v nastavení
-- 🎵 čtyři nové klidné **skladby**, 🥚 **spawn vajíčko** pro každého tvora v novém vzhledu
-- 📦 **export světa** do čitelného zipu, 🗺️ metro na mapě růžově, 🐢 režim **Slabé zařízení** (Mali, PowerVR)
-
-> [!TIP]
-> Otázky k vydání, číslování verzí, mincím (Voxel Bucks) a vzhledu najdeš ve **[❓ FAQ](docs/FAQ.md)**.
-
-> [!NOTE]
-> Rozhlas používá **eSpeak NG** (GPL-3.0-or-later), zabudovaný v `third_party/espeak-ng`.
-
-### Import světa z Minecraftu – jak se bloky převedou
-
-```diff
-+ deepslate          → hlubinný kámen
-+ redstone           → powerstone (kabel, blok, ruda, lampa)
-+ měď (copper)       → bronz
-+ soul sand          → úhelný kámen (Cornerstone)
-+ crimson / warped   → netherperkové / karmínové dřevo
-+ quartz             → bílý beton
-! schody a desky si drží směr, ploché světy zůstanou ploché
-- moby, obsah truhel a dveře se zatím nepřenesou
-```
 
 ## 🆕 2.7.0 – Batohy a doplňky
 
@@ -151,6 +102,26 @@ The rest of this page (history of every version, how to build) is in Czech.
 - 🏚️ opuštěné nádraží s pokladnou a čekárnou, 🔧 depo na opravu a přebarvení vagonů
 - 📢 hlášení „Příští stanice…“, 🎫 jízdenky do metra a úspěch „Cestovatel“
 
+
+## 📥 Import světa z Minecraftu – jak se bloky převedou
+
+```diff
++ deepslate          → hlubinný kámen
++ redstone           → powerstone (kabel, blok, ruda, lampa)
++ měď (copper)       → bronz
++ soul sand          → úhelný kámen (Cornerstone)
++ crimson / warped   → netherperkové / karmínové dřevo
++ quartz             → bílý beton
+! schody a desky si drží směr, ploché světy zůstanou ploché
+- moby, obsah truhel a dveře se zatím nepřenesou
+```
+
+
+> Otázky k vydání, číslování verzí, mincím (Voxel Bucks) a vzhledu najdeš ve **[❓ FAQ](docs/FAQ.md)**.
+
+> [!NOTE]
+> Rozhlas používá **eSpeak NG** (GPL-3.0-or-later), zabudovaný v `third_party/espeak-ng`.
+
 ## 🗺️ Čtyři dimenze
 
 | Dimenze | Co tam najdeš |
@@ -159,6 +130,49 @@ The rest of this page (history of every version, how to build) is in Czech.
 | 🔥 **Dimenze úhelného kamene** | lávová moře, powerstonová pustina, velká pevnost |
 | 👁️ **Karmínová prázdnota** | oční stromy, karmínová poušť, boss **Crimson Man** |
 | ☁️ **Nebeská říše** | plovoucí ostrovy, nízká gravitace, celestium, boss **Sky Guardian** |
+
+<details>
+<summary><b>📜 Starší verze 2.4.0 – 2.6.0 (rozbalit)</b></summary>
+
+### 2.4.0 – Metro a stanice
+
+| | Novinka | Co umí |
+|:-:|---|---|
+| 🚇 | **Metro** | rychlý vlak s posuvnými dveřmi; otevřou se na straně nástupiště, řidič je otevře i ručně; v noci svítí |
+| 🛞 | **Kola** | točí se a podvozky se natáčejí do oblouku |
+| 🚉 | **Stanice** | betonové kolejové lože a nástupiště |
+| 🌉 | **Mosty a křížení** | příhradový nosník, rovné i šikmé křížení kolejí |
+| 🏚️ | **Rozpadlé nádraží** | nová struktura s truhlou součástek, vidět na mapě (`/locate station`) |
+| 🏛️ | **Bronzové síně** | velký podzemní dungeon z bronzu s pokladnicí |
+| 🪜 | **Věže** | schody z půlbloků ve strážních věžích i věžích Crimson Void |
+| 🌍 | **Svět** | vesnice kopírují krajinu, mraky jsou nad horami |
+
+### 2.5.0 – Podzemí
+
+- 🗺️ **síť metra**: linky východ–západ nahoře, sever–jih dole, tunely mezi stanicemi
+- 🚏 **čtyři druhy stanic**: zastávka, depo s dílnou, konečná se smyčkou, přestupní uzel se dvěma patry
+- 🪨 **závaly** k prokopání, 🌊 **zatopené tunely**, **obklady**, **cedule stanic** (pojmenuješ si je) a **lavičky**
+- 🤖 **automatické metro** (staví u každého nástupiště), 🗺️ **mapa metra** s nalezenými stanicemi
+- 🏙️ **ztracené podzemní město** na konci linky (`/locate city`) a 📓 **deníky mrtvého průzkumníka** ve všech strukturách
+- 🚂 rezavé **vraky vlaků** (vagony metra a parní lokomotivy) po celém světě a **každá struktura na mapě**
+- 🌱 **seedy struktur**: v menu nového světa pevný seed pro každou strukturu, spawn přímo u ní
+- 🧍 nové **pixelové skiny** všech postav a nový **Kapitán Moře**; přikrčení, plavání a zamávání (`/wave`)
+- 🧊 mince jsou teď **Voxel Bucks**, ⚙️ **Nahlásit chybu** v nastavení otevře GitHub Issues, 🏆 úspěchy pro každý survival svět
+- 📱 hra běží od **Androidu 5.0**
+
+### 2.6.0 – Cornerstone a svátky
+
+- 🪨 nové **tvory Cornerstone**: úhelný golem, mechový plaz, sporovka, žhavá můra a popelavý lišák; **železná, bronzová a ocelová ruda** Cornerstone
+- 🦊 **lišák** ze sněžné tajgy a Dappled forest: ochočíš ho syrovým masem, chodí za tebou, kouše příšery, na povel si sedne
+- 🎃 **Halloween**: dýně s obličeji, pavučiny, náhrobky, netopýří lucerny, duchové v noci a koleda u vesničanů
+- 🎄 **Vánoce**: stromek a punčocha s dárkem každé ráno, světýlka, perník, sáně a **sněhulák**
+- ❄️ bílá tráva a sníh, který zasype i květiny; **sezónní vzhled** si vybereš v nastavení
+- 🎵 čtyři nové klidné **skladby**, 🥚 **spawn vajíčko** pro každého tvora v novém vzhledu
+- 📦 **export světa** do čitelného zipu, 🗺️ metro na mapě růžově, 🐢 režim **Slabé zařízení** (Mali, PowerVR)
+
+> [!TIP]
+
+</details>
 
 <details>
 <summary><b>📜 Starší verze 1.5.1 – 1.9.5 (rozbalit)</b></summary>
