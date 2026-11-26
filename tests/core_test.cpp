@@ -61,6 +61,7 @@
 #include "engine/Trading.h"
 #include "engine/Mods.h"
 #include "engine/VcModel.h"
+#include "engine/VcBuiltin.h"
 #include "engine/JavaImport.h"
 #include "engine/BedrockImport.h"
 #include "engine/WorldFiles.h"
@@ -3414,6 +3415,30 @@ static int testUpdate14() {
             for (const Vertex& q : v2) top2 = std::max(top2, q.y);
             CHECK(top2 < top - 0.3f);  // the swung leg lies down
             std::printf("vc model: %zu vertices, top %.3f, swung %.3f\n", v.size(), top, top2);
+        }
+        {
+            // 2.8.0 preview: the vanilla VC creatures (GLB models in the engine): legs found, textures in the atlas.
+            int found = 0;
+            for (MobType t : {MobType::Pig, MobType::Sheep, MobType::Chicken, MobType::Cow, MobType::Ghost}) {
+                VcTexRect tex;
+                const VcModel* m = builtinMobModel(t, tex);
+                CHECK((m != nullptr) == kFeatures280);
+                if (!m) continue;
+                int legs = 0;
+                for (const VcPart& part : m->parts) legs += part.swing != 0;
+                CHECK(m->parts.size() >= 10 && (t == MobType::Ghost ? legs == 0 : legs >= 2) && tex.v0 >= kVcBuiltinRow / (float)kAtlasCols);
+                std::vector<Vertex> still, walk;
+                VcPose pose;
+                buildVcModel(*m, pose, tex, Vec3(0, 0, 0), 0, 1, still);
+                pose.walk = 0.5f;
+                buildVcModel(*m, pose, tex, Vec3(0, 0, 0), 0, 1, walk);
+                bool moved = false;
+                for (size_t i = 0; i < still.size(); ++i) moved |= std::abs(still[i].z - walk[i].z) > 1e-3f;
+                CHECK(still.size() == walk.size() && moved == (t != MobType::Ghost));
+                ++found;
+            }
+            std::printf("vanilla VC models: %d\n", found);
+            CHECK(kFirstModTile >= T_COUNT);
         }
         JavaImportReport rep = convertJavaMod(java.string(), (root / "jmod").string());
         std::printf("java import '%s': %d blocks, %d items, %d recipes, %d textures, %d drops; skipped %d minecraft files, %d shapes, %d recipes, %d classes\n",

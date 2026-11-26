@@ -8,6 +8,7 @@
 #include "Blocks.h"
 #include "Noise.h"
 #include "TexturePack.h"
+#include "VcBuiltin.h"
 
 namespace vc {
 
@@ -2922,6 +2923,7 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
         }
         a.put(T_HARDIUM_ORE, 3, 4, Hl), a.put(T_HARDIUM_ORE, 10, 3, Hl), a.put(T_HARDIUM_ORE, 7, 11, Hl), a.put(T_HARDIUM_ORE, 12, 9, Hl);
     }
+    blitBuiltinModelTextures(a.image(), size);  // 2.8.0: the redesigned creatures' textures
     return a.image();
 }
 

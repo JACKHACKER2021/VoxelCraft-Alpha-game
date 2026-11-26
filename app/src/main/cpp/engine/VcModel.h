@@ -29,10 +29,20 @@ struct VcBone {
     std::vector<VcCube> cubes;
 };
 
+// 2.8.0: a free mesh part (from a GLB): triangles already in blocks (y up, the head towards -z, not
+// mirrored), texture 0..1 of the model's own texture. Walking legs turn round `pivot` about x.
+struct VcPart {
+    std::string name;
+    std::vector<float> tris;  // x, y, z, u, v per vertex, 3 vertices a triangle
+    float pivot[3] = {0, 0, 0};
+    float swing = 0;          // +1 / -1: a leg (opposite legs in turn), 0: does not move
+};
+
 struct VcModel {
     std::string id;
     int texW = 64, texH = 64;
     std::vector<VcBone> bones;
+    std::vector<VcPart> parts;  // 2.8.0: GLB models
     int cubeCount() const;
     int bone(const std::string& name) const;  // -1 if none
 };
@@ -40,6 +50,8 @@ struct VcModel {
 // Extra rotations (degrees) per bone for one frame: walking legs, a turned head, sitting.
 struct VcPose {
     std::map<std::string, Vec3> rotation;
+    float walk = 0;  // radians: how far the legs of a GLB model swing now
+    float fall = 0;  // radians: dying, the whole body tips over sideways round the feet
 };
 
 // Where the model's texture lies in the atlas (0..1).
@@ -50,6 +62,14 @@ struct VcTexRect {
 // Reads every model of a geo.json (format 1.12+: "minecraft:geometry": [...], and the older
 // "geometry.name": {...}) or a .vcmodel.json. Returns false with `error` set when nothing could be read.
 bool parseVcModels(const Json& doc, std::vector<VcModel>& out, std::string& error);
+
+// 2.8.0: reads a GLB (glTF 2.0 binary): every mesh of every node becomes a VcPart (node translation and
+// scale applied); the embedded PNG (if any) is returned in `png`. Legs are found with guessVcLegs.
+bool parseVcGlb(const uint8_t* data, size_t size, VcModel& out, std::vector<uint8_t>* png, std::string& error);
+// Marks the low parts standing on the ground as legs (grouped into columns, each turning round its top).
+void guessVcLegs(VcModel& model);
+// How much of the texture's height the model uses (0..1), to keep only that part in the atlas.
+float vcUsedTextureHeight(const VcModel& model);
 
 // The model's triangles: model pixels to blocks, turned by `yaw` round the feet, at `feet`.
 void buildVcModel(const VcModel& model, const VcPose& pose, const VcTexRect& tex, const Vec3& feet, float yaw, float light,

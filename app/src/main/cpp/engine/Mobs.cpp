@@ -1,5 +1,6 @@
 #include "Mobs.h"
 #include "VcModel.h"
+#include "VcBuiltin.h"
 
 #include <algorithm>
 #include <cmath>
@@ -628,6 +629,24 @@ void MobSystem::buildVertices(int dim, float time, std::vector<Vertex>& out) con
         b.fall = roll;
         roll = 0;
         if (!m.alive() && !mobInfo(m.type).boss) b.light = std::max(b.light, 1.4f);  // a red-white flash as it dies
+        {
+            // 2.8.0 preview (VC language): the redesigned creatures are GLB models; the Celestial Reach's
+            // pig and sheep and mod reskins keep the old bodies for now.
+            VcTexRect tex;
+            const bool keepOld = ModRegistry::get().mob(m.variant) || (m.dim == 3 && (m.type == MobType::Pig || m.type == MobType::Sheep));
+            if (const VcModel* model = keepOld ? nullptr : builtinMobModel(m.type, tex)) {
+                VcPose pose;
+                pose.walk = m.swing;
+                pose.fall = b.fall;
+                Vec3 at = feet;
+                if (m.type == MobType::Ghost) {
+                    at.y += std::sin(time * 2.0f + m.age) * 1.2f / 16.0f;  // it bobs in the air
+                    light = std::max(light, 3.2f);                          // and glows pale in the dark
+                }
+                buildVcModel(*model, pose, tex, at, yaw, light, out);
+                continue;
+            }
+        }
         if (const ModMob* mod = ModRegistry::get().mob(m.variant); mod && mod->model >= 0) {
             // 2.8.0: a creature with its own model (VcModel, from a geo.json or .vcmodel.json): the legs
             // swing as it walks (bones named leg..., the left and right ones in turn), arms the other way.

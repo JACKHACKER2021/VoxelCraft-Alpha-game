@@ -98,7 +98,7 @@ private:
     std::vector<ItemId> creative_;
     std::vector<std::pair<int, std::string>> textures_;
     std::vector<std::pair<std::string, Summary>> summaries_;
-    int nextTile_ = T_COUNT;
+    int nextTile_ = T_COUNT;  // set to kFirstModTile (VcBuiltin.h) by clear()
     bool idsChanged_ = false;
 };
 

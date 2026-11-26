@@ -1,4 +1,5 @@
 #include "Game.h"
+#include "VcBuiltin.h"
 #include "Voice.h"
 
 #include <cstring>
@@ -42,7 +43,7 @@ namespace vc {
 namespace vc {
 
 namespace {
-const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.8.0 Preview build 4" : "VoxelCraft 2.7.1";
+const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.8.0 Preview build 5" : "VoxelCraft 2.7.1";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -325,6 +326,7 @@ void Game::loadTextures() {
     if (kClassicEdition) applyClassicTiles(rgba, size);
     Atlas atlas = loadTexturePack(texturePackDir_, rgba, size);
     for (const std::string& dir : packs_.textureDirs()) atlas = loadTexturePack(dir, atlas.rgba, atlas.size);
+    blitBuiltinModelTextures(atlas.rgba, atlas.size);  // 2.8.0: the redesigned creatures (VC language)
     for (const auto& [tile, path] : ModRegistry::get().textures()) blitTextureFile(atlas, tile, path);  // mods
     texturesSeason_ = playSettings().season;
     // 2.6.0: only the season changes the look (the Winter addon brings its things, not the snow).

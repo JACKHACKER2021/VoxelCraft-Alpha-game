@@ -1,4 +1,5 @@
 #include "Mods.h"
+#include "VcBuiltin.h"
 #include "TexturePack.h"
 
 #include <algorithm>
@@ -49,7 +50,7 @@ void ModRegistry::clear() {
     creative_.clear();
     textures_.clear();
     summaries_.clear();
-    nextTile_ = T_COUNT;
+    nextTile_ = kFirstModTile;
     models_.clear();
     blockRow_ = kAtlasCols, blockCol_ = 0, blockRowH_ = 0;
 }

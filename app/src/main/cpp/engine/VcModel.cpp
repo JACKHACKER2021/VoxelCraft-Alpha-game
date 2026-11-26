@@ -1,6 +1,8 @@
 #include "VcModel.h"
 
+#include <algorithm>
 #include <cmath>
+#include <cstring>
 
 #include "Json.h"
 
@@ -93,6 +95,122 @@ bool parseVcModels(const Json& doc, std::vector<VcModel>& out, std::string& erro
     return out.size() > before;
 }
 
+bool parseVcGlb(const uint8_t* data, size_t size, VcModel& out, std::vector<uint8_t>* png, std::string& error) {
+    auto u32 = [&](size_t at) { uint32_t v = 0; std::memcpy(&v, data + at, 4); return v; };
+    if (size < 28 || std::memcmp(data, "glTF", 4) != 0 || u32(4) != 2) return error = "není GLB 2.0", false;
+    const size_t jsonLen = u32(12);
+    if (20 + jsonLen + 8 > size || u32(16) != 0x4E4F534Au) return error = "poškozený GLB", false;
+    Json j;
+    if (!Json::parse(std::string((const char*)data + 20, jsonLen), j, error)) return false;
+    const size_t binAt = 20 + jsonLen + 8, binLen = u32(20 + jsonLen);
+    if (binAt + binLen > size) return error = "poškozený GLB", false;
+    const uint8_t* bin = data + binAt;
+    // The bytes of an accessor: (pointer, count, components, component type).
+    auto view = [&](const Json& acc, const uint8_t*& p, size_t& count, size_t& stride) {
+        const Json& bv = j["bufferViews"][(size_t)acc["bufferView"].num(0)];
+        const size_t off = (size_t)bv["byteOffset"].num(0) + (size_t)acc["byteOffset"].num(0);
+        count = (size_t)acc["count"].num(0);
+        const int type = (int)acc["componentType"].num(5126);
+        const size_t comps = acc["type"].str("") == "VEC3" ? 3 : acc["type"].str("") == "VEC2" ? 2 : 1;
+        const size_t natural = comps * (type == 5126 || type == 5125 ? 4 : type == 5123 ? 2 : 1);
+        stride = (size_t)bv["byteStride"].num((double)natural);
+        p = bin + off;
+        return off + (count ? (count - 1) * stride + natural : 0) <= binLen;
+    };
+    const Json& nodes = j["nodes"];
+    for (size_t n = 0; n < nodes.size(); ++n) {
+        const Json& node = nodes[n];
+        if (!node["mesh"].isNumber()) continue;
+        float t[3] = {0, 0, 0}, s[3] = {1, 1, 1};
+        if (node["translation"].isArray()) read3(node["translation"], t);
+        if (node["scale"].isArray()) read3(node["scale"], s);
+        const Json& prims = j["meshes"][(size_t)node["mesh"].num(0)]["primitives"];
+        for (size_t pi = 0; pi < prims.size(); ++pi) {
+            const Json& pr = prims[pi];
+            const uint8_t *pp = nullptr, *tp = nullptr, *ip = nullptr;
+            size_t pc = 0, ps = 0, tc = 0, ts = 0, ic = 0, is = 0;
+            if (!view(j["accessors"][(size_t)pr["attributes"]["POSITION"].num(0)], pp, pc, ps)) return error = "poškozený GLB", false;
+            const bool hasUv = pr["attributes"]["TEXCOORD_0"].isNumber();
+            if (hasUv && (!view(j["accessors"][(size_t)pr["attributes"]["TEXCOORD_0"].num(0)], tp, tc, ts) || tc != pc)) return error = "poškozený GLB", false;
+            const bool indexed = pr["indices"].isNumber();
+            int itype = 5123;
+            if (indexed) {
+                const Json& ia = j["accessors"][(size_t)pr["indices"].num(0)];
+                itype = (int)ia["componentType"].num(5123);
+                if (!view(ia, ip, ic, is)) return error = "poškozený GLB", false;
+            }
+            VcPart part;
+            part.name = node["name"].str("part" + std::to_string(out.parts.size()));
+            const size_t total = indexed ? ic : pc;
+            for (size_t k = 0; k + 2 < total + 2 && k < total; ++k) {
+                size_t idx = k;
+                if (indexed) {
+                    if (itype == 5125) { uint32_t v; std::memcpy(&v, ip + k * is, 4); idx = v; }
+                    else if (itype == 5123) { uint16_t v; std::memcpy(&v, ip + k * is, 2); idx = v; }
+                    else idx = ip[k * is];
+                }
+                if (idx >= pc) return error = "poškozený GLB", false;
+                float p[3], uv[2] = {0, 0};
+                std::memcpy(p, pp + idx * ps, 12);
+                if (hasUv) std::memcpy(uv, tp + idx * ts, 8);
+                part.tris.insert(part.tris.end(), {p[0] * s[0] + t[0], p[1] * s[1] + t[1], p[2] * s[2] + t[2], uv[0], uv[1]});
+            }
+            part.tris.resize(part.tris.size() / 15 * 15);
+            if (!part.tris.empty()) out.parts.push_back(std::move(part));
+        }
+    }
+    if (out.parts.empty()) return error = "GLB nemá žádnou síť", false;
+    if (png && j["images"].isArray() && j["images"].size() > 0 && j["images"][0]["bufferView"].isNumber()) {
+        const Json& bv = j["bufferViews"][(size_t)j["images"][0]["bufferView"].num(0)];
+        const size_t off = (size_t)bv["byteOffset"].num(0), len = (size_t)bv["byteLength"].num(0);
+        if (off + len <= binLen) png->assign(bin + off, bin + off + len);
+    }
+    out.id = j["nodes"][0]["name"].str("model");
+    return true;
+}
+
+void guessVcLegs(VcModel& model) {
+    float top = 0;
+    struct Box { float lo[3], hi[3]; };
+    std::vector<Box> boxes;
+    for (const VcPart& p : model.parts) {
+        Box b{{1e9f, 1e9f, 1e9f}, {-1e9f, -1e9f, -1e9f}};
+        for (size_t i = 0; i < p.tris.size(); i += 5)
+            for (int k = 0; k < 3; ++k) b.lo[k] = std::min(b.lo[k], p.tris[i + k]), b.hi[k] = std::max(b.hi[k], p.tris[i + k]);
+        boxes.push_back(b);
+        top = std::max(top, b.hi[1]);
+    }
+    // The legs: columns of low parts (a leg, its hoof, toes) standing on the ground under the body.
+    struct Column { float x, z, lo = 1e9f, hi = -1e9f; std::vector<size_t> parts; };
+    std::vector<Column> cols;
+    for (size_t i = 0; i < boxes.size(); ++i) {
+        const Box& b = boxes[i];
+        if (b.hi[1] >= top * 0.5f || b.lo[1] > top * 0.3f) continue;
+        const float cx = (b.lo[0] + b.hi[0]) / 2, cz = (b.lo[2] + b.hi[2]) / 2;
+        Column* col = nullptr;
+        for (Column& c : cols)
+            if ((c.x - cx) * (c.x - cx) + (c.z - cz) * (c.z - cz) < 0.012f) col = &c;
+        if (!col) cols.push_back(Column{cx, cz}), col = &cols.back();
+        col->lo = std::min(col->lo, b.lo[1]), col->hi = std::max(col->hi, b.hi[1]);
+        col->parts.push_back(i);
+    }
+    cols.erase(std::remove_if(cols.begin(), cols.end(), [](const Column& c) { return c.lo > 0.03f || c.hi - c.lo < 0.12f; }), cols.end());
+    for (const Column& c : cols)
+        for (size_t i : c.parts) {
+            VcPart& p = model.parts[i];
+            p.pivot[0] = c.x, p.pivot[1] = c.hi, p.pivot[2] = c.z;
+            // Front left and back right swing together, as the old models did; two legs: left against right.
+            p.swing = (cols.size() <= 2 ? c.x < 0 : (c.x < 0) == (c.z < 0)) ? 1.0f : -1.0f;
+        }
+}
+
+float vcUsedTextureHeight(const VcModel& model) {
+    float v = 0;
+    for (const VcPart& p : model.parts)
+        for (size_t i = 4; i < p.tris.size(); i += 5) v = std::max(v, p.tris[i]);
+    return std::min(1.0f, v);
+}
+
 void buildVcModel(const VcModel& model, const VcPose& pose, const VcTexRect& tex, const Vec3& feet, float yaw, float light,
                   std::vector<Vertex>& out) {
     const float cy = std::cos(yaw), sy = std::sin(yaw);
@@ -138,6 +256,35 @@ void buildVcModel(const VcModel& model, const VcPose& pose, const VcTexRect& tex
                     vtx[k] = Vertex{q[k].x, q[k].y, q[k].z, tu, tv, f.shade * light};
                 }
                 out.insert(out.end(), {vtx[0], vtx[1], vtx[2], vtx[0], vtx[2], vtx[3]});
+            }
+        }
+    }
+    // 2.8.0: GLB parts (already in blocks, not mirrored).
+    const float cw = std::cos(pose.walk), sw = std::sin(pose.walk), cf = std::cos(pose.fall), sf = std::sin(pose.fall);
+    for (const VcPart& part : model.parts) {
+        const float a = part.swing * pose.walk, ca = part.swing ? std::cos(a) : 1, sa = part.swing ? std::sin(a) : 0;
+        (void)cw, (void)sw;
+        for (size_t i = 0; i + 15 <= part.tris.size(); i += 15) {
+            Vec3 q[3];
+            float uv[3][2];
+            for (int k = 0; k < 3; ++k) {
+                const float* f = &part.tris[i + (size_t)k * 5];
+                Vec3 p(f[0], f[1], f[2]);
+                if (sa != 0) {
+                    const float y = p.y - part.pivot[1], z = p.z - part.pivot[2];
+                    p = Vec3(p.x, part.pivot[1] + y * ca - z * sa, part.pivot[2] + y * sa + z * ca);
+                }
+                if (pose.fall != 0) p = Vec3(p.x * cf - p.y * sf, p.x * sf + p.y * cf + sf * 0.3f, p.z);
+                q[k] = p, uv[k][0] = f[3], uv[k][1] = f[4];
+            }
+            // The shade from the face's direction, as the other models: top bright, bottom dark, sides between.
+            const Vec3 e1 = q[1] - q[0], e2 = q[2] - q[0];
+            const Vec3 nrm(e1.y * e2.z - e1.z * e2.y, e1.z * e2.x - e1.x * e2.z, e1.x * e2.y - e1.y * e2.x);
+            const float ax = std::fabs(nrm.x), ay = std::fabs(nrm.y), az = std::fabs(nrm.z);
+            const float shade = ay >= ax && ay >= az ? (nrm.y > 0 ? 1.0f : 0.5f) : az >= ax ? 0.8f : 0.6f;
+            for (int k = 0; k < 3; ++k) {
+                const Vec3 w = feet + Vec3(q[k].x * cy - q[k].z * sy, q[k].y, q[k].x * sy + q[k].z * cy);
+                out.push_back(Vertex{w.x, w.y, w.z, tex.u0 + uv[k][0] * (tex.u1 - tex.u0), tex.v0 + uv[k][1] * (tex.v1 - tex.v0), shade * light});
             }
         }
     }
