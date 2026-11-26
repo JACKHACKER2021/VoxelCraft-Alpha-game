@@ -328,6 +328,9 @@ private:
     static constexpr int kWalletLimit = 500;  // 2.7.0
     int walletTotal_ = 0;
     float perfTime_ = 0;  // 2.7.0: the shader guard's window
+    float perfGrace_ = 20;  // 2.7.1: seconds left before the guard watches (a world or a dimension loading)
+    int perfBad_ = 0, perfDim_ = -1;
+    const void* perfSession_ = nullptr;
     int perfFrames_ = 0;  // 2.6.0: GL_RENDERER
     Font font_;
     Ui ui_;

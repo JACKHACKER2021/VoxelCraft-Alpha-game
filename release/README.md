@@ -4,7 +4,7 @@
 
 <a id="cz"></a>
 Všechna APK VoxelCraftu. Hra pro Android od Hoppy_Hopsy21 a VoxelSoftworks, vytvořená společně s Claude.
-Nejnovější je **2.7.0**. Preview další verze (2.8.0) je jen pro vývojáře, proto tu není. Neoficiální fanouškovský projekt, bez obsahu od Mojangu.
+Nejnovější je **2.7.1**. Preview další verze (2.8.0) je jen pro vývojáře, proto tu není. Neoficiální fanouškovský projekt, bez obsahu od Mojangu.
 
 > [!IMPORTANT]
 > Od verze **2.4.0** má hra nové ID (`cz.voxelsoftworks.voxelcraft`) a nový podpis. Nainstaluje se **vedle** starší verze.
@@ -17,7 +17,7 @@ Nejnovější je **2.7.0**. Preview další verze (2.8.0) je jen pro vývojáře
 - 📢 hlášení „Příští stanice…“, 🎫 jízdenky do metra a úspěch „Cestovatel“
 
 <a id="en"></a>
-All VoxelCraft APKs. Newest: **2.7.0**. The preview of the next version (2.8.0) is for developers only, so it is not here. From 2.4.0 the app has a new id and a new
+All VoxelCraft APKs. Newest: **2.7.1**. The preview of the next version (2.8.0) is for developers only, so it is not here. From 2.4.0 the app has a new id and a new
 signature, so it installs **next to** an older one (move worlds with *Export* / *Import*). The 2.2.0 and 2.3.x APKs were lost; 2.4.0 has all of them.
 
 ### 🧪 2.8.0 Preview – coming
@@ -26,7 +26,8 @@ signature, so it installs **next to** an older one (move worlds with *Export* / 
 
 | Verze | APK | Co přinesla |
 |---|---|---|
-| **2.7.0** | [VoxelCraft-2.7.0.apk](VoxelCraft-2.7.0.apk) | Backpacks and add-ons: six backpack tiers worn on the back, a wallet, a dyeable fox collar, leather, steel mix and rusting steel, a large chest, the new add-on manager with Bedrock conversion and a block and mob creator, redrawn eggs, meat, arrow, string, ingots and hardium ore, a concrete buffer stop, device power modes, Pre-Alpha Style in the store. |
+| **2.7.1** | [VoxelCraft-2.7.1.apk](VoxelCraft-2.7.1.apk) | Fix: the shaders no longer switch off while a world or a dimension loads (20 s wait, 10 s windows under 20 FPS, two in a row); shaders switched off by 2.7.0 get another chance; Galaxy A14 (Mali-G52) gets Smoother+. |
+| 2.7.0 | [VoxelCraft-2.7.0.apk](VoxelCraft-2.7.0.apk) | Backpacks and add-ons: six backpack tiers worn on the back, a wallet, a dyeable fox collar, leather, steel mix and rusting steel, a large chest, the new add-on manager with Bedrock conversion and a block and mob creator, redrawn eggs, meat, arrow, string, ingots and hardium ore, a concrete buffer stop, device power modes, Pre-Alpha Style in the store. |
 | 2.6.0 | [VoxelCraft-2.6.0.apk](VoxelCraft-2.6.0.apk) | The Cornerstone and the holidays: golem, moss lurker, sporeling, ember moth, ash fox, the tameable fox, Cornerstone ores, Halloween and Christmas blocks, ghosts, snowman, sled, white winter grass, seasonal look, four new songs, spawn eggs for every creature, readable world export, weak device mode. |
 | 2.5.0 | [VoxelCraft-2.5.0.apk](VoxelCraft-2.5.0.apk) | The underground: subway network with four kinds of station, the automatic subway, subway map, the lost city, explorer's journals, train wrecks, every structure on the map, structure seeds, new pixel skins and Captain Sea, crouching, swimming and waving, Voxel Bucks, Report a bug, Android 5.0 and newer. |
 | 2.4.0 | [VoxelCraft-2.4.0.apk](VoxelCraft-2.4.0.apk) | Subway with sliding doors and night lights, spinning wheels, stations (concrete track bed, platforms), lattice bridges, crossings, ruined stations, Bronze Halls, slab stairs in towers, villages that follow the land. |

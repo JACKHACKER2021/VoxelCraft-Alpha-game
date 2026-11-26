@@ -7,13 +7,13 @@
 **Kostičková hra pro Android s vlastním enginem v C++**
 *Hoppy_Hopsy21 · VoxelSoftworks · vytvořeno společně s Claude*
 
-![Verze](https://img.shields.io/badge/verze-2.7.0-2ea44f?style=for-the-badge)
+![Verze](https://img.shields.io/badge/verze-2.7.1-2ea44f?style=for-the-badge)
 ![Preview](https://img.shields.io/badge/preview-2.8.0-orange?style=for-the-badge)
 ![Android](https://img.shields.io/badge/Android-arm64-3DDC84?style=for-the-badge&logo=android&logoColor=white)
 ![C++](https://img.shields.io/badge/C%2B%2B-17-00599C?style=for-the-badge&logo=cplusplus&logoColor=white)
 ![OpenGL ES](https://img.shields.io/badge/OpenGL%20ES-3.0-5586A4?style=for-the-badge&logo=opengl&logoColor=white)
 
-[⬇️ Stáhnout APK 2.7.0](release/VoxelCraft-2.7.0.apk) · [📦 Všechny verze](release/) · [❓ FAQ](docs/FAQ.md) · [🎬 Trailer FAQ (3 min)](trailers/t13_faq.mp4) · [🎬 Trailer (17 min)](trailers/t12_2.0.0.mp4) · [📜 Historie](docs/HISTORIE.md)
+[⬇️ Stáhnout APK 2.7.1](release/VoxelCraft-2.7.1.apk) · [📦 Všechny verze](release/) · [❓ FAQ](docs/FAQ.md) · [🎬 Trailer FAQ (3 min)](trailers/t13_faq.mp4) · [🎬 Trailer (17 min)](trailers/t12_2.0.0.mp4) · [📜 Historie](docs/HISTORIE.md)
 
 
 **[🇨🇿 Čeština](#cestina)** · **[🇬🇧 English](#english)**
@@ -27,9 +27,10 @@
 **VoxelCraft** is a block-building game for Android with its own C++ engine, by Hoppy_Hopsy21 and VoxelSoftworks, made together with Claude.
 All code, textures, models and music are our own: **no textures, sounds, music or code from Mojang**, and it is not connected with Mojang or Microsoft.
 
-**⬇️ [VoxelCraft 2.7.0](release/VoxelCraft-2.7.0.apk)** · **[📦 all versions](release/)** · **[❓ FAQ](docs/FAQ.md)**
+**⬇️ [VoxelCraft 2.7.1](release/VoxelCraft-2.7.1.apk)** · **[📦 all versions](release/)** · **[❓ FAQ](docs/FAQ.md)**
 
 #### 🆕 2.7.0 – backpacks and add-ons
+> **2.7.1:** shaders no longer switch off while a world loads; the Galaxy A14 gets Smoother+.
 - 🎒 **backpacks** in six tiers (9–54 slots, crafting inside, a furnace from ruby on, worn on the back), 👛 a **wallet** for 500 things
 - 🦊 a dyeable **fox collar**, 🐄 **leather**; ⚙️ **steel mix**, **rusting steel**, 📦 a **large chest**
 - 🧩 the new **add-on manager**: Bedrock add-ons converted to VC with every error shown, a **block and mob creator**
@@ -87,6 +88,8 @@ The rest of this page (history of every version, how to build) is in Czech.
 ---
 
 ## 🆕 2.7.0 – Batohy a doplňky
+
+> **2.7.1:** shadery se už nevypnou při načítání světa (hra 20 s počká a měří déle), Galaxy A14 dostane Smoother+.
 
 - 🎒 **batohy** v šesti úrovních (kůže, ocel, ocelobronz, bronzorubín, hardium, celestium): 9–54 míst, výroba uvnitř, pec od rubínu, nošení na zádech i pod brněním
 - 👛 **peněženka** na 500 věcí, 🦊 **obarvitelný obojek** pro lišáka, 🐄 **kůže** z krav

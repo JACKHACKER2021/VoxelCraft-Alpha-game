@@ -2751,7 +2751,7 @@ static int testUpdate12() {
         // 1.8.0: then "VoxelSoftworks presents" the version; a tap goes on to the menu.
         log.clear();
         game.frame(t += 1 / 30.0);
-        CHECK(drawn("VOXELSOFTWORKS PRESENTS") && (drawn("VOXELCRAFT 2.7.0") || drawn("VOXELCRAFT 2.8.0 PREVIEW")) && !drawn("Play"));
+        CHECK(drawn("VOXELSOFTWORKS PRESENTS") && (drawn("VOXELCRAFT 2.7.1") || drawn("VOXELCRAFT 2.8.0 PREVIEW")) && !drawn("Play"));
         for (int i = 0; i < 30; ++i) game.frame(t += 1 / 30.0);
         game.onTouch(0, TouchAction::Down, 1200, 540, t);
         game.onTouch(0, TouchAction::Up, 1200, 540, t);
@@ -4097,9 +4097,9 @@ static int testCaves160() {
     // 2.7.0: steel rusts in two stages and honey waxes every stage.
     CHECK(steelVariant(0, false) == STEEL_BLOCK && steelStage(steelVariant(2, true)) == 2 && steelWaxed(steelVariant(2, true)) &&
           !steelWaxed(steelVariant(1, false)) && steelStage(steelVariant(1, false)) == 1 && isAgingSteel(STEEL_AGED + 4) && !isItemOnly(STEEL_AGED + 3));
-    // 2.7.0: the user's devices: Teclast P30T (Mali-G57 MC1, 4 GB) and Galaxy A14 (Mali-G52) weak,
+    // 2.7.0/2.7.1: the user's devices: Teclast P30T (Mali-G57 MC1, 4 GB) weak; Galaxy A14 (Mali-G52) and
     // Redmi Note 13 5G (Mali-G57 MC2, 8 GB) Smoother+.
-    CHECK(detectPerfTier("Mali-G57", 3900) == 1 && detectPerfTier("Mali-G52 MC2", 4000) == 1 &&
+    CHECK(detectPerfTier("Mali-G57", 3900) == 1 && detectPerfTier("Mali-G52 MC2", 4000) == 2 &&
           detectPerfTier("Mali-G57 MC2", 7600) == 2 && detectPerfTier("Adreno (TM) 740", 11000) == 0);
     CHECK(GenConfig::defaults().generation == (kFeatures260 ? 9 : 8));
     World nw(777, Dimension::Overworld), ow(777, Dimension::Overworld, g3);

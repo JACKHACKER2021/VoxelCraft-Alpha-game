@@ -42,7 +42,7 @@ namespace vc {
 namespace vc {
 
 namespace {
-const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.8.0 Preview build 1" : "VoxelCraft 2.7.0";
+const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.8.0 Preview build 2" : "VoxelCraft 2.7.1";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -112,6 +112,12 @@ Game::~Game() { endSession(); }
 bool Game::onSurfaceCreated() {
     if (!renderer_.init()) return false;
     gpuName_ = renderer_.gpuName();
+    if (kFeatures270 && settings_.shaderGuard < 1) {
+        // 2.7.1: the guard of 2.7.0 switched shaders off too soon: they get another chance once.
+        settings_.shadersAutoOff = false, settings_.shaderGuard = 1;
+        settings_.perfTier = -1;  // and the device is looked at again with the 2.7.1 rules
+        saveSettings(settingsPath_, settings_);
+    }
     if (kFeatures270 && settings_.perfTier < 0) {
         settings_.perfTier = detectPerfTier(gpuName_, deviceMemoryMb());
         saveSettings(settingsPath_, settings_);
@@ -614,7 +620,9 @@ int detectPerfTier(const std::string& gpu, int memMb) {
     auto has = [&](const char* s) { return gpu.find(s) != std::string::npos; };
     const bool knownMem = memMb > 0;
     if (knownMem && memMb < 3500) return 1;
-    if (has("Mali-T") || has("PowerVR") || has("Mali-G31") || has("Mali-G51") || has("Mali-G52") || has("Mali-4") ||
+    // 2.7.1: the Galaxy A14 (Mali-G52) handles the shaders on Smoother+ after all.
+    if (has("Mali-G52")) return 2;
+    if (has("Mali-T") || has("PowerVR") || has("Mali-G31") || has("Mali-G51") || has("Mali-4") ||
         has("Adreno (TM) 3") || has("Adreno (TM) 4") || has("Adreno (TM) 50") || has("Adreno (TM) 51"))
         return 1;
     if (has("Mali-G57")) return knownMem && memMb >= 5500 ? 2 : 1;
@@ -882,14 +890,22 @@ void Game::frame(double time) {
         saverWasOn_ = saver;
         // 2.7.0: the shaders watch the frame rate: if the device keeps under 24 FPS for 8 seconds in a world,
         // they switch off by themselves (and say so); the player can switch them on again in the settings.
-        if (kFeatures270 && session_ && !saver && eff.graphics == GraphicsMode::Enhanced && !settings_.shadersAutoOff) {
+        // 2.7.1: not while a world or a dimension is still loading (the first 20 seconds the chunks are being
+        // built and every phone is slow), over 10-second windows, under 20 FPS, and only after two bad
+        // windows in a row: 2.7.0 switched them off on phones that handle them well once the world is there.
+        if (session_ && (session_.get() != perfSession_ || session_->dimIndex() != perfDim_))
+            perfSession_ = session_.get(), perfDim_ = session_->dimIndex(), perfGrace_ = 20, perfBad_ = 0, perfTime_ = 0, perfFrames_ = 0;
+        if (kFeatures270 && session_ && !saver && screen_ == Screen::Playing && eff.graphics == GraphicsMode::Enhanced && !settings_.shadersAutoOff &&
+            (perfGrace_ -= dt) <= 0) {
             perfTime_ += dt, ++perfFrames_;
-            if (perfTime_ >= 8) {
-                if (perfFrames_ / perfTime_ < 24) {
+            if (perfTime_ >= 10) {
+                perfBad_ = perfFrames_ / perfTime_ < 20 ? perfBad_ + 1 : 0;
+                if (perfBad_ >= 2) {
                     settings_.shadersAutoOff = true;
                     saveSettings(settingsPath_, settings_);
                     toast_ = tr("Shadery vypnuty: zařízení je nestíhá");
                     toastUntil_ = time + 6;
+                    perfBad_ = 0;
                 }
                 perfTime_ = 0, perfFrames_ = 0;
             }
@@ -1410,7 +1426,7 @@ void Game::presentsScreen(float dt) {
     y += 14;
     const float big = ui_.textWidth("VOXELCRAFT 1.8.0", 3) < W - 20 && H >= 260 ? 3 : 2;
     // 2.5.0: the version and the name of the update (they stayed at 2.1.0 for a long time).
-    const char* title = kClassicEdition ? "VOXELCRAFT CLASSIC" : kPreviewEdition ? "VOXELCRAFT 2.8.0 PREVIEW" : "VOXELCRAFT 2.7.0";
+    const char* title = kClassicEdition ? "VOXELCRAFT CLASSIC" : kPreviewEdition ? "VOXELCRAFT 2.8.0 PREVIEW" : "VOXELCRAFT 2.7.1";
     ui_.textCentered(W / 2, y, title, faded(gold, 0.2f), ui_.textWidth(title, big) < W - 20 ? big : 2);
     y += 10 * big + 4;
     ui_.textCentered(W / 2, y, tr(kFeatures270 ? "Batohy a doplňky" : "Cornerstone a svátky"), faded(white, 0.5f), 1);

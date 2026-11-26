@@ -101,7 +101,8 @@ struct Settings {
     int batterySaver = 1;     // 1.5.7: 0 off, 1 automatic (35 % or less and not charging), 2 always
     int weakDevice = -1;      // 2.6.0: -1 not checked yet, 0 normal, 1 a weak phone or tablet (lighter graphics, 30 FPS)
     int perfTier = -1;        // 2.7.0: -1 not checked yet, 0 full, 1 weak (light, 30 FPS), 2 Smoother+ (lighter, shaders while they keep up)
-    bool shadersAutoOff = false;  // 2.7.0: the shaders were switched off by themselves because the device could not keep up
+    bool shadersAutoOff = false;
+    int shaderGuard = 0;          // 2.7.1: 1 once the too-eager switch-off of 2.7.0 was undone  // 2.7.0: the shaders were switched off by themselves because the device could not keep up
     // Audio
     float musicVolume = 0.6f;
     float soundVolume = 0.8f;
