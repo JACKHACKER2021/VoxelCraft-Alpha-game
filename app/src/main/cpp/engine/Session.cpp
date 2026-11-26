@@ -332,6 +332,21 @@ void Session::openChestAt(const FurnaceKey& key) {
                 : block == LOOT_CHEST_PORTAL ? "loot_portal" : "loot_explorer");
     }
     openChest = key;
+    openChest2 = {};
+    hasChest2 = false;
+    if (kFeatures270 && worldAt(key.dim).getBlock(key.x, key.y, key.z) == CHEST) {
+        // 2.7.0: two chests side by side make one big chest of 54 slots (the west or north one on top).
+        const int d[4][2] = {{-1, 0}, {0, -1}, {1, 0}, {0, 1}};
+        for (const auto& o : d)
+            if (worldAt(key.dim).getBlock(key.x + o[0], key.y, key.z + o[1]) == CHEST) {
+                FurnaceKey other{key.dim, key.x + o[0], key.y, key.z + o[1]};
+                if (!chests_.count(other)) chests_[other] = ChestContents{};
+                if (o[0] < 0 || o[1] < 0) openChest2 = key, openChest = other;
+                else openChest2 = other;
+                hasChest2 = true;
+                break;
+            }
+    }
     wantsChest = true;
 }
 
@@ -1246,6 +1261,11 @@ void Session::updateBronzeAndGrass(float dt) {
         const int x = px + (int)(fireRandom() * 49) - 24, y = py + (int)(fireRandom() * 25) - 12, z = pz + (int)(fireRandom() * 49) - 24;
         if (y < 1 || y >= kChunkHeight - 1) continue;
         const ItemId b = w.getBlock(x, y, z);
+        if (kFeatures270 && isAgingSteel(b)) {
+            // 2.7.0: steel rusts a stage every day or so (a little faster in the rain would be nice later).
+            if (!steelWaxed(b) && steelStage(b) < 2 && fireRandom() < 0.02f) w.setBlock(x, y, z, steelVariant(steelStage(b) + 1, false));
+            continue;
+        }
         const int base = bronzeAgingBase(b);
         if (base >= 0) {
             // About an in-game day for each stage on average.
@@ -2821,6 +2841,7 @@ bool Session::openWallet() {
     const FurnaceKey key{kWalletDim, held.damage, 0, 0};
     if (!chests_.count(key)) chests_[key] = ChestContents{};
     openChest = key;
+    hasChest2 = false;
     wantsChest = true;
     sound(Sound::Click);
     return true;
@@ -2839,6 +2860,7 @@ bool Session::openBackpack(ItemStack& bag) {
     const FurnaceKey key{kBackpackDim, bag.damage, 0, 0};
     if (!chests_.count(key)) chests_[key] = ChestContents{};
     openChest = key;
+    hasChest2 = false;
     openBag = &bag;
     wantsChest = true;
     sound(Sound::Click);
@@ -2893,6 +2915,22 @@ void Session::useItem(const RayHit& hit) {
             if (held.id == HONEY_BALL && !bronzeWaxed(block)) to = bronzeVariant(base, stage, true);
             else if (held.id != HONEY_BALL && bronzeWaxed(block)) to = bronzeVariant(base, stage, false);
             else if (held.id != HONEY_BALL && stage > 0) to = bronzeVariant(base, stage - 1, false);
+            if (to != block) {
+                w.setBlock(hit.x, hit.y, hit.z, to);
+                particles_.spawnBurst(w, hit.x, hit.y, hit.z, held.id == HONEY_BALL ? HONEY_BLOCK : block);
+                if (held.id == HONEY_BALL && survival() && --held.count == 0) held = {};
+                hand_.use();
+                sound(held.id == HONEY_BALL ? Sound::Place : Sound::Dig);
+                return;
+            }
+        }
+        if (kFeatures270 && isAgingSteel(block) && (held.id == HONEY_BALL || toolKind(held.id) == ToolKind::Axe)) {
+            // 2.7.0: honey waxes steel (no more rust); an axe scrapes the wax off, or the rust down a stage.
+            const int stage = steelStage(block);
+            ItemId to = block;
+            if (held.id == HONEY_BALL && !steelWaxed(block)) to = steelVariant(stage, true);
+            else if (held.id != HONEY_BALL && steelWaxed(block)) to = steelVariant(stage, false);
+            else if (held.id != HONEY_BALL && stage > 0) to = steelVariant(stage - 1, false);
             if (to != block) {
                 w.setBlock(hit.x, hit.y, hit.z, to);
                 particles_.spawnBurst(w, hit.x, hit.y, hit.z, held.id == HONEY_BALL ? HONEY_BLOCK : block);

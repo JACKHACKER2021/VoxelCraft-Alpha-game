@@ -368,7 +368,8 @@ enum BlockId : uint16_t {
     EGG_SNOWMAN = 60299,
     LEATHER = 60300,             // 2.7.0: from cows; for the backpack and the wallet
     WALLET = 60301,              // 2.7.0: holds up to 500 items and blocks (its number in `damage`)
-    STEEL_MIX = 60308,           // 2.7.0: iron and coal, smelted into steel
+    STEEL_MIX = 60308,
+    STEEL_AGED = 60309,          // 2.7.0: 60309..60313: steel rusting (waxed, rusty, waxed rusty, very rusty, waxed very rusty)           // 2.7.0: iron and coal, smelted into steel
     BACKPACK = 60302,            // 2.7.0: 60302..60307: leather, steel, steel-bronze, bronze-ruby, hardium, celestium
     RAIL_SWITCH8 = 60212,        // 60212..60243: 2.3.0 the flexible switch: entry port * 4 + left * 2 + state   // 2.3.0: a chest of the Bronze Halls
     RAIL_SWITCH_L = 60203,       // 60203..60210: 2.3.0 the mirrored switch, its branch to the left (facing * 2 + state)
@@ -682,6 +683,7 @@ bool modIsTransparent(ItemId id);
 bool modIsEmissive(ItemId id);
 int modFood(ItemId id);
 inline bool isNewBlock(ItemId id) {
+    if (id >= STEEL_AGED && id < STEEL_AGED + 5) return true;  // 2.7.0: rusting steel
     if (id >= kExtIdBase && id <= kExtLastBlock && !(id >= LOCOMOTIVE && id <= FREIGHT_WAGON) && id != DRILL_CAR && id != STARBERRIES && id != SUBWAY_LOCOMOTIVE && id != SUBWAY_CAR && id != METRO_MAP && id != EMBER_DUST && !(id >= JOURNAL && id < JOURNAL + 12)) return true;  // the engine's own range
     if (isModId(id)) return modIsBlock(id);
     return isStairs(id) || isSlab(id) || (id >= TAR && id <= SNOW_LAYER) || isStainedGlass(id) || (id >= WALL_CABLE && id < WALL_CABLE + 8) || (id >= WALL_SWITCH && id < WALL_SWITCH + 8) ||
@@ -816,6 +818,7 @@ enum Tile : uint16_t {
     T_BACKPACK, T_BACKPACK_LAST = T_BACKPACK + 5,
     T_STEEL_MIX,
     T_HAZARD,  // 2.7.0: yellow and black stripes (the buffer stop)
+    T_STEEL_RUST1, T_STEEL_RUST2,
     T_TRAIN_TEX2, T_TRAIN_TEX2_LAST = T_TRAIN_TEX2 + 15,  // 2.3.0 preview build 7: more train colours (the subway)
     T_COUNT
 };
@@ -884,6 +887,23 @@ inline ItemId bronzeVariant(int base, int stage, bool waxed) {
     if (stage == 0 && !waxed) return kPlain[base & 3];
     const int k = stage == 0 ? 0 : stage * 2 - 1 + (waxed ? 1 : 0);
     return (ItemId)(BRONZE_AGED + (base & 3) * 5 + k);
+}
+// 2.7.0: steel rusts like bronze ages (rusty, then very rusty) unless waxed with honey; an axe scrapes
+// the wax or the rust off. The plain steel block keeps its id; the rest sit at STEEL_AGED.
+inline bool isAgingSteel(ItemId id) { return id == STEEL_BLOCK || (id >= STEEL_AGED && id < STEEL_AGED + 5); }
+inline int steelStage(ItemId id) {
+    if (id < STEEL_AGED || id >= STEEL_AGED + 5) return 0;
+    const int k = id - STEEL_AGED;
+    return k == 0 ? 0 : (k + 1) / 2;
+}
+inline bool steelWaxed(ItemId id) {
+    if (id < STEEL_AGED || id >= STEEL_AGED + 5) return false;
+    const int k = id - STEEL_AGED;
+    return k == 0 || k == 2 || k == 4;
+}
+inline ItemId steelVariant(int stage, bool waxed) {
+    if (stage == 0 && !waxed) return STEEL_BLOCK;
+    return (ItemId)(STEEL_AGED + (stage == 0 ? 0 : stage * 2 - 1 + (waxed ? 1 : 0)));
 }
 // 2.2.0: the bronze building blocks (the creative "Bronze" folder).
 inline bool isBronzeBuilding(ItemId id) {
@@ -1062,6 +1082,9 @@ inline int tileFor(ItemId id, Face face) {
         case RUBY_ORE: return T_RUBY_ORE;
         case BRONZE_BLOCK: return T_BRONZE_BLOCK;
         case STEEL_BLOCK: return T_STEEL_BLOCK;
+        case STEEL_AGED: return T_STEEL_BLOCK;
+        case STEEL_AGED + 1: case STEEL_AGED + 2: return T_STEEL_RUST1;
+        case STEEL_AGED + 3: case STEEL_AGED + 4: return T_STEEL_RUST2;
         case RUBY_BLOCK: return T_RUBY_BLOCK;
         case BRONZE_INGOT: return T_BRONZE_INGOT;
         case STEEL_INGOT: return T_STEEL_INGOT;

@@ -2838,6 +2838,16 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
                     }
                 }
         }
+        // Rusting steel: the steel block with orange-brown rust spreading over it.
+        for (int stage = 1; stage <= 2; ++stage) {
+            const int t = stage == 1 ? T_STEEL_RUST1 : T_STEEL_RUST2;
+            for (int y = 0; y < 16; ++y)
+                for (int x = 0; x < 16; ++x) {
+                    std::copy_n(px4(T_STEEL_BLOCK, x, y), 4, px4(t, x, y));
+                    const int h = (int)(hash3(x / 2, y / 2, 7711, 5) % 100), fine = (int)(hash3(x, y, 7712, 3) % 9) - 4;
+                    if (h < (stage == 1 ? 30 : 72)) a.put(t, x, y, (h % 3 == 0 ? Rgb{150, 70, 30} : h % 3 == 1 ? Rgb{176, 92, 40} : Rgb{120, 56, 28}).plus(fine));
+                }
+        }
         // Yellow and black hazard stripes.
         for (int y = 0; y < 16; ++y)
             for (int x = 0; x < 16; ++x) {

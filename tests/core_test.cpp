@@ -4057,6 +4057,9 @@ static int testCaves160() {
     // pools, bigger caves than generation 3; old worlds unchanged; the new recipes and items.
     GenConfig g3 = GenConfig::defaults();
     g3.generation = 3;
+    // 2.7.0: steel rusts in two stages and honey waxes every stage.
+    CHECK(steelVariant(0, false) == STEEL_BLOCK && steelStage(steelVariant(2, true)) == 2 && steelWaxed(steelVariant(2, true)) &&
+          !steelWaxed(steelVariant(1, false)) && steelStage(steelVariant(1, false)) == 1 && isAgingSteel(STEEL_AGED + 4) && !isItemOnly(STEEL_AGED + 3));
     // 2.7.0: the user's devices: Teclast P30T (Mali-G57 MC1, 4 GB) and Galaxy A14 (Mali-G52) weak,
     // Redmi Note 13 5G (Mali-G57 MC2, 8 GB) Smoother+.
     CHECK(detectPerfTier("Mali-G57", 3900) == 1 && detectPerfTier("Mali-G52 MC2", 4000) == 1 &&
@@ -4169,7 +4172,7 @@ static int testWorld159() {
     }
     size_t total = 0;
     for (int c = 0; c < CatCount; ++c) total += creativeCategoryItems(c).size();
-    CHECK(total == (size_t)kCreativeItemCount + 7 + (kFeatures250 ? 6 : 0) + (kFeatures260 ? 15 : 0) + (kFeatures270 ? 9 : 0) && creativeGroup(STAINED_GLASS) && !creativeGroup(STONE));
+    CHECK(total == (size_t)kCreativeItemCount + 7 + (kFeatures250 ? 6 : 0) + (kFeatures260 ? 15 : 0) + (kFeatures270 ? 14 : 0) && creativeGroup(STAINED_GLASS) && !creativeGroup(STONE));
     return 0;
 }
 

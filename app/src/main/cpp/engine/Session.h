@@ -155,6 +155,8 @@ public:
     int wantsDocument = -1;      // 1.5.0: an old document was read: its page (0..7) for the reading screen
     void readDocument(int page);
     FurnaceKey openChest;
+    FurnaceKey openChest2;   // 2.7.0: the other half of a double chest
+    bool hasChest2 = false;
     ChestContents* chest(const FurnaceKey& key);
     // Multiplayer: the chest's contents (structure loot is decided now if it was never opened),
     // and replacing a chest's or furnace's contents with what another player sees.

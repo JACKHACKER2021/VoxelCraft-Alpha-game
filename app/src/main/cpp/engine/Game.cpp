@@ -4702,6 +4702,10 @@ ItemStack* Game::stackAt(SlotRef ref) {
         case SlotArea::Offhand: return &session_->offhand();
         case SlotArea::Back: return &session_->back();
         case SlotArea::Chest: {
+            if (ref.index >= kChestSize) {  // 2.7.0: the second half of a double chest
+                ChestContents* c2 = screen_ == Screen::Chest && session_->hasChest2 ? session_->chest(session_->openChest2) : nullptr;
+                return c2 ? &(*c2)[ref.index - kChestSize] : nullptr;
+            }
             ChestContents* c = screen_ == Screen::Chest ? session_->chest(session_->openChest) : nullptr;
             return c ? &(*c)[ref.index] : nullptr;
         }
@@ -5142,10 +5146,12 @@ void Game::chestScreen() {
         }
         walletTotal_ = total;
     }
-    if (!containerWindow(wallet ? trf("Peněženka {0} / {1}", {std::to_string(walletTotal_), std::to_string(kWalletLimit)}) : std::string("Truhla"),
-                         top + 6 + 3 * kSlot + 4 + kSlot, gx, gy)) return;
-    for (int i = 0; i < kChestSize; ++i) slot(gx + (i % 9) * kSlot, gy + (i / 9) * kSlot, {SlotArea::Chest, i});
-    playerSlots(gx, gy + top + 6);
+    const bool big = kFeatures270 && !wallet && session_->hasChest2 && session_->chest(session_->openChest2);
+    const float rows = big ? 6 * kSlot : top;
+    if (!containerWindow(wallet ? trf("Peněženka {0} / {1}", {std::to_string(walletTotal_), std::to_string(kWalletLimit)}) : std::string(big ? "Velká truhla" : "Truhla"),
+                         rows + 6 + 3 * kSlot + 4 + kSlot, gx, gy)) return;
+    for (int i = 0; i < (big ? 2 * kChestSize : kChestSize); ++i) slot(gx + (i % 9) * kSlot, gy + (i / 9) * kSlot, {SlotArea::Chest, i});
+    playerSlots(gx, gy + rows + 6);
 }
 
 // 2.7.0: a backpack: its pages of 27 slots (as many slots as the tier gives), a crafting grid and,
