@@ -40,3 +40,24 @@ Ukázka všech: `mob_sounds_demo.mp3` (3:12), u každého tvora v pořadí say 1
 | 2:56 | Crimson Man (boss) | zkreslený hluboký hlas o oktávu níž, nasátí ze tmy |
 
     python3 tools/mob_sounds.py   # znovu vytvoří všechny zvuky i ukázku
+
+# Zvuky hráče
+
+Syntetizované skriptem `tools/player_sounds.py` (stejné stavební kameny jako zvuky tvorů), v `player/`,
+mono Ogg Vorbis. Ukázka všech: `player_sounds_demo.mp3` (0:29), v tomto pořadí:
+
+| Čas | Soubor | Zvuk |
+|---|---|---|
+| 0:00 | `player_freeze_hit.ogg` | zásah mrazem: prasknutí ledu, cinkání krystalků, úder, studený výdech |
+| 0:01 | `player_fall.ogg` | malý pád: dopad těla a krátké „uh“ |
+| 0:03 | `player_fall_big.ogg` | velký pád: těžký dunivý dopad, křupnutí, odlétající štěrk, delší bolestné „ááuu“ |
+| 0:04 | `player_death.ogg` | smrt: klesající výkřik, pád na zem, doznívající tón |
+| 0:08 | `player_burn_1.ogg`, `player_burn_2.ogg` | hoření: syčení a praskání ohně, sykavé „eh“ |
+| 0:11 | `player_husking_flame.ogg` | zásah ohnivou koulí Huskingu: let koule, výbuch plamene, hoření |
+| 0:13 | `player_death_fire.ogg` | smrt v ohni: výkřik, šlehající plameny, pád |
+| 0:16 | `player_respawn.ogg` | respawn: stoupající zvonky C–E–G–C–E, zářivý tón |
+| 0:20 | `player_hunger.ogg` | hlad: kručení v břiše s bubláním |
+| 0:22 | `player_eat_1.ogg` … `player_eat_3.ogg` | jedení: křupavá kousnutí |
+| 0:27 | `player_eat_finish.ogg` | dojedení: polknutí a spokojené „ááh“ |
+
+    python3 tools/player_sounds.py   # znovu vytvoří zvuky hráče i ukázku
