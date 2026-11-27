@@ -1,4 +1,4 @@
-# VoxelCraft – co všechno je hotové (0.0.1 → 1.5.0)
+# VoxelCraft – co všechno je hotové (0.0.1 → 3.0.0)
 
 Autor: Hoppy_Hopsy21 aneb VoxelSoftworks. Vlastní C++ engine pro Android 16 (NativeActivity, GLES3),
 bez jakýchkoli assetů nebo kódu od Mojangu.
@@ -186,6 +186,33 @@ bez jakýchkoli assetů nebo kódu od Mojangu.
 - Rozhlas s hlasem (eSpeak NG), stárnoucí a voskovaný bronz, bronzové dveře, schody a desky, polštář na posteli.
 - Zelené menu, panorama všech světů, nová tlačítka HUD, písmo Tiny Caps, barvy a styly textu, příkazy /say /age /wax /locate.
 - Preview buildy 1–12 prošly testováním v chatu, než šlo vše do hlavní verze.
+
+## 2.3.0 – Metro a bronz
+- První metro, bronzové síně hluboko pod Overworldem, kola, která se točí.
+
+## 2.4.0 – Metro a stanice
+- Metro s posuvnými dveřmi a nočními světly, nádraží s betonovou kolejí a nástupišti, příhradové mosty, křížení kolejí, rozpadlá nádraží.
+
+## 2.5.0 – Podzemí
+- Síť metra se čtyřmi druhy stanic, automatické metro a jeho mapa, ztracené město, deníky průzkumníka, vraky vlaků, seedy struktur, Voxel Bucks, hlášení chyb.
+
+## 2.6.0 – Cornerstone a svátky
+- Úhelný golem, mechový plaz, sporovka, žhavá můra, popelavý a ochočitelný lišák; rudy Cornerstone; Halloween a Vánoce; duch, sněhulák, sáně; čtyři nové skladby.
+
+## 2.7.0 / 2.7.1 – Batohy a doplňky
+- Batohy v šesti úrovních, peněženka, obojek pro lišáka, ocelová směs a rezavějící ocel, velká truhla, správce doplňků s převodem z Bedrocku, Tvůrce bloků a mobů, režimy výkonu.
+- 2.7.1: shadery se nevypnou při načítání světa, Galaxy A14 na Smoother+.
+
+## 2.8.0 – VC jazyk
+- Všichni tvorové jako GLB modely (nové prase, ovce, slepice, kráva, duch s obličeji), bloky, předměty, loot, shadery a stavby v souborech, které doplněk přepíše.
+- Tvůrce se vším, výchozí textury, shadery a téma k úpravě, export doplňku; jízdenky, turnikety, hlášení stanic, deník hráče, deset úspěchů.
+
+## 2.9.0 Preview
+- Krátký preview na cestě k 3.0.0: začátek odchodu železa, oprava batohu, `cornerstone.json`.
+
+## 3.0.0 – Bez železa, úhelný kámen celý svůj
+- Železné nástroje odešly (jsou ocelové), železo jen s uhlím do ocelové směsi; ocelové dveře, nová rezavá ocel.
+- Dimenze úhelného kamene bez „Netheru“; Sídlo VoxelSoftworks na vývojářské mapě; slavnostní uvítání s ohňostrojem.
 
 ## Nápady, na které se dá navázat
 - Další věci do doplňků (vánoční bloky, halloweenské dýně s obličeji, narozeninové balónky).
