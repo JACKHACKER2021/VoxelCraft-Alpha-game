@@ -7616,11 +7616,11 @@ SHOT(t31_lineup) {
         for (size_t i = 0; i < s.mobs().mobs().size(); ++i) {
             Mob& m = s.mobs().mobs()[i];
             const bool flies = m.type == MobType::Bat || m.type == MobType::Ghost || m.type == MobType::SkyDrifter || m.type == MobType::EmberMoth;
-            m.pos = Vec3((int)m.type * gap, flies ? 5.5f : 4.0f, 0.5f), m.vel = {}, m.wandering = false, m.wanderTimer = 999, m.yaw = 0.4f;
+            m.pos = Vec3((int)m.type * gap, flies ? 5.0f : 4.0f, 0.5f), m.vel = {}, m.wandering = false, m.wanderTimer = 999, m.yaw = 0.5f;
             m.swing = std::sin(k * 50.0f + i) * 0.45f;
         }
-        const float x = -4.0f + k * (n * gap + 2.0f);
-        p.pos = Vec3(x, 6.5f, -7.5f), p.vel = {};
-        d.lookNow(Vec3(x + 2.5f, 4.8f, 0.5f));
+        const float x = -2.0f + k * (n * gap);
+        p.pos = Vec3(x - 1.5f, 5.6f, -5.0f), p.vel = {};
+        d.lookNow(Vec3(x + 1.0f, 4.7f, 0.5f));
     });
 }
