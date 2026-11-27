@@ -1,0 +1,8644 @@
+{"format": "vc:blocks", "version": "2.8.0",
+ "blocks": [
+  {
+  "key": "stone",
+  "name": "Kámen",
+  "tiles": [0, 0, 0, 0, 0, 0],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "grass",
+  "name": "Travnatý blok",
+  "tiles": [1, 3, 2, 2, 2, 2],
+  "hardness": 0.6,
+  "stack": 64
+},
+  {
+  "key": "dirt",
+  "name": "Hlína",
+  "tiles": [3, 3, 3, 3, 3, 3],
+  "hardness": 0.5,
+  "stack": 64
+},
+  {
+  "key": "cobblestone",
+  "name": "Dlažební kámen",
+  "tiles": [4, 4, 4, 4, 4, 4],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "planks",
+  "name": "Dubová prkna",
+  "tiles": [5, 5, 5, 5, 5, 5],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "nether_grass",
+  "name": "Úhelná tráva",
+  "tiles": [130, 17, 131, 131, 131, 131],
+  "hardness": 0.5,
+  "stack": 64
+},
+  {
+  "key": "bedrock",
+  "name": "Podloží",
+  "tiles": [6, 6, 6, 6, 6, 6],
+  "hardness": -1,
+  "stack": 64
+},
+  {
+  "key": "nether_sprouts",
+  "name": "Grasser",
+  "tiles": [132, 132, 132, 132, 132, 132],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "water",
+  "name": "Voda",
+  "tiles": [7, 7, 7, 7, 7, 7],
+  "hardness": -1,
+  "stack": 64
+},
+  {
+  "key": "void_stone",
+  "name": "Prázdnotný kámen",
+  "tiles": [133, 133, 133, 133, 133, 133],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "lava",
+  "name": "Láva",
+  "tiles": [15, 15, 15, 15, 15, 15],
+  "hardness": -1,
+  "stack": 64
+},
+  {
+  "key": "sand",
+  "name": "Písek",
+  "tiles": [8, 8, 8, 8, 8, 8],
+  "hardness": 0.5,
+  "stack": 64
+},
+  {
+  "key": "gravel",
+  "name": "Štěrk",
+  "tiles": [9, 9, 9, 9, 9, 9],
+  "hardness": 0.6,
+  "stack": 64
+},
+  {
+  "key": "void_grass",
+  "name": "Fialová tráva",
+  "tiles": [134, 133, 135, 135, 135, 135],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "iron_ore",
+  "name": "Železná ruda",
+  "tiles": [26, 26, 26, 26, 26, 26],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "coal_ore",
+  "name": "Uhelná ruda",
+  "tiles": [25, 25, 25, 25, 25, 25],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "log",
+  "name": "Dubový kmen",
+  "tiles": [11, 11, 10, 10, 10, 10],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "leaves",
+  "name": "Dubové listí",
+  "tiles": [12, 12, 12, 12, 12, 12],
+  "hardness": 0.2,
+  "stack": 64
+},
+  {
+  "key": "void_log",
+  "name": "Prázdnotný kmen",
+  "tiles": [137, 137, 136, 136, 136, 136],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "glass",
+  "name": "Sklo",
+  "tiles": [13, 13, 13, 13, 13, 13],
+  "hardness": 0.3,
+  "stack": 64
+},
+  {
+  "key": "eye_log",
+  "name": "Oční kmen",
+  "tiles": [137, 137, 138, 138, 138, 138],
+  "hardness": 2.5,
+  "stack": 64
+},
+  {
+  "key": "void_leaves",
+  "name": "Prázdnotné listí",
+  "tiles": [139, 139, 139, 139, 139, 139],
+  "hardness": 0.2,
+  "stack": 64
+},
+  {
+  "key": "red_sand",
+  "name": "Rudý písek",
+  "tiles": [140, 140, 140, 140, 140, 140],
+  "hardness": 0.5,
+  "stack": 64
+},
+  {
+  "key": "sandstone",
+  "name": "Pískovec",
+  "tiles": [50, 50, 51, 51, 51, 51],
+  "hardness": 0.8,
+  "stack": 64
+},
+  {
+  "key": "void_portal",
+  "name": "Prázdnotný portál",
+  "tiles": [141, 141, 141, 141, 141, 141],
+  "hardness": -1,
+  "stack": 64
+},
+  {
+  "key": "void_stone_bricks",
+  "name": "Prázdnotné cihly",
+  "tiles": [142, 142, 142, 142, 142, 142],
+  "hardness": 2.2,
+  "stack": 64
+},
+  {
+  "key": "pumpkin",
+  "name": "Dýně",
+  "tiles": [144, 144, 143, 145, 143, 143],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "crimson_roots",
+  "name": "Karmínové kořeny",
+  "tiles": [146, 146, 146, 146, 146, 146],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "world_end",
+  "name": "Konec světa",
+  "tiles": [172, 172, 172, 172, 172, 172],
+  "hardness": -1,
+  "stack": 64
+},
+  {
+  "key": "tnt",
+  "name": "TNT",
+  "tiles": [174, 175, 173, 173, 173, 173],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "tall_grass",
+  "name": "Vysoká tráva",
+  "tiles": [47, 47, 47, 47, 47, 47],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "nuke_tnt",
+  "name": "Jaderné TNT",
+  "tiles": [174, 175, 176, 176, 176, 176],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "netherperk_log",
+  "name": "Netherperkový kmen",
+  "tiles": [178, 178, 177, 177, 177, 177],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "netherperk_cap",
+  "name": "Netherperková koruna",
+  "tiles": [179, 179, 179, 179, 179, 179],
+  "hardness": 0.3,
+  "stack": 64
+},
+  {
+  "key": "white_wool",
+  "name": "Bílá vlna",
+  "tiles": [57, 57, 57, 57, 57, 57],
+  "hardness": 0.8,
+  "stack": 64
+},
+  {
+  "key": "netherperk_planks",
+  "name": "Netherperková prkna",
+  "tiles": [180, 180, 180, 180, 180, 180],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "dandelion",
+  "name": "Pampeliška",
+  "tiles": [48, 48, 48, 48, 48, 48],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "poppy",
+  "name": "Mák",
+  "tiles": [49, 49, 49, 49, 49, 49],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "void_planks",
+  "name": "Prázdnotná prkna",
+  "tiles": [181, 181, 181, 181, 181, 181],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "oak_sapling",
+  "name": "Dubová sazenice",
+  "tiles": [182, 182, 182, 182, 182, 182],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "pine_sapling",
+  "name": "Borová sazenice",
+  "tiles": [183, 183, 183, 183, 183, 183],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "void_sapling",
+  "name": "Prázdnotná sazenice",
+  "tiles": [184, 184, 184, 184, 184, 184],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "netherperk_sapling",
+  "name": "Netherperková sazenice",
+  "tiles": [185, 185, 185, 185, 185, 185],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "powerstone_ore",
+  "name": "Powerstonová ruda",
+  "tiles": [186, 186, 186, 186, 186, 186],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "bricks",
+  "name": "Cihly",
+  "tiles": [14, 14, 14, 14, 14, 14],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "powerstone_block",
+  "name": "Powerstonový blok",
+  "tiles": [187, 187, 187, 187, 187, 187],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "bookshelf",
+  "name": "Knihovna",
+  "tiles": [5, 5, 52, 52, 52, 52],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "mossy_cobblestone",
+  "name": "Mechový dlažební kámen",
+  "tiles": [53, 53, 53, 53, 53, 53],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "obsidian",
+  "name": "Obsidián",
+  "tiles": [16, 16, 16, 16, 16, 16],
+  "hardness": 50,
+  "stack": 64
+},
+  {
+  "key": "vc:id/50",
+  "name": "Truhla",
+  "tiles": [119, 119, 121, 121, 120, 120],
+  "hardness": 2.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/51",
+  "name": "Truhla",
+  "tiles": [119, 119, 121, 121, 120, 120],
+  "hardness": 2.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/52",
+  "name": "Truhla",
+  "tiles": [119, 119, 121, 121, 120, 120],
+  "hardness": 2.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/53",
+  "name": "Truhla",
+  "tiles": [119, 119, 121, 121, 120, 120],
+  "hardness": 2.5,
+  "stack": 64
+},
+  {
+  "key": "chest",
+  "name": "Truhla",
+  "tiles": [119, 119, 121, 121, 120, 120],
+  "hardness": 2.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/55",
+  "name": "Truhla",
+  "tiles": [119, 119, 121, 121, 120, 120],
+  "hardness": 2.5,
+  "stack": 64
+},
+  {
+  "key": "power_cable",
+  "name": "Napájecí kabel",
+  "tiles": [188, 188, 188, 188, 188, 188],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "vc:id/57",
+  "name": "Napájecí kabel",
+  "tiles": [189, 189, 189, 189, 189, 189],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "crafting_table",
+  "name": "Pracovní stůl",
+  "tiles": [27, 5, 29, 29, 28, 28],
+  "hardness": 2.5,
+  "stack": 64
+},
+  {
+  "key": "powerstone_lamp",
+  "name": "Powerstonová lampa",
+  "tiles": [190, 190, 190, 190, 190, 190],
+  "hardness": 0.3,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60",
+  "name": "Powerstonová lampa",
+  "tiles": [191, 191, 191, 191, 191, 191],
+  "hardness": 0.3,
+  "stack": 64
+},
+  {
+  "key": "furnace",
+  "name": "Pec",
+  "tiles": [30, 30, 32, 32, 31, 31],
+  "hardness": 3.5,
+  "stack": 64
+},
+  {
+  "key": "lit_furnace",
+  "name": "Pec",
+  "tiles": [30, 30, 33, 33, 31, 31],
+  "hardness": 3.5,
+  "stack": 64
+},
+  {
+  "key": "trapdoor",
+  "name": "Dubový poklop",
+  "tiles": [126, 126, 126, 126, 126, 126],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "vc:id/64",
+  "name": "Dubový poklop",
+  "tiles": [126, 126, 126, 126, 126, 126],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "vc:id/65",
+  "name": "Dubový poklop",
+  "tiles": [126, 126, 126, 126, 126, 126],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "vc:id/66",
+  "name": "Dubový poklop",
+  "tiles": [126, 126, 126, 126, 126, 126],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "vc:id/67",
+  "name": "Dubový poklop",
+  "tiles": [126, 126, 126, 126, 126, 126],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "vc:id/68",
+  "name": "Dubový poklop",
+  "tiles": [126, 126, 126, 126, 126, 126],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "vc:id/69",
+  "name": "Dubový poklop",
+  "tiles": [126, 126, 126, 126, 126, 126],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "vc:id/70",
+  "name": "Dubový poklop",
+  "tiles": [126, 126, 126, 126, 126, 126],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "vc:id/71",
+  "name": "Dubový poklop",
+  "tiles": [126, 126, 126, 126, 126, 126],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "vc:id/72",
+  "name": "Dubový poklop",
+  "tiles": [126, 126, 126, 126, 126, 126],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "vc:id/73",
+  "name": "Dubový poklop",
+  "tiles": [126, 126, 126, 126, 126, 126],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "vc:id/74",
+  "name": "Dubový poklop",
+  "tiles": [126, 126, 126, 126, 126, 126],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "vc:id/75",
+  "name": "Dubový poklop",
+  "tiles": [126, 126, 126, 126, 126, 126],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "vc:id/76",
+  "name": "Dubový poklop",
+  "tiles": [126, 126, 126, 126, 126, 126],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "vc:id/77",
+  "name": "Dubový poklop",
+  "tiles": [126, 126, 126, 126, 126, 126],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "vc:id/78",
+  "name": "Dubový poklop",
+  "tiles": [126, 126, 126, 126, 126, 126],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "ice",
+  "name": "Led",
+  "tiles": [115, 115, 115, 115, 115, 115],
+  "hardness": 0.5,
+  "stack": 64
+},
+  {
+  "key": "snow",
+  "name": "Sněhový blok",
+  "tiles": [54, 54, 54, 54, 54, 54],
+  "hardness": 0.2,
+  "stack": 64
+},
+  {
+  "key": "cactus",
+  "name": "Kaktus",
+  "tiles": [117, 117, 116, 116, 116, 116],
+  "hardness": 0.4,
+  "stack": 64
+},
+  {
+  "key": "clay",
+  "name": "Jíl",
+  "tiles": [55, 55, 55, 55, 55, 55],
+  "hardness": 0.6,
+  "stack": 64
+},
+  {
+  "key": "switch",
+  "name": "Vypínač",
+  "tiles": [192, 4, 4, 4, 4, 4],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "vc:id/84",
+  "name": "Vypínač",
+  "tiles": [193, 4, 4, 4, 4, 4],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "fence",
+  "name": "Plot",
+  "tiles": [5, 5, 5, 5, 5, 5],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "powerstone_light",
+  "name": "Powerstonové světlo",
+  "tiles": [194, 194, 194, 194, 194, 194],
+  "hardness": 0.3,
+  "stack": 64
+},
+  {
+  "key": "netherrack",
+  "name": "Úhelný kámen",
+  "tiles": [17, 17, 17, 17, 17, 17],
+  "hardness": 0.4,
+  "stack": 64
+},
+  {
+  "key": "wheat_crop_2",
+  "name": "Rostoucí pšenice",
+  "tiles": [220, 220, 220, 220, 220, 220],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "wheat_crop_ripe",
+  "name": "Zralá pšenice",
+  "tiles": [221, 221, 221, 221, 221, 221],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "portal",
+  "name": "",
+  "tiles": [20, 20, 20, 20, 20, 20],
+  "hardness": -1,
+  "stack": 64
+},
+  {
+  "key": "gift_box",
+  "name": "Dárek",
+  "tiles": [196, 196, 195, 195, 195, 195],
+  "hardness": 0.5,
+  "stack": 64
+},
+  {
+  "key": "cake",
+  "name": "Dort",
+  "tiles": [197, 198, 198, 198, 198, 198],
+  "hardness": 0.5,
+  "stack": 1
+},
+  {
+  "key": "vc:id/93",
+  "name": "Truhla",
+  "tiles": [119, 119, 121, 121, 120, 120],
+  "hardness": 2.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/94",
+  "name": "Truhla",
+  "tiles": [119, 119, 121, 121, 120, 120],
+  "hardness": 2.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/95",
+  "name": "Truhla",
+  "tiles": [119, 119, 121, 121, 120, 120],
+  "hardness": 2.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/96",
+  "name": "Truhla",
+  "tiles": [119, 119, 121, 121, 120, 120],
+  "hardness": 2.5,
+  "stack": 64
+},
+  {
+  "key": "farmland",
+  "name": "Ornice",
+  "tiles": [18, 3, 3, 3, 3, 3],
+  "hardness": 0.6,
+  "stack": 64
+},
+  {
+  "key": "stone_bricks",
+  "name": "Kamenné cihly",
+  "tiles": [56, 56, 56, 56, 56, 56],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "powerstone_dust",
+  "name": "Powerstonový prach",
+  "tiles": [213, 213, 213, 213, 213, 213],
+  "stack": 64
+},
+  {
+  "key": "powerstone_chip",
+  "name": "Powerstonový čip",
+  "tiles": [214, 214, 214, 214, 214, 214],
+  "stack": 64
+},
+  {
+  "key": "candy_cane",
+  "name": "Cukrová hůlka",
+  "tiles": [215, 215, 215, 215, 215, 215],
+  "stack": 64
+},
+  {
+  "key": "hoe",
+  "name": "Motyka",
+  "tiles": [222, 222, 222, 222, 222, 222],
+  "stack": 1
+},
+  {
+  "key": "bow",
+  "name": "Luk",
+  "tiles": [223, 223, 223, 223, 223, 223],
+  "stack": 1
+},
+  {
+  "key": "arrow",
+  "name": "Šíp",
+  "tiles": [224, 224, 224, 224, 224, 224],
+  "stack": 64
+},
+  {
+  "key": "feather",
+  "name": "Pírko",
+  "tiles": [225, 225, 225, 225, 225, 225],
+  "stack": 64
+},
+  {
+  "key": "wheat",
+  "name": "Pšenice",
+  "tiles": [226, 226, 226, 226, 226, 226],
+  "stack": 64
+},
+  {
+  "key": "bread",
+  "name": "Chléb",
+  "tiles": [227, 227, 227, 227, 227, 227],
+  "stack": 64
+},
+  {
+  "key": "chicken",
+  "name": "Syrové kuře",
+  "tiles": [228, 228, 228, 228, 228, 228],
+  "stack": 64
+},
+  {
+  "key": "cooked_chicken",
+  "name": "Pečené kuře",
+  "tiles": [229, 229, 229, 229, 229, 229],
+  "stack": 64
+},
+  {
+  "key": "beef",
+  "name": "Syrové hovězí",
+  "tiles": [230, 230, 230, 230, 230, 230],
+  "stack": 64
+},
+  {
+  "key": "cooked_beef",
+  "name": "Steak",
+  "tiles": [231, 231, 231, 231, 231, 231],
+  "stack": 64
+},
+  {
+  "key": "nether_brick",
+  "name": "Cihly z úhelného kamene",
+  "tiles": [21, 21, 21, 21, 21, 21],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/113",
+  "name": "Dubové dveře",
+  "tiles": [122, 122, 122, 122, 122, 122],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "vc:id/114",
+  "name": "Dubové dveře",
+  "tiles": [122, 122, 122, 122, 122, 122],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "vc:id/115",
+  "name": "Dubové dveře",
+  "tiles": [122, 122, 122, 122, 122, 122],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "vc:id/116",
+  "name": "Dubové dveře",
+  "tiles": [122, 122, 122, 122, 122, 122],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "vc:id/117",
+  "name": "Dubové dveře",
+  "tiles": [122, 122, 122, 122, 122, 122],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "vc:id/118",
+  "name": "Dubové dveře",
+  "tiles": [122, 122, 122, 122, 122, 122],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "vc:id/119",
+  "name": "Dubové dveře",
+  "tiles": [122, 122, 122, 122, 122, 122],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "vc:id/120",
+  "name": "Dubové dveře",
+  "tiles": [122, 122, 122, 122, 122, 122],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "vc:id/121",
+  "name": "Dubové dveře",
+  "tiles": [123, 123, 123, 123, 123, 123],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "vc:id/122",
+  "name": "Dubové dveře",
+  "tiles": [123, 123, 123, 123, 123, 123],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "vc:id/123",
+  "name": "Dubové dveře",
+  "tiles": [123, 123, 123, 123, 123, 123],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "vc:id/124",
+  "name": "Dubové dveře",
+  "tiles": [123, 123, 123, 123, 123, 123],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "vc:id/125",
+  "name": "Dubové dveře",
+  "tiles": [123, 123, 123, 123, 123, 123],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "vc:id/126",
+  "name": "Dubové dveře",
+  "tiles": [123, 123, 123, 123, 123, 123],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "vc:id/127",
+  "name": "Dubové dveře",
+  "tiles": [123, 123, 123, 123, 123, 123],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "vc:id/128",
+  "name": "Dubové dveře",
+  "tiles": [123, 123, 123, 123, 123, 123],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "vc:id/129",
+  "name": "Železné dveře",
+  "tiles": [124, 124, 124, 124, 124, 124],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/130",
+  "name": "Železné dveře",
+  "tiles": [124, 124, 124, 124, 124, 124],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/131",
+  "name": "Železné dveře",
+  "tiles": [124, 124, 124, 124, 124, 124],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/132",
+  "name": "Železné dveře",
+  "tiles": [124, 124, 124, 124, 124, 124],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/133",
+  "name": "Železné dveře",
+  "tiles": [124, 124, 124, 124, 124, 124],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/134",
+  "name": "Železné dveře",
+  "tiles": [124, 124, 124, 124, 124, 124],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/135",
+  "name": "Železné dveře",
+  "tiles": [124, 124, 124, 124, 124, 124],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/136",
+  "name": "Železné dveře",
+  "tiles": [124, 124, 124, 124, 124, 124],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/137",
+  "name": "Železné dveře",
+  "tiles": [125, 125, 125, 125, 125, 125],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/138",
+  "name": "Železné dveře",
+  "tiles": [125, 125, 125, 125, 125, 125],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/139",
+  "name": "Železné dveře",
+  "tiles": [125, 125, 125, 125, 125, 125],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/140",
+  "name": "Železné dveře",
+  "tiles": [125, 125, 125, 125, 125, 125],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/141",
+  "name": "Železné dveře",
+  "tiles": [125, 125, 125, 125, 125, 125],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/142",
+  "name": "Železné dveře",
+  "tiles": [125, 125, 125, 125, 125, 125],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/143",
+  "name": "Železné dveře",
+  "tiles": [125, 125, 125, 125, 125, 125],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/144",
+  "name": "Železné dveře",
+  "tiles": [125, 125, 125, 125, 125, 125],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/145",
+  "name": "Postel",
+  "tiles": [148, 5, 149, 149, 149, 149],
+  "hardness": 0.2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/146",
+  "name": "Postel",
+  "tiles": [147, 5, 149, 149, 149, 149],
+  "hardness": 0.2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/147",
+  "name": "Postel",
+  "tiles": [148, 5, 149, 149, 149, 149],
+  "hardness": 0.2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/148",
+  "name": "Postel",
+  "tiles": [147, 5, 149, 149, 149, 149],
+  "hardness": 0.2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/149",
+  "name": "Postel",
+  "tiles": [148, 5, 149, 149, 149, 149],
+  "hardness": 0.2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/150",
+  "name": "Postel",
+  "tiles": [147, 5, 149, 149, 149, 149],
+  "hardness": 0.2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/151",
+  "name": "Postel",
+  "tiles": [148, 5, 149, 149, 149, 149],
+  "hardness": 0.2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/152",
+  "name": "Postel",
+  "tiles": [147, 5, 149, 149, 149, 149],
+  "hardness": 0.2,
+  "stack": 64
+},
+  {
+  "key": "hay_block",
+  "name": "Balík sena",
+  "tiles": [19, 19, 22, 22, 22, 22],
+  "hardness": 0.5,
+  "stack": 64
+},
+  {
+  "key": "milk_bucket",
+  "name": "Kbelík mléka",
+  "tiles": [232, 232, 232, 232, 232, 232],
+  "stack": 1
+},
+  {
+  "key": "chicken_spawn_egg",
+  "name": "Vejce: slepice",
+  "tiles": [233, 233, 233, 233, 233, 233],
+  "stack": 16
+},
+  {
+  "key": "cow_spawn_egg",
+  "name": "Vejce: kráva",
+  "tiles": [234, 234, 234, 234, 234, 234],
+  "stack": 16
+},
+  {
+  "key": "villager_spawn_egg",
+  "name": "Vejce: vesničan",
+  "tiles": [235, 235, 235, 235, 235, 235],
+  "stack": 16
+},
+  {
+  "key": "hardened_stone",
+  "name": "Tvrdý kámen",
+  "tiles": [118, 118, 118, 118, 118, 118],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "spruce_planks",
+  "name": "Smrková prkna",
+  "tiles": [114, 114, 114, 114, 114, 114],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "spruce_leaves",
+  "name": "Smrkové jehličí",
+  "tiles": [113, 113, 113, 113, 113, 113],
+  "hardness": 0.2,
+  "stack": 64
+},
+  {
+  "key": "spruce_log",
+  "name": "Smrkový kmen",
+  "tiles": [112, 112, 111, 111, 111, 111],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "wheat_seeds",
+  "name": "Semínka pšenice",
+  "tiles": [218, 218, 218, 218, 218, 218],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "orange_wool",
+  "name": "Oranžová vlna",
+  "tiles": [58, 58, 58, 58, 58, 58],
+  "hardness": 0.8,
+  "stack": 64
+},
+  {
+  "key": "magenta_wool",
+  "name": "Purpurová vlna",
+  "tiles": [59, 59, 59, 59, 59, 59],
+  "hardness": 0.8,
+  "stack": 64
+},
+  {
+  "key": "light_blue_wool",
+  "name": "Světle modrá vlna",
+  "tiles": [60, 60, 60, 60, 60, 60],
+  "hardness": 0.8,
+  "stack": 64
+},
+  {
+  "key": "yellow_wool",
+  "name": "Žlutá vlna",
+  "tiles": [61, 61, 61, 61, 61, 61],
+  "hardness": 0.8,
+  "stack": 64
+},
+  {
+  "key": "lime_wool",
+  "name": "Limetková vlna",
+  "tiles": [62, 62, 62, 62, 62, 62],
+  "hardness": 0.8,
+  "stack": 64
+},
+  {
+  "key": "pink_wool",
+  "name": "Růžová vlna",
+  "tiles": [63, 63, 63, 63, 63, 63],
+  "hardness": 0.8,
+  "stack": 64
+},
+  {
+  "key": "gray_wool",
+  "name": "Šedá vlna",
+  "tiles": [64, 64, 64, 64, 64, 64],
+  "hardness": 0.8,
+  "stack": 64
+},
+  {
+  "key": "light_gray_wool",
+  "name": "Světle šedá vlna",
+  "tiles": [65, 65, 65, 65, 65, 65],
+  "hardness": 0.8,
+  "stack": 64
+},
+  {
+  "key": "cyan_wool",
+  "name": "Azurová vlna",
+  "tiles": [66, 66, 66, 66, 66, 66],
+  "hardness": 0.8,
+  "stack": 64
+},
+  {
+  "key": "purple_wool",
+  "name": "Fialová vlna",
+  "tiles": [67, 67, 67, 67, 67, 67],
+  "hardness": 0.8,
+  "stack": 64
+},
+  {
+  "key": "blue_wool",
+  "name": "Modrá vlna",
+  "tiles": [68, 68, 68, 68, 68, 68],
+  "hardness": 0.8,
+  "stack": 64
+},
+  {
+  "key": "brown_wool",
+  "name": "Hnědá vlna",
+  "tiles": [69, 69, 69, 69, 69, 69],
+  "hardness": 0.8,
+  "stack": 64
+},
+  {
+  "key": "green_wool",
+  "name": "Zelená vlna",
+  "tiles": [70, 70, 70, 70, 70, 70],
+  "hardness": 0.8,
+  "stack": 64
+},
+  {
+  "key": "red_wool",
+  "name": "Červená vlna",
+  "tiles": [71, 71, 71, 71, 71, 71],
+  "hardness": 0.8,
+  "stack": 64
+},
+  {
+  "key": "black_wool",
+  "name": "Černá vlna",
+  "tiles": [72, 72, 72, 72, 72, 72],
+  "hardness": 0.8,
+  "stack": 64
+},
+  {
+  "key": "wheat_crop_1",
+  "name": "Rostoucí pšenice",
+  "tiles": [219, 219, 219, 219, 219, 219],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "bronze_ore",
+  "name": "Bronzová ruda",
+  "tiles": [73, 73, 73, 73, 73, 73],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "steel_ore",
+  "name": "Ocelová ruda",
+  "tiles": [74, 74, 74, 74, 74, 74],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "ruby_ore",
+  "name": "Rubínová ruda",
+  "tiles": [75, 75, 75, 75, 75, 75],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "bronze_block",
+  "name": "Bronzový blok",
+  "tiles": [76, 76, 76, 76, 76, 76],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "steel_block",
+  "name": "Ocelový blok",
+  "tiles": [77, 77, 77, 77, 77, 77],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "ruby_block",
+  "name": "Rubínový blok",
+  "tiles": [78, 78, 78, 78, 78, 78],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "bucket",
+  "name": "Kbelík",
+  "tiles": [199, 199, 199, 199, 199, 199],
+  "stack": 16
+},
+  {
+  "key": "water_bucket",
+  "name": "Kbelík vody",
+  "tiles": [200, 200, 200, 200, 200, 200],
+  "stack": 1
+},
+  {
+  "key": "lava_bucket",
+  "name": "Kbelík lávy",
+  "tiles": [201, 201, 201, 201, 201, 201],
+  "stack": 1
+},
+  {
+  "key": "boss_compass",
+  "name": "Kompas k aréně",
+  "tiles": [202, 202, 202, 202, 202, 202],
+  "stack": 1
+},
+  {
+  "key": "wooden_sword",
+  "name": "Dřevěný meč",
+  "tiles": [203, 203, 203, 203, 203, 203],
+  "stack": 1
+},
+  {
+  "key": "stone_sword",
+  "name": "Kamenný meč",
+  "tiles": [204, 204, 204, 204, 204, 204],
+  "stack": 1
+},
+  {
+  "key": "iron_sword",
+  "name": "Železný meč",
+  "tiles": [205, 205, 205, 205, 205, 205],
+  "stack": 1
+},
+  {
+  "key": "bronze_sword",
+  "name": "Bronzový meč",
+  "tiles": [206, 206, 206, 206, 206, 206],
+  "stack": 1
+},
+  {
+  "key": "steel_sword",
+  "name": "Ocelový meč",
+  "tiles": [207, 207, 207, 207, 207, 207],
+  "stack": 1
+},
+  {
+  "key": "ruby_sword",
+  "name": "Rubínový meč",
+  "tiles": [208, 208, 208, 208, 208, 208],
+  "stack": 1
+},
+  {
+  "key": "pig_spawn_egg",
+  "name": "Vejce: prase",
+  "tiles": [209, 209, 209, 209, 209, 209],
+  "stack": 16
+},
+  {
+  "key": "sheep_spawn_egg",
+  "name": "Vejce: ovce",
+  "tiles": [210, 210, 210, 210, 210, 210],
+  "stack": 16
+},
+  {
+  "key": "pumpkin_slime_spawn_egg",
+  "name": "Vejce: dýňový sliz",
+  "tiles": [211, 211, 211, 211, 211, 211],
+  "stack": 16
+},
+  {
+  "key": "forgotten_man_spawn_egg",
+  "name": "Vejce: zapomenutý muž",
+  "tiles": [212, 212, 212, 212, 212, 212],
+  "stack": 16
+},
+  {
+  "key": "stick",
+  "name": "Klacek",
+  "tiles": [34, 34, 34, 34, 34, 34],
+  "stack": 64
+},
+  {
+  "key": "coal",
+  "name": "Uhlí",
+  "tiles": [35, 35, 35, 35, 35, 35],
+  "stack": 64
+},
+  {
+  "key": "iron_ingot",
+  "name": "Železný ingot",
+  "tiles": [36, 36, 36, 36, 36, 36],
+  "stack": 64
+},
+  {
+  "key": "flint",
+  "name": "Pazourek",
+  "tiles": [37, 37, 37, 37, 37, 37],
+  "stack": 64
+},
+  {
+  "key": "bronze_ingot",
+  "name": "Bronzový ingot",
+  "tiles": [79, 79, 79, 79, 79, 79],
+  "stack": 64
+},
+  {
+  "key": "steel_ingot",
+  "name": "Ocelový ingot",
+  "tiles": [80, 80, 80, 80, 80, 80],
+  "stack": 64
+},
+  {
+  "key": "ruby",
+  "name": "Rubín",
+  "tiles": [81, 81, 81, 81, 81, 81],
+  "stack": 64
+},
+  {
+  "key": "oak_door",
+  "name": "Dubové dveře",
+  "tiles": [127, 127, 127, 127, 127, 127],
+  "stack": 64
+},
+  {
+  "key": "iron_door",
+  "name": "Železné dveře",
+  "tiles": [128, 128, 128, 128, 128, 128],
+  "stack": 64
+},
+  {
+  "key": "boat",
+  "name": "Loďka",
+  "tiles": [129, 129, 129, 129, 129, 129],
+  "stack": 64
+},
+  {
+  "key": "wooden_pickaxe",
+  "name": "Dřevěný krumpáč",
+  "tiles": [38, 38, 38, 38, 38, 38],
+  "stack": 1
+},
+  {
+  "key": "stone_pickaxe",
+  "name": "Kamenný krumpáč",
+  "tiles": [39, 39, 39, 39, 39, 39],
+  "stack": 1
+},
+  {
+  "key": "iron_pickaxe",
+  "name": "Železný krumpáč",
+  "tiles": [40, 40, 40, 40, 40, 40],
+  "stack": 1
+},
+  {
+  "key": "wooden_axe",
+  "name": "Dřevěná sekera",
+  "tiles": [41, 41, 41, 41, 41, 41],
+  "stack": 1
+},
+  {
+  "key": "stone_axe",
+  "name": "Kamenná sekera",
+  "tiles": [42, 42, 42, 42, 42, 42],
+  "stack": 1
+},
+  {
+  "key": "iron_axe",
+  "name": "Železná sekera",
+  "tiles": [43, 43, 43, 43, 43, 43],
+  "stack": 1
+},
+  {
+  "key": "wooden_shovel",
+  "name": "Dřevěná lopata",
+  "tiles": [44, 44, 44, 44, 44, 44],
+  "stack": 1
+},
+  {
+  "key": "stone_shovel",
+  "name": "Kamenná lopata",
+  "tiles": [45, 45, 45, 45, 45, 45],
+  "stack": 1
+},
+  {
+  "key": "iron_shovel",
+  "name": "Železná lopata",
+  "tiles": [46, 46, 46, 46, 46, 46],
+  "stack": 1
+},
+  {
+  "key": "bronze_pickaxe",
+  "name": "Bronzový krumpáč",
+  "tiles": [82, 82, 82, 82, 82, 82],
+  "stack": 1
+},
+  {
+  "key": "bronze_axe",
+  "name": "Bronzová sekera",
+  "tiles": [83, 83, 83, 83, 83, 83],
+  "stack": 1
+},
+  {
+  "key": "bronze_shovel",
+  "name": "Bronzová lopata",
+  "tiles": [84, 84, 84, 84, 84, 84],
+  "stack": 1
+},
+  {
+  "key": "steel_pickaxe",
+  "name": "Ocelový krumpáč",
+  "tiles": [85, 85, 85, 85, 85, 85],
+  "stack": 1
+},
+  {
+  "key": "steel_axe",
+  "name": "Ocelová sekera",
+  "tiles": [86, 86, 86, 86, 86, 86],
+  "stack": 1
+},
+  {
+  "key": "steel_shovel",
+  "name": "Ocelová lopata",
+  "tiles": [87, 87, 87, 87, 87, 87],
+  "stack": 1
+},
+  {
+  "key": "ruby_pickaxe",
+  "name": "Rubínový krumpáč",
+  "tiles": [88, 88, 88, 88, 88, 88],
+  "stack": 1
+},
+  {
+  "key": "ruby_axe",
+  "name": "Rubínová sekera",
+  "tiles": [89, 89, 89, 89, 89, 89],
+  "stack": 1
+},
+  {
+  "key": "ruby_shovel",
+  "name": "Rubínová lopata",
+  "tiles": [90, 90, 90, 90, 90, 90],
+  "stack": 1
+},
+  {
+  "key": "wooden_helmet",
+  "name": "Dřevěná helma",
+  "tiles": [91, 91, 91, 91, 91, 91],
+  "stack": 1
+},
+  {
+  "key": "wooden_chestplate",
+  "name": "Dřevěný kyrys",
+  "tiles": [92, 92, 92, 92, 92, 92],
+  "stack": 1
+},
+  {
+  "key": "wooden_leggings",
+  "name": "Dřevěné nohavice",
+  "tiles": [93, 93, 93, 93, 93, 93],
+  "stack": 1
+},
+  {
+  "key": "wooden_boots",
+  "name": "Dřevěné boty",
+  "tiles": [94, 94, 94, 94, 94, 94],
+  "stack": 1
+},
+  {
+  "key": "stone_helmet",
+  "name": "Kamenná helma",
+  "tiles": [95, 95, 95, 95, 95, 95],
+  "stack": 1
+},
+  {
+  "key": "stone_chestplate",
+  "name": "Kamenný kyrys",
+  "tiles": [96, 96, 96, 96, 96, 96],
+  "stack": 1
+},
+  {
+  "key": "stone_leggings",
+  "name": "Kamenné nohavice",
+  "tiles": [97, 97, 97, 97, 97, 97],
+  "stack": 1
+},
+  {
+  "key": "stone_boots",
+  "name": "Kamenné boty",
+  "tiles": [98, 98, 98, 98, 98, 98],
+  "stack": 1
+},
+  {
+  "key": "bronze_helmet",
+  "name": "Bronzová helma",
+  "tiles": [99, 99, 99, 99, 99, 99],
+  "stack": 1
+},
+  {
+  "key": "bronze_chestplate",
+  "name": "Bronzový kyrys",
+  "tiles": [100, 100, 100, 100, 100, 100],
+  "stack": 1
+},
+  {
+  "key": "bronze_leggings",
+  "name": "Bronzové nohavice",
+  "tiles": [101, 101, 101, 101, 101, 101],
+  "stack": 1
+},
+  {
+  "key": "bronze_boots",
+  "name": "Bronzové boty",
+  "tiles": [102, 102, 102, 102, 102, 102],
+  "stack": 1
+},
+  {
+  "key": "steel_helmet",
+  "name": "Ocelová helma",
+  "tiles": [103, 103, 103, 103, 103, 103],
+  "stack": 1
+},
+  {
+  "key": "steel_chestplate",
+  "name": "Ocelový kyrys",
+  "tiles": [104, 104, 104, 104, 104, 104],
+  "stack": 1
+},
+  {
+  "key": "steel_leggings",
+  "name": "Ocelové nohavice",
+  "tiles": [105, 105, 105, 105, 105, 105],
+  "stack": 1
+},
+  {
+  "key": "steel_boots",
+  "name": "Ocelové boty",
+  "tiles": [106, 106, 106, 106, 106, 106],
+  "stack": 1
+},
+  {
+  "key": "ruby_helmet",
+  "name": "Rubínová helma",
+  "tiles": [107, 107, 107, 107, 107, 107],
+  "stack": 1
+},
+  {
+  "key": "ruby_chestplate",
+  "name": "Rubínový kyrys",
+  "tiles": [108, 108, 108, 108, 108, 108],
+  "stack": 1
+},
+  {
+  "key": "ruby_leggings",
+  "name": "Rubínové nohavice",
+  "tiles": [109, 109, 109, 109, 109, 109],
+  "stack": 1
+},
+  {
+  "key": "ruby_boots",
+  "name": "Rubínové boty",
+  "tiles": [110, 110, 110, 110, 110, 110],
+  "stack": 1
+},
+  {
+  "key": "void_flint_and_steel",
+  "name": "Prázdnotné křesadlo",
+  "tiles": [150, 150, 150, 150, 150, 150],
+  "stack": 1
+},
+  {
+  "key": "porkchop",
+  "name": "Syrové vepřové",
+  "tiles": [151, 151, 151, 151, 151, 151],
+  "stack": 64
+},
+  {
+  "key": "cooked_porkchop",
+  "name": "Pečené vepřové",
+  "tiles": [152, 152, 152, 152, 152, 152],
+  "stack": 64
+},
+  {
+  "key": "mutton",
+  "name": "Syrové skopové",
+  "tiles": [153, 153, 153, 153, 153, 153],
+  "stack": 64
+},
+  {
+  "key": "cooked_mutton",
+  "name": "Pečené skopové",
+  "tiles": [154, 154, 154, 154, 154, 154],
+  "stack": 64
+},
+  {
+  "key": "bed",
+  "name": "Postel",
+  "tiles": [155, 155, 155, 155, 155, 155],
+  "stack": 64
+},
+  {
+  "key": "apple",
+  "name": "Jablko",
+  "tiles": [24, 24, 24, 24, 24, 24],
+  "stack": 64
+},
+  {
+  "key": "flint_and_steel",
+  "name": "Křesadlo",
+  "tiles": [23, 23, 23, 23, 23, 23],
+  "stack": 1
+},
+  {
+  "key": "oak_stairs",
+  "name": "Dubové schody",
+  "tiles": [5, 5, 5, 5, 5, 5],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1001",
+  "name": "Dubové schody",
+  "tiles": [5, 5, 5, 5, 5, 5],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1002",
+  "name": "Dubové schody",
+  "tiles": [5, 5, 5, 5, 5, 5],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1003",
+  "name": "Dubové schody",
+  "tiles": [5, 5, 5, 5, 5, 5],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1004",
+  "name": "Dubové schody",
+  "tiles": [5, 5, 5, 5, 5, 5],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1005",
+  "name": "Dubové schody",
+  "tiles": [5, 5, 5, 5, 5, 5],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1006",
+  "name": "Dubové schody",
+  "tiles": [5, 5, 5, 5, 5, 5],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1007",
+  "name": "Dubové schody",
+  "tiles": [5, 5, 5, 5, 5, 5],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "spruce_stairs",
+  "name": "Smrkové schody",
+  "tiles": [114, 114, 114, 114, 114, 114],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1009",
+  "name": "Smrkové schody",
+  "tiles": [114, 114, 114, 114, 114, 114],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1010",
+  "name": "Smrkové schody",
+  "tiles": [114, 114, 114, 114, 114, 114],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1011",
+  "name": "Smrkové schody",
+  "tiles": [114, 114, 114, 114, 114, 114],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1012",
+  "name": "Smrkové schody",
+  "tiles": [114, 114, 114, 114, 114, 114],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1013",
+  "name": "Smrkové schody",
+  "tiles": [114, 114, 114, 114, 114, 114],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1014",
+  "name": "Smrkové schody",
+  "tiles": [114, 114, 114, 114, 114, 114],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1015",
+  "name": "Smrkové schody",
+  "tiles": [114, 114, 114, 114, 114, 114],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "void_stairs",
+  "name": "Prázdnotné schody",
+  "tiles": [181, 181, 181, 181, 181, 181],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1017",
+  "name": "Prázdnotné schody",
+  "tiles": [181, 181, 181, 181, 181, 181],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1018",
+  "name": "Prázdnotné schody",
+  "tiles": [181, 181, 181, 181, 181, 181],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1019",
+  "name": "Prázdnotné schody",
+  "tiles": [181, 181, 181, 181, 181, 181],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1020",
+  "name": "Prázdnotné schody",
+  "tiles": [181, 181, 181, 181, 181, 181],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1021",
+  "name": "Prázdnotné schody",
+  "tiles": [181, 181, 181, 181, 181, 181],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1022",
+  "name": "Prázdnotné schody",
+  "tiles": [181, 181, 181, 181, 181, 181],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1023",
+  "name": "Prázdnotné schody",
+  "tiles": [181, 181, 181, 181, 181, 181],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "netherperk_stairs",
+  "name": "Netherperkové schody",
+  "tiles": [180, 180, 180, 180, 180, 180],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1025",
+  "name": "Netherperkové schody",
+  "tiles": [180, 180, 180, 180, 180, 180],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1026",
+  "name": "Netherperkové schody",
+  "tiles": [180, 180, 180, 180, 180, 180],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1027",
+  "name": "Netherperkové schody",
+  "tiles": [180, 180, 180, 180, 180, 180],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1028",
+  "name": "Netherperkové schody",
+  "tiles": [180, 180, 180, 180, 180, 180],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1029",
+  "name": "Netherperkové schody",
+  "tiles": [180, 180, 180, 180, 180, 180],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1030",
+  "name": "Netherperkové schody",
+  "tiles": [180, 180, 180, 180, 180, 180],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1031",
+  "name": "Netherperkové schody",
+  "tiles": [180, 180, 180, 180, 180, 180],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "cobblestone_stairs",
+  "name": "Schody z dlažebního kamene",
+  "tiles": [4, 4, 4, 4, 4, 4],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1033",
+  "name": "Schody z dlažebního kamene",
+  "tiles": [4, 4, 4, 4, 4, 4],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1034",
+  "name": "Schody z dlažebního kamene",
+  "tiles": [4, 4, 4, 4, 4, 4],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1035",
+  "name": "Schody z dlažebního kamene",
+  "tiles": [4, 4, 4, 4, 4, 4],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1036",
+  "name": "Schody z dlažebního kamene",
+  "tiles": [4, 4, 4, 4, 4, 4],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1037",
+  "name": "Schody z dlažebního kamene",
+  "tiles": [4, 4, 4, 4, 4, 4],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1038",
+  "name": "Schody z dlažebního kamene",
+  "tiles": [4, 4, 4, 4, 4, 4],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1039",
+  "name": "Schody z dlažebního kamene",
+  "tiles": [4, 4, 4, 4, 4, 4],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "stone_stairs",
+  "name": "Kamenné schody",
+  "tiles": [0, 0, 0, 0, 0, 0],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1041",
+  "name": "Kamenné schody",
+  "tiles": [0, 0, 0, 0, 0, 0],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1042",
+  "name": "Kamenné schody",
+  "tiles": [0, 0, 0, 0, 0, 0],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1043",
+  "name": "Kamenné schody",
+  "tiles": [0, 0, 0, 0, 0, 0],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1044",
+  "name": "Kamenné schody",
+  "tiles": [0, 0, 0, 0, 0, 0],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1045",
+  "name": "Kamenné schody",
+  "tiles": [0, 0, 0, 0, 0, 0],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1046",
+  "name": "Kamenné schody",
+  "tiles": [0, 0, 0, 0, 0, 0],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1047",
+  "name": "Kamenné schody",
+  "tiles": [0, 0, 0, 0, 0, 0],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "stone_brick_stairs",
+  "name": "Schody z kamenných cihel",
+  "tiles": [56, 56, 56, 56, 56, 56],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1049",
+  "name": "Schody z kamenných cihel",
+  "tiles": [56, 56, 56, 56, 56, 56],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1050",
+  "name": "Schody z kamenných cihel",
+  "tiles": [56, 56, 56, 56, 56, 56],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1051",
+  "name": "Schody z kamenných cihel",
+  "tiles": [56, 56, 56, 56, 56, 56],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1052",
+  "name": "Schody z kamenných cihel",
+  "tiles": [56, 56, 56, 56, 56, 56],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1053",
+  "name": "Schody z kamenných cihel",
+  "tiles": [56, 56, 56, 56, 56, 56],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1054",
+  "name": "Schody z kamenných cihel",
+  "tiles": [56, 56, 56, 56, 56, 56],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1055",
+  "name": "Schody z kamenných cihel",
+  "tiles": [56, 56, 56, 56, 56, 56],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "mossy_cobblestone_stairs",
+  "name": "Schody z mechového kamene",
+  "tiles": [53, 53, 53, 53, 53, 53],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1057",
+  "name": "Schody z mechového kamene",
+  "tiles": [53, 53, 53, 53, 53, 53],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1058",
+  "name": "Schody z mechového kamene",
+  "tiles": [53, 53, 53, 53, 53, 53],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1059",
+  "name": "Schody z mechového kamene",
+  "tiles": [53, 53, 53, 53, 53, 53],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1060",
+  "name": "Schody z mechového kamene",
+  "tiles": [53, 53, 53, 53, 53, 53],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1061",
+  "name": "Schody z mechového kamene",
+  "tiles": [53, 53, 53, 53, 53, 53],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1062",
+  "name": "Schody z mechového kamene",
+  "tiles": [53, 53, 53, 53, 53, 53],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1063",
+  "name": "Schody z mechového kamene",
+  "tiles": [53, 53, 53, 53, 53, 53],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "brick_stairs",
+  "name": "Cihlové schody",
+  "tiles": [14, 14, 14, 14, 14, 14],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1065",
+  "name": "Cihlové schody",
+  "tiles": [14, 14, 14, 14, 14, 14],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1066",
+  "name": "Cihlové schody",
+  "tiles": [14, 14, 14, 14, 14, 14],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1067",
+  "name": "Cihlové schody",
+  "tiles": [14, 14, 14, 14, 14, 14],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1068",
+  "name": "Cihlové schody",
+  "tiles": [14, 14, 14, 14, 14, 14],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1069",
+  "name": "Cihlové schody",
+  "tiles": [14, 14, 14, 14, 14, 14],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1070",
+  "name": "Cihlové schody",
+  "tiles": [14, 14, 14, 14, 14, 14],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1071",
+  "name": "Cihlové schody",
+  "tiles": [14, 14, 14, 14, 14, 14],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "sandstone_stairs",
+  "name": "Pískovcové schody",
+  "tiles": [50, 50, 51, 51, 51, 51],
+  "hardness": 0.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1073",
+  "name": "Pískovcové schody",
+  "tiles": [50, 50, 51, 51, 51, 51],
+  "hardness": 0.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1074",
+  "name": "Pískovcové schody",
+  "tiles": [50, 50, 51, 51, 51, 51],
+  "hardness": 0.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1075",
+  "name": "Pískovcové schody",
+  "tiles": [50, 50, 51, 51, 51, 51],
+  "hardness": 0.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1076",
+  "name": "Pískovcové schody",
+  "tiles": [50, 50, 51, 51, 51, 51],
+  "hardness": 0.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1077",
+  "name": "Pískovcové schody",
+  "tiles": [50, 50, 51, 51, 51, 51],
+  "hardness": 0.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1078",
+  "name": "Pískovcové schody",
+  "tiles": [50, 50, 51, 51, 51, 51],
+  "hardness": 0.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1079",
+  "name": "Pískovcové schody",
+  "tiles": [50, 50, 51, 51, 51, 51],
+  "hardness": 0.8,
+  "stack": 64
+},
+  {
+  "key": "nether_brick_stairs",
+  "name": "Schody z cihel úhelného kamene",
+  "tiles": [21, 21, 21, 21, 21, 21],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1081",
+  "name": "Schody z cihel úhelného kamene",
+  "tiles": [21, 21, 21, 21, 21, 21],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1082",
+  "name": "Schody z cihel úhelného kamene",
+  "tiles": [21, 21, 21, 21, 21, 21],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1083",
+  "name": "Schody z cihel úhelného kamene",
+  "tiles": [21, 21, 21, 21, 21, 21],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1084",
+  "name": "Schody z cihel úhelného kamene",
+  "tiles": [21, 21, 21, 21, 21, 21],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1085",
+  "name": "Schody z cihel úhelného kamene",
+  "tiles": [21, 21, 21, 21, 21, 21],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1086",
+  "name": "Schody z cihel úhelného kamene",
+  "tiles": [21, 21, 21, 21, 21, 21],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1087",
+  "name": "Schody z cihel úhelného kamene",
+  "tiles": [21, 21, 21, 21, 21, 21],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "void_brick_stairs",
+  "name": "Schody z prázdnotných cihel",
+  "tiles": [142, 142, 142, 142, 142, 142],
+  "hardness": 2.2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1089",
+  "name": "Schody z prázdnotných cihel",
+  "tiles": [142, 142, 142, 142, 142, 142],
+  "hardness": 2.2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1090",
+  "name": "Schody z prázdnotných cihel",
+  "tiles": [142, 142, 142, 142, 142, 142],
+  "hardness": 2.2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1091",
+  "name": "Schody z prázdnotných cihel",
+  "tiles": [142, 142, 142, 142, 142, 142],
+  "hardness": 2.2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1092",
+  "name": "Schody z prázdnotných cihel",
+  "tiles": [142, 142, 142, 142, 142, 142],
+  "hardness": 2.2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1093",
+  "name": "Schody z prázdnotných cihel",
+  "tiles": [142, 142, 142, 142, 142, 142],
+  "hardness": 2.2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1094",
+  "name": "Schody z prázdnotných cihel",
+  "tiles": [142, 142, 142, 142, 142, 142],
+  "hardness": 2.2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1095",
+  "name": "Schody z prázdnotných cihel",
+  "tiles": [142, 142, 142, 142, 142, 142],
+  "hardness": 2.2,
+  "stack": 64
+},
+  {
+  "key": "oak_slab",
+  "name": "Dubová deska",
+  "tiles": [5, 5, 5, 5, 5, 5],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1101",
+  "name": "Dubová deska",
+  "tiles": [5, 5, 5, 5, 5, 5],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1102",
+  "name": "Dubová deska",
+  "tiles": [5, 5, 5, 5, 5, 5],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "spruce_slab",
+  "name": "Smrková deska",
+  "tiles": [114, 114, 114, 114, 114, 114],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1104",
+  "name": "Smrková deska",
+  "tiles": [114, 114, 114, 114, 114, 114],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1105",
+  "name": "Smrková deska",
+  "tiles": [114, 114, 114, 114, 114, 114],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "void_slab",
+  "name": "Prázdnotná deska",
+  "tiles": [181, 181, 181, 181, 181, 181],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1107",
+  "name": "Prázdnotná deska",
+  "tiles": [181, 181, 181, 181, 181, 181],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1108",
+  "name": "Prázdnotná deska",
+  "tiles": [181, 181, 181, 181, 181, 181],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "netherperk_slab",
+  "name": "Netherperková deska",
+  "tiles": [180, 180, 180, 180, 180, 180],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1110",
+  "name": "Netherperková deska",
+  "tiles": [180, 180, 180, 180, 180, 180],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1111",
+  "name": "Netherperková deska",
+  "tiles": [180, 180, 180, 180, 180, 180],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "cobblestone_slab",
+  "name": "Deska z dlažebního kamene",
+  "tiles": [4, 4, 4, 4, 4, 4],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1113",
+  "name": "Deska z dlažebního kamene",
+  "tiles": [4, 4, 4, 4, 4, 4],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1114",
+  "name": "Deska z dlažebního kamene",
+  "tiles": [4, 4, 4, 4, 4, 4],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "stone_slab",
+  "name": "Kamenná deska",
+  "tiles": [0, 0, 0, 0, 0, 0],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1116",
+  "name": "Kamenná deska",
+  "tiles": [0, 0, 0, 0, 0, 0],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1117",
+  "name": "Kamenná deska",
+  "tiles": [0, 0, 0, 0, 0, 0],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "stone_brick_slab",
+  "name": "Deska z kamenných cihel",
+  "tiles": [56, 56, 56, 56, 56, 56],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1119",
+  "name": "Deska z kamenných cihel",
+  "tiles": [56, 56, 56, 56, 56, 56],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1120",
+  "name": "Deska z kamenných cihel",
+  "tiles": [56, 56, 56, 56, 56, 56],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "mossy_cobblestone_slab",
+  "name": "Deska z mechového kamene",
+  "tiles": [53, 53, 53, 53, 53, 53],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1122",
+  "name": "Deska z mechového kamene",
+  "tiles": [53, 53, 53, 53, 53, 53],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1123",
+  "name": "Deska z mechového kamene",
+  "tiles": [53, 53, 53, 53, 53, 53],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "brick_slab",
+  "name": "Cihlová deska",
+  "tiles": [14, 14, 14, 14, 14, 14],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1125",
+  "name": "Cihlová deska",
+  "tiles": [14, 14, 14, 14, 14, 14],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1126",
+  "name": "Cihlová deska",
+  "tiles": [14, 14, 14, 14, 14, 14],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "sandstone_slab",
+  "name": "Pískovcová deska",
+  "tiles": [50, 50, 51, 51, 51, 51],
+  "hardness": 0.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1128",
+  "name": "Pískovcová deska",
+  "tiles": [50, 50, 51, 51, 51, 51],
+  "hardness": 0.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1129",
+  "name": "Pískovcová deska",
+  "tiles": [50, 50, 51, 51, 51, 51],
+  "hardness": 0.8,
+  "stack": 64
+},
+  {
+  "key": "nether_brick_slab",
+  "name": "Deska z cihel úhelného kamene",
+  "tiles": [21, 21, 21, 21, 21, 21],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1131",
+  "name": "Deska z cihel úhelného kamene",
+  "tiles": [21, 21, 21, 21, 21, 21],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1132",
+  "name": "Deska z cihel úhelného kamene",
+  "tiles": [21, 21, 21, 21, 21, 21],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "void_brick_slab",
+  "name": "Deska z prázdnotných cihel",
+  "tiles": [142, 142, 142, 142, 142, 142],
+  "hardness": 2.2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1134",
+  "name": "Deska z prázdnotných cihel",
+  "tiles": [142, 142, 142, 142, 142, 142],
+  "hardness": 2.2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1135",
+  "name": "Deska z prázdnotných cihel",
+  "tiles": [142, 142, 142, 142, 142, 142],
+  "hardness": 2.2,
+  "stack": 64
+},
+  {
+  "key": "powerstone_slab",
+  "name": "Powerstonová deska",
+  "tiles": [300, 300, 300, 300, 300, 300],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1137",
+  "name": "Powerstonová deska",
+  "tiles": [300, 300, 300, 300, 300, 300],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1138",
+  "name": "Powerstonová deska",
+  "tiles": [300, 300, 300, 300, 300, 300],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "powerstone_stairs",
+  "name": "Powerstonové schody",
+  "tiles": [300, 300, 300, 300, 300, 300],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1141",
+  "name": "Powerstonové schody",
+  "tiles": [300, 300, 300, 300, 300, 300],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1142",
+  "name": "Powerstonové schody",
+  "tiles": [300, 300, 300, 300, 300, 300],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1143",
+  "name": "Powerstonové schody",
+  "tiles": [300, 300, 300, 300, 300, 300],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1144",
+  "name": "Powerstonové schody",
+  "tiles": [300, 300, 300, 300, 300, 300],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1145",
+  "name": "Powerstonové schody",
+  "tiles": [300, 300, 300, 300, 300, 300],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1146",
+  "name": "Powerstonové schody",
+  "tiles": [300, 300, 300, 300, 300, 300],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1147",
+  "name": "Powerstonové schody",
+  "tiles": [300, 300, 300, 300, 300, 300],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "crimson_slab",
+  "name": "Karmínová deska",
+  "tiles": [328, 328, 328, 328, 328, 328],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1149",
+  "name": "Karmínová deska",
+  "tiles": [328, 328, 328, 328, 328, 328],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1150",
+  "name": "Karmínová deska",
+  "tiles": [328, 328, 328, 328, 328, 328],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "deepstone_slab",
+  "name": "Deepstonová deska",
+  "tiles": [341, 341, 341, 341, 341, 341],
+  "hardness": 4.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1152",
+  "name": "Deepstonová deska",
+  "tiles": [341, 341, 341, 341, 341, 341],
+  "hardness": 4.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1153",
+  "name": "Deepstonová deska",
+  "tiles": [341, 341, 341, 341, 341, 341],
+  "hardness": 4.5,
+  "stack": 64
+},
+  {
+  "key": "deepstone_brick_slab",
+  "name": "Deska z deepstonových cihel",
+  "tiles": [346, 346, 346, 346, 346, 346],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1155",
+  "name": "Deska z deepstonových cihel",
+  "tiles": [346, 346, 346, 346, 346, 346],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1156",
+  "name": "Deska z deepstonových cihel",
+  "tiles": [346, 346, 346, 346, 346, 346],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "mossy_deepstone_brick_slab",
+  "name": "Deska z mechových deepstonových cihel",
+  "tiles": [348, 348, 348, 348, 348, 348],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1158",
+  "name": "Deska z mechových deepstonových cihel",
+  "tiles": [348, 348, 348, 348, 348, 348],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1159",
+  "name": "Deska z mechových deepstonových cihel",
+  "tiles": [348, 348, 348, 348, 348, 348],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "crimson_stairs",
+  "name": "Karmínové schody",
+  "tiles": [328, 328, 328, 328, 328, 328],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1161",
+  "name": "Karmínové schody",
+  "tiles": [328, 328, 328, 328, 328, 328],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1162",
+  "name": "Karmínové schody",
+  "tiles": [328, 328, 328, 328, 328, 328],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1163",
+  "name": "Karmínové schody",
+  "tiles": [328, 328, 328, 328, 328, 328],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1164",
+  "name": "Karmínové schody",
+  "tiles": [328, 328, 328, 328, 328, 328],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1165",
+  "name": "Karmínové schody",
+  "tiles": [328, 328, 328, 328, 328, 328],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1166",
+  "name": "Karmínové schody",
+  "tiles": [328, 328, 328, 328, 328, 328],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1167",
+  "name": "Karmínové schody",
+  "tiles": [328, 328, 328, 328, 328, 328],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "deepstone_stairs",
+  "name": "Deepstonové schody",
+  "tiles": [341, 341, 341, 341, 341, 341],
+  "hardness": 4.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1169",
+  "name": "Deepstonové schody",
+  "tiles": [341, 341, 341, 341, 341, 341],
+  "hardness": 4.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1170",
+  "name": "Deepstonové schody",
+  "tiles": [341, 341, 341, 341, 341, 341],
+  "hardness": 4.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1171",
+  "name": "Deepstonové schody",
+  "tiles": [341, 341, 341, 341, 341, 341],
+  "hardness": 4.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1172",
+  "name": "Deepstonové schody",
+  "tiles": [341, 341, 341, 341, 341, 341],
+  "hardness": 4.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1173",
+  "name": "Deepstonové schody",
+  "tiles": [341, 341, 341, 341, 341, 341],
+  "hardness": 4.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1174",
+  "name": "Deepstonové schody",
+  "tiles": [341, 341, 341, 341, 341, 341],
+  "hardness": 4.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1175",
+  "name": "Deepstonové schody",
+  "tiles": [341, 341, 341, 341, 341, 341],
+  "hardness": 4.5,
+  "stack": 64
+},
+  {
+  "key": "deepstone_brick_stairs",
+  "name": "Schody z deepstonových cihel",
+  "tiles": [346, 346, 346, 346, 346, 346],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1177",
+  "name": "Schody z deepstonových cihel",
+  "tiles": [346, 346, 346, 346, 346, 346],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1178",
+  "name": "Schody z deepstonových cihel",
+  "tiles": [346, 346, 346, 346, 346, 346],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1179",
+  "name": "Schody z deepstonových cihel",
+  "tiles": [346, 346, 346, 346, 346, 346],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1180",
+  "name": "Schody z deepstonových cihel",
+  "tiles": [346, 346, 346, 346, 346, 346],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1181",
+  "name": "Schody z deepstonových cihel",
+  "tiles": [346, 346, 346, 346, 346, 346],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1182",
+  "name": "Schody z deepstonových cihel",
+  "tiles": [346, 346, 346, 346, 346, 346],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1183",
+  "name": "Schody z deepstonových cihel",
+  "tiles": [346, 346, 346, 346, 346, 346],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "mossy_deepstone_brick_stairs",
+  "name": "Schody z mechových deepstonových cihel",
+  "tiles": [348, 348, 348, 348, 348, 348],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1185",
+  "name": "Schody z mechových deepstonových cihel",
+  "tiles": [348, 348, 348, 348, 348, 348],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1186",
+  "name": "Schody z mechových deepstonových cihel",
+  "tiles": [348, 348, 348, 348, 348, 348],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1187",
+  "name": "Schody z mechových deepstonových cihel",
+  "tiles": [348, 348, 348, 348, 348, 348],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1188",
+  "name": "Schody z mechových deepstonových cihel",
+  "tiles": [348, 348, 348, 348, 348, 348],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1189",
+  "name": "Schody z mechových deepstonových cihel",
+  "tiles": [348, 348, 348, 348, 348, 348],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1190",
+  "name": "Schody z mechových deepstonových cihel",
+  "tiles": [348, 348, 348, 348, 348, 348],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1191",
+  "name": "Schody z mechových deepstonových cihel",
+  "tiles": [348, 348, 348, 348, 348, 348],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "tar",
+  "name": "Dehet",
+  "tiles": [248, 248, 248, 248, 248, 248],
+  "hardness": -1,
+  "stack": 64
+},
+  {
+  "key": "tar_block",
+  "name": "Ztuhlý dehet",
+  "tiles": [249, 249, 249, 249, 249, 249],
+  "hardness": 1.2,
+  "stack": 64
+},
+  {
+  "key": "dripstone_block",
+  "name": "Krápníkový blok",
+  "tiles": [250, 250, 250, 250, 250, 250],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "pointed_dripstone",
+  "name": "Krápník",
+  "tiles": [251, 251, 251, 251, 251, 251],
+  "hardness": 0.4,
+  "stack": 64
+},
+  {
+  "key": "pointed_dripstone_down",
+  "name": "Krápník",
+  "tiles": [252, 252, 252, 252, 252, 252],
+  "hardness": 0.4,
+  "stack": 64
+},
+  {
+  "key": "snow_layer",
+  "name": "Sněhová pokrývka",
+  "tiles": [54, 54, 54, 54, 54, 54],
+  "hardness": 0.1,
+  "stack": 64
+},
+  {
+  "key": "white_stained_glass",
+  "name": "Bílé sklo",
+  "tiles": [253, 253, 253, 253, 253, 253],
+  "hardness": 0.3,
+  "stack": 64
+},
+  {
+  "key": "orange_stained_glass",
+  "name": "Oranžové sklo",
+  "tiles": [254, 254, 254, 254, 254, 254],
+  "hardness": 0.3,
+  "stack": 64
+},
+  {
+  "key": "magenta_stained_glass",
+  "name": "Purpurové sklo",
+  "tiles": [255, 255, 255, 255, 255, 255],
+  "hardness": 0.3,
+  "stack": 64
+},
+  {
+  "key": "light_blue_stained_glass",
+  "name": "Světle modré sklo",
+  "tiles": [256, 256, 256, 256, 256, 256],
+  "hardness": 0.3,
+  "stack": 64
+},
+  {
+  "key": "yellow_stained_glass",
+  "name": "Žluté sklo",
+  "tiles": [257, 257, 257, 257, 257, 257],
+  "hardness": 0.3,
+  "stack": 64
+},
+  {
+  "key": "lime_stained_glass",
+  "name": "Limetkové sklo",
+  "tiles": [258, 258, 258, 258, 258, 258],
+  "hardness": 0.3,
+  "stack": 64
+},
+  {
+  "key": "pink_stained_glass",
+  "name": "Růžové sklo",
+  "tiles": [259, 259, 259, 259, 259, 259],
+  "hardness": 0.3,
+  "stack": 64
+},
+  {
+  "key": "gray_stained_glass",
+  "name": "Šedé sklo",
+  "tiles": [260, 260, 260, 260, 260, 260],
+  "hardness": 0.3,
+  "stack": 64
+},
+  {
+  "key": "light_gray_stained_glass",
+  "name": "Světle šedé sklo",
+  "tiles": [261, 261, 261, 261, 261, 261],
+  "hardness": 0.3,
+  "stack": 64
+},
+  {
+  "key": "cyan_stained_glass",
+  "name": "Azurové sklo",
+  "tiles": [262, 262, 262, 262, 262, 262],
+  "hardness": 0.3,
+  "stack": 64
+},
+  {
+  "key": "purple_stained_glass",
+  "name": "Fialové sklo",
+  "tiles": [263, 263, 263, 263, 263, 263],
+  "hardness": 0.3,
+  "stack": 64
+},
+  {
+  "key": "blue_stained_glass",
+  "name": "Modré sklo",
+  "tiles": [264, 264, 264, 264, 264, 264],
+  "hardness": 0.3,
+  "stack": 64
+},
+  {
+  "key": "brown_stained_glass",
+  "name": "Hnědé sklo",
+  "tiles": [265, 265, 265, 265, 265, 265],
+  "hardness": 0.3,
+  "stack": 64
+},
+  {
+  "key": "green_stained_glass",
+  "name": "Zelené sklo",
+  "tiles": [266, 266, 266, 266, 266, 266],
+  "hardness": 0.3,
+  "stack": 64
+},
+  {
+  "key": "red_stained_glass",
+  "name": "Červené sklo",
+  "tiles": [267, 267, 267, 267, 267, 267],
+  "hardness": 0.3,
+  "stack": 64
+},
+  {
+  "key": "black_stained_glass",
+  "name": "Černé sklo",
+  "tiles": [268, 268, 268, 268, 268, 268],
+  "hardness": 0.3,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1230",
+  "name": "Napájecí kabel",
+  "tiles": [243, 243, 243, 243, 243, 243],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1231",
+  "name": "Napájecí kabel",
+  "tiles": [243, 243, 243, 243, 243, 243],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1232",
+  "name": "Napájecí kabel",
+  "tiles": [243, 243, 243, 243, 243, 243],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1233",
+  "name": "Napájecí kabel",
+  "tiles": [243, 243, 243, 243, 243, 243],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1234",
+  "name": "Napájecí kabel",
+  "tiles": [244, 244, 244, 244, 244, 244],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1235",
+  "name": "Napájecí kabel",
+  "tiles": [244, 244, 244, 244, 244, 244],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1236",
+  "name": "Napájecí kabel",
+  "tiles": [244, 244, 244, 244, 244, 244],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1237",
+  "name": "Napájecí kabel",
+  "tiles": [244, 244, 244, 244, 244, 244],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1240",
+  "name": "Vypínač",
+  "tiles": [4, 4, 4, 192, 4, 4],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1241",
+  "name": "Vypínač",
+  "tiles": [4, 4, 4, 4, 4, 192],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1242",
+  "name": "Vypínač",
+  "tiles": [4, 4, 192, 4, 4, 4],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1243",
+  "name": "Vypínač",
+  "tiles": [4, 4, 4, 4, 192, 4],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1244",
+  "name": "Vypínač",
+  "tiles": [4, 4, 4, 193, 4, 4],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1245",
+  "name": "Vypínač",
+  "tiles": [4, 4, 4, 4, 4, 193],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1246",
+  "name": "Vypínač",
+  "tiles": [4, 4, 193, 4, 4, 4],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1247",
+  "name": "Vypínač",
+  "tiles": [4, 4, 4, 4, 193, 4],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "string",
+  "name": "Provázek",
+  "tiles": [269, 269, 269, 269, 269, 269],
+  "stack": 64
+},
+  {
+  "key": "map",
+  "name": "Mapa",
+  "tiles": [270, 270, 270, 270, 270, 270],
+  "stack": 1
+},
+  {
+  "key": "tar_ball",
+  "name": "Dehtová koule",
+  "tiles": [271, 271, 271, 271, 271, 271],
+  "stack": 64
+},
+  {
+  "key": "spider_spawn_egg",
+  "name": "Vejce: pavouk",
+  "tiles": [272, 272, 272, 272, 272, 272],
+  "stack": 16
+},
+  {
+  "key": "bat_spawn_egg",
+  "name": "Vejce: netopýr",
+  "tiles": [273, 273, 273, 273, 273, 273],
+  "stack": 16
+},
+  {
+  "key": "tnt_zombie_spawn_egg",
+  "name": "Vejce: TNT zombie",
+  "tiles": [274, 274, 274, 274, 274, 274],
+  "stack": 16
+},
+  {
+  "key": "tar_monster_spawn_egg",
+  "name": "Vejce: dehtová příšera",
+  "tiles": [275, 275, 275, 275, 275, 275],
+  "stack": 16
+},
+  {
+  "key": "husking_spawn_egg",
+  "name": "Vejce: Husking",
+  "tiles": [320, 320, 320, 320, 320, 320],
+  "stack": 16
+},
+  {
+  "key": "hogman_spawn_egg",
+  "name": "Vejce: Prasák",
+  "tiles": [333, 333, 333, 333, 333, 333],
+  "stack": 16
+},
+  {
+  "key": "voxelcraft_logo",
+  "name": "Logo VoxelCraftu",
+  "tiles": [285, 285, 284, 284, 284, 284],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "confetti_block",
+  "name": "Blok konfet",
+  "tiles": [286, 286, 286, 286, 286, 286],
+  "hardness": 0.1,
+  "stack": 64
+},
+  {
+  "key": "red_balloon",
+  "name": "Červený balónek",
+  "tiles": [287, 287, 287, 287, 287, 287],
+  "hardness": 0.1,
+  "stack": 64
+},
+  {
+  "key": "blue_balloon",
+  "name": "Modrý balónek",
+  "tiles": [288, 288, 288, 288, 288, 288],
+  "hardness": 0.1,
+  "stack": 64
+},
+  {
+  "key": "yellow_balloon",
+  "name": "Žlutý balónek",
+  "tiles": [289, 289, 289, 289, 289, 289],
+  "hardness": 0.1,
+  "stack": 64
+},
+  {
+  "key": "party_lantern",
+  "name": "Slavnostní lucerna",
+  "tiles": [291, 291, 290, 290, 290, 290],
+  "hardness": 0.5,
+  "stack": 64
+},
+  {
+  "key": "festive_bricks",
+  "name": "Slavnostní cihly",
+  "tiles": [292, 292, 292, 292, 292, 292],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "red_painted_planks",
+  "name": "Červená prkna",
+  "tiles": [293, 293, 293, 293, 293, 293],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "blue_painted_planks",
+  "name": "Modrá prkna",
+  "tiles": [294, 294, 294, 294, 294, 294],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "yellow_painted_planks",
+  "name": "Žlutá prkna",
+  "tiles": [295, 295, 295, 295, 295, 295],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "green_painted_planks",
+  "name": "Zelená prkna",
+  "tiles": [296, 296, 296, 296, 296, 296],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "anniversary_token",
+  "name": "Výroční žeton",
+  "tiles": [297, 297, 297, 297, 297, 297],
+  "stack": 64
+},
+  {
+  "key": "anniversary_medal",
+  "name": "Výroční medaile",
+  "tiles": [298, 298, 298, 298, 298, 298],
+  "stack": 1
+},
+  {
+  "key": "party_popper",
+  "name": "Vystřelovací konfety",
+  "tiles": [299, 299, 299, 299, 299, 299],
+  "stack": 64
+},
+  {
+  "key": "powerstone_bricks",
+  "name": "Powerstonové cihly",
+  "tiles": [300, 300, 300, 300, 300, 300],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "cracked_powerstone_bricks",
+  "name": "Popraskané powerstonové cihly",
+  "tiles": [301, 301, 301, 301, 301, 301],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "chiseled_powerstone_bricks",
+  "name": "Zdobené powerstonové cihly",
+  "tiles": [300, 300, 302, 302, 302, 302],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "powerstone_glass",
+  "name": "Powerstonové sklo",
+  "tiles": [303, 303, 303, 303, 303, 303],
+  "hardness": 0.3,
+  "stack": 64
+},
+  {
+  "key": "debris_gravel",
+  "name": "Štěrk s nálezy",
+  "tiles": [304, 304, 304, 304, 304, 304],
+  "hardness": 0.6,
+  "stack": 64
+},
+  {
+  "key": "skeleton_head",
+  "name": "Lebka kostlivce",
+  "tiles": [305, 305, 305, 306, 305, 305],
+  "hardness": 1,
+  "stack": 16
+},
+  {
+  "key": "vc:id/1506",
+  "name": "Lebka kostlivce",
+  "tiles": [305, 305, 305, 305, 305, 306],
+  "hardness": 1,
+  "stack": 16
+},
+  {
+  "key": "vc:id/1507",
+  "name": "Lebka kostlivce",
+  "tiles": [305, 305, 306, 305, 305, 305],
+  "hardness": 1,
+  "stack": 16
+},
+  {
+  "key": "vc:id/1508",
+  "name": "Lebka kostlivce",
+  "tiles": [305, 305, 305, 305, 306, 305],
+  "hardness": 1,
+  "stack": 16
+},
+  {
+  "key": "wasteland_grass",
+  "name": "Pustá tráva",
+  "tiles": [307, 17, 308, 308, 308, 308],
+  "hardness": 0.5,
+  "stack": 64
+},
+  {
+  "key": "dry_grass",
+  "name": "Suchá tráva",
+  "tiles": [309, 309, 309, 309, 309, 309],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "grasser_flower",
+  "name": "Květ Grasser",
+  "tiles": [310, 310, 310, 310, 310, 310],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "fern",
+  "name": "Kapradí",
+  "tiles": [311, 311, 311, 311, 311, 311],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "cracked_nether_bricks",
+  "name": "Popraskané cihly z úhelného kamene",
+  "tiles": [312, 312, 312, 312, 312, 312],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "chiseled_nether_bricks",
+  "name": "Zdobené cihly z úhelného kamene",
+  "tiles": [21, 21, 313, 313, 313, 313],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1515",
+  "name": "Truhla",
+  "tiles": [119, 119, 121, 121, 120, 120],
+  "hardness": 2.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1516",
+  "name": "Truhla",
+  "tiles": [119, 119, 121, 121, 120, 120],
+  "hardness": 2.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1517",
+  "name": "Truhla",
+  "tiles": [119, 119, 121, 121, 120, 120],
+  "hardness": 2.5,
+  "stack": 64
+},
+  {
+  "key": "spruce_fence",
+  "name": "Smrkový plot",
+  "tiles": [114, 114, 114, 114, 114, 114],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "void_fence",
+  "name": "Prázdnotný plot",
+  "tiles": [181, 181, 181, 181, 181, 181],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "netherperk_fence",
+  "name": "Netherperkový plot",
+  "tiles": [180, 180, 180, 180, 180, 180],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "nether_brick_fence",
+  "name": "Plot z cihel úhelného kamene",
+  "tiles": [21, 21, 21, 21, 21, 21],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "powerstone_fence",
+  "name": "Powerstonový plot",
+  "tiles": [300, 300, 300, 300, 300, 300],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "void_brick_eye",
+  "name": "Oko v prázdnotných cihlách",
+  "tiles": [142, 142, 325, 325, 325, 325],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "crimson_stone",
+  "name": "Karmínový kámen",
+  "tiles": [326, 326, 326, 326, 326, 326],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "torch",
+  "name": "Pochodeň",
+  "tiles": [327, 327, 327, 327, 327, 327],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1528",
+  "name": "Pochodeň",
+  "tiles": [327, 327, 327, 327, 327, 327],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1529",
+  "name": "Pochodeň",
+  "tiles": [327, 327, 327, 327, 327, 327],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1530",
+  "name": "Pochodeň",
+  "tiles": [327, 327, 327, 327, 327, 327],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1531",
+  "name": "Pochodeň",
+  "tiles": [327, 327, 327, 327, 327, 327],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "crimson_planks",
+  "name": "Karmínová prkna",
+  "tiles": [328, 328, 328, 328, 328, 328],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "crimson_log",
+  "name": "Karmínový kmen",
+  "tiles": [330, 330, 329, 329, 329, 329],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "powerstone_furnace",
+  "name": "Powerstonová pec",
+  "tiles": [302, 302, 337, 337, 300, 300],
+  "hardness": 3.5,
+  "stack": 64
+},
+  {
+  "key": "lit_powerstone_furnace",
+  "name": "Powerstonová pec",
+  "tiles": [302, 302, 338, 338, 300, 300],
+  "hardness": 3.5,
+  "stack": 64
+},
+  {
+  "key": "ceiling_power_cable",
+  "name": "Napájecí kabel",
+  "tiles": [243, 243, 243, 243, 243, 243],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "lit_ceiling_power_cable",
+  "name": "Napájecí kabel",
+  "tiles": [244, 244, 244, 244, 244, 244],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "deepstone",
+  "name": "Hlubinný kámen",
+  "tiles": [341, 341, 341, 341, 341, 341],
+  "hardness": 4.5,
+  "stack": 64
+},
+  {
+  "key": "hardium_ore",
+  "name": "Hardiová ruda",
+  "tiles": [342, 342, 342, 342, 342, 342],
+  "hardness": 7,
+  "stack": 64
+},
+  {
+  "key": "mossy_deepstone",
+  "name": "Mechový hlubinný kámen",
+  "tiles": [343, 343, 343, 343, 343, 343],
+  "hardness": 4.5,
+  "stack": 64
+},
+  {
+  "key": "moss_block",
+  "name": "Blok mechu",
+  "tiles": [344, 344, 344, 344, 344, 344],
+  "hardness": 0.6,
+  "stack": 64
+},
+  {
+  "key": "fungal_deepstone",
+  "name": "Houbový hlubinný kámen",
+  "tiles": [345, 345, 345, 345, 345, 345],
+  "hardness": 4.5,
+  "stack": 64
+},
+  {
+  "key": "deepstone_bricks",
+  "name": "Cihly z hlubinného kamene",
+  "tiles": [346, 346, 346, 346, 346, 346],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "cracked_deepstone_bricks",
+  "name": "Popraskané cihly z hlubinného kamene",
+  "tiles": [347, 347, 347, 347, 347, 347],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "mossy_deepstone_bricks",
+  "name": "Mechové cihly z hlubinného kamene",
+  "tiles": [348, 348, 348, 348, 348, 348],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "rotten_planks",
+  "name": "Shnilá prkna",
+  "tiles": [349, 349, 349, 349, 349, 349],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vines",
+  "name": "Liány",
+  "tiles": [350, 350, 350, 350, 350, 350],
+  "hardness": 0.2,
+  "stack": 64
+},
+  {
+  "key": "spawner",
+  "name": "Líheň příšer",
+  "tiles": [353, 353, 353, 353, 353, 353],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "souled_grass",
+  "name": "Duševní tráva",
+  "tiles": [354, 356, 355, 355, 355, 355],
+  "hardness": 0.6,
+  "stack": 64
+},
+  {
+  "key": "souled_dirt",
+  "name": "Duševní hlína",
+  "tiles": [356, 356, 356, 356, 356, 356],
+  "hardness": 0.5,
+  "stack": 64
+},
+  {
+  "key": "souled_stone",
+  "name": "Duševní kámen",
+  "tiles": [357, 357, 357, 357, 357, 357],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "celestial_portal_frame",
+  "name": "Rám nebeského portálu",
+  "tiles": [358, 359, 359, 359, 359, 359],
+  "hardness": -1,
+  "stack": 64
+},
+  {
+  "key": "celestial_portal_frame_filled",
+  "name": "Rám nebeského portálu",
+  "tiles": [360, 359, 359, 359, 359, 359],
+  "hardness": -1,
+  "stack": 64
+},
+  {
+  "key": "celestial_portal",
+  "name": "Nebeský portál",
+  "tiles": [361, 361, 361, 361, 361, 361],
+  "hardness": -1,
+  "stack": 64
+},
+  {
+  "key": "celestial_log",
+  "name": "Nebeský kmen",
+  "tiles": [373, 373, 372, 372, 372, 372],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "celestial_planks",
+  "name": "Nebeská prkna",
+  "tiles": [374, 374, 374, 374, 374, 374],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "celestial_stone_bricks",
+  "name": "Nebeské kamenné cihly",
+  "tiles": [375, 375, 375, 375, 375, 375],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "celestial_leaves",
+  "name": "Nebeské listí",
+  "tiles": [376, 376, 376, 376, 376, 376],
+  "hardness": 0.2,
+  "stack": 64
+},
+  {
+  "key": "celestial_grass",
+  "name": "Nebeská duševní tráva",
+  "tiles": [377, 379, 378, 378, 378, 378],
+  "hardness": 0.6,
+  "stack": 64
+},
+  {
+  "key": "celestial_dirt",
+  "name": "Nebeská duševní hlína",
+  "tiles": [379, 379, 379, 379, 379, 379],
+  "hardness": 0.5,
+  "stack": 64
+},
+  {
+  "key": "celestial_stone",
+  "name": "Nebeský duševní kámen",
+  "tiles": [380, 380, 380, 380, 380, 380],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "dusty_concrete",
+  "name": "Prašný beton",
+  "tiles": [381, 381, 381, 381, 381, 381],
+  "hardness": 1.6,
+  "stack": 64
+},
+  {
+  "key": "hardened_concrete",
+  "name": "Tvrzený beton",
+  "tiles": [382, 382, 382, 382, 382, 382],
+  "hardness": 2.4,
+  "stack": 64
+},
+  {
+  "key": "gray_log",
+  "name": "Šedý kmen",
+  "tiles": [384, 384, 383, 383, 383, 383],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "gray_planks",
+  "name": "Šedá prkna",
+  "tiles": [385, 385, 385, 385, 385, 385],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "red_leaves",
+  "name": "Červené listí",
+  "tiles": [386, 386, 386, 386, 386, 386],
+  "hardness": 0.2,
+  "stack": 64
+},
+  {
+  "key": "orange_leaves",
+  "name": "Oranžové listí",
+  "tiles": [387, 387, 387, 387, 387, 387],
+  "hardness": 0.2,
+  "stack": 64
+},
+  {
+  "key": "yellow_leaves",
+  "name": "Žluté listí",
+  "tiles": [388, 388, 388, 388, 388, 388],
+  "hardness": 0.2,
+  "stack": 64
+},
+  {
+  "key": "stonecutter",
+  "name": "Kamenořez",
+  "tiles": [389, 0, 390, 390, 390, 390],
+  "hardness": 3.5,
+  "stack": 64
+},
+  {
+  "key": "barrel",
+  "name": "Barel",
+  "tiles": [391, 391, 392, 392, 392, 392],
+  "hardness": 2.5,
+  "stack": 64
+},
+  {
+  "key": "wood_cutter",
+  "name": "Dřevořez",
+  "tiles": [393, 5, 394, 394, 394, 394],
+  "hardness": 2.5,
+  "stack": 64
+},
+  {
+  "key": "gray_sapling",
+  "name": "Šedá sazenice",
+  "tiles": [399, 399, 399, 399, 399, 399],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "celestial_sapling",
+  "name": "Nebeská sazenice",
+  "tiles": [400, 400, 400, 400, 400, 400],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "camp_barrel",
+  "name": "Barel z tábora",
+  "tiles": [391, 391, 392, 392, 392, 392],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "pale_stone",
+  "name": "Bledý kámen",
+  "tiles": [462, 462, 462, 462, 462, 462],
+  "hardness": 1.6,
+  "stack": 64
+},
+  {
+  "key": "sky_stone",
+  "name": "Nebeský kámen",
+  "tiles": [463, 463, 463, 463, 463, 463],
+  "hardness": 1.6,
+  "stack": 64
+},
+  {
+  "key": "celestium_ore",
+  "name": "Celestiová ruda",
+  "tiles": [464, 464, 464, 464, 464, 464],
+  "hardness": 4.5,
+  "stack": 64
+},
+  {
+  "key": "pale_crystal",
+  "name": "Bledý krystal",
+  "tiles": [465, 465, 465, 465, 465, 465],
+  "hardness": 1.2,
+  "stack": 64
+},
+  {
+  "key": "fire",
+  "name": "Oheň",
+  "tiles": [466, 466, 466, 466, 466, 466],
+  "hardness": 0,
+  "stack": 64
+},
+  {
+  "key": "campfire",
+  "name": "Táborák",
+  "tiles": [467, 11, 468, 468, 468, 468],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "leaf_litter",
+  "name": "Spadané listí",
+  "tiles": [481, 481, 481, 481, 481, 481],
+  "hardness": 0.1,
+  "stack": 64
+},
+  {
+  "key": "honey_block",
+  "name": "Medový blok",
+  "tiles": [485, 485, 484, 484, 484, 484],
+  "hardness": 0.4,
+  "stack": 64
+},
+  {
+  "key": "structure_block",
+  "name": "Blok struktur",
+  "tiles": [487, 487, 487, 487, 487, 487],
+  "hardness": -1,
+  "stack": 64
+},
+  {
+  "key": "barrier",
+  "name": "Bariéra",
+  "tiles": [488, 488, 488, 488, 488, 488],
+  "hardness": -1,
+  "stack": 64
+},
+  {
+  "key": "command_block",
+  "name": "Příkazový blok",
+  "tiles": [490, 490, 489, 489, 489, 489],
+  "hardness": -1,
+  "stack": 64
+},
+  {
+  "key": "sound_block",
+  "name": "Zvukový blok",
+  "tiles": [492, 491, 491, 491, 491, 491],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "rail",
+  "name": "Kolej",
+  "tiles": [493, 493, 493, 493, 493, 493],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "rail_ew",
+  "name": "Kolej",
+  "tiles": [494, 494, 494, 494, 494, 494],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "rail_curve",
+  "name": "Kolej",
+  "tiles": [495, 495, 495, 495, 495, 495],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "rail_curve_es",
+  "name": "Kolej",
+  "tiles": [496, 496, 496, 496, 496, 496],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "rail_curve_sw",
+  "name": "Kolej",
+  "tiles": [497, 497, 497, 497, 497, 497],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "rail_curve_wn",
+  "name": "Kolej",
+  "tiles": [498, 498, 498, 498, 498, 498],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "brusher",
+  "name": "Štětec",
+  "tiles": [314, 314, 314, 314, 314, 314],
+  "stack": 1
+},
+  {
+  "key": "fortress_compass",
+  "name": "Kompas k pevnosti",
+  "tiles": [315, 315, 315, 315, 315, 315],
+  "stack": 1
+},
+  {
+  "key": "old_document_1",
+  "name": "Starý dokument I",
+  "tiles": [316, 316, 316, 316, 316, 316],
+  "stack": 16
+},
+  {
+  "key": "old_document_2",
+  "name": "Starý dokument II",
+  "tiles": [316, 316, 316, 316, 316, 316],
+  "stack": 16
+},
+  {
+  "key": "old_document_3",
+  "name": "Starý dokument III",
+  "tiles": [316, 316, 316, 316, 316, 316],
+  "stack": 16
+},
+  {
+  "key": "old_document_4",
+  "name": "Starý dokument IV",
+  "tiles": [316, 316, 316, 316, 316, 316],
+  "stack": 16
+},
+  {
+  "key": "old_document_5",
+  "name": "Starý dokument V",
+  "tiles": [316, 316, 316, 316, 316, 316],
+  "stack": 16
+},
+  {
+  "key": "old_document_6",
+  "name": "Starý dokument VI",
+  "tiles": [316, 316, 316, 316, 316, 316],
+  "stack": 16
+},
+  {
+  "key": "old_document_7",
+  "name": "Starý dokument VII",
+  "tiles": [316, 316, 316, 316, 316, 316],
+  "stack": 16
+},
+  {
+  "key": "old_document_8",
+  "name": "Starý dokument VIII",
+  "tiles": [316, 316, 316, 316, 316, 316],
+  "stack": 16
+},
+  {
+  "key": "ancient_coin",
+  "name": "Starověká mince",
+  "tiles": [317, 317, 317, 317, 317, 317],
+  "stack": 64
+},
+  {
+  "key": "powerstone_relic",
+  "name": "Powerstonová relikvie",
+  "tiles": [318, 318, 318, 318, 318, 318],
+  "stack": 16
+},
+  {
+  "key": "pottery_shard",
+  "name": "Střep",
+  "tiles": [319, 319, 319, 319, 319, 319],
+  "stack": 64
+},
+  {
+  "key": "shield",
+  "name": "Štít",
+  "tiles": [331, 331, 331, 331, 331, 331],
+  "stack": 1
+},
+  {
+  "key": "explorer_map",
+  "name": "Průzkumná mapa",
+  "tiles": [332, 332, 332, 332, 332, 332],
+  "stack": 1
+},
+  {
+  "key": "writable_book",
+  "name": "Kniha a brk",
+  "tiles": [339, 339, 339, 339, 339, 339],
+  "stack": 1
+},
+  {
+  "key": "written_book",
+  "name": "Podepsaná kniha",
+  "tiles": [340, 340, 340, 340, 340, 340],
+  "stack": 1
+},
+  {
+  "key": "hardium",
+  "name": "Hardium",
+  "tiles": [351, 351, 351, 351, 351, 351],
+  "stack": 64
+},
+  {
+  "key": "hardium_pickaxe",
+  "name": "Hardiový krumpáč",
+  "tiles": [352, 352, 352, 352, 352, 352],
+  "stack": 1
+},
+  {
+  "key": "crimson_head",
+  "name": "Hlava Karmínového muže",
+  "tiles": [362, 362, 362, 362, 362, 362],
+  "stack": 16
+},
+  {
+  "key": "celestial_compass",
+  "name": "Nebeský kompas",
+  "tiles": [363, 363, 363, 363, 363, 363],
+  "stack": 1
+},
+  {
+  "key": "hardium_sword",
+  "name": "Hardiový meč",
+  "tiles": [364, 364, 364, 364, 364, 364],
+  "stack": 1
+},
+  {
+  "key": "hardium_axe",
+  "name": "Hardiová sekera",
+  "tiles": [365, 365, 365, 365, 365, 365],
+  "stack": 1
+},
+  {
+  "key": "hardium_shovel",
+  "name": "Hardiová lopata",
+  "tiles": [366, 366, 366, 366, 366, 366],
+  "stack": 1
+},
+  {
+  "key": "hardium_helmet",
+  "name": "Hardiová helma",
+  "tiles": [367, 367, 367, 367, 367, 367],
+  "stack": 1
+},
+  {
+  "key": "hardium_chestplate",
+  "name": "Hardiový kyrys",
+  "tiles": [368, 368, 368, 368, 368, 368],
+  "stack": 1
+},
+  {
+  "key": "hardium_leggings",
+  "name": "Hardiové nohavice",
+  "tiles": [369, 369, 369, 369, 369, 369],
+  "stack": 1
+},
+  {
+  "key": "hardium_boots",
+  "name": "Hardiové boty",
+  "tiles": [370, 370, 370, 370, 370, 370],
+  "stack": 1
+},
+  {
+  "key": "white_dye",
+  "name": "Bílé barvivo",
+  "tiles": [433, 433, 433, 433, 433, 433],
+  "stack": 64
+},
+  {
+  "key": "orange_dye",
+  "name": "Oranžové barvivo",
+  "tiles": [434, 434, 434, 434, 434, 434],
+  "stack": 64
+},
+  {
+  "key": "magenta_dye",
+  "name": "Purpurové barvivo",
+  "tiles": [435, 435, 435, 435, 435, 435],
+  "stack": 64
+},
+  {
+  "key": "light_blue_dye",
+  "name": "Světle modré barvivo",
+  "tiles": [436, 436, 436, 436, 436, 436],
+  "stack": 64
+},
+  {
+  "key": "yellow_dye",
+  "name": "Žluté barvivo",
+  "tiles": [437, 437, 437, 437, 437, 437],
+  "stack": 64
+},
+  {
+  "key": "lime_dye",
+  "name": "Limetkové barvivo",
+  "tiles": [438, 438, 438, 438, 438, 438],
+  "stack": 64
+},
+  {
+  "key": "pink_dye",
+  "name": "Růžové barvivo",
+  "tiles": [439, 439, 439, 439, 439, 439],
+  "stack": 64
+},
+  {
+  "key": "gray_dye",
+  "name": "Šedé barvivo",
+  "tiles": [440, 440, 440, 440, 440, 440],
+  "stack": 64
+},
+  {
+  "key": "light_gray_dye",
+  "name": "Světle šedé barvivo",
+  "tiles": [441, 441, 441, 441, 441, 441],
+  "stack": 64
+},
+  {
+  "key": "cyan_dye",
+  "name": "Azurové barvivo",
+  "tiles": [442, 442, 442, 442, 442, 442],
+  "stack": 64
+},
+  {
+  "key": "purple_dye",
+  "name": "Fialové barvivo",
+  "tiles": [443, 443, 443, 443, 443, 443],
+  "stack": 64
+},
+  {
+  "key": "blue_dye",
+  "name": "Modré barvivo",
+  "tiles": [444, 444, 444, 444, 444, 444],
+  "stack": 64
+},
+  {
+  "key": "brown_dye",
+  "name": "Hnědé barvivo",
+  "tiles": [445, 445, 445, 445, 445, 445],
+  "stack": 64
+},
+  {
+  "key": "green_dye",
+  "name": "Zelené barvivo",
+  "tiles": [446, 446, 446, 446, 446, 446],
+  "stack": 64
+},
+  {
+  "key": "red_dye",
+  "name": "Červené barvivo",
+  "tiles": [447, 447, 447, 447, 447, 447],
+  "stack": 64
+},
+  {
+  "key": "black_dye",
+  "name": "Černé barvivo",
+  "tiles": [448, 448, 448, 448, 448, 448],
+  "stack": 64
+},
+  {
+  "key": "void_shard",
+  "name": "Prázdnotný střep",
+  "tiles": [460, 460, 460, 460, 460, 460],
+  "stack": 64
+},
+  {
+  "key": "crimsonium",
+  "name": "Crimsonium",
+  "tiles": [461, 461, 461, 461, 461, 461],
+  "stack": 64
+},
+  {
+  "key": "crimsonium_slab",
+  "name": "Crimsoniová deska",
+  "tiles": [451, 451, 451, 451, 451, 451],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1647",
+  "name": "Crimsoniová deska",
+  "tiles": [451, 451, 451, 451, 451, 451],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1648",
+  "name": "Crimsoniová deska",
+  "tiles": [451, 451, 451, 451, 451, 451],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "shattered_stone_slab",
+  "name": "Deska z roztříštěného kamene",
+  "tiles": [453, 453, 453, 453, 453, 453],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1650",
+  "name": "Deska z roztříštěného kamene",
+  "tiles": [453, 453, 453, 453, 453, 453],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1651",
+  "name": "Deska z roztříštěného kamene",
+  "tiles": [453, 453, 453, 453, 453, 453],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "shattered_brick_slab",
+  "name": "Deska z cihel roztříštěného kamene",
+  "tiles": [454, 454, 454, 454, 454, 454],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1653",
+  "name": "Deska z cihel roztříštěného kamene",
+  "tiles": [454, 454, 454, 454, 454, 454],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1654",
+  "name": "Deska z cihel roztříštěného kamene",
+  "tiles": [454, 454, 454, 454, 454, 454],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "dark_sandstone_slab",
+  "name": "Deska z temného pískovce",
+  "tiles": [457, 457, 457, 457, 457, 457],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1656",
+  "name": "Deska z temného pískovce",
+  "tiles": [457, 457, 457, 457, 457, 457],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1657",
+  "name": "Deska z temného pískovce",
+  "tiles": [457, 457, 457, 457, 457, 457],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "crimsonium_stairs",
+  "name": "Crimsoniové schody",
+  "tiles": [451, 451, 451, 451, 451, 451],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1661",
+  "name": "Crimsoniové schody",
+  "tiles": [451, 451, 451, 451, 451, 451],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1662",
+  "name": "Crimsoniové schody",
+  "tiles": [451, 451, 451, 451, 451, 451],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1663",
+  "name": "Crimsoniové schody",
+  "tiles": [451, 451, 451, 451, 451, 451],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1664",
+  "name": "Crimsoniové schody",
+  "tiles": [451, 451, 451, 451, 451, 451],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1665",
+  "name": "Crimsoniové schody",
+  "tiles": [451, 451, 451, 451, 451, 451],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1666",
+  "name": "Crimsoniové schody",
+  "tiles": [451, 451, 451, 451, 451, 451],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1667",
+  "name": "Crimsoniové schody",
+  "tiles": [451, 451, 451, 451, 451, 451],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "shattered_stone_stairs",
+  "name": "Schody z roztříštěného kamene",
+  "tiles": [453, 453, 453, 453, 453, 453],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1669",
+  "name": "Schody z roztříštěného kamene",
+  "tiles": [453, 453, 453, 453, 453, 453],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1670",
+  "name": "Schody z roztříštěného kamene",
+  "tiles": [453, 453, 453, 453, 453, 453],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1671",
+  "name": "Schody z roztříštěného kamene",
+  "tiles": [453, 453, 453, 453, 453, 453],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1672",
+  "name": "Schody z roztříštěného kamene",
+  "tiles": [453, 453, 453, 453, 453, 453],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1673",
+  "name": "Schody z roztříštěného kamene",
+  "tiles": [453, 453, 453, 453, 453, 453],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1674",
+  "name": "Schody z roztříštěného kamene",
+  "tiles": [453, 453, 453, 453, 453, 453],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1675",
+  "name": "Schody z roztříštěného kamene",
+  "tiles": [453, 453, 453, 453, 453, 453],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "shattered_brick_stairs",
+  "name": "Schody z cihel roztříštěného kamene",
+  "tiles": [454, 454, 454, 454, 454, 454],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1677",
+  "name": "Schody z cihel roztříštěného kamene",
+  "tiles": [454, 454, 454, 454, 454, 454],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1678",
+  "name": "Schody z cihel roztříštěného kamene",
+  "tiles": [454, 454, 454, 454, 454, 454],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1679",
+  "name": "Schody z cihel roztříštěného kamene",
+  "tiles": [454, 454, 454, 454, 454, 454],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1680",
+  "name": "Schody z cihel roztříštěného kamene",
+  "tiles": [454, 454, 454, 454, 454, 454],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1681",
+  "name": "Schody z cihel roztříštěného kamene",
+  "tiles": [454, 454, 454, 454, 454, 454],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1682",
+  "name": "Schody z cihel roztříštěného kamene",
+  "tiles": [454, 454, 454, 454, 454, 454],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1683",
+  "name": "Schody z cihel roztříštěného kamene",
+  "tiles": [454, 454, 454, 454, 454, 454],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "dark_sandstone_stairs",
+  "name": "Schody z temného pískovce",
+  "tiles": [457, 457, 457, 457, 457, 457],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1685",
+  "name": "Schody z temného pískovce",
+  "tiles": [457, 457, 457, 457, 457, 457],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1686",
+  "name": "Schody z temného pískovce",
+  "tiles": [457, 457, 457, 457, 457, 457],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1687",
+  "name": "Schody z temného pískovce",
+  "tiles": [457, 457, 457, 457, 457, 457],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1688",
+  "name": "Schody z temného pískovce",
+  "tiles": [457, 457, 457, 457, 457, 457],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1689",
+  "name": "Schody z temného pískovce",
+  "tiles": [457, 457, 457, 457, 457, 457],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1690",
+  "name": "Schody z temného pískovce",
+  "tiles": [457, 457, 457, 457, 457, 457],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1691",
+  "name": "Schody z temného pískovce",
+  "tiles": [457, 457, 457, 457, 457, 457],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "dusty_concrete_slab",
+  "name": "Deska z prašného betonu",
+  "tiles": [381, 381, 381, 381, 381, 381],
+  "hardness": 1.6,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1701",
+  "name": "Deska z prašného betonu",
+  "tiles": [381, 381, 381, 381, 381, 381],
+  "hardness": 1.6,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1702",
+  "name": "Deska z prašného betonu",
+  "tiles": [381, 381, 381, 381, 381, 381],
+  "hardness": 1.6,
+  "stack": 64
+},
+  {
+  "key": "hardened_concrete_slab",
+  "name": "Deska z tvrzeného betonu",
+  "tiles": [382, 382, 382, 382, 382, 382],
+  "hardness": 2.4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1704",
+  "name": "Deska z tvrzeného betonu",
+  "tiles": [382, 382, 382, 382, 382, 382],
+  "hardness": 2.4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1705",
+  "name": "Deska z tvrzeného betonu",
+  "tiles": [382, 382, 382, 382, 382, 382],
+  "hardness": 2.4,
+  "stack": 64
+},
+  {
+  "key": "gray_slab",
+  "name": "Šedá dřevěná deska",
+  "tiles": [385, 385, 385, 385, 385, 385],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1707",
+  "name": "Šedá dřevěná deska",
+  "tiles": [385, 385, 385, 385, 385, 385],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1708",
+  "name": "Šedá dřevěná deska",
+  "tiles": [385, 385, 385, 385, 385, 385],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "celestial_slab",
+  "name": "Nebeská deska",
+  "tiles": [374, 374, 374, 374, 374, 374],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1710",
+  "name": "Nebeská deska",
+  "tiles": [374, 374, 374, 374, 374, 374],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1711",
+  "name": "Nebeská deska",
+  "tiles": [374, 374, 374, 374, 374, 374],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "celestial_brick_slab",
+  "name": "Deska z nebeských cihel",
+  "tiles": [375, 375, 375, 375, 375, 375],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1713",
+  "name": "Deska z nebeských cihel",
+  "tiles": [375, 375, 375, 375, 375, 375],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1714",
+  "name": "Deska z nebeských cihel",
+  "tiles": [375, 375, 375, 375, 375, 375],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "dusty_concrete_stairs",
+  "name": "Schody z prašného betonu",
+  "tiles": [381, 381, 381, 381, 381, 381],
+  "hardness": 1.6,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1721",
+  "name": "Schody z prašného betonu",
+  "tiles": [381, 381, 381, 381, 381, 381],
+  "hardness": 1.6,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1722",
+  "name": "Schody z prašného betonu",
+  "tiles": [381, 381, 381, 381, 381, 381],
+  "hardness": 1.6,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1723",
+  "name": "Schody z prašného betonu",
+  "tiles": [381, 381, 381, 381, 381, 381],
+  "hardness": 1.6,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1724",
+  "name": "Schody z prašného betonu",
+  "tiles": [381, 381, 381, 381, 381, 381],
+  "hardness": 1.6,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1725",
+  "name": "Schody z prašného betonu",
+  "tiles": [381, 381, 381, 381, 381, 381],
+  "hardness": 1.6,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1726",
+  "name": "Schody z prašného betonu",
+  "tiles": [381, 381, 381, 381, 381, 381],
+  "hardness": 1.6,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1727",
+  "name": "Schody z prašného betonu",
+  "tiles": [381, 381, 381, 381, 381, 381],
+  "hardness": 1.6,
+  "stack": 64
+},
+  {
+  "key": "hardened_concrete_stairs",
+  "name": "Schody z tvrzeného betonu",
+  "tiles": [382, 382, 382, 382, 382, 382],
+  "hardness": 2.4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1729",
+  "name": "Schody z tvrzeného betonu",
+  "tiles": [382, 382, 382, 382, 382, 382],
+  "hardness": 2.4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1730",
+  "name": "Schody z tvrzeného betonu",
+  "tiles": [382, 382, 382, 382, 382, 382],
+  "hardness": 2.4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1731",
+  "name": "Schody z tvrzeného betonu",
+  "tiles": [382, 382, 382, 382, 382, 382],
+  "hardness": 2.4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1732",
+  "name": "Schody z tvrzeného betonu",
+  "tiles": [382, 382, 382, 382, 382, 382],
+  "hardness": 2.4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1733",
+  "name": "Schody z tvrzeného betonu",
+  "tiles": [382, 382, 382, 382, 382, 382],
+  "hardness": 2.4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1734",
+  "name": "Schody z tvrzeného betonu",
+  "tiles": [382, 382, 382, 382, 382, 382],
+  "hardness": 2.4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1735",
+  "name": "Schody z tvrzeného betonu",
+  "tiles": [382, 382, 382, 382, 382, 382],
+  "hardness": 2.4,
+  "stack": 64
+},
+  {
+  "key": "gray_stairs",
+  "name": "Šedé dřevěné schody",
+  "tiles": [385, 385, 385, 385, 385, 385],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1737",
+  "name": "Šedé dřevěné schody",
+  "tiles": [385, 385, 385, 385, 385, 385],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1738",
+  "name": "Šedé dřevěné schody",
+  "tiles": [385, 385, 385, 385, 385, 385],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1739",
+  "name": "Šedé dřevěné schody",
+  "tiles": [385, 385, 385, 385, 385, 385],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1740",
+  "name": "Šedé dřevěné schody",
+  "tiles": [385, 385, 385, 385, 385, 385],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1741",
+  "name": "Šedé dřevěné schody",
+  "tiles": [385, 385, 385, 385, 385, 385],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1742",
+  "name": "Šedé dřevěné schody",
+  "tiles": [385, 385, 385, 385, 385, 385],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1743",
+  "name": "Šedé dřevěné schody",
+  "tiles": [385, 385, 385, 385, 385, 385],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "celestial_stairs",
+  "name": "Nebeské schody",
+  "tiles": [374, 374, 374, 374, 374, 374],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1745",
+  "name": "Nebeské schody",
+  "tiles": [374, 374, 374, 374, 374, 374],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1746",
+  "name": "Nebeské schody",
+  "tiles": [374, 374, 374, 374, 374, 374],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1747",
+  "name": "Nebeské schody",
+  "tiles": [374, 374, 374, 374, 374, 374],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1748",
+  "name": "Nebeské schody",
+  "tiles": [374, 374, 374, 374, 374, 374],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1749",
+  "name": "Nebeské schody",
+  "tiles": [374, 374, 374, 374, 374, 374],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1750",
+  "name": "Nebeské schody",
+  "tiles": [374, 374, 374, 374, 374, 374],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1751",
+  "name": "Nebeské schody",
+  "tiles": [374, 374, 374, 374, 374, 374],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "celestial_brick_stairs",
+  "name": "Schody z nebeských cihel",
+  "tiles": [375, 375, 375, 375, 375, 375],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1753",
+  "name": "Schody z nebeských cihel",
+  "tiles": [375, 375, 375, 375, 375, 375],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1754",
+  "name": "Schody z nebeských cihel",
+  "tiles": [375, 375, 375, 375, 375, 375],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1755",
+  "name": "Schody z nebeských cihel",
+  "tiles": [375, 375, 375, 375, 375, 375],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1756",
+  "name": "Schody z nebeských cihel",
+  "tiles": [375, 375, 375, 375, 375, 375],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1757",
+  "name": "Schody z nebeských cihel",
+  "tiles": [375, 375, 375, 375, 375, 375],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1758",
+  "name": "Schody z nebeských cihel",
+  "tiles": [375, 375, 375, 375, 375, 375],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1759",
+  "name": "Schody z nebeských cihel",
+  "tiles": [375, 375, 375, 375, 375, 375],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "hardened_stone_slab",
+  "name": "Deska z tvrzeného kamene",
+  "tiles": [118, 118, 118, 118, 118, 118],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1761",
+  "name": "Deska z tvrzeného kamene",
+  "tiles": [118, 118, 118, 118, 118, 118],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1762",
+  "name": "Deska z tvrzeného kamene",
+  "tiles": [118, 118, 118, 118, 118, 118],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "void_stone_slab",
+  "name": "Deska z prázdnotného kamene",
+  "tiles": [133, 133, 133, 133, 133, 133],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1764",
+  "name": "Deska z prázdnotného kamene",
+  "tiles": [133, 133, 133, 133, 133, 133],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1765",
+  "name": "Deska z prázdnotného kamene",
+  "tiles": [133, 133, 133, 133, 133, 133],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "netherrack_slab",
+  "name": "Netherracková deska",
+  "tiles": [17, 17, 17, 17, 17, 17],
+  "hardness": 0.4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1767",
+  "name": "Netherracková deska",
+  "tiles": [17, 17, 17, 17, 17, 17],
+  "hardness": 0.4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1768",
+  "name": "Netherracková deska",
+  "tiles": [17, 17, 17, 17, 17, 17],
+  "hardness": 0.4,
+  "stack": 64
+},
+  {
+  "key": "obsidian_slab",
+  "name": "Obsidiánová deska",
+  "tiles": [16, 16, 16, 16, 16, 16],
+  "hardness": 50,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1770",
+  "name": "Obsidiánová deska",
+  "tiles": [16, 16, 16, 16, 16, 16],
+  "hardness": 50,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1771",
+  "name": "Obsidiánová deska",
+  "tiles": [16, 16, 16, 16, 16, 16],
+  "hardness": 50,
+  "stack": 64
+},
+  {
+  "key": "crimson_stone_slab",
+  "name": "Deska z karmínového kamene",
+  "tiles": [326, 326, 326, 326, 326, 326],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1773",
+  "name": "Deska z karmínového kamene",
+  "tiles": [326, 326, 326, 326, 326, 326],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1774",
+  "name": "Deska z karmínového kamene",
+  "tiles": [326, 326, 326, 326, 326, 326],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "souled_stone_slab",
+  "name": "Deska z duševního kamene",
+  "tiles": [357, 357, 357, 357, 357, 357],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1776",
+  "name": "Deska z duševního kamene",
+  "tiles": [357, 357, 357, 357, 357, 357],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1777",
+  "name": "Deska z duševního kamene",
+  "tiles": [357, 357, 357, 357, 357, 357],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "celestial_stone_slab",
+  "name": "Deska z nebeského kamene",
+  "tiles": [380, 380, 380, 380, 380, 380],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1779",
+  "name": "Deska z nebeského kamene",
+  "tiles": [380, 380, 380, 380, 380, 380],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1780",
+  "name": "Deska z nebeského kamene",
+  "tiles": [380, 380, 380, 380, 380, 380],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "dripstone_slab",
+  "name": "Krápníková deska",
+  "tiles": [250, 250, 250, 250, 250, 250],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1782",
+  "name": "Krápníková deska",
+  "tiles": [250, 250, 250, 250, 250, 250],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1783",
+  "name": "Krápníková deska",
+  "tiles": [250, 250, 250, 250, 250, 250],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "tar_slab",
+  "name": "Deska z tvrdého dehtu",
+  "tiles": [249, 249, 249, 249, 249, 249],
+  "hardness": 1.2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1785",
+  "name": "Deska z tvrdého dehtu",
+  "tiles": [249, 249, 249, 249, 249, 249],
+  "hardness": 1.2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1786",
+  "name": "Deska z tvrdého dehtu",
+  "tiles": [249, 249, 249, 249, 249, 249],
+  "hardness": 1.2,
+  "stack": 64
+},
+  {
+  "key": "cracked_powerstone_brick_slab",
+  "name": "Deska z popraskaných powerstonových cihel",
+  "tiles": [301, 301, 301, 301, 301, 301],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1788",
+  "name": "Deska z popraskaných powerstonových cihel",
+  "tiles": [301, 301, 301, 301, 301, 301],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1789",
+  "name": "Deska z popraskaných powerstonových cihel",
+  "tiles": [301, 301, 301, 301, 301, 301],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "cracked_nether_brick_slab",
+  "name": "Deska z popraskaných cihel úhelného kamene",
+  "tiles": [312, 312, 312, 312, 312, 312],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1791",
+  "name": "Deska z popraskaných cihel úhelného kamene",
+  "tiles": [312, 312, 312, 312, 312, 312],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1792",
+  "name": "Deska z popraskaných cihel úhelného kamene",
+  "tiles": [312, 312, 312, 312, 312, 312],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "cracked_deepstone_brick_slab",
+  "name": "Deska z popraskaných deepstonových cihel",
+  "tiles": [347, 347, 347, 347, 347, 347],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1794",
+  "name": "Deska z popraskaných deepstonových cihel",
+  "tiles": [347, 347, 347, 347, 347, 347],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1795",
+  "name": "Deska z popraskaných deepstonových cihel",
+  "tiles": [347, 347, 347, 347, 347, 347],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "rotten_slab",
+  "name": "Deska z trouchnivých prken",
+  "tiles": [349, 349, 349, 349, 349, 349],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1797",
+  "name": "Deska z trouchnivých prken",
+  "tiles": [349, 349, 349, 349, 349, 349],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1798",
+  "name": "Deska z trouchnivých prken",
+  "tiles": [349, 349, 349, 349, 349, 349],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "mossy_deepstone_slab",
+  "name": "Deska z mechového deepstonu",
+  "tiles": [343, 343, 343, 343, 343, 343],
+  "hardness": 4.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1800",
+  "name": "Deska z mechového deepstonu",
+  "tiles": [343, 343, 343, 343, 343, 343],
+  "hardness": 4.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1801",
+  "name": "Deska z mechového deepstonu",
+  "tiles": [343, 343, 343, 343, 343, 343],
+  "hardness": 4.5,
+  "stack": 64
+},
+  {
+  "key": "chiseled_powerstone_brick_slab",
+  "name": "Deska z vytesaných powerstonových cihel",
+  "tiles": [300, 300, 302, 302, 302, 302],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1803",
+  "name": "Deska z vytesaných powerstonových cihel",
+  "tiles": [300, 300, 302, 302, 302, 302],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1804",
+  "name": "Deska z vytesaných powerstonových cihel",
+  "tiles": [300, 300, 302, 302, 302, 302],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "hardened_stone_stairs",
+  "name": "Schody z tvrzeného kamene",
+  "tiles": [118, 118, 118, 118, 118, 118],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1811",
+  "name": "Schody z tvrzeného kamene",
+  "tiles": [118, 118, 118, 118, 118, 118],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1812",
+  "name": "Schody z tvrzeného kamene",
+  "tiles": [118, 118, 118, 118, 118, 118],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1813",
+  "name": "Schody z tvrzeného kamene",
+  "tiles": [118, 118, 118, 118, 118, 118],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1814",
+  "name": "Schody z tvrzeného kamene",
+  "tiles": [118, 118, 118, 118, 118, 118],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1815",
+  "name": "Schody z tvrzeného kamene",
+  "tiles": [118, 118, 118, 118, 118, 118],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1816",
+  "name": "Schody z tvrzeného kamene",
+  "tiles": [118, 118, 118, 118, 118, 118],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1817",
+  "name": "Schody z tvrzeného kamene",
+  "tiles": [118, 118, 118, 118, 118, 118],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "void_stone_stairs",
+  "name": "Schody z prázdnotného kamene",
+  "tiles": [133, 133, 133, 133, 133, 133],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1819",
+  "name": "Schody z prázdnotného kamene",
+  "tiles": [133, 133, 133, 133, 133, 133],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1820",
+  "name": "Schody z prázdnotného kamene",
+  "tiles": [133, 133, 133, 133, 133, 133],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1821",
+  "name": "Schody z prázdnotného kamene",
+  "tiles": [133, 133, 133, 133, 133, 133],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1822",
+  "name": "Schody z prázdnotného kamene",
+  "tiles": [133, 133, 133, 133, 133, 133],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1823",
+  "name": "Schody z prázdnotného kamene",
+  "tiles": [133, 133, 133, 133, 133, 133],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1824",
+  "name": "Schody z prázdnotného kamene",
+  "tiles": [133, 133, 133, 133, 133, 133],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1825",
+  "name": "Schody z prázdnotného kamene",
+  "tiles": [133, 133, 133, 133, 133, 133],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "netherrack_stairs",
+  "name": "Netherrackové schody",
+  "tiles": [17, 17, 17, 17, 17, 17],
+  "hardness": 0.4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1827",
+  "name": "Netherrackové schody",
+  "tiles": [17, 17, 17, 17, 17, 17],
+  "hardness": 0.4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1828",
+  "name": "Netherrackové schody",
+  "tiles": [17, 17, 17, 17, 17, 17],
+  "hardness": 0.4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1829",
+  "name": "Netherrackové schody",
+  "tiles": [17, 17, 17, 17, 17, 17],
+  "hardness": 0.4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1830",
+  "name": "Netherrackové schody",
+  "tiles": [17, 17, 17, 17, 17, 17],
+  "hardness": 0.4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1831",
+  "name": "Netherrackové schody",
+  "tiles": [17, 17, 17, 17, 17, 17],
+  "hardness": 0.4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1832",
+  "name": "Netherrackové schody",
+  "tiles": [17, 17, 17, 17, 17, 17],
+  "hardness": 0.4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1833",
+  "name": "Netherrackové schody",
+  "tiles": [17, 17, 17, 17, 17, 17],
+  "hardness": 0.4,
+  "stack": 64
+},
+  {
+  "key": "obsidian_stairs",
+  "name": "Obsidiánové schody",
+  "tiles": [16, 16, 16, 16, 16, 16],
+  "hardness": 50,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1835",
+  "name": "Obsidiánové schody",
+  "tiles": [16, 16, 16, 16, 16, 16],
+  "hardness": 50,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1836",
+  "name": "Obsidiánové schody",
+  "tiles": [16, 16, 16, 16, 16, 16],
+  "hardness": 50,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1837",
+  "name": "Obsidiánové schody",
+  "tiles": [16, 16, 16, 16, 16, 16],
+  "hardness": 50,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1838",
+  "name": "Obsidiánové schody",
+  "tiles": [16, 16, 16, 16, 16, 16],
+  "hardness": 50,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1839",
+  "name": "Obsidiánové schody",
+  "tiles": [16, 16, 16, 16, 16, 16],
+  "hardness": 50,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1840",
+  "name": "Obsidiánové schody",
+  "tiles": [16, 16, 16, 16, 16, 16],
+  "hardness": 50,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1841",
+  "name": "Obsidiánové schody",
+  "tiles": [16, 16, 16, 16, 16, 16],
+  "hardness": 50,
+  "stack": 64
+},
+  {
+  "key": "crimson_stone_stairs",
+  "name": "Schody z karmínového kamene",
+  "tiles": [326, 326, 326, 326, 326, 326],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1843",
+  "name": "Schody z karmínového kamene",
+  "tiles": [326, 326, 326, 326, 326, 326],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1844",
+  "name": "Schody z karmínového kamene",
+  "tiles": [326, 326, 326, 326, 326, 326],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1845",
+  "name": "Schody z karmínového kamene",
+  "tiles": [326, 326, 326, 326, 326, 326],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1846",
+  "name": "Schody z karmínového kamene",
+  "tiles": [326, 326, 326, 326, 326, 326],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1847",
+  "name": "Schody z karmínového kamene",
+  "tiles": [326, 326, 326, 326, 326, 326],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1848",
+  "name": "Schody z karmínového kamene",
+  "tiles": [326, 326, 326, 326, 326, 326],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1849",
+  "name": "Schody z karmínového kamene",
+  "tiles": [326, 326, 326, 326, 326, 326],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "souled_stone_stairs",
+  "name": "Schody z duševního kamene",
+  "tiles": [357, 357, 357, 357, 357, 357],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1851",
+  "name": "Schody z duševního kamene",
+  "tiles": [357, 357, 357, 357, 357, 357],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1852",
+  "name": "Schody z duševního kamene",
+  "tiles": [357, 357, 357, 357, 357, 357],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1853",
+  "name": "Schody z duševního kamene",
+  "tiles": [357, 357, 357, 357, 357, 357],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1854",
+  "name": "Schody z duševního kamene",
+  "tiles": [357, 357, 357, 357, 357, 357],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1855",
+  "name": "Schody z duševního kamene",
+  "tiles": [357, 357, 357, 357, 357, 357],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1856",
+  "name": "Schody z duševního kamene",
+  "tiles": [357, 357, 357, 357, 357, 357],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1857",
+  "name": "Schody z duševního kamene",
+  "tiles": [357, 357, 357, 357, 357, 357],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "celestial_stone_stairs",
+  "name": "Schody z nebeského kamene",
+  "tiles": [380, 380, 380, 380, 380, 380],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1859",
+  "name": "Schody z nebeského kamene",
+  "tiles": [380, 380, 380, 380, 380, 380],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1860",
+  "name": "Schody z nebeského kamene",
+  "tiles": [380, 380, 380, 380, 380, 380],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1861",
+  "name": "Schody z nebeského kamene",
+  "tiles": [380, 380, 380, 380, 380, 380],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1862",
+  "name": "Schody z nebeského kamene",
+  "tiles": [380, 380, 380, 380, 380, 380],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1863",
+  "name": "Schody z nebeského kamene",
+  "tiles": [380, 380, 380, 380, 380, 380],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1864",
+  "name": "Schody z nebeského kamene",
+  "tiles": [380, 380, 380, 380, 380, 380],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1865",
+  "name": "Schody z nebeského kamene",
+  "tiles": [380, 380, 380, 380, 380, 380],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "dripstone_stairs",
+  "name": "Krápníkové schody",
+  "tiles": [250, 250, 250, 250, 250, 250],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1867",
+  "name": "Krápníkové schody",
+  "tiles": [250, 250, 250, 250, 250, 250],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1868",
+  "name": "Krápníkové schody",
+  "tiles": [250, 250, 250, 250, 250, 250],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1869",
+  "name": "Krápníkové schody",
+  "tiles": [250, 250, 250, 250, 250, 250],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1870",
+  "name": "Krápníkové schody",
+  "tiles": [250, 250, 250, 250, 250, 250],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1871",
+  "name": "Krápníkové schody",
+  "tiles": [250, 250, 250, 250, 250, 250],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1872",
+  "name": "Krápníkové schody",
+  "tiles": [250, 250, 250, 250, 250, 250],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1873",
+  "name": "Krápníkové schody",
+  "tiles": [250, 250, 250, 250, 250, 250],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "tar_stairs",
+  "name": "Schody z tvrdého dehtu",
+  "tiles": [249, 249, 249, 249, 249, 249],
+  "hardness": 1.2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1875",
+  "name": "Schody z tvrdého dehtu",
+  "tiles": [249, 249, 249, 249, 249, 249],
+  "hardness": 1.2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1876",
+  "name": "Schody z tvrdého dehtu",
+  "tiles": [249, 249, 249, 249, 249, 249],
+  "hardness": 1.2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1877",
+  "name": "Schody z tvrdého dehtu",
+  "tiles": [249, 249, 249, 249, 249, 249],
+  "hardness": 1.2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1878",
+  "name": "Schody z tvrdého dehtu",
+  "tiles": [249, 249, 249, 249, 249, 249],
+  "hardness": 1.2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1879",
+  "name": "Schody z tvrdého dehtu",
+  "tiles": [249, 249, 249, 249, 249, 249],
+  "hardness": 1.2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1880",
+  "name": "Schody z tvrdého dehtu",
+  "tiles": [249, 249, 249, 249, 249, 249],
+  "hardness": 1.2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1881",
+  "name": "Schody z tvrdého dehtu",
+  "tiles": [249, 249, 249, 249, 249, 249],
+  "hardness": 1.2,
+  "stack": 64
+},
+  {
+  "key": "cracked_powerstone_brick_stairs",
+  "name": "Schody z popraskaných powerstonových cihel",
+  "tiles": [301, 301, 301, 301, 301, 301],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1883",
+  "name": "Schody z popraskaných powerstonových cihel",
+  "tiles": [301, 301, 301, 301, 301, 301],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1884",
+  "name": "Schody z popraskaných powerstonových cihel",
+  "tiles": [301, 301, 301, 301, 301, 301],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1885",
+  "name": "Schody z popraskaných powerstonových cihel",
+  "tiles": [301, 301, 301, 301, 301, 301],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1886",
+  "name": "Schody z popraskaných powerstonových cihel",
+  "tiles": [301, 301, 301, 301, 301, 301],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1887",
+  "name": "Schody z popraskaných powerstonových cihel",
+  "tiles": [301, 301, 301, 301, 301, 301],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1888",
+  "name": "Schody z popraskaných powerstonových cihel",
+  "tiles": [301, 301, 301, 301, 301, 301],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1889",
+  "name": "Schody z popraskaných powerstonových cihel",
+  "tiles": [301, 301, 301, 301, 301, 301],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "cracked_nether_brick_stairs",
+  "name": "Schody z popraskaných cihel úhelného kamene",
+  "tiles": [312, 312, 312, 312, 312, 312],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1891",
+  "name": "Schody z popraskaných cihel úhelného kamene",
+  "tiles": [312, 312, 312, 312, 312, 312],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1892",
+  "name": "Schody z popraskaných cihel úhelného kamene",
+  "tiles": [312, 312, 312, 312, 312, 312],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1893",
+  "name": "Schody z popraskaných cihel úhelného kamene",
+  "tiles": [312, 312, 312, 312, 312, 312],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1894",
+  "name": "Schody z popraskaných cihel úhelného kamene",
+  "tiles": [312, 312, 312, 312, 312, 312],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1895",
+  "name": "Schody z popraskaných cihel úhelného kamene",
+  "tiles": [312, 312, 312, 312, 312, 312],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1896",
+  "name": "Schody z popraskaných cihel úhelného kamene",
+  "tiles": [312, 312, 312, 312, 312, 312],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1897",
+  "name": "Schody z popraskaných cihel úhelného kamene",
+  "tiles": [312, 312, 312, 312, 312, 312],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "cracked_deepstone_brick_stairs",
+  "name": "Schody z popraskaných deepstonových cihel",
+  "tiles": [347, 347, 347, 347, 347, 347],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1899",
+  "name": "Schody z popraskaných deepstonových cihel",
+  "tiles": [347, 347, 347, 347, 347, 347],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1900",
+  "name": "Schody z popraskaných deepstonových cihel",
+  "tiles": [347, 347, 347, 347, 347, 347],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1901",
+  "name": "Schody z popraskaných deepstonových cihel",
+  "tiles": [347, 347, 347, 347, 347, 347],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1902",
+  "name": "Schody z popraskaných deepstonových cihel",
+  "tiles": [347, 347, 347, 347, 347, 347],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1903",
+  "name": "Schody z popraskaných deepstonových cihel",
+  "tiles": [347, 347, 347, 347, 347, 347],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1904",
+  "name": "Schody z popraskaných deepstonových cihel",
+  "tiles": [347, 347, 347, 347, 347, 347],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1905",
+  "name": "Schody z popraskaných deepstonových cihel",
+  "tiles": [347, 347, 347, 347, 347, 347],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "rotten_stairs",
+  "name": "Schody z trouchnivých prken",
+  "tiles": [349, 349, 349, 349, 349, 349],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1907",
+  "name": "Schody z trouchnivých prken",
+  "tiles": [349, 349, 349, 349, 349, 349],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1908",
+  "name": "Schody z trouchnivých prken",
+  "tiles": [349, 349, 349, 349, 349, 349],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1909",
+  "name": "Schody z trouchnivých prken",
+  "tiles": [349, 349, 349, 349, 349, 349],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1910",
+  "name": "Schody z trouchnivých prken",
+  "tiles": [349, 349, 349, 349, 349, 349],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1911",
+  "name": "Schody z trouchnivých prken",
+  "tiles": [349, 349, 349, 349, 349, 349],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1912",
+  "name": "Schody z trouchnivých prken",
+  "tiles": [349, 349, 349, 349, 349, 349],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1913",
+  "name": "Schody z trouchnivých prken",
+  "tiles": [349, 349, 349, 349, 349, 349],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "mossy_deepstone_stairs",
+  "name": "Schody z mechového deepstonu",
+  "tiles": [343, 343, 343, 343, 343, 343],
+  "hardness": 4.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1915",
+  "name": "Schody z mechového deepstonu",
+  "tiles": [343, 343, 343, 343, 343, 343],
+  "hardness": 4.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1916",
+  "name": "Schody z mechového deepstonu",
+  "tiles": [343, 343, 343, 343, 343, 343],
+  "hardness": 4.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1917",
+  "name": "Schody z mechového deepstonu",
+  "tiles": [343, 343, 343, 343, 343, 343],
+  "hardness": 4.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1918",
+  "name": "Schody z mechového deepstonu",
+  "tiles": [343, 343, 343, 343, 343, 343],
+  "hardness": 4.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1919",
+  "name": "Schody z mechového deepstonu",
+  "tiles": [343, 343, 343, 343, 343, 343],
+  "hardness": 4.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1920",
+  "name": "Schody z mechového deepstonu",
+  "tiles": [343, 343, 343, 343, 343, 343],
+  "hardness": 4.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1921",
+  "name": "Schody z mechového deepstonu",
+  "tiles": [343, 343, 343, 343, 343, 343],
+  "hardness": 4.5,
+  "stack": 64
+},
+  {
+  "key": "chiseled_powerstone_brick_stairs",
+  "name": "Schody z vytesaných powerstonových cihel",
+  "tiles": [300, 300, 302, 302, 302, 302],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1923",
+  "name": "Schody z vytesaných powerstonových cihel",
+  "tiles": [300, 300, 302, 302, 302, 302],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1924",
+  "name": "Schody z vytesaných powerstonových cihel",
+  "tiles": [300, 300, 302, 302, 302, 302],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1925",
+  "name": "Schody z vytesaných powerstonových cihel",
+  "tiles": [300, 300, 302, 302, 302, 302],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1926",
+  "name": "Schody z vytesaných powerstonových cihel",
+  "tiles": [300, 300, 302, 302, 302, 302],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1927",
+  "name": "Schody z vytesaných powerstonových cihel",
+  "tiles": [300, 300, 302, 302, 302, 302],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1928",
+  "name": "Schody z vytesaných powerstonových cihel",
+  "tiles": [300, 300, 302, 302, 302, 302],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "vc:id/1929",
+  "name": "Schody z vytesaných powerstonových cihel",
+  "tiles": [300, 300, 302, 302, 302, 302],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "white_concrete_powder",
+  "name": "Bílý betonový prášek",
+  "tiles": [401, 401, 401, 401, 401, 401],
+  "hardness": 0.5,
+  "stack": 64
+},
+  {
+  "key": "orange_concrete_powder",
+  "name": "Oranžový betonový prášek",
+  "tiles": [402, 402, 402, 402, 402, 402],
+  "hardness": 0.5,
+  "stack": 64
+},
+  {
+  "key": "magenta_concrete_powder",
+  "name": "Purpurový betonový prášek",
+  "tiles": [403, 403, 403, 403, 403, 403],
+  "hardness": 0.5,
+  "stack": 64
+},
+  {
+  "key": "light_blue_concrete_powder",
+  "name": "Světle modrý betonový prášek",
+  "tiles": [404, 404, 404, 404, 404, 404],
+  "hardness": 0.5,
+  "stack": 64
+},
+  {
+  "key": "yellow_concrete_powder",
+  "name": "Žlutý betonový prášek",
+  "tiles": [405, 405, 405, 405, 405, 405],
+  "hardness": 0.5,
+  "stack": 64
+},
+  {
+  "key": "lime_concrete_powder",
+  "name": "Limetkový betonový prášek",
+  "tiles": [406, 406, 406, 406, 406, 406],
+  "hardness": 0.5,
+  "stack": 64
+},
+  {
+  "key": "pink_concrete_powder",
+  "name": "Růžový betonový prášek",
+  "tiles": [407, 407, 407, 407, 407, 407],
+  "hardness": 0.5,
+  "stack": 64
+},
+  {
+  "key": "gray_concrete_powder",
+  "name": "Šedý betonový prášek",
+  "tiles": [408, 408, 408, 408, 408, 408],
+  "hardness": 0.5,
+  "stack": 64
+},
+  {
+  "key": "light_gray_concrete_powder",
+  "name": "Světle šedý betonový prášek",
+  "tiles": [409, 409, 409, 409, 409, 409],
+  "hardness": 0.5,
+  "stack": 64
+},
+  {
+  "key": "cyan_concrete_powder",
+  "name": "Azurový betonový prášek",
+  "tiles": [410, 410, 410, 410, 410, 410],
+  "hardness": 0.5,
+  "stack": 64
+},
+  {
+  "key": "purple_concrete_powder",
+  "name": "Fialový betonový prášek",
+  "tiles": [411, 411, 411, 411, 411, 411],
+  "hardness": 0.5,
+  "stack": 64
+},
+  {
+  "key": "blue_concrete_powder",
+  "name": "Modrý betonový prášek",
+  "tiles": [412, 412, 412, 412, 412, 412],
+  "hardness": 0.5,
+  "stack": 64
+},
+  {
+  "key": "brown_concrete_powder",
+  "name": "Hnědý betonový prášek",
+  "tiles": [413, 413, 413, 413, 413, 413],
+  "hardness": 0.5,
+  "stack": 64
+},
+  {
+  "key": "green_concrete_powder",
+  "name": "Zelený betonový prášek",
+  "tiles": [414, 414, 414, 414, 414, 414],
+  "hardness": 0.5,
+  "stack": 64
+},
+  {
+  "key": "red_concrete_powder",
+  "name": "Červený betonový prášek",
+  "tiles": [415, 415, 415, 415, 415, 415],
+  "hardness": 0.5,
+  "stack": 64
+},
+  {
+  "key": "black_concrete_powder",
+  "name": "Černý betonový prášek",
+  "tiles": [416, 416, 416, 416, 416, 416],
+  "hardness": 0.5,
+  "stack": 64
+},
+  {
+  "key": "white_concrete",
+  "name": "Bílý beton",
+  "tiles": [417, 417, 417, 417, 417, 417],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "orange_concrete",
+  "name": "Oranžový beton",
+  "tiles": [418, 418, 418, 418, 418, 418],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "magenta_concrete",
+  "name": "Purpurový beton",
+  "tiles": [419, 419, 419, 419, 419, 419],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "light_blue_concrete",
+  "name": "Světle modrý beton",
+  "tiles": [420, 420, 420, 420, 420, 420],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "yellow_concrete",
+  "name": "Žlutý beton",
+  "tiles": [421, 421, 421, 421, 421, 421],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "lime_concrete",
+  "name": "Limetkový beton",
+  "tiles": [422, 422, 422, 422, 422, 422],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "pink_concrete",
+  "name": "Růžový beton",
+  "tiles": [423, 423, 423, 423, 423, 423],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "gray_concrete",
+  "name": "Šedý beton",
+  "tiles": [424, 424, 424, 424, 424, 424],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "light_gray_concrete",
+  "name": "Světle šedý beton",
+  "tiles": [425, 425, 425, 425, 425, 425],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "cyan_concrete",
+  "name": "Azurový beton",
+  "tiles": [426, 426, 426, 426, 426, 426],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "purple_concrete",
+  "name": "Fialový beton",
+  "tiles": [427, 427, 427, 427, 427, 427],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "blue_concrete",
+  "name": "Modrý beton",
+  "tiles": [428, 428, 428, 428, 428, 428],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "brown_concrete",
+  "name": "Hnědý beton",
+  "tiles": [429, 429, 429, 429, 429, 429],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "green_concrete",
+  "name": "Zelený beton",
+  "tiles": [430, 430, 430, 430, 430, 430],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "red_concrete",
+  "name": "Červený beton",
+  "tiles": [431, 431, 431, 431, 431, 431],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "black_concrete",
+  "name": "Černý beton",
+  "tiles": [432, 432, 432, 432, 432, 432],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "white_carpet",
+  "name": "Bílý koberec",
+  "tiles": [57, 57, 57, 57, 57, 57],
+  "hardness": 0.1,
+  "stack": 64
+},
+  {
+  "key": "orange_carpet",
+  "name": "Oranžový koberec",
+  "tiles": [58, 58, 58, 58, 58, 58],
+  "hardness": 0.1,
+  "stack": 64
+},
+  {
+  "key": "magenta_carpet",
+  "name": "Purpurový koberec",
+  "tiles": [59, 59, 59, 59, 59, 59],
+  "hardness": 0.1,
+  "stack": 64
+},
+  {
+  "key": "light_blue_carpet",
+  "name": "Světle modrý koberec",
+  "tiles": [60, 60, 60, 60, 60, 60],
+  "hardness": 0.1,
+  "stack": 64
+},
+  {
+  "key": "yellow_carpet",
+  "name": "Žlutý koberec",
+  "tiles": [61, 61, 61, 61, 61, 61],
+  "hardness": 0.1,
+  "stack": 64
+},
+  {
+  "key": "lime_carpet",
+  "name": "Limetkový koberec",
+  "tiles": [62, 62, 62, 62, 62, 62],
+  "hardness": 0.1,
+  "stack": 64
+},
+  {
+  "key": "pink_carpet",
+  "name": "Růžový koberec",
+  "tiles": [63, 63, 63, 63, 63, 63],
+  "hardness": 0.1,
+  "stack": 64
+},
+  {
+  "key": "gray_carpet",
+  "name": "Šedý koberec",
+  "tiles": [64, 64, 64, 64, 64, 64],
+  "hardness": 0.1,
+  "stack": 64
+},
+  {
+  "key": "light_gray_carpet",
+  "name": "Světle šedý koberec",
+  "tiles": [65, 65, 65, 65, 65, 65],
+  "hardness": 0.1,
+  "stack": 64
+},
+  {
+  "key": "cyan_carpet",
+  "name": "Azurový koberec",
+  "tiles": [66, 66, 66, 66, 66, 66],
+  "hardness": 0.1,
+  "stack": 64
+},
+  {
+  "key": "purple_carpet",
+  "name": "Fialový koberec",
+  "tiles": [67, 67, 67, 67, 67, 67],
+  "hardness": 0.1,
+  "stack": 64
+},
+  {
+  "key": "blue_carpet",
+  "name": "Modrý koberec",
+  "tiles": [68, 68, 68, 68, 68, 68],
+  "hardness": 0.1,
+  "stack": 64
+},
+  {
+  "key": "brown_carpet",
+  "name": "Hnědý koberec",
+  "tiles": [69, 69, 69, 69, 69, 69],
+  "hardness": 0.1,
+  "stack": 64
+},
+  {
+  "key": "green_carpet",
+  "name": "Zelený koberec",
+  "tiles": [70, 70, 70, 70, 70, 70],
+  "hardness": 0.1,
+  "stack": 64
+},
+  {
+  "key": "red_carpet",
+  "name": "Červený koberec",
+  "tiles": [71, 71, 71, 71, 71, 71],
+  "hardness": 0.1,
+  "stack": 64
+},
+  {
+  "key": "black_carpet",
+  "name": "Černý koberec",
+  "tiles": [72, 72, 72, 72, 72, 72],
+  "hardness": 0.1,
+  "stack": 64
+},
+  {
+  "key": "crimsonium_log",
+  "name": "Crimsoniový kmen",
+  "tiles": [450, 450, 449, 449, 449, 449],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "crimsonium_planks",
+  "name": "Crimsoniová prkna",
+  "tiles": [451, 451, 451, 451, 451, 451],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "crimsonium_leaves",
+  "name": "Crimsoniové listí",
+  "tiles": [452, 452, 452, 452, 452, 452],
+  "hardness": 0.2,
+  "stack": 64
+},
+  {
+  "key": "shattered_stone",
+  "name": "Roztříštěný kámen",
+  "tiles": [453, 453, 453, 453, 453, 453],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "shattered_bricks",
+  "name": "Cihly z roztříštěného kamene",
+  "tiles": [454, 454, 454, 454, 454, 454],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "void_shard_block",
+  "name": "Blok prázdnotných střepů",
+  "tiles": [455, 455, 455, 455, 455, 455],
+  "hardness": 1.5,
+  "stack": 64
+},
+  {
+  "key": "dark_sand",
+  "name": "Temný písek",
+  "tiles": [456, 456, 456, 456, 456, 456],
+  "hardness": 0.5,
+  "stack": 64
+},
+  {
+  "key": "dark_sandstone",
+  "name": "Temný pískovec",
+  "tiles": [457, 457, 457, 457, 457, 457],
+  "hardness": 1.8,
+  "stack": 64
+},
+  {
+  "key": "shard_cluster",
+  "name": "Shluk střepů",
+  "tiles": [458, 458, 458, 458, 458, 458],
+  "hardness": 0.2,
+  "stack": 64
+},
+  {
+  "key": "crimsonium_ore",
+  "name": "Crimsoniová ruda",
+  "tiles": [459, 459, 459, 459, 459, 459],
+  "hardness": 4,
+  "stack": 64
+},
+  {
+  "key": "shrine_chest",
+  "name": "Truhla svatyně",
+  "tiles": [119, 119, 121, 121, 120, 120],
+  "hardness": 2.5,
+  "stack": 64
+},
+  {
+  "key": "chamber_chest",
+  "name": "Truhla skryté komory",
+  "tiles": [119, 119, 121, 121, 120, 120],
+  "hardness": 2.5,
+  "stack": 64
+},
+  {
+  "key": "celestium",
+  "name": "Celestium",
+  "tiles": [469, 469, 469, 469, 469, 469],
+  "stack": 64
+},
+  {
+  "key": "celestium_pickaxe",
+  "name": "Celestiový krumpáč",
+  "tiles": [470, 470, 470, 470, 470, 470],
+  "stack": 1
+},
+  {
+  "key": "celestium_sword",
+  "name": "Celestiový meč",
+  "tiles": [471, 471, 471, 471, 471, 471],
+  "stack": 1
+},
+  {
+  "key": "celestium_axe",
+  "name": "Celestiová sekera",
+  "tiles": [472, 472, 472, 472, 472, 472],
+  "stack": 1
+},
+  {
+  "key": "celestium_shovel",
+  "name": "Celestiová lopata",
+  "tiles": [473, 473, 473, 473, 473, 473],
+  "stack": 1
+},
+  {
+  "key": "celestium_chestplate",
+  "name": "Celestiový kyrys",
+  "tiles": [474, 474, 474, 474, 474, 474],
+  "stack": 1
+},
+  {
+  "key": "celestial_wings",
+  "name": "Nebeská křídla",
+  "tiles": [482, 482, 482, 482, 482, 482],
+  "stack": 1
+},
+  {
+  "key": "honey_ball",
+  "name": "Medová kulička",
+  "tiles": [486, 486, 486, 486, 486, 486],
+  "stack": 64
+},
+  {
+  "key": "rail_switch",
+  "name": "Výhybka",
+  "tiles": [499, 499, 499, 499, 499, 499],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60001",
+  "name": "Výhybka",
+  "tiles": [500, 500, 500, 500, 500, 500],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60002",
+  "name": "Výhybka",
+  "tiles": [501, 501, 501, 501, 501, 501],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60003",
+  "name": "Výhybka",
+  "tiles": [502, 502, 502, 502, 502, 502],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60004",
+  "name": "Výhybka",
+  "tiles": [503, 503, 503, 503, 503, 503],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60005",
+  "name": "Výhybka",
+  "tiles": [504, 504, 504, 504, 504, 504],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60006",
+  "name": "Výhybka",
+  "tiles": [505, 505, 505, 505, 505, 505],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60007",
+  "name": "Výhybka",
+  "tiles": [506, 506, 506, 506, 506, 506],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "cushion",
+  "name": "Sedák",
+  "tiles": [507, 508, 508, 508, 508, 508],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "buffer_stop",
+  "name": "Zarážka",
+  "tiles": [509, 509, 510, 510, 510, 510],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60010",
+  "name": "Zarážka",
+  "tiles": [509, 509, 510, 510, 510, 510],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60011",
+  "name": "Zarážka",
+  "tiles": [509, 509, 510, 510, 510, 510],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60012",
+  "name": "Zarážka",
+  "tiles": [509, 509, 510, 510, 510, 510],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "locomotive",
+  "name": "Lokomotiva",
+  "tiles": [512, 512, 512, 512, 512, 512],
+  "stack": 64
+},
+  {
+  "key": "passenger_wagon",
+  "name": "Osobní vagon",
+  "tiles": [513, 513, 513, 513, 513, 513],
+  "stack": 64
+},
+  {
+  "key": "freight_wagon",
+  "name": "Nákladní vagon",
+  "tiles": [514, 514, 514, 514, 514, 514],
+  "stack": 64
+},
+  {
+  "key": "rail_slope",
+  "name": "Šikmá kolej",
+  "tiles": [493, 493, 493, 493, 493, 493],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60017",
+  "name": "Šikmá kolej",
+  "tiles": [494, 494, 494, 494, 494, 494],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60018",
+  "name": "Šikmá kolej",
+  "tiles": [493, 493, 493, 493, 493, 493],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60019",
+  "name": "Šikmá kolej",
+  "tiles": [494, 494, 494, 494, 494, 494],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "train_booster",
+  "name": "Urychlovač vlaku",
+  "tiles": [515, 516, 516, 516, 516, 516],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "chime_maker",
+  "name": "Přejezdový zvonek",
+  "tiles": [517, 517, 517, 517, 517, 517],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "horn_maker",
+  "name": "Houkačka",
+  "tiles": [518, 518, 518, 518, 518, 518],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "crossing_signal",
+  "name": "Přejezdové světlo",
+  "tiles": [523, 523, 523, 523, 523, 523],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60024",
+  "name": "Přejezdové světlo",
+  "tiles": [523, 523, 523, 523, 523, 523],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60025",
+  "name": "Přejezdové světlo",
+  "tiles": [523, 523, 523, 523, 523, 523],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60026",
+  "name": "Přejezdové světlo",
+  "tiles": [523, 523, 523, 523, 523, 523],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60027",
+  "name": "Přejezdové světlo",
+  "tiles": [523, 523, 523, 523, 523, 523],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60028",
+  "name": "Přejezdové světlo",
+  "tiles": [523, 523, 523, 523, 523, 523],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60029",
+  "name": "Přejezdové světlo",
+  "tiles": [523, 523, 523, 523, 523, 523],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60030",
+  "name": "Přejezdové světlo",
+  "tiles": [523, 523, 523, 523, 523, 523],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60031",
+  "name": "Přejezdové světlo",
+  "tiles": [523, 523, 523, 523, 523, 523],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60032",
+  "name": "Přejezdové světlo",
+  "tiles": [523, 523, 523, 523, 523, 523],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60033",
+  "name": "Přejezdové světlo",
+  "tiles": [523, 523, 523, 523, 523, 523],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60034",
+  "name": "Přejezdové světlo",
+  "tiles": [523, 523, 523, 523, 523, 523],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "crossing_gate",
+  "name": "Závora",
+  "tiles": [524, 524, 524, 524, 524, 524],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60036",
+  "name": "Závora",
+  "tiles": [524, 524, 524, 524, 524, 524],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60037",
+  "name": "Závora",
+  "tiles": [524, 524, 524, 524, 524, 524],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60038",
+  "name": "Závora",
+  "tiles": [524, 524, 524, 524, 524, 524],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60039",
+  "name": "Závora",
+  "tiles": [524, 524, 524, 524, 524, 524],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60040",
+  "name": "Závora",
+  "tiles": [524, 524, 524, 524, 524, 524],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60041",
+  "name": "Závora",
+  "tiles": [524, 524, 524, 524, 524, 524],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60042",
+  "name": "Závora",
+  "tiles": [524, 524, 524, 524, 524, 524],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "turntable",
+  "name": "Točna",
+  "tiles": [522, 522, 522, 522, 522, 522],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60044",
+  "name": "Točna",
+  "tiles": [522, 522, 522, 522, 522, 522],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "drill_car",
+  "name": "Vrtací vůz",
+  "tiles": [546, 546, 546, 546, 546, 546],
+  "stack": 64
+},
+  {
+  "key": "cut_bronze",
+  "name": "Řezaný bronz",
+  "tiles": [572, 572, 572, 572, 572, 572],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "chiseled_bronze",
+  "name": "Zdobený bronz",
+  "tiles": [573, 573, 573, 573, 573, 573],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "bronze_grate",
+  "name": "Bronzová mřížka",
+  "tiles": [574, 574, 574, 574, 574, 574],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "bronze_bulb",
+  "name": "Bronzová žárovka",
+  "tiles": [575, 575, 575, 575, 575, 575],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60050",
+  "name": "Bronzová žárovka",
+  "tiles": [576, 576, 576, 576, 576, 576],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60051",
+  "name": "Bronzová žárovka",
+  "tiles": [575, 575, 575, 575, 575, 575],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60052",
+  "name": "Bronzová žárovka",
+  "tiles": [576, 576, 576, 576, 576, 576],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "bronze_stairs",
+  "name": "Bronzové schody",
+  "tiles": [76, 76, 76, 76, 76, 76],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60081",
+  "name": "Bronzové schody",
+  "tiles": [76, 76, 76, 76, 76, 76],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60082",
+  "name": "Bronzové schody",
+  "tiles": [76, 76, 76, 76, 76, 76],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60083",
+  "name": "Bronzové schody",
+  "tiles": [76, 76, 76, 76, 76, 76],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60084",
+  "name": "Bronzové schody",
+  "tiles": [76, 76, 76, 76, 76, 76],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60085",
+  "name": "Bronzové schody",
+  "tiles": [76, 76, 76, 76, 76, 76],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60086",
+  "name": "Bronzové schody",
+  "tiles": [76, 76, 76, 76, 76, 76],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60087",
+  "name": "Bronzové schody",
+  "tiles": [76, 76, 76, 76, 76, 76],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "cut_bronze_stairs",
+  "name": "Schody z řezaného bronzu",
+  "tiles": [572, 572, 572, 572, 572, 572],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60089",
+  "name": "Schody z řezaného bronzu",
+  "tiles": [572, 572, 572, 572, 572, 572],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60090",
+  "name": "Schody z řezaného bronzu",
+  "tiles": [572, 572, 572, 572, 572, 572],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60091",
+  "name": "Schody z řezaného bronzu",
+  "tiles": [572, 572, 572, 572, 572, 572],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60092",
+  "name": "Schody z řezaného bronzu",
+  "tiles": [572, 572, 572, 572, 572, 572],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60093",
+  "name": "Schody z řezaného bronzu",
+  "tiles": [572, 572, 572, 572, 572, 572],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60094",
+  "name": "Schody z řezaného bronzu",
+  "tiles": [572, 572, 572, 572, 572, 572],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60095",
+  "name": "Schody z řezaného bronzu",
+  "tiles": [572, 572, 572, 572, 572, 572],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "bronze_slab",
+  "name": "Bronzová deska",
+  "tiles": [76, 76, 76, 76, 76, 76],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60097",
+  "name": "Bronzová deska",
+  "tiles": [76, 76, 76, 76, 76, 76],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60098",
+  "name": "Bronzová deska",
+  "tiles": [76, 76, 76, 76, 76, 76],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "cut_bronze_slab",
+  "name": "Deska z řezaného bronzu",
+  "tiles": [572, 572, 572, 572, 572, 572],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60100",
+  "name": "Deska z řezaného bronzu",
+  "tiles": [572, 572, 572, 572, 572, 572],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60101",
+  "name": "Deska z řezaného bronzu",
+  "tiles": [572, 572, 572, 572, 572, 572],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60102",
+  "name": "Bronzové dveře",
+  "tiles": [585, 585, 585, 585, 585, 585],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60103",
+  "name": "Bronzové dveře",
+  "tiles": [585, 585, 585, 585, 585, 585],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60104",
+  "name": "Bronzové dveře",
+  "tiles": [585, 585, 585, 585, 585, 585],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60105",
+  "name": "Bronzové dveře",
+  "tiles": [585, 585, 585, 585, 585, 585],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60106",
+  "name": "Bronzové dveře",
+  "tiles": [585, 585, 585, 585, 585, 585],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60107",
+  "name": "Bronzové dveře",
+  "tiles": [585, 585, 585, 585, 585, 585],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60108",
+  "name": "Bronzové dveře",
+  "tiles": [585, 585, 585, 585, 585, 585],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60109",
+  "name": "Bronzové dveře",
+  "tiles": [585, 585, 585, 585, 585, 585],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60110",
+  "name": "Bronzové dveře",
+  "tiles": [586, 586, 586, 586, 586, 586],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60111",
+  "name": "Bronzové dveře",
+  "tiles": [586, 586, 586, 586, 586, 586],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60112",
+  "name": "Bronzové dveře",
+  "tiles": [586, 586, 586, 586, 586, 586],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60113",
+  "name": "Bronzové dveře",
+  "tiles": [586, 586, 586, 586, 586, 586],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60114",
+  "name": "Bronzové dveře",
+  "tiles": [586, 586, 586, 586, 586, 586],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60115",
+  "name": "Bronzové dveře",
+  "tiles": [586, 586, 586, 586, 586, 586],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60116",
+  "name": "Bronzové dveře",
+  "tiles": [586, 586, 586, 586, 586, 586],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60117",
+  "name": "Bronzové dveře",
+  "tiles": [586, 586, 586, 586, 586, 586],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "bronze_trapdoor",
+  "name": "Bronzový poklop",
+  "tiles": [587, 587, 587, 587, 587, 587],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60119",
+  "name": "Bronzový poklop",
+  "tiles": [587, 587, 587, 587, 587, 587],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60120",
+  "name": "Bronzový poklop",
+  "tiles": [587, 587, 587, 587, 587, 587],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60121",
+  "name": "Bronzový poklop",
+  "tiles": [587, 587, 587, 587, 587, 587],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60122",
+  "name": "Bronzový poklop",
+  "tiles": [587, 587, 587, 587, 587, 587],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60123",
+  "name": "Bronzový poklop",
+  "tiles": [587, 587, 587, 587, 587, 587],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60124",
+  "name": "Bronzový poklop",
+  "tiles": [587, 587, 587, 587, 587, 587],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60125",
+  "name": "Bronzový poklop",
+  "tiles": [587, 587, 587, 587, 587, 587],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60126",
+  "name": "Bronzový poklop",
+  "tiles": [587, 587, 587, 587, 587, 587],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60127",
+  "name": "Bronzový poklop",
+  "tiles": [587, 587, 587, 587, 587, 587],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60128",
+  "name": "Bronzový poklop",
+  "tiles": [587, 587, 587, 587, 587, 587],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60129",
+  "name": "Bronzový poklop",
+  "tiles": [587, 587, 587, 587, 587, 587],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60130",
+  "name": "Bronzový poklop",
+  "tiles": [587, 587, 587, 587, 587, 587],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60131",
+  "name": "Bronzový poklop",
+  "tiles": [587, 587, 587, 587, 587, 587],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60132",
+  "name": "Bronzový poklop",
+  "tiles": [587, 587, 587, 587, 587, 587],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60133",
+  "name": "Bronzový poklop",
+  "tiles": [587, 587, 587, 587, 587, 587],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "bronze_door",
+  "name": "Bronzové dveře",
+  "tiles": [588, 588, 588, 588, 588, 588],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "waxed_bronze_block",
+  "name": "Bronzový blok (voskovaný)",
+  "tiles": [76, 76, 76, 76, 76, 76],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "tarnished_bronze_block",
+  "name": "Bronzový blok (zašlý)",
+  "tiles": [577, 577, 577, 577, 577, 577],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "waxed_tarnished_bronze_block",
+  "name": "Bronzový blok (voskovaný, zašlý)",
+  "tiles": [577, 577, 577, 577, 577, 577],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "rusty_bronze_block",
+  "name": "Bronzový blok (rezavý)",
+  "tiles": [578, 578, 578, 578, 578, 578],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "waxed_rusty_bronze_block",
+  "name": "Bronzový blok (voskovaný, rezavý)",
+  "tiles": [578, 578, 578, 578, 578, 578],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "waxed_cut_bronze",
+  "name": "Řezaný bronz (voskovaný)",
+  "tiles": [572, 572, 572, 572, 572, 572],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "tarnished_cut_bronze",
+  "name": "Řezaný bronz (zašlý)",
+  "tiles": [579, 579, 579, 579, 579, 579],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "waxed_tarnished_cut_bronze",
+  "name": "Řezaný bronz (voskovaný, zašlý)",
+  "tiles": [579, 579, 579, 579, 579, 579],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "rusty_cut_bronze",
+  "name": "Řezaný bronz (rezavý)",
+  "tiles": [580, 580, 580, 580, 580, 580],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "waxed_rusty_cut_bronze",
+  "name": "Řezaný bronz (voskovaný, rezavý)",
+  "tiles": [580, 580, 580, 580, 580, 580],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "waxed_chiseled_bronze",
+  "name": "Zdobený bronz (voskovaný)",
+  "tiles": [573, 573, 573, 573, 573, 573],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "tarnished_chiseled_bronze",
+  "name": "Zdobený bronz (zašlý)",
+  "tiles": [581, 581, 581, 581, 581, 581],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "waxed_tarnished_chiseled_bronze",
+  "name": "Zdobený bronz (voskovaný, zašlý)",
+  "tiles": [581, 581, 581, 581, 581, 581],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "rusty_chiseled_bronze",
+  "name": "Zdobený bronz (rezavý)",
+  "tiles": [582, 582, 582, 582, 582, 582],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "waxed_rusty_chiseled_bronze",
+  "name": "Zdobený bronz (voskovaný, rezavý)",
+  "tiles": [582, 582, 582, 582, 582, 582],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "waxed_bronze_grate",
+  "name": "Bronzová mřížka (voskovaný)",
+  "tiles": [574, 574, 574, 574, 574, 574],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "tarnished_bronze_grate",
+  "name": "Bronzová mřížka (zašlý)",
+  "tiles": [583, 583, 583, 583, 583, 583],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "waxed_tarnished_bronze_grate",
+  "name": "Bronzová mřížka (voskovaný, zašlý)",
+  "tiles": [583, 583, 583, 583, 583, 583],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "rusty_bronze_grate",
+  "name": "Bronzová mřížka (rezavý)",
+  "tiles": [584, 584, 584, 584, 584, 584],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "waxed_rusty_bronze_grate",
+  "name": "Bronzová mřížka (voskovaný, rezavý)",
+  "tiles": [584, 584, 584, 584, 584, 584],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "carved_cornerstone",
+  "name": "Tesaný úhelný kámen",
+  "tiles": [547, 547, 547, 547, 547, 547],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "gilded_cobble",
+  "name": "Zlacená dlažba",
+  "tiles": [548, 548, 548, 548, 548, 548],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "amber_resin",
+  "name": "Jantarová pryskyřice",
+  "tiles": [549, 549, 549, 549, 549, 549],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "copper_moss",
+  "name": "Měděný mech",
+  "tiles": [550, 550, 550, 550, 550, 550],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "prismatide_pillar",
+  "name": "Prizmatický sloup",
+  "tiles": [551, 551, 551, 551, 551, 551],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "siltstone",
+  "name": "Prachovec",
+  "tiles": [552, 552, 552, 552, 552, 552],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "luminous_salt",
+  "name": "Světélkující sůl",
+  "tiles": [553, 553, 553, 553, 553, 553],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "aether_brine",
+  "name": "Éterový lák",
+  "tiles": [554, 554, 554, 554, 554, 554],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "glass_reeds",
+  "name": "Skleněný rákos",
+  "tiles": [555, 555, 555, 555, 555, 555],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "spore_pad",
+  "name": "Sporová podložka",
+  "tiles": [556, 556, 557, 557, 557, 557],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "stonewood_log",
+  "name": "Zkamenělá kůra",
+  "tiles": [559, 559, 558, 558, 558, 558],
+  "hardness": 2,
+  "stack": 64
+},
+  {
+  "key": "mossy_cornerstone",
+  "name": "Mechový úhelný kámen",
+  "tiles": [606, 17, 560, 560, 560, 560],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "glowcap_leaves",
+  "name": "Zářící listí",
+  "tiles": [561, 561, 561, 561, 561, 561],
+  "hardness": 0.2,
+  "stack": 64
+},
+  {
+  "key": "starberry_bush",
+  "name": "Keř hvězdnic",
+  "tiles": [562, 562, 562, 562, 562, 562],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "void_truffle",
+  "name": "Prázdnotný lanýž",
+  "tiles": [563, 563, 563, 563, 563, 563],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "starberries",
+  "name": "Hvězdnice",
+  "tiles": [564, 564, 564, 564, 564, 564],
+  "stack": 64
+},
+  {
+  "key": "thin_ice",
+  "name": "Praskající led",
+  "tiles": [565, 565, 565, 565, 565, 565],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "ice_bricks",
+  "name": "Ledové cihly",
+  "tiles": [566, 566, 566, 566, 566, 566],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "snowflake_block",
+  "name": "Blok sněhových vloček",
+  "tiles": [567, 567, 567, 567, 567, 567],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "dried_snow",
+  "name": "Suchý sníh",
+  "tiles": [568, 568, 568, 568, 568, 568],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "abyssal_rock",
+  "name": "Propastná skála",
+  "tiles": [569, 569, 569, 569, 569, 569],
+  "hardness": 6,
+  "stack": 64
+},
+  {
+  "key": "radio",
+  "name": "Rozhlas",
+  "tiles": [571, 571, 570, 570, 570, 570],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60177",
+  "name": "Kolej",
+  "tiles": [493, 493, 493, 493, 493, 493],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60178",
+  "name": "Kolej",
+  "tiles": [493, 493, 493, 493, 493, 493],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60179",
+  "name": "Kolej",
+  "tiles": [493, 493, 493, 493, 493, 493],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60180",
+  "name": "Kolej",
+  "tiles": [493, 493, 493, 493, 493, 493],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60181",
+  "name": "Kolej",
+  "tiles": [493, 493, 493, 493, 493, 493],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60182",
+  "name": "Kolej",
+  "tiles": [493, 493, 493, 493, 493, 493],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60183",
+  "name": "Kolej",
+  "tiles": [493, 493, 493, 493, 493, 493],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60184",
+  "name": "Kolej",
+  "tiles": [493, 493, 493, 493, 493, 493],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60185",
+  "name": "Kolej",
+  "tiles": [493, 493, 493, 493, 493, 493],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60186",
+  "name": "Kolej",
+  "tiles": [493, 493, 493, 493, 493, 493],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "rail_gentle_slope",
+  "name": "Mírné stoupání koleje",
+  "tiles": [493, 493, 493, 493, 493, 493],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60188",
+  "name": "Kolej",
+  "tiles": [493, 493, 493, 493, 493, 493],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60189",
+  "name": "Kolej",
+  "tiles": [493, 493, 493, 493, 493, 493],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60190",
+  "name": "Kolej",
+  "tiles": [493, 493, 493, 493, 493, 493],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60191",
+  "name": "Kolej",
+  "tiles": [493, 493, 493, 493, 493, 493],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60192",
+  "name": "Kolej",
+  "tiles": [493, 493, 493, 493, 493, 493],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60193",
+  "name": "Kolej",
+  "tiles": [493, 493, 493, 493, 493, 493],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60194",
+  "name": "Kolej",
+  "tiles": [493, 493, 493, 493, 493, 493],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60195",
+  "name": "Kolej",
+  "tiles": [493, 493, 493, 493, 493, 493],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60196",
+  "name": "Kolej",
+  "tiles": [493, 493, 493, 493, 493, 493],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60197",
+  "name": "Kolej",
+  "tiles": [493, 493, 493, 493, 493, 493],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60198",
+  "name": "Kolej",
+  "tiles": [493, 493, 493, 493, 493, 493],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60199",
+  "name": "Kolej",
+  "tiles": [493, 493, 493, 493, 493, 493],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60200",
+  "name": "Kolej",
+  "tiles": [493, 493, 493, 493, 493, 493],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60201",
+  "name": "Kolej",
+  "tiles": [493, 493, 493, 493, 493, 493],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60202",
+  "name": "Kolej",
+  "tiles": [493, 493, 493, 493, 493, 493],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60203",
+  "name": "Výhybka",
+  "tiles": [499, 499, 499, 499, 499, 499],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60204",
+  "name": "Výhybka",
+  "tiles": [500, 500, 500, 500, 500, 500],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60205",
+  "name": "Výhybka",
+  "tiles": [501, 501, 501, 501, 501, 501],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60206",
+  "name": "Výhybka",
+  "tiles": [502, 502, 502, 502, 502, 502],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60207",
+  "name": "Výhybka",
+  "tiles": [503, 503, 503, 503, 503, 503],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60208",
+  "name": "Výhybka",
+  "tiles": [504, 504, 504, 504, 504, 504],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60209",
+  "name": "Výhybka",
+  "tiles": [505, 505, 505, 505, 505, 505],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60210",
+  "name": "Výhybka",
+  "tiles": [506, 506, 506, 506, 506, 506],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60211",
+  "name": "Truhla",
+  "tiles": [119, 119, 121, 121, 120, 120],
+  "hardness": 2.5,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60212",
+  "name": "Kolej",
+  "tiles": [499, 499, 499, 499, 499, 499],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60213",
+  "name": "Kolej",
+  "tiles": [499, 499, 499, 499, 499, 499],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60214",
+  "name": "Kolej",
+  "tiles": [499, 499, 499, 499, 499, 499],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60215",
+  "name": "Kolej",
+  "tiles": [499, 499, 499, 499, 499, 499],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60216",
+  "name": "Kolej",
+  "tiles": [499, 499, 499, 499, 499, 499],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60217",
+  "name": "Kolej",
+  "tiles": [499, 499, 499, 499, 499, 499],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60218",
+  "name": "Kolej",
+  "tiles": [499, 499, 499, 499, 499, 499],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60219",
+  "name": "Kolej",
+  "tiles": [499, 499, 499, 499, 499, 499],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60220",
+  "name": "Kolej",
+  "tiles": [499, 499, 499, 499, 499, 499],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60221",
+  "name": "Kolej",
+  "tiles": [499, 499, 499, 499, 499, 499],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60222",
+  "name": "Kolej",
+  "tiles": [499, 499, 499, 499, 499, 499],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60223",
+  "name": "Kolej",
+  "tiles": [499, 499, 499, 499, 499, 499],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60224",
+  "name": "Kolej",
+  "tiles": [499, 499, 499, 499, 499, 499],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60225",
+  "name": "Kolej",
+  "tiles": [499, 499, 499, 499, 499, 499],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60226",
+  "name": "Kolej",
+  "tiles": [499, 499, 499, 499, 499, 499],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60227",
+  "name": "Kolej",
+  "tiles": [499, 499, 499, 499, 499, 499],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60228",
+  "name": "Kolej",
+  "tiles": [499, 499, 499, 499, 499, 499],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60229",
+  "name": "Kolej",
+  "tiles": [499, 499, 499, 499, 499, 499],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60230",
+  "name": "Kolej",
+  "tiles": [499, 499, 499, 499, 499, 499],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60231",
+  "name": "Kolej",
+  "tiles": [499, 499, 499, 499, 499, 499],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60232",
+  "name": "Kolej",
+  "tiles": [499, 499, 499, 499, 499, 499],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60233",
+  "name": "Kolej",
+  "tiles": [499, 499, 499, 499, 499, 499],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60234",
+  "name": "Kolej",
+  "tiles": [499, 499, 499, 499, 499, 499],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60235",
+  "name": "Kolej",
+  "tiles": [499, 499, 499, 499, 499, 499],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60236",
+  "name": "Kolej",
+  "tiles": [499, 499, 499, 499, 499, 499],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60237",
+  "name": "Kolej",
+  "tiles": [499, 499, 499, 499, 499, 499],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60238",
+  "name": "Kolej",
+  "tiles": [499, 499, 499, 499, 499, 499],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60239",
+  "name": "Kolej",
+  "tiles": [499, 499, 499, 499, 499, 499],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60240",
+  "name": "Kolej",
+  "tiles": [499, 499, 499, 499, 499, 499],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60241",
+  "name": "Kolej",
+  "tiles": [499, 499, 499, 499, 499, 499],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60242",
+  "name": "Kolej",
+  "tiles": [499, 499, 499, 499, 499, 499],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "vc:id/60243",
+  "name": "Kolej",
+  "tiles": [499, 499, 499, 499, 499, 499],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "subway_locomotive",
+  "name": "Čelo metra",
+  "tiles": [589, 589, 589, 589, 589, 589],
+  "stack": 64
+},
+  {
+  "key": "subway_car",
+  "name": "Vůz metra",
+  "tiles": [590, 590, 590, 590, 590, 590],
+  "stack": 64
+},
+  {
+  "key": "concrete_track_bed",
+  "name": "Betonové kolejové lože",
+  "tiles": [597, 597, 597, 597, 597, 597],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "platform",
+  "name": "Nástupiště",
+  "tiles": [598, 597, 599, 599, 599, 599],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "lattice_girder",
+  "name": "Příhradový nosník",
+  "tiles": [600, 600, 600, 600, 600, 600],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "rail_crossing",
+  "name": "Kolejové křížení",
+  "tiles": [601, 601, 601, 601, 601, 601],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "rail_crossing_diagonal",
+  "name": "Šikmé kolejové křížení",
+  "tiles": [602, 602, 602, 602, 602, 602],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "station_chest",
+  "name": "Truhla",
+  "tiles": [119, 119, 121, 121, 120, 120],
+  "hardness": 2.5,
+  "stack": 64
+},
+  {
+  "key": "metro_chest",
+  "name": "Truhla",
+  "tiles": [119, 119, 121, 121, 120, 120],
+  "hardness": 2.5,
+  "stack": 64
+},
+  {
+  "key": "explorer_journal_1",
+  "name": "Deník průzkumníka I",
+  "tiles": [316, 316, 316, 316, 316, 316],
+  "stack": 64
+},
+  {
+  "key": "explorer_journal_2",
+  "name": "Deník průzkumníka II",
+  "tiles": [316, 316, 316, 316, 316, 316],
+  "stack": 64
+},
+  {
+  "key": "explorer_journal_3",
+  "name": "Deník průzkumníka III",
+  "tiles": [316, 316, 316, 316, 316, 316],
+  "stack": 64
+},
+  {
+  "key": "explorer_journal_4",
+  "name": "Deník průzkumníka IV",
+  "tiles": [316, 316, 316, 316, 316, 316],
+  "stack": 64
+},
+  {
+  "key": "explorer_journal_5",
+  "name": "Deník průzkumníka V",
+  "tiles": [316, 316, 316, 316, 316, 316],
+  "stack": 64
+},
+  {
+  "key": "explorer_journal_6",
+  "name": "Deník průzkumníka VI",
+  "tiles": [316, 316, 316, 316, 316, 316],
+  "stack": 64
+},
+  {
+  "key": "explorer_journal_7",
+  "name": "Deník průzkumníka VII",
+  "tiles": [316, 316, 316, 316, 316, 316],
+  "stack": 64
+},
+  {
+  "key": "explorer_journal_8",
+  "name": "Deník průzkumníka VIII",
+  "tiles": [316, 316, 316, 316, 316, 316],
+  "stack": 64
+},
+  {
+  "key": "explorer_journal_9",
+  "name": "Deník průzkumníka IX",
+  "tiles": [316, 316, 316, 316, 316, 316],
+  "stack": 64
+},
+  {
+  "key": "explorer_journal_10",
+  "name": "Deník průzkumníka X",
+  "tiles": [316, 316, 316, 316, 316, 316],
+  "stack": 64
+},
+  {
+  "key": "explorer_journal_11",
+  "name": "Deník průzkumníka XI",
+  "tiles": [316, 316, 316, 316, 316, 316],
+  "stack": 64
+},
+  {
+  "key": "explorer_journal_12",
+  "name": "Deník průzkumníka XII",
+  "tiles": [316, 316, 316, 316, 316, 316],
+  "stack": 64
+},
+  {
+  "key": "metro_tile",
+  "name": "Obklad metra",
+  "tiles": [591, 591, 591, 591, 591, 591],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "metro_tile_blue",
+  "name": "Modrý obklad metra",
+  "tiles": [592, 592, 592, 592, 592, 592],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "metro_tile_cracked",
+  "name": "Popraskaný obklad",
+  "tiles": [593, 593, 593, 593, 593, 593],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "station_sign",
+  "name": "Cedule stanice",
+  "tiles": [591, 591, 594, 594, 594, 594],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "bench",
+  "name": "Lavička",
+  "tiles": [595, 595, 595, 595, 595, 595],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "metro_map",
+  "name": "Mapa metra",
+  "tiles": [596, 596, 596, 596, 596, 596],
+  "stack": 64
+},
+  {
+  "key": "cornerstone_iron_ore",
+  "name": "Železná ruda Cornerstone",
+  "tiles": [603, 603, 603, 603, 603, 603],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "cornerstone_bronze_ore",
+  "name": "Bronzová ruda Cornerstone",
+  "tiles": [604, 604, 604, 604, 604, 604],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "cornerstone_steel_ore",
+  "name": "Ocelová ruda Cornerstone",
+  "tiles": [605, 605, 605, 605, 605, 605],
+  "hardness": 3,
+  "stack": 64
+},
+  {
+  "key": "ember_dust",
+  "name": "Žhavý prach",
+  "tiles": [622, 622, 622, 622, 622, 622],
+  "stack": 64
+},
+  {
+  "key": "jack_o_lantern",
+  "name": "Svítící dýně",
+  "tiles": [144, 144, 623, 623, 623, 623],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "jack_o_lantern_grin",
+  "name": "Svítící dýně",
+  "tiles": [144, 144, 624, 624, 624, 624],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "jack_o_lantern_scary",
+  "name": "Svítící dýně",
+  "tiles": [144, 144, 625, 625, 625, 625],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "jack_o_lantern_surprised",
+  "name": "Svítící dýně",
+  "tiles": [144, 144, 626, 626, 626, 626],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "cobweb",
+  "name": "Pavučina",
+  "tiles": [627, 627, 627, 627, 627, 627],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "gravestone",
+  "name": "Náhrobek",
+  "tiles": [628, 628, 628, 628, 628, 628],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "bat_lantern",
+  "name": "Netopýří lampion",
+  "tiles": [629, 629, 629, 629, 629, 629],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "christmas_tree",
+  "name": "Vánoční stromek",
+  "tiles": [630, 630, 630, 630, 630, 630],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "string_lights",
+  "name": "Světelný řetěz",
+  "tiles": [631, 631, 631, 631, 631, 631],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "christmas_stocking",
+  "name": "Vánoční punčocha",
+  "tiles": [632, 632, 632, 632, 632, 632],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "lollipop",
+  "name": "Lízátko",
+  "tiles": [633, 633, 633, 633, 633, 633],
+  "stack": 64
+},
+  {
+  "key": "caramel",
+  "name": "Karamel",
+  "tiles": [634, 634, 634, 634, 634, 634],
+  "stack": 64
+},
+  {
+  "key": "gingerbread",
+  "name": "Perníček",
+  "tiles": [635, 635, 635, 635, 635, 635],
+  "stack": 64
+},
+  {
+  "key": "sled",
+  "name": "Sáně",
+  "tiles": [636, 636, 636, 636, 636, 636],
+  "stack": 64
+},
+  {
+  "key": "celestling_spawn_egg",
+  "name": "Vejce: Celestling",
+  "tiles": [640, 640, 640, 640, 640, 640],
+  "stack": 16
+},
+  {
+  "key": "reach_stalker_spawn_egg",
+  "name": "Vejce: Reach Stalker",
+  "tiles": [641, 641, 641, 641, 641, 641],
+  "stack": 16
+},
+  {
+  "key": "sky_drifter_spawn_egg",
+  "name": "Vejce: Sky Drifter",
+  "tiles": [642, 642, 642, 642, 642, 642],
+  "stack": 16
+},
+  {
+  "key": "cornerstone_golem_spawn_egg",
+  "name": "Vejce: Úhelný golem",
+  "tiles": [643, 643, 643, 643, 643, 643],
+  "stack": 16
+},
+  {
+  "key": "moss_lurker_spawn_egg",
+  "name": "Vejce: Mechový plaz",
+  "tiles": [644, 644, 644, 644, 644, 644],
+  "stack": 16
+},
+  {
+  "key": "sporeling_spawn_egg",
+  "name": "Vejce: Sporovka",
+  "tiles": [645, 645, 645, 645, 645, 645],
+  "stack": 16
+},
+  {
+  "key": "ember_moth_spawn_egg",
+  "name": "Vejce: Žhavá můra",
+  "tiles": [646, 646, 646, 646, 646, 646],
+  "stack": 16
+},
+  {
+  "key": "ash_fox_spawn_egg",
+  "name": "Vejce: Popelavý lišák",
+  "tiles": [647, 647, 647, 647, 647, 647],
+  "stack": 16
+},
+  {
+  "key": "fox_spawn_egg",
+  "name": "Vejce: Lišák",
+  "tiles": [648, 648, 648, 648, 648, 648],
+  "stack": 16
+},
+  {
+  "key": "ghost_spawn_egg",
+  "name": "Vejce: Duch",
+  "tiles": [649, 649, 649, 649, 649, 649],
+  "stack": 16
+},
+  {
+  "key": "snowman_spawn_egg",
+  "name": "Vejce: Sněhulák",
+  "tiles": [650, 650, 650, 650, 650, 650],
+  "stack": 16
+},
+  {
+  "key": "leather",
+  "name": "Kůže",
+  "tiles": [651, 651, 651, 651, 651, 651],
+  "stack": 64
+},
+  {
+  "key": "wallet",
+  "name": "Peněženka",
+  "tiles": [652, 652, 652, 652, 652, 652],
+  "stack": 1
+},
+  {
+  "key": "leather_backpack",
+  "name": "Kožený batoh",
+  "tiles": [653, 653, 653, 653, 653, 653],
+  "stack": 1
+},
+  {
+  "key": "steel_backpack",
+  "name": "Ocelový batoh",
+  "tiles": [654, 654, 654, 654, 654, 654],
+  "stack": 1
+},
+  {
+  "key": "steelbronze_backpack",
+  "name": "Ocelobronzový batoh",
+  "tiles": [655, 655, 655, 655, 655, 655],
+  "stack": 1
+},
+  {
+  "key": "bronzeruby_backpack",
+  "name": "Bronzorubínový batoh",
+  "tiles": [656, 656, 656, 656, 656, 656],
+  "stack": 1
+},
+  {
+  "key": "hardium_backpack",
+  "name": "Hardiový batoh",
+  "tiles": [657, 657, 657, 657, 657, 657],
+  "stack": 1
+},
+  {
+  "key": "celestium_backpack",
+  "name": "Celestiový batoh",
+  "tiles": [658, 658, 658, 658, 658, 658],
+  "stack": 1
+},
+  {
+  "key": "steel_mix",
+  "name": "Ocelová směs",
+  "tiles": [659, 659, 659, 659, 659, 659],
+  "stack": 64
+},
+  {
+  "key": "waxed_steel_block",
+  "name": "Voskovaný ocelový blok",
+  "tiles": [77, 77, 77, 77, 77, 77],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "rusty_steel_block",
+  "name": "Zrezivělý ocelový blok",
+  "tiles": [661, 661, 661, 661, 661, 661],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "waxed_rusty_steel_block",
+  "name": "Voskovaný zrezivělý ocelový blok",
+  "tiles": [661, 661, 661, 661, 661, 661],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "very_rusty_steel_block",
+  "name": "Silně zrezivělý ocelový blok",
+  "tiles": [662, 662, 662, 662, 662, 662],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "waxed_very_rusty_steel_block",
+  "name": "Voskovaný silně zrezivělý ocelový blok",
+  "tiles": [662, 662, 662, 662, 662, 662],
+  "hardness": 5,
+  "stack": 64
+},
+  {
+  "key": "ticket_machine",
+  "name": "Automat na jízdenky",
+  "tiles": [664, 664, 664, 663, 664, 664],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "turnstile",
+  "name": "Turniket",
+  "tiles": [665, 665, 665, 665, 665, 665],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "turnstile_open",
+  "name": "Turniket",
+  "tiles": [665, 665, 665, 665, 665, 665],
+  "hardness": 1,
+  "stack": 64
+},
+  {
+  "key": "metro_ticket",
+  "name": "Jízdenka",
+  "tiles": [666, 666, 666, 666, 666, 666],
+  "stack": 64
+},
+  {
+  "key": "day_ticket",
+  "name": "Celodenní jízdenka",
+  "tiles": [667, 667, 667, 667, 667, 667],
+  "stack": 1
+}
+ ]}

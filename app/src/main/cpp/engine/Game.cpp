@@ -1,5 +1,6 @@
 #include "Game.h"
 #include "VcBuiltin.h"
+#include "VcData.h"
 #include "Voice.h"
 
 #include <cstring>
@@ -43,7 +44,7 @@ namespace vc {
 namespace vc {
 
 namespace {
-const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.8.0 Preview build 6" : "VoxelCraft 2.7.1";
+const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.8.0 Preview build 7" : "VoxelCraft 2.7.1";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -333,6 +334,7 @@ void Game::loadTextures() {
         if (!texturePackDir_.empty()) dirs.insert(dirs.begin(), texturePackDir_);
         dirs.push_back(dataDir_ + "/vc");
         setVcModelDirs(dirs);
+        setVcShaderDir(dataDir_ + "/vc");
         loadVcMobModels(rgba, size, &packWarnings_);
         blitVcMobTextures(atlas.rgba, atlas.size);
     }
@@ -478,6 +480,13 @@ void Game::rebuildFromPacks() {
     for (const PackInfo& p : packList_)
         if (p.enabled) modDirs.push_back(p.dir);
     ModRegistry::get().load(modDirs, dataDir_ + "/mod_ids.txt", &packWarnings_);
+    if (kFeatures280) {
+        // 2.8.0 preview: blocks, items and loot from the VC files: the game's, then each enabled pack's vc/.
+        std::vector<std::string> vcDirs = {dataDir_};
+        for (const std::string& d : modDirs) vcDirs.push_back(d);
+        loadVcData(vcDirs, &packWarnings_);
+        setVcStructureDirs(std::vector<std::string>(modDirs.rbegin(), modDirs.rend()));  // packs only: the code's structures stay the default
+    }
     setRecipes(packs_.buildRecipes(&packWarnings_));
     packs_.buildConfig(&packWarnings_);  // only to report problems; worlds snapshot it when created
     packSelected_ = std::clamp(packSelected_, 0, std::max(0, (int)packList_.size() - 1));

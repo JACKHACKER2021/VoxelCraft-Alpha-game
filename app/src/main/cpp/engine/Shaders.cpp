@@ -1,4 +1,6 @@
 #include "Shaders.h"
+#include "Blocks.h"
+#include <map>
 
 #include <algorithm>
 #include <filesystem>
@@ -236,6 +238,27 @@ void writeShaderPackFiles(const std::string& packDir, const std::string& name) {
     writeText(base / "README.txt", kShaderPackGuide);
     // Rename to world.fsh to start from the Vibrant shader's own code.
     writeText(base / "world.fsh.example", kVibrantWorldFs);
+}
+
+namespace {
+std::string gShaderDir;
+std::map<std::string, std::string> gShaderFiles;
+}  // namespace
+
+void setVcShaderDir(const std::string& dir) { gShaderDir = dir, gShaderFiles.clear(); }
+
+const char* vcShaderSource(const char* name, const char* fallback) {
+    if (!kFeatures280 || gShaderDir.empty()) return fallback;
+    auto it = gShaderFiles.find(name);
+    if (it == gShaderFiles.end()) {
+        std::ifstream in(gShaderDir + "/shaders/" + name);
+        std::stringstream ss;
+        if (in) ss << in.rdbuf();
+        std::string text = ss.str();
+        if (text.find("#version 300 es") == std::string::npos) text.clear();  // not a shader the phone can run
+        it = gShaderFiles.emplace(name, text).first;
+    }
+    return it->second.empty() ? fallback : it->second.c_str();
 }
 
 }  // namespace vc

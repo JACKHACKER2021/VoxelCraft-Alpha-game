@@ -1,5 +1,6 @@
 #include <map>
 #include "Items.h"
+#include "VcData.h"
 
 #include <algorithm>
 #include <cstring>
@@ -358,6 +359,11 @@ ItemId itemFromKey(const std::string& key) {
     // Mod content is named with its own namespace, "mymod:ruby_bricks".
     if (k.find(':') != std::string::npos && k.rfind("minecraft:", 0) != 0)
         if (ItemId mod = ModRegistry::get().find(k); mod != AIR) return mod;
+    // 2.8.0: "vc:id/1234": a built-in block or item that has no name of its own (vc/blocks.json writes these).
+    if (k.rfind("vc:id/", 0) == 0) {
+        const long n = std::strtol(k.c_str() + 6, nullptr, 10);
+        return n > 0 && n < 65536 && !isModId((int)n) ? (ItemId)n : AIR;
+    }
     if (size_t colon = k.find(':'); colon != std::string::npos) k = k.substr(colon + 1);
     if (k == "bronze_door") return BRONZE_DOOR_ITEM;  // 2.2.0: the item, not one of the door's blocks
     if (k == "bronze_trapdoor") return BRONZE_TRAPDOOR;
@@ -431,6 +437,7 @@ ItemId itemFromKey(const std::string& key) {
 }
 
 const char* itemName(ItemId id) {
+    if (const char* n = vcName(id)) return n;  // 2.8.0: vc/blocks.json
     switch (id) {  // 2.2.0 preview: the new Cornerstone biomes
         case CARVED_CORNERSTONE: return "Tesaný úhelný kámen";
         case GILDED_COBBLE: return "Zlacená dlažba";
@@ -950,6 +957,7 @@ float armorReduction(const ItemStack armor[4]) {
 }
 
 int maxStack(ItemId id) {
+    if (const int s = vcStack(id)) return s;  // 2.8.0: vc/blocks.json
     if (const ModItem* m = isModId(id) ? ModRegistry::get().item(id) : nullptr) return m->stack;
     if (id == WATER_BUCKET || id == LAVA_BUCKET || id == BOSS_COMPASS || id == CAKE || id == MILK_BUCKET || id == MAP || id == ANNIV_MEDAL ||
         id == WALLET || isBackpack(id) || id == DAY_TICKET || id == FORTRESS_COMPASS || id == EXPLORER_MAP || id == WRITABLE_BOOK || id == WRITTEN_BOOK || id == CELESTIAL_COMPASS)
@@ -962,6 +970,7 @@ int maxStack(ItemId id) {
 namespace {
 
 float hardness(ItemId id) {
+    if (const float v = vcHardness(id); v > -1.5f) return v;  // 2.8.0: vc/blocks.json
     if (id >= BRONZE_AGED && id < BRONZE_AGED + 20) return hardness(BRONZE_BLOCK);  // 2.2.0: aged and waxed bronze
     if ((id >= BRONZE_DOOR && id < BRONZE_DOOR + 16)) return 5.0f;
     if (const ModBlock* m = isModId(id) ? ModRegistry::get().block(id) : nullptr) return m->hardness;
@@ -1189,6 +1198,8 @@ bool canHarvest(ItemId block, ItemId tool) {
     ToolKind kind = preferredTool(block, tier);
     return tier == 0 || (toolKind(tool) == kind && toolTier(tool) >= tier);
 }
+
+float blockHardness(ItemId id) { return hardness(id); }
 
 float breakTime(ItemId block, ItemId tool) {
     float h = hardness(block);

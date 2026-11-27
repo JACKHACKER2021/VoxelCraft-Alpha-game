@@ -39,6 +39,7 @@ float armorReduction(const ItemStack armor[4]);
 bool canHarvest(ItemId block, ItemId tool);
 // Seconds to break in survival with the given tool; negative means unbreakable.
 float breakTime(ItemId block, ItemId tool = AIR);
+float blockHardness(ItemId id);  // 2.8.0: seconds-scale hardness (-1 unbreakable), as vc/blocks.json writes it
 
 // What breaking a block gives in survival (AIR for nothing). `roll` is a
 // random number in [0, 1) used for chance drops (apples, flint).

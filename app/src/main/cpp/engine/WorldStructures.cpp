@@ -1,4 +1,6 @@
 #include "WorldStructures.h"
+#include <iterator>
+#include <fstream>
 
 #include <algorithm>
 #include <cmath>
@@ -1008,7 +1010,51 @@ Structure caveDungeon(Rng& r) {
     return s;
 }
 
+// 2.8.0 preview (VC language): a pack can replace any structure of the world with its own .vcstructure files,
+// vc/structures/<name>.vcstructure or several variants <name>_1 .. <name>_9 (one is picked by the seed).
+namespace {
+std::vector<std::string> gStructureDirs;
+const char* const kStructureNames[] = {"ruin", "shipwreck", "dungeon", "mineshaft", "fortress", "boss_arena", "void_dungeon", "void_tower",
+                                       "desert_temple", "igloo", "watchtower", "village", "forgotten_village", "drowned_ruins", "broken_portal",
+                                       "crimson_mineshaft", "great_fortress", "void_mineshaft", "void_watchtower", "ruined_village", "cave_dungeon",
+                                       "camp", "ruined_station", "train_wreck"};
+static_assert(sizeof(kStructureNames) / sizeof(kStructureNames[0]) == (size_t)WorldStructure::Count, "a file name for every structure");
+bool readFileBytes(const std::string& path, std::vector<uint8_t>& out) {
+    std::ifstream in(path, std::ios::binary);
+    if (!in) return false;
+    out.assign(std::istreambuf_iterator<char>(in), {});
+    return !out.empty();
+}
+}  // namespace
+
+void setVcStructureDirs(const std::vector<std::string>& dirs) { gStructureDirs = dirs; }
+
+const char* worldStructureName(WorldStructure kind) {
+    const size_t i = (size_t)kind;
+    return i < sizeof(kStructureNames) / sizeof(kStructureNames[0]) ? kStructureNames[i] : "";
+}
+
 Structure buildWorldStructure(WorldStructure kind, uint32_t seed) {
+    if (kFeatures280 && !gStructureDirs.empty() && *worldStructureName(kind)) {
+        std::vector<std::vector<uint8_t>> found;
+        for (const std::string& d : gStructureDirs) {
+            std::vector<uint8_t> data;
+            const std::string base = d + "/vc/structures/" + worldStructureName(kind);
+            if (readFileBytes(base + ".vcstructure", data)) found.push_back(data);
+            for (int v = 1; v <= 9; ++v)
+                if (readFileBytes(base + "_" + std::to_string(v) + ".vcstructure", data)) found.push_back(data);
+            if (!found.empty()) break;  // the first pack that has it wins
+        }
+        if (!found.empty()) {
+            Structure s;
+            std::string err;
+            if (readVcStructure(found[seed % found.size()], s, err) && s.valid()) return s;
+        }
+    }
+    return buildWorldStructureCode(kind, seed);
+}
+
+Structure buildWorldStructureCode(WorldStructure kind, uint32_t seed) {
     Rng r{seed | 1};
     switch (kind) {
         case WorldStructure::Ruin: return ruin(r);

@@ -62,6 +62,7 @@
 #include "engine/Mods.h"
 #include "engine/VcModel.h"
 #include "engine/VcBuiltin.h"
+#include "engine/VcData.h"
 #include "engine/JavaImport.h"
 #include "engine/BedrockImport.h"
 #include "engine/WorldFiles.h"
@@ -3466,6 +3467,68 @@ static int testUpdate14() {
                 ++found;
             }
             CHECK(!kFeatures280 || (builtinMobModel(MobType::Fox, true) != builtinMobModel(MobType::Fox, false)));
+            if (kFeatures280) {
+                // 2.8.0 build 7: blocks, items and loot in the VC language: the game's files give exactly what the code
+                // gives; a pack's vc/blocks.json and vc/loot.json change them.
+                std::vector<int> tiles, stacks;
+                std::vector<float> hard;
+                std::vector<std::string> names;
+                for (int id = 1; id < 65536; ++id) {
+                    if (isModId(id)) continue;
+                    for (int f = 0; f < 6; ++f) tiles.push_back(tileFor((ItemId)id, (Face)f));
+                    stacks.push_back(maxStack((ItemId)id)), hard.push_back(breakTime((ItemId)id)), names.push_back(itemName((ItemId)id));
+                }
+                std::vector<ChestContents> loot;
+                for (ItemId c : {LOOT_CHEST_RUIN, LOOT_CHEST_FORTRESS, LOOT_CHEST_METRO, LOOT_BARREL_CAMP})
+                    for (uint32_t seed = 0; seed < 20; ++seed) loot.push_back(generateLoot(c, seed));
+                fs::create_directories(root / "assets_root"), fs::remove_all(root / "assets_root/vc");
+                fs::create_directory_symlink(fs::absolute("app/src/main/assets/vc"), root / "assets_root/vc");
+                std::vector<std::string> dw;
+                const int entries = loadVcData({(root / "assets_root").string()}, &dw);
+                for (const std::string& x : dw) std::printf("vc data warning: %s\n", x.c_str());
+                CHECK(entries > 1200 && dw.empty() && gVcTiles != nullptr);
+                size_t k = 0, n = 0;
+                for (int id = 1; id < 65536; ++id) {
+                    if (isModId(id)) continue;
+                    for (int f = 0; f < 6; ++f) CHECK(tiles[k++] == tileFor((ItemId)id, (Face)f));
+                    CHECK(stacks[n] == maxStack((ItemId)id) && hard[n] == breakTime((ItemId)id) && names[n] == itemName((ItemId)id));
+                    ++n;
+                }
+                size_t li = 0;
+                for (ItemId c : {LOOT_CHEST_RUIN, LOOT_CHEST_FORTRESS, LOOT_CHEST_METRO, LOOT_BARREL_CAMP})
+                    for (uint32_t seed = 0; seed < 20; ++seed) {
+                        const ChestContents got = generateLoot(c, seed);
+                        for (int sl = 0; sl < kChestSize; ++sl) CHECK(got[sl].id == loot[li][sl].id && got[sl].count == loot[li][sl].count);
+                        ++li;
+                    }
+                // A pack changes stone and what ruins hold.
+                fs::create_directories(root / "vcpack/vc");
+                std::ofstream(root / "vcpack/vc/blocks.json") << R"({"blocks": [{"key": "stone", "name": "Kámen VC", "tiles": [5, 5, 5, 5, 5, 5], "hardness": 9, "stack": 16}]})";
+                std::ofstream(root / "vcpack/vc/loot.json") << R"({"chests": {"vc:id/50": {"rolls": [2, 2], "entries": [{"item": "ruby", "weight": 1, "count": [3, 3]}]}}})";
+                loadVcData({(root / "assets_root").string(), (root / "vcpack").string()}, &dw);
+                CHECK(dw.empty() && tileFor(STONE, F_TOP) == 5 && maxStack(STONE) == 16 && std::string(itemName(STONE)) == "Kámen VC" && breakTime(STONE) > breakTime(COBBLESTONE));
+                int rubies = 0;
+                for (const ItemStack& st : generateLoot(LOOT_CHEST_RUIN, 7)) {
+                    rubies += st.id == RUBY ? st.count : 0;
+                }
+                CHECK(rubies == 6 && tileFor(DIRT, F_TOP) == T_DIRT);
+                clearVcData();
+                CHECK(tileFor(STONE, F_TOP) == T_STONE && maxStack(STONE) == 64);
+                // Structures: the shipped examples read back as the code builds them; a pack's file replaces one.
+                Structure ex;
+                std::string serr;
+                std::ifstream sin("app/src/main/assets/vc/structures_examples/igloo.vcstructure", std::ios::binary);
+                const std::vector<uint8_t> sbytes{std::istreambuf_iterator<char>(sin), {}};
+                CHECK(readVcStructure(sbytes, ex, serr) && ex.cells == buildWorldStructureCode(WorldStructure::Igloo, 1).cells);
+                Structure tiny;
+                tiny.name = "tiny", tiny.sx = tiny.sy = tiny.sz = 2, tiny.cells.assign(8, RUBY_BLOCK);
+                fs::create_directories(root / "vcpack/vc/structures");
+                const std::vector<uint8_t> tb = writeVcStructure(tiny);
+                std::ofstream(root / "vcpack/vc/structures/igloo.vcstructure", std::ios::binary).write((const char*)tb.data(), (std::streamsize)tb.size());
+                setVcStructureDirs({(root / "vcpack").string()});
+                CHECK(buildWorldStructure(WorldStructure::Igloo, 5).cells == tiny.cells && buildWorldStructure(WorldStructure::Village, 5).cells == buildWorldStructureCode(WorldStructure::Village, 5).cells);
+                setVcStructureDirs({});
+            }
             if (kFeatures280) {
                 // 2.8.0 build 7: the last creatures in the VC language: the celestial pig and sheep, the collar,
                 // the bosses' slams and the slime's squash.

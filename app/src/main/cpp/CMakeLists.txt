@@ -105,6 +105,7 @@ add_library(voxelcraft SHARED
     engine/GameCreator.cpp
     engine/VcModel.cpp
     engine/VcBuiltin.cpp
+    engine/VcData.cpp
     engine/WorldFiles.cpp)
 
 target_include_directories(voxelcraft PRIVATE

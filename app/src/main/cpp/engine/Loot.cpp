@@ -1,15 +1,17 @@
 #include "Loot.h"
 
+#include <sstream>
+
+#include "Json.h"
+#include "VcData.h"
+
 #include <vector>
 
 namespace vc {
 
 namespace {
 
-struct LootEntry {
-    ItemId id;
-    int weight, minCount, maxCount;
-};
+using LootEntry = VcLootEntry;  // 2.8.0: the same as vc/loot.json holds
 
 // Loot tables: a few rolls of weighted entries per chest.
 const std::vector<LootEntry>& table(ItemId chest, int& rollsMin, int& rollsMax) {
@@ -146,7 +148,9 @@ ChestContents generateLoot(ItemId chestBlock, uint32_t seed) {
         return (int)(r % (uint32_t)n);
     };
     int rollsMin, rollsMax;
-    const std::vector<LootEntry>& t = table(chestBlock, rollsMin, rollsMax);
+    const std::vector<LootEntry>* tp = &table(chestBlock, rollsMin, rollsMax);
+    if (const VcLootTable* v = vcLoot(chestBlock)) tp = &v->entries, rollsMin = v->rollsMin, rollsMax = v->rollsMax;  // 2.8.0: vc/loot.json
+    const std::vector<LootEntry>& t = *tp;
     int total = 0;
     for (const LootEntry& e : t) total += e.weight;
     const int rolls = rollsMin + rnd(rollsMax - rollsMin + 1);
@@ -248,6 +252,36 @@ ItemStack archaeologyFind(uint32_t seed) {
     if (roll < 75) return {POWERSTONE_RELIC, 1, 0};
     if (roll < 90) return {POWERSTONE_DUST, (uint8_t)(1 + extra % 4), 0};
     return {FLINT, 1, 0};
+}
+
+std::string exportVcLoot() {
+    // Every chest with its table, written with the code's values.
+    static const ItemId kChests[] = {LOOT_CHEST_RUIN, LOOT_CHEST_SHIP, LOOT_CHEST_DUNGEON, LOOT_CHEST_MINE, LOOT_CHEST_FORTRESS, LOOT_CHEST_VOID,
+                                     LOOT_CHEST_TEMPLE, LOOT_CHEST_IGLOO, LOOT_CHEST_TOWER, LOOT_CHEST_FORGOTTEN, LOOT_CHEST_DROWNED, LOOT_CHEST_PORTAL,
+                                     LOOT_BARREL_CAMP, LOOT_CHEST_SHRINE, LOOT_CHEST_CHAMBER, LOOT_CHEST_BRONZE, LOOT_CHEST_STATION, LOOT_CHEST_METRO};
+    std::ostringstream o;
+    o << "{\"format\": \"vc:loot\", \"version\": \"2.8.0\",\n \"chests\": {\n";
+    bool first = true;
+    for (ItemId c : kChests) {
+        int lo, hi;
+        const std::vector<LootEntry>& t = table(c, lo, hi);
+        Json chest = Json::object(), rolls = Json::array(), list = Json::array();
+        rolls.push(Json::number(lo)), rolls.push(Json::number(hi));
+        for (const LootEntry& e : t) {
+            Json j = Json::object(), count = Json::array();
+            j.set("item", Json::string(vcKey(e.id)));
+            j.set("weight", Json::number(e.weight));
+            count.push(Json::number(e.minCount)), count.push(Json::number(e.maxCount));
+            j.set("count", count);
+            list.push(j);
+        }
+        chest.set("rolls", rolls);
+        chest.set("entries", list);
+        o << (first ? "  \"" : ",\n  \"") << vcKey(c) << "\": " << chest.dump();
+        first = false;
+    }
+    o << "\n }}\n";
+    return o.str();
 }
 
 }  // namespace vc

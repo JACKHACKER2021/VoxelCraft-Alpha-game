@@ -1,0 +1,1088 @@
+{"format": "vc:loot", "version": "2.8.0",
+ "chests": {
+  "vc:id/50": {
+  "rolls": [3, 6],
+  "entries": [
+    {
+      "item": "apple",
+      "weight": 10,
+      "count": [1, 3]
+    },
+    {
+      "item": "stick",
+      "weight": 10,
+      "count": [2, 6]
+    },
+    {
+      "item": "coal",
+      "weight": 8,
+      "count": [2, 5]
+    },
+    {
+      "item": "iron_ingot",
+      "weight": 5,
+      "count": [1, 3]
+    },
+    {
+      "item": "bronze_ingot",
+      "weight": 4,
+      "count": [1, 2]
+    },
+    {
+      "item": "wooden_pickaxe",
+      "weight": 3,
+      "count": [1, 1]
+    },
+    {
+      "item": "stone_axe",
+      "weight": 3,
+      "count": [1, 1]
+    },
+    {
+      "item": "white_wool",
+      "weight": 4,
+      "count": [1, 3]
+    },
+    {
+      "item": "oak_door",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "flint_and_steel",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "wooden_helmet",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "stone_boots",
+      "weight": 2,
+      "count": [1, 1]
+    }
+  ]
+},
+  "vc:id/51": {
+  "rolls": [4, 8],
+  "entries": [
+    {
+      "item": "iron_ingot",
+      "weight": 8,
+      "count": [1, 4]
+    },
+    {
+      "item": "bronze_ingot",
+      "weight": 8,
+      "count": [1, 4]
+    },
+    {
+      "item": "coal",
+      "weight": 8,
+      "count": [2, 8]
+    },
+    {
+      "item": "planks",
+      "weight": 8,
+      "count": [4, 12]
+    },
+    {
+      "item": "apple",
+      "weight": 6,
+      "count": [1, 4]
+    },
+    {
+      "item": "steel_ingot",
+      "weight": 3,
+      "count": [1, 2]
+    },
+    {
+      "item": "ruby",
+      "weight": 2,
+      "count": [1, 2]
+    },
+    {
+      "item": "boat",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "bronze_chestplate",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "bronze_helmet",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "chest",
+      "weight": 1,
+      "count": [1, 1]
+    }
+  ]
+},
+  "vc:id/52": {
+  "rolls": [3, 7],
+  "entries": [
+    {
+      "item": "iron_ingot",
+      "weight": 8,
+      "count": [2, 5]
+    },
+    {
+      "item": "steel_ingot",
+      "weight": 5,
+      "count": [1, 3]
+    },
+    {
+      "item": "ruby",
+      "weight": 3,
+      "count": [1, 3]
+    },
+    {
+      "item": "apple",
+      "weight": 6,
+      "count": [1, 3]
+    },
+    {
+      "item": "flint_and_steel",
+      "weight": 3,
+      "count": [1, 1]
+    },
+    {
+      "item": "steel_helmet",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "steel_leggings",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "bronze_chestplate",
+      "weight": 3,
+      "count": [1, 1]
+    },
+    {
+      "item": "steel_pickaxe",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "powerstone_light",
+      "weight": 4,
+      "count": [1, 4]
+    },
+    {
+      "item": "obsidian",
+      "weight": 3,
+      "count": [1, 3]
+    }
+  ]
+},
+  "vc:id/53": {
+  "rolls": [3, 6],
+  "entries": [
+    {
+      "item": "coal",
+      "weight": 10,
+      "count": [3, 9]
+    },
+    {
+      "item": "iron_ore",
+      "weight": 6,
+      "count": [1, 5]
+    },
+    {
+      "item": "bronze_ingot",
+      "weight": 6,
+      "count": [1, 4]
+    },
+    {
+      "item": "steel_ingot",
+      "weight": 3,
+      "count": [1, 3]
+    },
+    {
+      "item": "ruby",
+      "weight": 2,
+      "count": [1, 2]
+    },
+    {
+      "item": "stone_pickaxe",
+      "weight": 3,
+      "count": [1, 1]
+    },
+    {
+      "item": "iron_pickaxe",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "bronze_shovel",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "fence",
+      "weight": 4,
+      "count": [2, 6]
+    },
+    {
+      "item": "planks",
+      "weight": 5,
+      "count": [3, 10]
+    },
+    {
+      "item": "apple",
+      "weight": 4,
+      "count": [1, 3]
+    }
+  ]
+},
+  "vc:id/55": {
+  "rolls": [6, 11],
+  "entries": [
+    {
+      "item": "ruby",
+      "weight": 8,
+      "count": [1, 4]
+    },
+    {
+      "item": "steel_ingot",
+      "weight": 8,
+      "count": [2, 5]
+    },
+    {
+      "item": "bronze_ingot",
+      "weight": 6,
+      "count": [2, 6]
+    },
+    {
+      "item": "iron_ingot",
+      "weight": 6,
+      "count": [2, 6]
+    },
+    {
+      "item": "powerstone_light",
+      "weight": 6,
+      "count": [2, 8]
+    },
+    {
+      "item": "obsidian",
+      "weight": 5,
+      "count": [2, 6]
+    },
+    {
+      "item": "nether_brick",
+      "weight": 5,
+      "count": [4, 12]
+    },
+    {
+      "item": "cooked_porkchop",
+      "weight": 6,
+      "count": [2, 5]
+    },
+    {
+      "item": "ruby_block",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "steel_block",
+      "weight": 2,
+      "count": [1, 2]
+    },
+    {
+      "item": "ruby_pickaxe",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "steel_axe",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "ruby_chestplate",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "ruby_helmet",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "steel_leggings",
+      "weight": 3,
+      "count": [1, 1]
+    },
+    {
+      "item": "steel_boots",
+      "weight": 3,
+      "count": [1, 1]
+    },
+    {
+      "item": "void_flint_and_steel",
+      "weight": 3,
+      "count": [1, 1]
+    },
+    {
+      "item": "flint_and_steel",
+      "weight": 3,
+      "count": [1, 1]
+    },
+    {
+      "item": "bed",
+      "weight": 2,
+      "count": [1, 1]
+    }
+  ]
+},
+  "vc:id/93": {
+  "rolls": [5, 9],
+  "entries": [
+    {
+      "item": "ruby",
+      "weight": 8,
+      "count": [2, 6]
+    },
+    {
+      "item": "steel_ingot",
+      "weight": 6,
+      "count": [2, 5]
+    },
+    {
+      "item": "void_stone_bricks",
+      "weight": 5,
+      "count": [4, 12]
+    },
+    {
+      "item": "eye_log",
+      "weight": 4,
+      "count": [1, 3]
+    },
+    {
+      "item": "ruby_sword",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "steel_sword",
+      "weight": 3,
+      "count": [1, 1]
+    },
+    {
+      "item": "ruby_leggings",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "ruby_boots",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "powerstone_dust",
+      "weight": 5,
+      "count": [3, 9]
+    },
+    {
+      "item": "tnt",
+      "weight": 3,
+      "count": [1, 3]
+    },
+    {
+      "item": "cooked_mutton",
+      "weight": 5,
+      "count": [2, 5]
+    },
+    {
+      "item": "boss_compass",
+      "weight": 3,
+      "count": [1, 1]
+    }
+  ]
+},
+  "vc:id/94": {
+  "rolls": [4, 8],
+  "entries": [
+    {
+      "item": "ruby",
+      "weight": 5,
+      "count": [1, 3]
+    },
+    {
+      "item": "bronze_ingot",
+      "weight": 8,
+      "count": [2, 6]
+    },
+    {
+      "item": "sandstone",
+      "weight": 6,
+      "count": [4, 12]
+    },
+    {
+      "item": "tnt",
+      "weight": 5,
+      "count": [1, 4]
+    },
+    {
+      "item": "iron_sword",
+      "weight": 3,
+      "count": [1, 1]
+    },
+    {
+      "item": "bronze_sword",
+      "weight": 3,
+      "count": [1, 1]
+    },
+    {
+      "item": "apple",
+      "weight": 6,
+      "count": [1, 4]
+    },
+    {
+      "item": "powerstone_dust",
+      "weight": 5,
+      "count": [2, 6]
+    },
+    {
+      "item": "bronze_helmet",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "bucket",
+      "weight": 3,
+      "count": [1, 1]
+    }
+  ]
+},
+  "vc:id/95": {
+  "rolls": [3, 6],
+  "entries": [
+    {
+      "item": "cooked_porkchop",
+      "weight": 8,
+      "count": [2, 5]
+    },
+    {
+      "item": "cooked_mutton",
+      "weight": 8,
+      "count": [2, 5]
+    },
+    {
+      "item": "apple",
+      "weight": 6,
+      "count": [2, 5]
+    },
+    {
+      "item": "snow",
+      "weight": 5,
+      "count": [2, 8]
+    },
+    {
+      "item": "ice",
+      "weight": 4,
+      "count": [1, 4]
+    },
+    {
+      "item": "pine_sapling",
+      "weight": 5,
+      "count": [1, 3]
+    },
+    {
+      "item": "white_wool",
+      "weight": 4,
+      "count": [2, 5]
+    },
+    {
+      "item": "iron_ingot",
+      "weight": 3,
+      "count": [1, 3]
+    },
+    {
+      "item": "candy_cane",
+      "weight": 3,
+      "count": [1, 3]
+    }
+  ]
+},
+  "vc:id/96": {
+  "rolls": [3, 6],
+  "entries": [
+    {
+      "item": "iron_ingot",
+      "weight": 6,
+      "count": [1, 4]
+    },
+    {
+      "item": "stone_sword",
+      "weight": 4,
+      "count": [1, 1]
+    },
+    {
+      "item": "iron_sword",
+      "weight": 3,
+      "count": [1, 1]
+    },
+    {
+      "item": "stone_chestplate",
+      "weight": 3,
+      "count": [1, 1]
+    },
+    {
+      "item": "bronze_boots",
+      "weight": 3,
+      "count": [1, 1]
+    },
+    {
+      "item": "cooked_porkchop",
+      "weight": 6,
+      "count": [1, 4]
+    },
+    {
+      "item": "oak_sapling",
+      "weight": 5,
+      "count": [1, 3]
+    },
+    {
+      "item": "bucket",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "spruce_planks",
+      "weight": 5,
+      "count": [4, 10]
+    }
+  ]
+},
+  "vc:id/1515": {
+  "rolls": [4, 8],
+  "entries": [
+    {
+      "item": "powerstone_dust",
+      "weight": 8,
+      "count": [2, 6]
+    },
+    {
+      "item": "ancient_coin",
+      "weight": 8,
+      "count": [1, 4]
+    },
+    {
+      "item": "pottery_shard",
+      "weight": 6,
+      "count": [1, 3]
+    },
+    {
+      "item": "powerstone_bricks",
+      "weight": 5,
+      "count": [4, 10]
+    },
+    {
+      "item": "powerstone_lamp",
+      "weight": 3,
+      "count": [1, 2]
+    },
+    {
+      "item": "brusher",
+      "weight": 3,
+      "count": [1, 1]
+    },
+    {
+      "item": "powerstone_relic",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "bread",
+      "weight": 5,
+      "count": [1, 3]
+    },
+    {
+      "item": "iron_ingot",
+      "weight": 4,
+      "count": [1, 3]
+    },
+    {
+      "item": "skeleton_head",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "powerstone_chip",
+      "weight": 3,
+      "count": [1, 2]
+    }
+  ]
+},
+  "vc:id/1516": {
+  "rolls": [4, 7],
+  "entries": [
+    {
+      "item": "ancient_coin",
+      "weight": 8,
+      "count": [2, 6]
+    },
+    {
+      "item": "iron_ingot",
+      "weight": 6,
+      "count": [1, 4]
+    },
+    {
+      "item": "bronze_ingot",
+      "weight": 6,
+      "count": [1, 4]
+    },
+    {
+      "item": "pottery_shard",
+      "weight": 6,
+      "count": [1, 3]
+    },
+    {
+      "item": "skeleton_head",
+      "weight": 3,
+      "count": [1, 1]
+    },
+    {
+      "item": "ruby",
+      "weight": 3,
+      "count": [1, 2]
+    },
+    {
+      "item": "powerstone_relic",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "brusher",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "powerstone_dust",
+      "weight": 4,
+      "count": [1, 4]
+    }
+  ]
+},
+  "vc:id/1517": {
+  "rolls": [4, 7],
+  "entries": [
+    {
+      "item": "obsidian",
+      "weight": 8,
+      "count": [1, 4]
+    },
+    {
+      "item": "flint_and_steel",
+      "weight": 4,
+      "count": [1, 1]
+    },
+    {
+      "item": "powerstone_dust",
+      "weight": 6,
+      "count": [2, 5]
+    },
+    {
+      "item": "ancient_coin",
+      "weight": 5,
+      "count": [1, 3]
+    },
+    {
+      "item": "iron_ingot",
+      "weight": 5,
+      "count": [1, 3]
+    },
+    {
+      "item": "nether_brick",
+      "weight": 4,
+      "count": [2, 6]
+    },
+    {
+      "item": "cooked_porkchop",
+      "weight": 4,
+      "count": [1, 3]
+    },
+    {
+      "item": "cracked_powerstone_bricks",
+      "weight": 4,
+      "count": [2, 6]
+    }
+  ]
+},
+  "camp_barrel": {
+  "rolls": [3, 6],
+  "entries": [
+    {
+      "item": "bread",
+      "weight": 8,
+      "count": [1, 4]
+    },
+    {
+      "item": "cooked_mutton",
+      "weight": 6,
+      "count": [1, 3]
+    },
+    {
+      "item": "apple",
+      "weight": 6,
+      "count": [1, 4]
+    },
+    {
+      "item": "torch",
+      "weight": 6,
+      "count": [2, 8]
+    },
+    {
+      "item": "stick",
+      "weight": 5,
+      "count": [2, 6]
+    },
+    {
+      "item": "iron_ingot",
+      "weight": 3,
+      "count": [1, 2]
+    },
+    {
+      "item": "gray_sapling",
+      "weight": 4,
+      "count": [1, 3]
+    },
+    {
+      "item": "orange_dye",
+      "weight": 4,
+      "count": [1, 4]
+    },
+    {
+      "item": "red_dye",
+      "weight": 4,
+      "count": [1, 4]
+    },
+    {
+      "item": "yellow_dye",
+      "weight": 4,
+      "count": [1, 4]
+    },
+    {
+      "item": "orange_carpet",
+      "weight": 3,
+      "count": [1, 3]
+    },
+    {
+      "item": "explorer_map",
+      "weight": 1,
+      "count": [1, 1]
+    }
+  ]
+},
+  "shrine_chest": {
+  "rolls": [4, 7],
+  "entries": [
+    {
+      "item": "crimsonium",
+      "weight": 6,
+      "count": [1, 3]
+    },
+    {
+      "item": "void_shard",
+      "weight": 8,
+      "count": [2, 6]
+    },
+    {
+      "item": "ruby",
+      "weight": 4,
+      "count": [1, 2]
+    },
+    {
+      "item": "crimsonium_planks",
+      "weight": 5,
+      "count": [4, 10]
+    },
+    {
+      "item": "cooked_porkchop",
+      "weight": 5,
+      "count": [1, 3]
+    },
+    {
+      "item": "eye_log",
+      "weight": 2,
+      "count": [1, 2]
+    },
+    {
+      "item": "red_dye",
+      "weight": 4,
+      "count": [2, 5]
+    },
+    {
+      "item": "steel_ingot",
+      "weight": 3,
+      "count": [1, 3]
+    }
+  ]
+},
+  "chamber_chest": {
+  "rolls": [5, 9],
+  "entries": [
+    {
+      "item": "void_shard",
+      "weight": 10,
+      "count": [3, 8]
+    },
+    {
+      "item": "crimsonium",
+      "weight": 4,
+      "count": [1, 2]
+    },
+    {
+      "item": "ruby",
+      "weight": 5,
+      "count": [1, 3]
+    },
+    {
+      "item": "ancient_coin",
+      "weight": 6,
+      "count": [2, 5]
+    },
+    {
+      "item": "dark_sandstone",
+      "weight": 5,
+      "count": [4, 10]
+    },
+    {
+      "item": "powerstone_relic",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "hardium",
+      "weight": 2,
+      "count": [1, 2]
+    },
+    {
+      "item": "purple_dye",
+      "weight": 4,
+      "count": [2, 5]
+    }
+  ]
+},
+  "vc:id/60211": {
+  "rolls": [5, 9],
+  "entries": [
+    {
+      "item": "bronze_ingot",
+      "weight": 10,
+      "count": [3, 8]
+    },
+    {
+      "item": "bronze_block",
+      "weight": 4,
+      "count": [1, 3]
+    },
+    {
+      "item": "cut_bronze",
+      "weight": 5,
+      "count": [4, 10]
+    },
+    {
+      "item": "chiseled_bronze",
+      "weight": 4,
+      "count": [2, 6]
+    },
+    {
+      "item": "bronze_grate",
+      "weight": 4,
+      "count": [2, 6]
+    },
+    {
+      "item": "bronze_bulb",
+      "weight": 3,
+      "count": [1, 3]
+    },
+    {
+      "item": "bronze_door",
+      "weight": 2,
+      "count": [1, 2]
+    },
+    {
+      "item": "honey_ball",
+      "weight": 4,
+      "count": [1, 4]
+    },
+    {
+      "item": "steel_ingot",
+      "weight": 6,
+      "count": [2, 5]
+    },
+    {
+      "item": "ruby",
+      "weight": 4,
+      "count": [1, 3]
+    },
+    {
+      "item": "hardium",
+      "weight": 3,
+      "count": [1, 3]
+    },
+    {
+      "item": "bronze_pickaxe",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "steel_sword",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "bronze_chestplate",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "ruby_block",
+      "weight": 1,
+      "count": [1, 1]
+    }
+  ]
+},
+  "station_chest": {
+  "rolls": [4, 7],
+  "entries": [
+    {
+      "item": "rail",
+      "weight": 10,
+      "count": [4, 12]
+    },
+    {
+      "item": "concrete_track_bed",
+      "weight": 8,
+      "count": [3, 8]
+    },
+    {
+      "item": "platform",
+      "weight": 6,
+      "count": [2, 6]
+    },
+    {
+      "item": "lattice_girder",
+      "weight": 6,
+      "count": [2, 6]
+    },
+    {
+      "item": "steel_ingot",
+      "weight": 6,
+      "count": [2, 5]
+    },
+    {
+      "item": "iron_ingot",
+      "weight": 6,
+      "count": [2, 6]
+    },
+    {
+      "item": "rail_crossing",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "buffer_stop",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "train_booster",
+      "weight": 2,
+      "count": [1, 2]
+    },
+    {
+      "item": "subway_car",
+      "weight": 1,
+      "count": [1, 1]
+    },
+    {
+      "item": "subway_locomotive",
+      "weight": 1,
+      "count": [1, 1]
+    },
+    {
+      "item": "bread",
+      "weight": 4,
+      "count": [1, 3]
+    }
+  ]
+},
+  "metro_chest": {
+  "rolls": [5, 8],
+  "entries": [
+    {
+      "item": "rail",
+      "weight": 8,
+      "count": [4, 12]
+    },
+    {
+      "item": "concrete_track_bed",
+      "weight": 6,
+      "count": [3, 8]
+    },
+    {
+      "item": "platform",
+      "weight": 5,
+      "count": [2, 6]
+    },
+    {
+      "item": "lattice_girder",
+      "weight": 5,
+      "count": [2, 6]
+    },
+    {
+      "item": "steel_ingot",
+      "weight": 6,
+      "count": [2, 6]
+    },
+    {
+      "item": "powerstone_light",
+      "weight": 4,
+      "count": [1, 3]
+    },
+    {
+      "item": "torch",
+      "weight": 6,
+      "count": [4, 12]
+    },
+    {
+      "item": "steel_pickaxe",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "subway_car",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "subway_locomotive",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "rail_crossing",
+      "weight": 2,
+      "count": [1, 1]
+    },
+    {
+      "item": "bread",
+      "weight": 3,
+      "count": [1, 3]
+    }
+  ]
+}
+ }}

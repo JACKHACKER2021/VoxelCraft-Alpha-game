@@ -48,4 +48,10 @@ extern const char* kClassicWorldFs;
 extern const char* kVibrantWorldFs;
 extern const char* kShaderPackGuide;
 
+// 2.8.0 preview: the shaders as files of the VC language: <dir>/shaders/<name> (world.vsh, classic_world.fsh,
+// vibrant_world.fsh) from the game's vc folder; `fallback` (the code's own) when there is no such file
+// or in the normal edition. The text stays valid until setVcShaderDir is called again.
+void setVcShaderDir(const std::string& dir);
+const char* vcShaderSource(const char* name, const char* fallback);
+
 }  // namespace vc

@@ -17,3 +17,11 @@ Všech 26 tvorů se v preview kreslí z GLB souborů `app/src/main/assets/vc/mod
 Pohyb je v GLB uzlech: `"extras": {"vc": {"swing", "flap", "pivot"}}`. Stará těla v `Mobs.cpp` (kopie zde)
 zůstávají jen jako záloha: normální edice, módy s přebarvením, nebeské prase a ovce, liška s obojkem,
 bossové a dýňový sliz, a když GLB chybí.
+
+## 2.8.0 build 7: celá hra ve VC jazyce
+
+Data jsou v `app/src/main/assets/vc` (viz README tam): tvorové (GLB, i bossové, sliz, liška s obojkem,
+nebeské prase a ovce), bloky a předměty (`blocks.json`), loot (`loot.json`), shadery (`shaders/`) a stavby
+(`structures_examples/`, doplněk je nahradí přes `vc/structures/`). Hodnoty v kódu zůstávají jen jako záloha,
+když soubor chybí, a pro normální edici, která se nemění. Generátory staveb v kódu dál tvoří náhodné varianty;
+soubor stavby z doplňku má přednost.

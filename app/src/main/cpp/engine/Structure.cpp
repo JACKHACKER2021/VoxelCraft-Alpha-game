@@ -1,4 +1,5 @@
 #include "Structure.h"
+#include "VcData.h"
 
 #include <algorithm>
 #include <cstring>
@@ -89,7 +90,8 @@ std::vector<uint8_t> writeVcStructure(const Structure& s) {
         if (std::find(palette.begin(), palette.end(), c) == palette.end()) palette.push_back(c);
     put16(o, (uint16_t)palette.size());
     for (ItemId id : palette) {
-        std::string key = id == Structure::kVoid ? "void" : itemKey(id);
+        std::string key = id == Structure::kVoid ? "void" : id == AIR ? "air" : vcKey(id);  // 2.8.0: "vc:id/<n>" for unnamed blocks
+        if (key.empty()) key = itemKey(id);
         o.push_back((uint8_t)key.size());
         o.insert(o.end(), key.begin(), key.end());
     }

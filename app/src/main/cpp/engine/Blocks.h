@@ -1025,7 +1025,9 @@ inline ItemId upgradeLegacyBlock(ItemId id) {
     }
 }
 
+extern const int16_t* gVcTiles;  // 2.8.0: vc/blocks.json (VcData.h), null when not loaded
 inline int tileFor(ItemId id, Face face) {
+    if (gVcTiles && gVcTiles[(size_t)id * 6 + face] >= 0) return gVcTiles[(size_t)id * 6 + face];
     switch (id) {
         case STONE: return T_STONE;
         case GRASS: return face == F_TOP ? T_GRASS_TOP : face == F_BOTTOM ? T_DIRT : T_GRASS_SIDE;

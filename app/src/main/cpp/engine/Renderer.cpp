@@ -177,7 +177,10 @@ Mat4 sunMatrix(const Vec3& centre, const Vec3& sunDir, float radius, float depth
 bool Renderer::setShader(GraphicsMode mode, const ShaderProfile& profile) {
     GLuint prog = 0;
     bool custom = false;
-    if (mode == GraphicsMode::Enhanced && !profile.fragment.empty()) custom = (prog = link(kWorldVs, profile.fragment.c_str())) != 0;
+    // 2.8.0 preview: the shaders are files in the VC language (vc/shaders/), the ones in the code stay as the fallback.
+    const char* vs = vcShaderSource("world.vsh", kWorldVs);
+    if (mode == GraphicsMode::Enhanced && !profile.fragment.empty()) custom = (prog = link(vs, profile.fragment.c_str())) != 0;
+    if (!prog) prog = link(vs, mode == GraphicsMode::Enhanced ? vcShaderSource("vibrant_world.fsh", kVibrantWorldFs) : vcShaderSource("classic_world.fsh", kClassicWorldFs));
     if (!prog) prog = link(kWorldVs, mode == GraphicsMode::Enhanced ? kVibrantWorldFs : kClassicWorldFs);
     if (!prog) prog = link(kWorldVs, kClassicWorldFs);  // never without a world shader
     if (!prog) return false;

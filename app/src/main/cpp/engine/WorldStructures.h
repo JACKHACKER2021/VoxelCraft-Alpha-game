@@ -1,5 +1,7 @@
 #pragma once
 #include <cstdint>
+#include <string>
+#include <vector>
 
 #include "Structure.h"
 
@@ -39,6 +41,10 @@ constexpr int kVillageSize = 45;
 constexpr int kForgottenVillageSize = 41, kDrownedRuinsSize = 19, kBrokenPortalSize = 13;
 
 // The blueprint of one instance; `seed` varies the shape (missing walls, corridor layout).
+// 2.8.0 preview: folders (packs) whose vc/structures/<name>.vcstructure replace a structure of the world.
+void setVcStructureDirs(const std::vector<std::string>& dirs);
+const char* worldStructureName(WorldStructure kind);  // "village", "igloo", ... ("" for the ones without a file name)
+Structure buildWorldStructureCode(WorldStructure kind, uint32_t seed);  // always the code's own
 Structure buildWorldStructure(WorldStructure kind, uint32_t seed);
 
 // 1.4.0 Anniversary modpack: a party plaza with "VOXELCRAFT" in big letters, the logo on a
