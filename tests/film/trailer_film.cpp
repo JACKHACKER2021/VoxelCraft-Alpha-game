@@ -7539,3 +7539,88 @@ SHOT(t30_finale) {
         p.pitch = 0.12f + k * 0.18f;
     });
 }
+
+// ---------------------------------------------------------------- 3.0.0 trailer: the menus and the add-on studio
+
+// The green menu: the welcome of 3.0.0 opens by itself, then the title screen with its panorama.
+SHOT(t31_menu) {
+    Director d(out, "t31m");
+    d.shot("t31_menu");
+    d.seconds(4.5f);           // the welcome (the news of 3.0.0)
+    d.tap(300, 244, 0);        // Close
+    d.seconds(4.0f);           // the green title screen
+}
+
+// The add-on manager (2.7.0) and the Creator (2.8.0): every tab, then a texture painted pixel by pixel,
+// a model built and painted, a mob with the body of a fox.
+SHOT(t31_addons) {
+    Director d(out, "t31a");
+    d.game->toolAddons(0);
+    d.shot("t31_addons");
+    d.seconds(2.5f);
+    d.game->toolAddons(1);
+    d.seconds(1.8f);
+    d.game->toolAddons(2);
+    d.seconds(1.8f);
+    d.game->toolAddons(4);
+    d.seconds(1.8f);
+    d.cut();
+    // The Creator: a ruby brick drawn row by row.
+    d.game->toolAddons(3, 0);
+    d.game->toolCreatorName("Ruby Bricks");
+    for (int i = 0; i < 256; ++i) d.game->toolCreatorPixel(i, 0xF0F0F0);
+    d.idle(2);
+    d.shot("t31_creator");
+    d.seconds(5.0f, [&](float k) {
+        const int upto = (int)(k * 256);
+        for (int i = 0; i < upto; ++i) {
+            const int x = i % 16, y = i / 16;
+            const bool mortar = y % 4 == 3 || (x + (y / 4 % 2) * 4) % 8 == 7;
+            const uint32_t h = (uint32_t)(x * 7 + y * 13) % 5;
+            d.game->toolCreatorPixel(i, mortar ? 0xD8C8B8 : h == 0 ? 0xE04848 : h == 1 ? 0xA82828 : 0xC83C37);
+        }
+    });
+    d.game->toolAddons(3, 2);  // a mob: the body of the fox
+    d.game->toolCreatorName("Ruby Fox");
+    d.game->toolCreatorBody((int)MobType::Fox);
+    d.seconds(2.5f);
+    d.game->toolAddons(3, 3);  // a model of boxes, then painted
+    d.game->toolCreatorName("Lamp");
+    d.game->toolCreatorBoxes({{-3, 0, -3, 6, 2, 6}, {-1, 2, -1, 2, 8, 2}, {-3, 10, -3, 6, 4, 6}});
+    d.seconds(2.5f);
+    d.game->toolCreatorModelPaint(true);
+    d.seconds(2.5f);
+    d.game->toolAddons(3, 5);  // shaders
+    d.seconds(2.0f);
+}
+
+// Every creature of the game, the GLB models of the VC language, in one long row; the camera goes along it.
+SHOT(t31_lineup) {
+    Director d(out, "t31l");
+    d.openWorld("Lineup", 1, GameMode::Creative, [](GenConfig& g) { g.flat = true; });
+    Session& s = d.s();
+    Player& p = s.player();
+    p.flying = true;
+    d.settings().hideGui = true;
+    s.setTimeOfDay(6000);
+    s.mobs().mobs().clear();
+    const int n = (int)MobType::Count;
+    const float gap = 3.2f;
+    for (int t = 0; t < n; ++t) {
+        s.mobs().spawn((MobType)t, 0, Vec3(t * gap, 4.0f, 0.5f));
+        if (!s.mobs().mobs().empty()) s.mobs().mobs().back().yaw = 0.4f;
+    }
+    d.idle(10);
+    d.shot("t31_lineup");
+    d.seconds(12.0f, [&](float k) {
+        for (size_t i = 0; i < s.mobs().mobs().size(); ++i) {
+            Mob& m = s.mobs().mobs()[i];
+            const bool flies = m.type == MobType::Bat || m.type == MobType::Ghost || m.type == MobType::SkyDrifter || m.type == MobType::EmberMoth;
+            m.pos = Vec3((int)m.type * gap, flies ? 5.5f : 4.0f, 0.5f), m.vel = {}, m.wandering = false, m.wanderTimer = 999, m.yaw = 0.4f;
+            m.swing = std::sin(k * 50.0f + i) * 0.45f;
+        }
+        const float x = -4.0f + k * (n * gap + 2.0f);
+        p.pos = Vec3(x, 6.5f, -7.5f), p.vel = {};
+        d.lookNow(Vec3(x + 2.5f, 4.8f, 0.5f));
+    });
+}

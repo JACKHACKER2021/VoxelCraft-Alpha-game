@@ -68,6 +68,20 @@ public:
     void toolApplySkin() { applySkin(); }
     void toolOpenCredits() { setScreen(Screen::Credits); }
     void toolEndSession() { endSession(); }
+    // 3.0.0 trailer: the add-on manager on a tab (and the Creator in a mode), the Creator's picture and model.
+    void toolAddons(int tab, int mode = -1) {
+        setScreen(Screen::Packs);
+        addonTab_ = tab, addonReportPack_.clear();
+        if (mode >= 0) creatorMode_ = mode;
+    }
+    void toolCreatorPixel(int i, uint32_t rgb) {
+        if (creatorPixels_.size() != 256) creatorPixels_.assign(256, 0xF0F0F0);
+        creatorPixels_[(size_t)(i & 255)] = rgb;
+    }
+    void toolCreatorName(const std::string& n) { creatorName_ = n; }
+    void toolCreatorBoxes(const std::vector<std::array<int, 6>>& b) { creatorBoxes_ = b, creatorBox_ = 0; }
+    void toolCreatorModelPaint(bool on) { creatorModelPaint_ = on; }
+    void toolCreatorBody(int mob) { creatorBase_ = mob; }
     void toolHowToCraft(int cat, int pick) { howBack_ = Screen::Playing, howCat_ = cat, howPick_ = pick, setScreen(Screen::HowToCraft); }
     void toolCreateWorld(bool experiments) { setScreen(Screen::CreateWorld), newWorldExpOpen_ = experiments; }
     void toolCreateWorldType(int type, int option) {  // 0 endless + preset, 1 flat + look
