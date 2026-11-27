@@ -1,6 +1,8 @@
 #include "Lang.h"
 
 #include <unordered_map>
+#include "Blocks.h"
+#include <vector>
 
 namespace vc {
 
@@ -47,12 +49,43 @@ Language languageFromCode(const std::string& code) {
     return Language::English;
 }
 
+namespace {
+
+// 2.9.0 (on the way to 3.0.0): the Cornerstone Dimension is its own place: no "Nether" left in what the player
+// reads. Whole phrases first, then the single words, per language.
+std::string cornerstoneWords(std::string s) {
+    if (!kFeatures290 || s.find("ether") == std::string::npos && s.find("езер") == std::string::npos) return s;
+    static const std::vector<std::pair<std::string, std::string>> kCs = {
+        {"Netherrackové schody", "Schody z úhelného kamene"}, {"Netherracková deska", "Deska z úhelného kamene"},
+        {"Netherová křemenná ruda", "Úhelná křemenná ruda"}, {"Netherová tráva", "Úhelná tráva"}, {"Netherové výhonky", "Úhelné výhonky"},
+        {"netherové pevnosti", "pevnosti úhelného kamene"}, {"nether cihel", "cihel úhelného kamene"}, {"Poutník Netheru", "Poutník úhelného kamene"},
+        {"Vstup do Netheru", "Vstup do dimenze úhelného kamene"}, {"Ohnivý Nether", "Ohnivá dimenze úhelného kamene"},
+        {"Nether z cihel", "Dimenze úhelného kamene z cihel"}, {"Netherperkov", "Úhelníkov"}, {"Netherrack", "Úhelný kámen"},
+        {"Netherový", "Úhelný"}, {"Netherová", "Úhelná"}, {"Netherové", "Úhelné"}, {"Netheru", "dimenze úhelného kamene"},
+        {"Nether", "Dimenze úhelného kamene"}, {"nether,", "úhelný kámen,"}};
+    static const std::vector<std::pair<std::string, std::string>> kEn = {
+        {"Entering the Nether", "Entering the Cornerstone Dimension"}, {"the Nether", "the Cornerstone Dimension"},
+        {"Netherperk", "Cornerperk"}, {"Netherrack", "Cornerstone Rock"}, {"Nether quartz", "Cornerstone quartz"}, {"nether brick", "cornerstone brick"},
+        {"Nether", "Cornerstone"}, {"nether,", "cornerstone,"}};
+    static const std::vector<std::pair<std::string, std::string>> kOther = {{"Netherrack", "Cornerstone"}, {"Nether", "Cornerstone"}, {"Незер", "Краеугольный камень"}};
+    const auto& list = g_language == Language::Czech ? kCs : g_language == Language::English ? kEn : kOther;
+    for (const auto& [from, to] : list)
+        for (size_t p = s.find(from); p != std::string::npos; p = s.find(from, p + to.size())) {
+            // never inside a file name such as nether.json
+            if (s.compare(p + from.size(), 5, ".json") == 0) break;
+            s.replace(p, from.size(), to);
+        }
+    return s;
+}
+
+}  // namespace
+
 std::string tr(const std::string& czech) {
-    if (g_language == Language::Czech || czech.empty()) return czech;
+    if (g_language == Language::Czech || czech.empty()) return cornerstoneWords(czech);
     auto it = index().find(czech);
-    if (it == index().end()) return czech;
+    if (it == index().end()) return cornerstoneWords(czech);
     const char* t = it->second->text[(int)g_language];
-    return t && *t ? t : czech;
+    return cornerstoneWords(t && *t ? t : czech);
 }
 
 std::string trf(const std::string& czech, std::initializer_list<std::string> args) {

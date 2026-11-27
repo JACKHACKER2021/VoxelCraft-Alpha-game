@@ -231,6 +231,13 @@ private:
     void addonFilesTab(float x, float y, float w, float h, bool resource);
     void addonStoreTab(float x, float y, float w, float h);
     void addonCreatorTab(float x, float y, float w, float h);
+    // 2.8.0: a texture of a pack, painted right in the Resource tab (16 x 16 up to 64 x 64).
+    void textureEditor(float x, float y, float w, float h);
+    std::string texEditPack_, texEditFile_;
+    bool editorFromAddons_ = false;
+    bool welcomeChecked_ = false;  // 3.0.0: the welcome was looked for  // 2.8.0: the JSON editor was opened from the add-on manager
+    std::vector<uint32_t> texEditPix_;
+    int texEditW_ = 0, texEditH_ = 0;
     void saveCreation();
     std::map<std::string, AddonInfo> addonInfo_;
     std::vector<uint32_t> creatorPixels_;

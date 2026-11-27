@@ -138,7 +138,14 @@ const std::vector<LootEntry>& table(ItemId chest, int& rollsMin, int& rollsMax) 
 
 }  // namespace
 
+static ChestContents generateLootCode(ItemId chestBlock, uint32_t seed);
 ChestContents generateLoot(ItemId chestBlock, uint32_t seed) {
+    ChestContents out = generateLootCode(chestBlock, seed);
+    for (ItemStack& s : out) s.id = withoutIron(s.id);  // 2.9.0: no iron in chests either
+    return out;
+}
+
+static ChestContents generateLootCode(ItemId chestBlock, uint32_t seed) {
     ChestContents out{};
     uint32_t r = seed * 2654435761u + 0x9E3779B9u;
     auto rnd = [&](int n) {

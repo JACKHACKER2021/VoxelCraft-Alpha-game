@@ -150,7 +150,7 @@ std::string exportVcBlocks() {
         if (key.empty()) continue;
         Json e = Json::object(), tiles = Json::array();
         e.set("key", Json::string(key));
-        e.set("name", Json::string(itemName((ItemId)id)));
+        // Names stay with the game (they differ between editions and are translated); a pack may still set "name".
         for (int f = 0; f < 6; ++f) tiles.push(Json::number(tileFor((ItemId)id, (Face)f)));
         e.set("tiles", tiles);
         if (isPlaceable((ItemId)id)) e.set("hardness", Json::number(blockHardness((ItemId)id)));

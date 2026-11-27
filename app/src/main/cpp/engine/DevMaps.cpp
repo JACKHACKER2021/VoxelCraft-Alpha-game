@@ -106,6 +106,28 @@ Structure devHeadquarters() {
     return s;
 }
 
+// 2.9.0: the developer's house beside the HQ: planks on a stone base, log corners, big windows, a pitched
+// roof of bricks, and inside a bed, a desk with a crafting table, shelves and a chest.
+Structure devHouse() {
+    Structure s = box("Dům vývojáře", 15, 11, 13, Structure::kVoid);
+    fillBox(s, 0, 0, 0, 14, 0, 12, STONE_BRICKS);                      // the base
+    walls(s, 1, 1, 1, 13, 5, 11, PLANKS);
+    for (int y = 1; y <= 5; ++y)
+        for (const auto& c : {std::pair{1, 1}, {13, 1}, {1, 11}, {13, 11}}) s.at(c.first, y, c.second) = LOG;
+    fillBox(s, 2, 1, 2, 12, 4, 10, AIR);                                 // the room
+    for (int x : {3, 4, 10, 11}) s.at(x, 3, 1) = GLASS, s.at(x, 3, 11) = GLASS;  // windows
+    for (int z : {4, 5, 7, 8}) s.at(1, 3, z) = GLASS, s.at(13, 3, z) = GLASS;
+    fillBox(s, 7, 1, 1, 7, 2, 1, AIR);                                   // the door
+    for (int k = 0; k <= 4; ++k) fillBox(s, k, 6 + k, 0, 14 - k, 6 + k, 12, BRICKS);  // the roof, stepped in
+    fillBox(s, 5, 6, 1, 9, 9, 11, Structure::kVoid);
+    for (int k = 0; k < 4; ++k) fillBox(s, 2 + k, 6 + k, 1, 12 - k, 6 + k, 11, AIR);    // the attic, open
+    s.at(3, 1, 9) = BED, s.at(3, 1, 10) = BED + 1;                       // the bed
+    s.at(11, 1, 9) = CRAFTING_TABLE, s.at(10, 1, 9) = CHEST;            // the desk
+    for (int x = 9; x <= 12; ++x) s.at(x, 1, 2) = BOOKSHELF, s.at(x, 2, 2) = BOOKSHELF;
+    s.at(7, 4, 6) = POWERSTONE_LAMP_ON;
+    return s;
+}
+
 // Hoppy's tower: a tall signature tower of stone bricks and glass with stairs round the inside,
 // a lookout with a fence on top and a chest of developer things.
 Structure devHoppyTower() {
@@ -234,8 +256,8 @@ Structure devGlitch() {
 // ---- The six developer maps ----
 
 const char* devMapName(int map) {
-    static const char* const kNames[kDevMaps + 1] = {"Žádná", "Testovací svět struktur", "Galerie bloků", "Metro laboratoř",
-                                                     "Biomový šachovnicový svět", "Mob aréna", "Trailer studio"};
+    static const char* const kNames[8] = {"Žádná", "Testovací svět struktur", "Galerie bloků", "Metro laboratoř",
+                                          "Biomový šachovnicový svět", "Mob aréna", "Trailer studio", "Sídlo VoxelSoftworks"};
     return kNames[std::clamp(map, 0, kDevMaps)];
 }
 
@@ -268,6 +290,18 @@ const std::vector<std::string>& hqJournal() {
         "Příště ve 2.6: noví tvorové v Cornerstone, lepší Rozhlas a hra přes internet.",
         "Vydání na Google Play: během roku 2027, rok od vzniku VoxelCraftu. Díky, že hraješ!",
     };
+    // 2.9.0: the pages of 2.6 to 3.0 in the new seat of the studio.
+    static const std::vector<std::string> kPages290 = [] {
+        std::vector<std::string> p(kPages.begin(), kPages.end() - 2);
+        for (const char* s : {"2.6: Cornerstone a svátky: golem, lišák, duch, Halloween a Vánoce.",
+                              "2.7: batohy, peněženka, správce doplňků, Bedrock doplňky a rezavějící ocel.",
+                              "2.8: VC jazyk: tvorové, bloky, loot, shadery a stavby v souborech; Tvůrce se vším.",
+                              "2.9: železné nástroje mizí, železo jen do ocelové směsi; ocelové dveře a nová rez.",
+                              "3.0.0: VoxelCraft bez železa, dimenze úhelného kamene celá svoje. Díky, že hraješ!"})
+            p.push_back(s);
+        return p;
+    }();
+    if (kFeatures290) return kPages290;
     return kPages;
 }
 
@@ -322,7 +356,7 @@ void addPiece(DevLayout& L, Structure s, int ox, int oz, const std::string& name
                 if (track && y == 1 && z == 1) sign.mark = (x - 6) * 1;  // the marks stand every 10 blocks from x 6
                 L.signs.push_back(sign);
             }
-    L.signs.push_back({ox + s.sx / 2, kGround, oz - 3, name});
+    if (!name.empty()) L.signs.push_back({ox + s.sx / 2, kGround, oz - 3, name});
     L.pieces.push_back({std::move(s), ox, kGround, oz, name});
 }
 
@@ -421,6 +455,15 @@ DevLayout buildLayout(int map) {
             addPiece(L, std::move(s), -30, -10, "Trailer studio");
             break;
         }
+        case 7: {
+            // 2.9.0: the seat of VoxelSoftworks: the HQ, the developer's house across a lime road, trees.
+            Structure yard = box("Sídlo", 80, 1, 50, Structure::kVoid);
+            fillBox(yard, 0, 0, 22, 79, 0, 26, concrete(Lime));         // the road
+            addPiece(L, std::move(yard), -40, -25, "");
+            addPiece(L, devHeadquarters(), -36, -25, "VoxelSoftworks HQ");
+            addPiece(L, devHouse(), 8, 6, "Dům vývojáře");
+            break;
+        }
         default: break;
     }
     return L;
@@ -496,6 +539,7 @@ int devMapSpawn(int map, int& x, int& z) {
         case 4: x = 96, z = 48; break;   // where four squares meet
         case 5: x = 38, z = -6; break;
         case 6: x = 0, z = 15; break;
+        case 7: x = 0, z = 0; break;  // on the road between the HQ and the house
         default: x = z = 0; return 0;
     }
     return kGround;

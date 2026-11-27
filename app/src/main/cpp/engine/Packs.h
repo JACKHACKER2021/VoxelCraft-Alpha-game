@@ -43,6 +43,7 @@ public:
     std::vector<std::string> files(const std::string& id) const;  // relative paths of .json files
     std::string readFile(const std::string& id, const std::string& path) const;
     bool writeFile(const std::string& id, const std::string& path, const std::string& text);
+    void markEdited(const std::string& id, const std::string& path);  // 2.8.0: the default pack's resources now count
     std::string packDir(const std::string& id) const { return root_ + "/" + id; }
 
     // Merges all enabled packs. Problems in files are reported as warnings.

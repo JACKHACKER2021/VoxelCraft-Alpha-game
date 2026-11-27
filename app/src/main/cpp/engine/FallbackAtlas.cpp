@@ -2875,7 +2875,36 @@ std::vector<uint8_t> buildFallbackAtlas(int& sizeOut) {
             }
         }
         // Rusting steel: the steel block with orange-brown rust spreading over it.
-        for (int stage = 1; stage <= 2; ++stage) {
+        for (int stage = 1; stage <= 2 && kFeatures290; ++stage) {
+            // 2.9.0: rust as it really grows: from the edges and the plate seams first, running down in streaks
+            // where water ran, the very rusty one flaking with dark pits and a little steel still showing.
+            const int t = stage == 1 ? T_STEEL_RUST1 : T_STEEL_RUST2;
+            auto smooth = [&](int x, int y, int salt) {  // soft noise from 4 x 4 cells
+                const float fx = x / 4.0f, fy = y / 4.0f;
+                const int ix = (int)fx, iy = (int)fy;
+                const float tx = fx - ix, ty = fy - iy;
+                auto v = [&](int a, int b) { return (float)(hash3(a & 3, b & 3, 9100 + salt, 11) % 1000) / 1000.0f; };
+                const float top = v(ix, iy) * (1 - tx) + v(ix + 1, iy) * tx, bot = v(ix, iy + 1) * (1 - tx) + v(ix + 1, iy + 1) * tx;
+                return top * (1 - ty) + bot * ty;
+            };
+            for (int y = 0; y < 16; ++y)
+                for (int x = 0; x < 16; ++x) {
+                    std::copy_n(px4(T_STEEL_BLOCK, x, y), 4, px4(t, x, y));
+                    const float edge = std::max(0.0f, 1.0f - std::min({x, y, 15 - x, 15 - y}) / 3.0f);  // near the rim
+                    const float seam = (x == 7 || x == 8 || y == 7 || y == 8) ? 0.35f : 0.0f;
+                    const int col = (int)(hash3(x, 0, 9200, 7) % 100);  // streaks run down from the top
+                    const float streak = col < (stage == 1 ? 22 : 45) ? std::max(0.0f, 1.0f - y / (stage == 1 ? 9.0f : 16.0f)) * 0.8f : 0.0f;
+                    const float n = smooth(x, y, stage) * 0.75f + (float)(hash3(x, y, 9300, stage) % 100) / 400.0f;
+                    const float rust = n + edge * 0.45f + seam + streak - (stage == 1 ? 0.78f : 0.32f);
+                    if (rust <= 0) continue;
+                    const int fine = (int)(hash3(x, y, 9400, 5) % 11) - 5;
+                    Rgb c = rust > 0.45f ? Rgb{112, 50, 24} : rust > 0.2f ? Rgb{158, 74, 32} : Rgb{190, 104, 48};  // deep, mid, fresh
+                    if (stage == 2 && hash3(x, y, 9500, 9) % 13 == 0) c = Rgb{62, 34, 22};              // pits
+                    if (stage == 2 && rust > 0.3f && hash3(x, y, 9600, 3) % 7 == 0) c = Rgb{214, 128, 62};  // a flake catching light
+                    a.put(t, x, y, c.plus(fine));
+                }
+        }
+        for (int stage = 1; stage <= 2 && !kFeatures290; ++stage) {
             const int t = stage == 1 ? T_STEEL_RUST1 : T_STEEL_RUST2;
             for (int y = 0; y < 16; ++y)
                 for (int x = 0; x < 16; ++x) {

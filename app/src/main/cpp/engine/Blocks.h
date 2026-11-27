@@ -33,7 +33,8 @@ constexpr bool kFeatures250 = !kClassicEdition;  // 2.5.0: released (was the pre
 constexpr bool kFeatures260 = !kClassicEdition;  // 2.6.0: released (was the preview)
 constexpr bool kFeatures270 = !kClassicEdition;  // 2.7.0: released (was the preview)
 constexpr bool kFeatures280 = !kClassicEdition;  // 2.8.0: released (was the preview)
-constexpr bool kFeatures290 = kPreviewEdition;   // 2.9.0 preview
+constexpr bool kFeatures290 = !kClassicEdition;  // 3.0.0 (begun as the 2.9.0 preview): no iron things, steel doors, the Cornerstone on its own
+constexpr bool kFeatures310 = kPreviewEdition;   // 3.1.0 preview
 constexpr int kModIdBase = 2000;     // blocks and items of VoxelCraft Mods (see Mods.h) start here
 // 2.0.0: the engine's own ids above the mods (the ids under 2000 are all taken): 60000..64999.
 constexpr int kExtIdBase = 60000;

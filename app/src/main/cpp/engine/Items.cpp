@@ -164,6 +164,8 @@ const std::vector<ItemId>& creativeCategoryItems(int category) {
             for (ItemId id = BACKPACK; id <= BACKPACK + 5; ++id) lists[categoryOf(SHIELD, 2)].push_back(id);
         if (kFeatures260)  // 2.6.0: a spawn egg for every creature
             for (ItemId id = EGG_CELESTLING; id <= EGG_SNOWMAN; ++id) lists[categoryOf(EGG_HOGMAN, 4)].push_back(id);
+        if (kFeatures290)  // 2.9.0: iron is gone from the game
+            for (auto& l : lists) l.erase(std::remove_if(l.begin(), l.end(), [](ItemId id) { return isIronThing(id); }), l.end());
     }
     static const std::vector<ItemId> none;
     return category >= 0 && category < CatCount ? lists[category] : none;
@@ -365,7 +367,8 @@ ItemId itemFromKey(const std::string& key) {
         return n > 0 && n < 65536 && !isModId((int)n) ? (ItemId)n : AIR;
     }
     if (size_t colon = k.find(':'); colon != std::string::npos) k = k.substr(colon + 1);
-    if (k == "bronze_door") return BRONZE_DOOR_ITEM;  // 2.2.0: the item, not one of the door's blocks
+    if (k == "bronze_door") return BRONZE_DOOR_ITEM;
+    if (k == "steel_door") return IRON_DOOR_ITEM;  // 2.9.0: the iron door is the steel door now  // 2.2.0: the item, not one of the door's blocks
     if (k == "bronze_trapdoor") return BRONZE_TRAPDOOR;
     if (k == "oak_log") k = "log";
     if (k == "oak_planks") k = "planks";
@@ -434,6 +437,17 @@ ItemId itemFromKey(const std::string& key) {
     }();
     if (auto it = ext.find(k); it != ext.end()) return it->second;
     return AIR;
+}
+
+ItemId withoutIron(ItemId id) {
+    if (!kFeatures290) return id;
+    switch (id) {
+        case IRON_SWORD: return STEEL_SWORD;
+        case IRON_PICKAXE: return STEEL_PICKAXE;
+        case IRON_AXE: return STEEL_AXE;
+        case IRON_SHOVEL: return STEEL_SHOVEL;
+        default: return id;
+    }
 }
 
 const char* itemName(ItemId id) {
@@ -795,7 +809,7 @@ const char* itemName(ItemId id) {
         case CHEST: case LOOT_CHEST_RUIN: case LOOT_CHEST_SHIP: case LOOT_CHEST_DUNGEON: case LOOT_CHEST_MINE: return "Truhla";
         case FENCE: return "Plot";
         case OAK_DOOR_ITEM: return "Dubové dveře";
-        case IRON_DOOR_ITEM: return "Železné dveře";
+        case IRON_DOOR_ITEM: return kFeatures290 ? "Ocelové dveře" : "Železné dveře";  // 2.9.0: steel doors
         case BOAT: return "Loďka";
         case NETHER_GRASS: return "Úhelná tráva";
         case NETHER_SPROUTS: return "Grasser";
@@ -856,7 +870,7 @@ const char* itemName(ItemId id) {
         case EGG_FORGOTTEN: return "Vejce: zapomenutý muž";
         default: break;
     }
-    if (isDoor(id)) return id >= BRONZE_DOOR ? "Bronzové dveře" : id >= IRON_DOOR ? "Železné dveře" : "Dubové dveře";
+    if (isDoor(id)) return id >= BRONZE_DOOR ? "Bronzové dveře" : id >= IRON_DOOR ? (kFeatures290 ? "Ocelové dveře" : "Železné dveře") : "Dubové dveře";
     if (isTrapdoor(id) && id >= BRONZE_TRAPDOOR) return "Bronzový poklop";
     if (isTrapdoor(id)) return "Dubový poklop";
     if (isBed(id)) return "Postel";
@@ -1212,7 +1226,10 @@ float breakTime(ItemId block, ItemId tool) {
     return std::max(t, 0.05f);
 }
 
-ItemId dropFor(ItemId block, float roll, ItemId tool) {
+static ItemId dropForCode(ItemId block, float roll, ItemId tool);
+ItemId dropFor(ItemId block, float roll, ItemId tool) { return withoutIron(dropForCode(block, roll, tool)); }  // 2.9.0: no iron
+
+static ItemId dropForCode(ItemId block, float roll, ItemId tool) {
     if (isRailSwitch(block)) return RAIL_SWITCH;
     if (isRailSlope(block)) return RAIL_SLOPE;
     if (isCrossingSignal(block)) return CROSSING_SIGNAL;

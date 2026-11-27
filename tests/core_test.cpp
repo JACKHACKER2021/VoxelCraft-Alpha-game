@@ -406,6 +406,7 @@ static int testMenuFlow() {
     fs::path root = fs::temp_directory_path() / "vc_menu_test";
     fs::remove_all(root);
     fs::create_directories(root);
+    std::filesystem::create_directories(root), std::ofstream((root / "welcome_3.0.0").string()) << "3.0.0\n";  // 3.0.0: the welcome was seen
     Game game(root.string());
     game.skipSplash();
     int prompts = 0;
@@ -618,7 +619,8 @@ static int testJsonAndPacks() {
     std::vector<std::string> warn;
     GenConfig round = GenConfig::fromJson(def.toJson(), &warn);
     CHECK(warn.empty() && round.biomes.size() == 8 && round.biomes[2].surface == def.biomes[2].surface);
-    CHECK(RecipeBook::defaults().shaped.size() == 12 + 35 + 6 + 2 + 16 + 6 + 24 + 16 + 3 + 10 + 12 + 5 + 3 + 8 + 7 + 1 + 10 + 33 + 16 + 11 + 7 + 18 + 8 + 2 + 5 + (kFeatures250 ? 3 : 0) + (kFeatures260 ? 4 : 0) + (kFeatures270 ? 7 - 5 : 0) + (kFeatures280 ? 2 : 0) && RecipeBook::defaults().shapeless.size() == 2 + 4 + 1 + 1 + 6 + 1 + 1 + 3 + 1 + 3 + 3 + 1 + 2 + 49 + 1 + 1 + 4 + (kFeatures250 ? 3 : 0) + (kFeatures260 ? 10 : 0) + (kFeatures270 ? 1 : 0));  // 1.8.0: concrete, gray planks, 10 stairs and slabs  // 1.5.7: + book and quill; 1.6.0: + 3: torch, shield, lamp; crimson planks  // 1.5.1: no planks from Eye Logs  // 2.7.0: +7 (wallet, backpacks) -5 (iron things no longer made)
+    std::printf("recipes: %zu shaped, %zu shapeless\n", RecipeBook::defaults().shaped.size(), RecipeBook::defaults().shapeless.size());
+    CHECK(RecipeBook::defaults().shaped.size() == 12 + 35 + 6 + 2 + 16 + 6 + 24 + 16 + 3 + 10 + 12 + 5 + 3 + 8 + 7 + 1 + 10 + 33 + 16 + 11 + 7 + 18 + 8 + 2 + 5 + (kFeatures250 ? 3 : 0) + (kFeatures260 ? 4 : 0) + (kFeatures270 ? 7 - 5 : 0) + (kFeatures280 ? 2 : 0) + (kFeatures290 ? 4 : 0) && RecipeBook::defaults().shapeless.size() == 2 + 4 + 1 + 1 + 6 + 1 + 1 + 3 + 1 + 3 + 3 + 1 + 2 + 49 + 1 + 1 + 4 + (kFeatures250 ? 3 : 0) + (kFeatures260 ? 10 : 0) + (kFeatures270 ? 1 : 0));  // 1.8.0: concrete, gray planks, 10 stairs and slabs  // 1.5.7: + book and quill; 1.6.0: + 3: torch, shield, lamp; crimson planks  // 1.5.1: no planks from Eye Logs  // 2.7.0: +7 (wallet, backpacks) -5 (iron things no longer made)
 
     // Biomes really show up in the world: deserts are sandy, forests have trees.
     World w(1234, Dimension::Overworld);
@@ -1347,6 +1349,7 @@ static int testStructures() {
             .write(reinterpret_cast<const char*>(file.data()), (std::streamsize)file.size());
         std::ofstream(root / "structures" / "rozbita.mcstructure") << "nesmysl";
     }
+    std::filesystem::create_directories(root), std::ofstream((root / "welcome_3.0.0").string()) << "3.0.0\n";  // 3.0.0: the welcome was seen
     Game game(root.string());
     game.skipSplash();
     int imports = 0;
@@ -1595,6 +1598,7 @@ static int testInventoryAndHand() {
 
     // 11: the inventory screen by touch only: pick, halve, move 5, merge, quick move, throw.
     fs::create_directories(root);
+    std::filesystem::create_directories(root), std::ofstream((root / "welcome_3.0.0").string()) << "3.0.0\n";  // 3.0.0: the welcome was seen
     Game game(root.string());
     game.skipSplash();
     game.onTextPrompt = [](int, const std::string&, const std::string&) {};
@@ -1775,6 +1779,7 @@ static int testDeveloperAccess() {
         cheat.devGodMode = true;
         saveSettings((root / "options.txt").string(), cheat);
     }
+    std::filesystem::create_directories(root), std::ofstream((root / "welcome_3.0.0").string()) << "3.0.0\n";  // 3.0.0: the welcome was seen
     Game game(root.string());
     game.skipSplash();
     int prompts = 0, passwordPrompts = 0;
@@ -1844,6 +1849,7 @@ static int testEnglishEverywhere() {
     fs::create_directories(root);
     std::vector<std::string> log;
     Ui::textLog = &log;
+    std::filesystem::create_directories(root), std::ofstream((root / "welcome_3.0.0").string()) << "3.0.0\n";  // 3.0.0: the welcome was seen
     Game game(root.string());
     game.skipSplash();
     game.onTextPrompt = [](int, const std::string&, const std::string&) {};
@@ -1937,6 +1943,7 @@ static int testMusic() {
     fs::path root = fs::temp_directory_path() / "vc_music_test";
     fs::remove_all(root);
     fs::create_directories(root);
+    std::filesystem::create_directories(root), std::ofstream((root / "welcome_3.0.0").string()) << "3.0.0\n";  // 3.0.0: the welcome was seen
     Game game(root.string());
     game.skipSplash();
     std::vector<std::pair<std::string, bool>> played;
@@ -2746,6 +2753,7 @@ static int testUpdate12() {
         fs::path root = fs::temp_directory_path() / "vc_splash_test";
         fs::remove_all(root);
         fs::create_directories(root);
+        std::filesystem::create_directories(root), std::ofstream((root / "welcome_3.0.0").string()) << "3.0.0\n";  // 3.0.0: the welcome was seen
         Game game(root.string());
         game.onSurfaceCreated();
         game.onResize(2400, 1080);
@@ -2761,7 +2769,7 @@ static int testUpdate12() {
         // 1.8.0: then "VoxelSoftworks presents" the version; a tap goes on to the menu.
         log.clear();
         game.frame(t += 1 / 30.0);
-        CHECK(drawn("VOXELSOFTWORKS PRESENTS") && (drawn("VOXELCRAFT 2.7.1") || drawn("VOXELCRAFT 2.8.0 PREVIEW")) && !drawn("Play"));
+        CHECK(drawn("VOXELSOFTWORKS PRESENTS") && (drawn("VOXELCRAFT 3.0.0") || drawn("VOXELCRAFT 3.1.0 PREVIEW")) && !drawn("Play"));
         for (int i = 0; i < 30; ++i) game.frame(t += 1 / 30.0);
         game.onTouch(0, TouchAction::Down, 1200, 540, t);
         game.onTouch(0, TouchAction::Up, 1200, 540, t);
@@ -4395,7 +4403,12 @@ static int testWorld159() {
     }
     size_t total = 0;
     for (int c = 0; c < CatCount; ++c) total += creativeCategoryItems(c).size();
-    CHECK(total == (size_t)kCreativeItemCount + 7 + (kFeatures250 ? 6 : 0) + (kFeatures260 ? 15 : 0) + (kFeatures270 ? 14 : 0) + (kFeatures280 ? 4 : 0) && creativeGroup(STAINED_GLASS) && !creativeGroup(STONE));
+    size_t ironGone = 0;  // 2.9.0: the iron things left the creative inventory
+    if (kFeatures290)
+        for (int i = 0; i < kCreativeItemCount; ++i) ironGone += isIronThing(kCreativeItems[i]);
+    for (int c = 0; c < CatCount; ++c)
+        for (ItemId id : creativeCategoryItems(c)) CHECK(!isIronThing(id));
+    CHECK(total + ironGone == (size_t)kCreativeItemCount + 7 + (kFeatures250 ? 6 : 0) + (kFeatures260 ? 15 : 0) + (kFeatures270 ? 14 : 0) + (kFeatures280 ? 4 : 0) && creativeGroup(STAINED_GLASS) && !creativeGroup(STONE));
     return 0;
 }
 
@@ -4585,6 +4598,7 @@ static int testBugReport250() {
     if (b.find("Padá to") == std::string::npos || b.find("VoxelCraft 2.5.0") == std::string::npos) return 1;
     const std::filesystem::path root = std::filesystem::temp_directory_path() / "vc_bugreport";
     std::filesystem::remove_all(root);
+    std::filesystem::create_directories(root), std::ofstream((root / "welcome_3.0.0").string()) << "3.0.0\n";  // 3.0.0: the welcome was seen
     Game g(root.string());
     std::string title, body;
     g.onOpenBugReport = [&](const std::string& t, const std::string& bb) { title = t, body = bb; };

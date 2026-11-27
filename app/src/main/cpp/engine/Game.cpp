@@ -44,7 +44,7 @@ namespace vc {
 namespace vc {
 
 namespace {
-const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.9.0 Preview build 1" : "VoxelCraft 2.8.0";
+const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 3.1.0 Preview build 1" : "VoxelCraft 3.0.0";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -218,7 +218,7 @@ bool Game::onBack() {
         case Screen::Skins: setScreen(Screen::Title); break;
         case Screen::EditWorld: setScreen(Screen::WorldList); break;
         case Screen::PackFiles: setScreen(Screen::Packs); break;
-        case Screen::JsonEditor: setScreen(Screen::PackFiles); break;
+        case Screen::JsonEditor: setScreen(editorFromAddons_ ? Screen::Packs : Screen::PackFiles); break;  // 2.8.0: back to the add-on manager
         case Screen::Playing: setScreen(Screen::Pause); break;
         case Screen::Invite: setScreen(Screen::Pause); break;
         case Screen::OfflineGuide: setScreen(Screen::WorldList); break;
@@ -1460,6 +1460,28 @@ void Game::presentsScreen(float dt) {
             ui_.fill(sx, sy, s, s, c);
         }
     }
+    if (kFeatures290 && !kPreviewEdition) {
+        // 3.0.0: a celebration: fireworks bursting one after another behind the text.
+        for (int k = 0; k < 6; ++k) {
+            const float period = 2.4f, local = std::fmod(t + k * 0.4f, period);
+            const int round = (int)((t + k * 0.4f) / period);
+            const uint32_t h = hash3(k, round, 300, 7);
+            const float cx = 20 + (float)(h % 1000) / 1000.0f * (W - 40), cy = 20 + (float)((h >> 10) % 1000) / 1000.0f * (H * 0.55f);
+            static const Color kFire[5] = {{1, 0.82f, 0.43f, 1}, {0.45f, 0.9f, 0.45f, 1}, {0.4f, 0.7f, 1, 1}, {1, 0.45f, 0.4f, 1}, {0.9f, 0.5f, 1, 1}};
+            Color c = kFire[(h >> 20) % 5];
+            if (local < 0.5f) {  // the rocket going up
+                c.a = 0.9f;
+                ui_.fill(cx, cy + (0.5f - local) * 120, 2, 4, c);
+                continue;
+            }
+            const float age = local - 0.5f, r = age * 70;
+            c.a = std::max(0.0f, 1 - age / 1.6f);
+            for (int p = 0; p < 20; ++p) {
+                const float a = p * 6.2831853f / 20;
+                ui_.fill(cx + std::cos(a) * r, cy + std::sin(a) * r + age * age * 18, 2, 2, c);
+            }
+        }
+    }
     const Color gold{1.0f, 0.82f, 0.43f, 1}, white{1, 1, 1, 1}, dim{0.72f, 0.74f, 0.8f, 1}, green{0.63f, 0.92f, 0.5f, 1};
     auto faded = [&](Color c, float start) {
         c.a = ease((t - start) / 0.5f);
@@ -1470,11 +1492,21 @@ void Game::presentsScreen(float dt) {
     y += 14;
     const float big = ui_.textWidth("VOXELCRAFT 1.8.0", 3) < W - 20 && H >= 260 ? 3 : 2;
     // 2.5.0: the version and the name of the update (they stayed at 2.1.0 for a long time).
-    const char* title = kClassicEdition ? "VOXELCRAFT CLASSIC" : kPreviewEdition ? "VOXELCRAFT 2.8.0 PREVIEW" : "VOXELCRAFT 2.7.1";
+    const char* title = kClassicEdition ? "VOXELCRAFT CLASSIC" : kPreviewEdition ? "VOXELCRAFT 3.1.0 PREVIEW" : "VOXELCRAFT 3.0.0";
     ui_.textCentered(W / 2, y, title, faded(gold, 0.2f), ui_.textWidth(title, big) < W - 20 ? big : 2);
     y += 10 * big + 4;
-    ui_.textCentered(W / 2, y, tr(kFeatures270 ? "Batohy a doplňky" : "Cornerstone a svátky"), faded(white, 0.5f), 1);
+    ui_.textCentered(W / 2, y, tr(kFeatures290 ? "Bez železa, úhelný kámen celý svůj" : kFeatures270 ? "Batohy a doplňky" : "Cornerstone a svátky"), faded(white, 0.5f), 1);
     y += 14;
+    if (kFeatures290 && !kPreviewEdition) {
+        // 3.0.0: the festive welcome, in a gold band.
+        const std::string hello = tr("Slavnostní vydání: vítej ve VoxelCraftu 3.0.0!");
+        const float bw = std::min(W - 20, ui_.textWidth(hello) + 16);
+        Color bc{0.45f, 0.32f, 0.05f, 0.9f};
+        bc.a *= ease((t - 0.55f) / 0.5f);
+        ui_.fill(W / 2 - bw / 2, y - 3, bw, 13, bc);
+        ui_.textCentered(W / 2, y, hello, faded(gold, 0.55f), 1);
+        y += 14;
+    }
     if (season != Season::None) {
         // The event that is on right now, in a coloured band.
         const char* name = season == Season::Halloween ? "Právě probíhá: Podzim a Halloween (1. 10. - 30. 11.)"
@@ -1536,6 +1568,17 @@ void Game::presentsScreen(float dt) {
         "Jízdenky, turnikety, hlášení stanic a deník hráče",
         "Výchozí textury, shadery a téma k úpravě a export doplňků",
     };
+    static const char* const kNew300[] = {
+        "Vítej ve VoxelCraftu 3.0.0!",
+        "Železné nástroje odešly: železo jen do ocelové směsi",
+        "Ocelové dveře a nová rezavá ocel",
+        "Dimenze úhelného kamene je celá svoje",
+        "Sídlo VoxelSoftworks na vývojářské mapě",
+    };
+    static const char* const kNext300[] = {
+        "Opuštěné nádraží s pokladnou a čekárnou, vozovna",
+        "Další tvorové a bloky ve VC jazyce",
+    };
     static const char* const kNext280[] = {
         "Opuštěné nádraží s pokladnou a čekárnou, vozovna",
         "Cesta k 3.0.0: železo odchází ze hry",
@@ -1548,11 +1591,11 @@ void Game::presentsScreen(float dt) {
         "Jízdenky, hlášení stanic a opuštěné nádraží",
         "Deník hráče, peněženka a obojek pro lišáka",
     };
-    const char* const* kNew = kFeatures280 ? kNew280 : kFeatures270 ? kNew270 : kFeatures260 ? kNew260 : kFeatures250 ? kNew250 : kNew240;
+    const char* const* kNew = kFeatures290 ? kNew300 : kFeatures280 ? kNew280 : kFeatures270 ? kNew270 : kFeatures260 ? kNew260 : kFeatures250 ? kNew250 : kNew240;
     const int kNewCount = 5;
-    const char* const* kNext = kFeatures280 ? kNext280 : kFeatures270 ? kNext270 : kFeatures260 ? kNext260 : kFeatures250 ? kNext250 : kNext240;
+    const char* const* kNext = kFeatures290 ? kNext300 : kFeatures280 ? kNext280 : kFeatures270 ? kNext270 : kFeatures260 ? kNext260 : kFeatures250 ? kNext250 : kNext240;
     const int kNextCount = kFeatures250 ? 2 : 3;
-    const char* nextTitle = kFeatures280 ? "PŘIPRAVUJEME VE 2.9.0" : kFeatures270 ? "PŘIPRAVUJEME VE 2.8.0" : kFeatures260 ? "PŘIPRAVUJEME VE 2.7.0" : kFeatures250 ? "PŘIPRAVUJEME VE 2.6.0" : "PŘIPRAVUJEME VE 2.5.0";
+    const char* nextTitle = kFeatures290 ? "PŘIPRAVUJEME VE 3.1.0" : kFeatures280 ? "PŘIPRAVUJEME VE 2.9.0" : kFeatures270 ? "PŘIPRAVUJEME VE 2.8.0" : kFeatures260 ? "PŘIPRAVUJEME VE 2.7.0" : kFeatures250 ? "PŘIPRAVUJEME VE 2.6.0" : "PŘIPRAVUJEME VE 2.5.0";
     // Long lines wrap at word boundaries (they used to be cut off). On a small screen the two lists
     // sit side by side.
     auto wrap = [&](const std::string& prefix, const char* source, float width) {
@@ -1991,6 +2034,12 @@ void Game::coinsPill(float right, float y) {
 
 void Game::titleScreen() {
     const float W = ui_.width(), H = ui_.height();
+    if (kFeatures290 && !welcomeChecked_) {
+        // 3.0.0: the welcome (the news of 3.0.0) opens by itself the first time.
+        welcomeChecked_ = true;
+        const std::string marker = dataDir_ + "/welcome_3.0.0";
+        if (!std::ifstream(marker)) newsOpen_ = true, std::ofstream(marker) << "3.0.0\n";
+    }
     if (Ui::preAlpha) {
         // Pre-Alpha Style: the title of 0.3. A big white "VoxelCraft" with a dark drop shadow,
         // the yellow splash on its corner, grey buttons in one column, the version bottom left.
@@ -2119,7 +2168,7 @@ void Game::titleScreen() {
         // 2.5.0: on a low screen there is no room under the menu: the button goes to the top left corner.
         const bool under = ny + 20 < H - 12;
         const float bx = under ? (W - nw) / 2 : 4, by = under ? ny : 4;
-        if (ui_.menuButton(bx, by, nw, 20, kFeatures280 ? "Novinky 2.8.0" : kFeatures270 ? "Novinky 2.7.0" : kFeatures260 ? "Novinky 2.6.0" : kFeatures250 ? "Novinky 2.5.0" : "Novinky 2.4.0", St::Primary, Font::Star, live)) newsOpen_ = true;
+        if (ui_.menuButton(bx, by, nw, 20, kFeatures290 ? "Novinky 3.0.0" : kFeatures280 ? "Novinky 2.8.0" : kFeatures270 ? "Novinky 2.7.0" : kFeatures260 ? "Novinky 2.6.0" : kFeatures250 ? "Novinky 2.5.0" : "Novinky 2.4.0", St::Primary, Font::Star, live)) newsOpen_ = true;
     }
     if (newsOpen_) newsPanel();
     ui_.text(3, H - 10, kVersion, kText);
@@ -2138,7 +2187,7 @@ void Game::newsPanel() {
     const float pw = std::min(420.0f, W - 20), ph = std::min(260.0f, H - 20), px = (W - pw) / 2, py = (H - ph) / 2;
     ui_.roundPanel(px, py, pw, ph);
     const Color gold{1.0f, 0.82f, 0.43f, 1};
-    ui_.textCentered(W / 2, py + 8, kFeatures280 ? "Co je nového ve VoxelCraftu 2.8.0" : kFeatures270 ? "Co je nového ve VoxelCraftu 2.7.0" : kFeatures260 ? "Co je nového ve VoxelCraftu 2.6.0" : kFeatures250 ? "Co je nového ve VoxelCraftu 2.5.0" : "Co je nového ve VoxelCraftu 2.4.0", gold);
+    ui_.textCentered(W / 2, py + 8, kFeatures290 ? "Vítej ve VoxelCraftu 3.0.0" : kFeatures280 ? "Co je nového ve VoxelCraftu 2.8.0" : kFeatures270 ? "Co je nového ve VoxelCraftu 2.7.0" : kFeatures260 ? "Co je nového ve VoxelCraftu 2.6.0" : kFeatures250 ? "Co je nového ve VoxelCraftu 2.5.0" : "Co je nového ve VoxelCraftu 2.4.0", gold);
     struct Row { const char* head; const char* text; };
     static const Row rows250[] = {
         {"Síť metra", "Linky východ-západ nahoře a sever-jih dole, tunely mezi stanicemi"},
@@ -2160,6 +2209,24 @@ void Game::newsPanel() {
         {"Voxel Bucks", "Mince jsou Voxel Bucks s ikonou kostičky; v obchodě balíčky za Kč"},
         {"Úspěchy", "Každý nový survival svět začíná úspěchy od nuly"},
         {"Chyby", "Nahlásit chybu v nastavení otevře GitHub Issues s vyplněnými údaji"},
+    };
+    static const Row rows300[] = {
+        {"3.0.0", "Vítej! Velká verze: VoxelCraft bez železných věcí a s dimenzí úhelného kamene"},
+        {"Železo", "Železné nástroje jsou teď ocelové; železo jen se uhlím do ocelové směsi"},
+        {"Ocel", "Železné dveře jsou ocelové, rez roste od okrajů, stéká a odlupuje se"},
+        {"Cornerstone", "Žádný Nether: úhelný kámen, úhelná tráva, pevnosti úhelného kamene"},
+        {"Sídlo", "Nová vývojářská mapa: HQ studia, dům vývojáře a deník až po 3.0.0"},
+        {"Batohy", "Šipka na další stránku batohu už batoh nezavře"},
+        {"Doplňky", "Resource soubory jdou otevřít: textury malovat, JSON upravit"},
+        {"Biomy", "Nový biom přímo v záložce Behavior"},
+    };
+    static const Row rows300b[] = {
+        {"VC jazyk", "Vše z 2.8.0: tvorové, bloky, loot, shadery a stavby v souborech"},
+        {"Tvorové", "Nové prase, ovce, slepice, kráva a duch s obličeji"},
+        {"Tvůrce", "Bloky, předměty, moby, modely, recepty, shadery a balíček"},
+        {"Metro", "Jízdenky, turnikety a hlášení stanic"},
+        {"Deník", "Deník hráče a nové úspěchy"},
+        {"Sezóny", "Sváteční věci jen se zapnutým doplňkem"},
     };
     static const Row rows280[] = {
         {"VC jazyk", "Tvorové, bloky, předměty, loot, shadery a stavby jsou v souborech; doplněk je přepíše"},
@@ -2227,8 +2294,8 @@ void Game::newsPanel() {
     };
     const int pages = kFeatures250 ? 2 : 1;
     newsPage_ = std::clamp(newsPage_, 0, pages - 1);
-    const Row* rows = kFeatures280 ? (newsPage_ == 0 ? rows280 : rows280b) : kFeatures270 ? (newsPage_ == 0 ? rows270 : rows270b) : kFeatures260 ? (newsPage_ == 0 ? rows260 : rows260b) : kFeatures250 ? (newsPage_ == 0 ? rows250 : rows250b) : rows240;
-    const int rowCount = kFeatures280 ? (newsPage_ == 0 ? 8 : 6) : kFeatures270 ? (newsPage_ == 0 ? 8 : 6) : kFeatures260 ? (newsPage_ == 0 ? 8 : 7) : kFeatures250 ? 8 : 7;
+    const Row* rows = kFeatures290 ? (newsPage_ == 0 ? rows300 : rows300b) : kFeatures280 ? (newsPage_ == 0 ? rows280 : rows280b) : kFeatures270 ? (newsPage_ == 0 ? rows270 : rows270b) : kFeatures260 ? (newsPage_ == 0 ? rows260 : rows260b) : kFeatures250 ? (newsPage_ == 0 ? rows250 : rows250b) : rows240;
+    const int rowCount = kFeatures290 ? (newsPage_ == 0 ? 8 : 6) : kFeatures280 ? (newsPage_ == 0 ? 8 : 6) : kFeatures270 ? (newsPage_ == 0 ? 8 : 6) : kFeatures260 ? (newsPage_ == 0 ? 8 : 7) : kFeatures250 ? 8 : 7;
     float y = py + 24;
     // 2.5.0: the heads' column as wide as the widest head (English ones are longer).
     float headW = 90;
@@ -2626,10 +2693,11 @@ void Game::worldListScreen() {
     if (playTab_ == 2) {
         // The developer maps: one row each; a tap opens the map's world (made the first time).
         ui_.frame(x, listY, w, listH, kPanelInner, kSeparator);
-        static const ItemId kIcons[kDevMaps] = {STONE_BRICKS, BOOKSHELF, RAIL_NS, GRASS, MOB_SPAWNER, CONCRETE + 5};
-        static const char* const kSubs[kDevMaps] = {"Všechny struktury v řadě a 5 developer staveb", "Každý blok na podstavci",
-                                                    "Okruh, křížení, nástupiště a automatické metro", "Čtverce všech biomů",
-                                                    "Ohrada se spawnerem pro každého moba", "Zelené plátno a světla na natáčení"};
+        static const ItemId kIcons[7] = {STONE_BRICKS, BOOKSHELF, RAIL_NS, GRASS, MOB_SPAWNER, CONCRETE + 5, CONCRETE};
+        static const char* const kSubs[7] = {"Všechny struktury v řadě a 5 developer staveb", "Každý blok na podstavci",
+                                             "Okruh, křížení, nástupiště a automatické metro", "Čtverce všech biomů",
+                                             "Ohrada se spawnerem pro každého moba", "Zelené plátno a světla na natáčení",
+                                             "HQ studia, dům vývojáře a deník až po 3.0.0"};
         const float rh = std::min(rowH, std::floor((listH - 4) / kDevMaps));
         for (int m = 1; m <= kDevMaps; ++m) {
             const float rx = x + 2, ry = listY + 2 + (m - 1) * rh, rw = w - 4;
@@ -3436,6 +3504,7 @@ void Game::packFilesScreen() {
 }
 
 void Game::openEditor(const std::string& pack, const std::string& path) {
+    editorFromAddons_ = kFeatures270 && screen_ == Screen::Packs;
     editorPack_ = pack;
     editorPath_ = path;
     editorScroll_ = 0;
@@ -3509,7 +3578,7 @@ void Game::jsonEditorScreen() {
     if (!editorSaved_) ui_.text(x + 140, y + h - 18, "Neuloženo, oprav chybu", kError, 1, false);
     if (ui_.button(x + w - 70, y + h - 26, 70, 22, "Zpět")) {
         packFiles_ = packs_.files(editorPack_);
-        setScreen(Screen::PackFiles);
+        setScreen(editorFromAddons_ ? Screen::Packs : Screen::PackFiles);  // 2.8.0: the add-on manager, not the old file list
     }
 }
 
@@ -5287,6 +5356,11 @@ void Game::survivalInventoryScreen() {
 }
 
 void Game::chestScreen() {
+    // 2.9.0: a backpack makes its next page itself (the arrow to page 2 used to close the bag: that page did not exist yet).
+    if (kFeatures270 && session_->openChest.dim == Session::kBackpackDim) {
+        backpackScreen();
+        return;
+    }
     if (!session_->chest(session_->openChest)) {
         setScreen(Screen::Playing);
         return;

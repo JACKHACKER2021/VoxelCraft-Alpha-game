@@ -1,6 +1,7 @@
 // 2.7.0: the add-on manager: Add-ons, Behavior Voxel, Resource Voxel, Creator and Store tabs, the import
 // report of every converted add-on (nothing fails silently) and the creator of blocks and mobs.
 #include <algorithm>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -14,6 +15,7 @@
 #include "Png.h"
 #include "Store.h"
 #include "WorldFiles.h"
+#include "third_party/stb/stb_image.h"  // implementation lives in TexturePack.cpp
 
 namespace vc {
 
@@ -210,6 +212,10 @@ void Game::addonReportScreen(float x, float y, float w, float h) {
 
 void Game::addonFilesTab(float x, float y, float w, float h, bool resource) {
     if (packList_.empty()) return;
+    if (resource && !texEditFile_.empty()) {
+        textureEditor(x, y, w, h);
+        return;
+    }
     // Which add-on: a row of arrows above the tree.
     PackInfo& p = packList_[packSelected_];
     if (ui_.button(x, y, 18, 16, "<", packSelected_ > 0)) --packSelected_, listScroll_ = 0;
@@ -222,8 +228,10 @@ void Game::addonFilesTab(float x, float y, float w, float h, bool resource) {
             if (ec) break;
             if (!e->is_regular_file()) continue;
             const std::string rel = fs::relative(e->path(), p.dir, ec).generic_string();
-            if ((rel.rfind("textures/", 0) == 0 || rel.rfind("shaders/", 0) == 0 || rel.rfind("bedrock/", 0) == 0 && rel.find("/textures/") != std::string::npos) &&
-                files.size() < 400)
+            if (rel.size() > 7 && rel.compare(rel.size() - 7, 7, ".edited") == 0) continue;
+            if ((rel.rfind("textures/", 0) == 0 || rel.rfind("shaders/", 0) == 0 || rel.rfind("theme/", 0) == 0 || rel.rfind("vc/", 0) == 0 ||
+                 rel.rfind("bedrock/", 0) == 0 && rel.find("/textures/") != std::string::npos) &&
+                files.size() < 1500)
                 files.push_back(rel);
         }
         std::sort(files.begin(), files.end());
@@ -246,12 +254,85 @@ void Game::addonFilesTab(float x, float y, float w, float h, bool resource) {
                       : top == "dimensions" ? kGold : top == "shaders" ? Color{0.75f, 0.55f, 0.9f, 1} : kText;
         ui_.fill(x + 6, ry + 4, 6, 7, c);
         ui_.text(x + 18, ry + 4, f, kText, 1, false, w - 24);
-        if (!resource && ui_.tapped(x + 2, ry, w - 4, rowH - 1)) {
-            openEditor(p.id, f);
-            return;
+        if (ui_.tapped(x + 2, ry, w - 4, rowH - 1)) {
+            const auto ends = [&](const char* e) { return f.size() > std::strlen(e) && f.compare(f.size() - std::strlen(e), std::strlen(e), e) == 0; };
+            if (!resource || ends(".json") || ends(".fsh") || ends(".vsh") || ends(".txt") || ends(".example")) {
+                openEditor(p.id, f);  // 2.8.0: shader.json, theme.json, vc/ files and shaders open as text too
+                return;
+            }
+            if (ends(".png")) {
+                // 2.8.0: a texture opens in the painter.
+                int iw = 0, ih = 0, n = 0;
+                if (stbi_uc* px = stbi_load((p.dir + "/" + f).c_str(), &iw, &ih, &n, 4)) {
+                    if (iw >= 1 && ih >= 1 && iw <= 64 && ih <= 64) {
+                        texEditPix_.assign((size_t)iw * ih, 0);
+                        for (int k = 0; k < iw * ih; ++k)
+                            texEditPix_[(size_t)k] = (uint32_t)px[k * 4] << 24 | (uint32_t)px[k * 4 + 1] << 16 | (uint32_t)px[k * 4 + 2] << 8 | px[k * 4 + 3];
+                        texEditW_ = iw, texEditH_ = ih, texEditPack_ = p.id, texEditFile_ = f;
+                    } else {
+                        toast_ = tr("Obrázek je větší než 64 × 64: uprav ho v počítači"), toastUntil_ = now_ + 4;
+                    }
+                    stbi_image_free(px);
+                }
+                return;
+            }
         }
     }
     if (files.empty()) ui_.textCentered(x + w / 2, listY + listH / 2 - 4, tr(resource ? "Žádné textury ani shadery" : "Žádné soubory chování"), kTextDim);
+    if (!resource && ui_.button(x + w - 110, y, 110, 16, "+ Nový biom", true, true)) {
+        // 2.8.0: a new biome right here (it used to be only in the old file list).
+        const std::vector<std::string> have = packs_.files(p.id);
+        std::string path;
+        for (int n = 1;; ++n) {
+            path = "biomes/novy_biom_" + std::to_string(n) + ".json";
+            if (std::find(have.begin(), have.end(), path) == have.end()) break;
+        }
+        const std::string id = path.substr(7, path.size() - 12);
+        packs_.writeFile(p.id, path,
+                         "{\n  \"id\": \"" + id + "\",\n  \"name\": \"Nový biom\",\n"
+                         "  \"climate\": {\"temperature\": 0.3, \"humidity\": 0.2},\n"
+                         "  \"terrain\": {\"height\": 70, \"variation\": 12},\n"
+                         "  \"blocks\": {\"surface\": \"grass\", \"filler\": \"dirt\", \"filler_depth\": 3, \"beach\": \"sand\", \"underwater\": \"gravel\"},\n"
+                         "  \"trees\": {\"density\": 0.02, \"trunk\": \"log\", \"leaves\": \"leaves\"}\n}\n");
+        rebuildFromPacks();
+        openEditor(p.id, path);
+    }
+}
+
+void Game::textureEditor(float x, float y, float w, float h) {
+    // The picture, the palette beside it, and Uložit / Zpět. Colours are RGBA; the eraser paints transparent.
+    static const uint32_t kColors[14] = {0xF0F0F0FF, 0x202020FF, 0x8C5A32FF, 0x5AA046FF, 0xC83C37FF, 0x3C78C8FF, 0xE6C83CFF,
+                                         0x9696A0FF, 0xE68C3CFF, 0x8C50B4FF, 0xF0A0B4FF, 0x46B4AAFF, 0x606060FF, 0x00000000};
+    ui_.text(x, y + 2, texEditPack_ + " / " + texEditFile_, kGold, 1, false, w);
+    const float top = y + 16, cell = std::max(1.0f, std::floor(std::min((w - 100) / texEditW_, (h - 20) / texEditH_)));
+    ui_.frame(x - 1, top - 1, texEditW_ * cell + 2, texEditH_ * cell + 2, kField, kSeparator);
+    for (int i = 0; i < texEditW_ * texEditH_; ++i) {
+        const float px = x + (i % texEditW_) * cell, py = top + (i / texEditW_) * cell;
+        const uint32_t c = texEditPix_[(size_t)i];
+        if ((c & 255) < 128) ui_.fill(px, py, cell, cell, ((i % texEditW_) + (i / texEditW_)) % 2 ? Color{0.3f, 0.3f, 0.3f, 1} : Color{0.4f, 0.4f, 0.4f, 1});
+        else ui_.fill(px, py, cell, cell, Color{(c >> 24) / 255.0f, ((c >> 16) & 255) / 255.0f, ((c >> 8) & 255) / 255.0f, 1});
+        if (ui_.held(px, py, cell, cell)) texEditPix_[(size_t)i] = kColors[creatorColor_ % 14];
+    }
+    const float palX = x + texEditW_ * cell + 10;
+    for (int k = 0; k < 14; ++k) {
+        const uint32_t c = kColors[k];
+        const float cx = palX + (k % 2) * 16, cy = top + (k / 2) * 14;
+        ui_.frame(cx, cy, 14, 12, k == 13 ? Color{0.35f, 0.35f, 0.35f, 1} : Color{(c >> 24) / 255.0f, ((c >> 16) & 255) / 255.0f, ((c >> 8) & 255) / 255.0f, 1},
+                  k == creatorColor_ % 14 ? kTextBright : kSeparator);
+        if (ui_.tapped(cx, cy, 14, 12)) creatorColor_ = k;
+    }
+    if (ui_.button(palX, top + 104, 70, 18, "Uložit", true, true)) {
+        std::vector<uint8_t> rgba((size_t)texEditW_ * texEditH_ * 4);
+        for (size_t k = 0; k < texEditPix_.size(); ++k)
+            rgba[k * 4] = texEditPix_[k] >> 24, rgba[k * 4 + 1] = (texEditPix_[k] >> 16) & 255, rgba[k * 4 + 2] = (texEditPix_[k] >> 8) & 255, rgba[k * 4 + 3] = texEditPix_[k] & 255;
+        writePng(packs_.packDir(texEditPack_) + "/" + texEditFile_, texEditW_, texEditH_, rgba);
+        packs_.markEdited(texEditPack_, texEditFile_);
+        packs_.setEnabled(texEditPack_, true);
+        rebuildFromPacks();
+        textureReload_ = true;
+        toast_ = trf("Uloženo: {0}", {texEditFile_}), toastUntil_ = now_ + 4;
+    }
+    if (ui_.button(palX, top + 126, 70, 18, "Zpět")) texEditFile_.clear();
 }
 
 void Game::addonStoreTab(float x, float y, float w, float h) {

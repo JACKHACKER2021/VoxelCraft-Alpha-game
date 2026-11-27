@@ -11,8 +11,8 @@ android {
         applicationId = "cz.voxelsoftworks.voxelcraft"  // 2.4.0: new id and a lasting signing key (the old key was lost)
         minSdk = 21  // 2.5.0: Android 5.0 and newer
         targetSdk = 36
-        versionCode = 39
-        versionName = "2.8.0"
+        versionCode = 40
+        versionName = "3.0.0"
     }
 
     externalNativeBuild {
@@ -35,8 +35,8 @@ android {
         create("preview") {
             dimension = "edition"
             applicationIdSuffix = ".preview"
-            versionName = "2.9.0"  // the preview runs ahead of the normal edition
-            versionCode = 76
+            versionName = "3.1.0"  // the preview runs ahead of the normal edition
+            versionCode = 77
             versionNameSuffix = "-preview"
             resValue("string", "app_name", "VoxelCraft Preview")
             ndk { abiFilters += listOf("arm64-v8a", "x86_64") }

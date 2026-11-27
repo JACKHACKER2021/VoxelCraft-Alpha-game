@@ -276,7 +276,16 @@ std::string PackManager::readFile(const std::string& id, const std::string& path
 
 bool PackManager::writeFile(const std::string& id, const std::string& path, const std::string& text) {
     if (path.find("..") != std::string::npos) return false;
+    markEdited(id, path);
     return writeText(fs::path(root_) / id / path, text);
+}
+
+// 2.8.0: the default pack's textures and shaders are the game's own and are not loaded, until the player
+// changes one of them: then that folder counts (textures/.edited, shaders/.edited).
+void PackManager::markEdited(const std::string& id, const std::string& path) {
+    if (id != "default") return;
+    for (const char* folder : {"textures", "shaders"})
+        if (path.rfind(std::string(folder) + "/", 0) == 0) writeText(fs::path(root_) / id / folder / ".edited", "1\n");
 }
 
 GenConfig PackManager::buildConfig(std::vector<std::string>* w) const {
@@ -334,7 +343,8 @@ RecipeBook PackManager::buildRecipes(std::vector<std::string>* w) const {
 std::string PackManager::shaderPackDir() const {
     std::string out;
     for (const std::string& id : enabledOrder())
-        if (id != "default" && fs::is_directory(fs::path(root_) / id / "shaders"))  // 2.8.0: the default's are the game's own
+        if ((id != "default" || fs::exists(fs::path(root_) / id / "shaders" / ".edited")) &&  // 2.8.0: the default's only once changed
+            fs::is_directory(fs::path(root_) / id / "shaders"))
             out = (fs::path(root_) / id).string();
     return out;
 }
@@ -342,7 +352,7 @@ std::string PackManager::shaderPackDir() const {
 std::vector<std::string> PackManager::textureDirs() const {
     std::vector<std::string> out;
     for (const std::string& id : enabledOrder()) {
-        if (id == "default") continue;  // 2.8.0: the default pack's textures are the game's own (to copy and edit)
+        if (id == "default" && !fs::exists(fs::path(root_) / id / "textures" / ".edited")) continue;  // 2.8.0: the game's own until changed
         fs::path t = fs::path(root_) / id / "textures";
         if (fs::is_directory(t)) out.push_back(t.string());
     }

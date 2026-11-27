@@ -19,7 +19,7 @@ RecipeBook& current() {
 }
 
 ItemId item(const Json& j, std::vector<std::string>* w, const std::string& where) {
-    ItemId id = itemFromKey(j.str(""));
+    ItemId id = withoutIron(itemFromKey(j.str("")));  // 2.9.0: iron recipes make and take steel
     if (id == AIR && w) w->push_back(where + ": " + trf("neznámý předmět \"{0}\"", {j.str("")}));
     return id;
 }
@@ -197,7 +197,7 @@ CraftResult matchExact(const ItemStack* grid, int size) {
 }  // namespace
 
 ItemId smeltResult(ItemId id) {
-    auto it = recipes().smelting.find(id);
+    auto it = recipes().smelting.find(withoutIron(id));  // 2.9.0: iron ore left in a chest smelts as steel ore
     return it == recipes().smelting.end() ? (ItemId)AIR : it->second;
 }
 

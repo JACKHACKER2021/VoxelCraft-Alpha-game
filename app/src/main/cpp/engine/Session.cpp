@@ -606,8 +606,10 @@ void Session::placeShape(const RayHit& hit, ItemStack& held, int x, int y, int z
     styledSound(soundMaterial(place) == SoundMat::Stone ? Sound::PlaceStone : Sound::Place, place);  // 2.0.0: by the block
 }
 
-void Session::giveItem(const ItemStack& stack) {
-    if (stack.empty()) return;
+void Session::giveItem(const ItemStack& given) {
+    if (given.empty()) return;
+    ItemStack stack = given;
+    stack.id = withoutIron(stack.id);  // 2.9.0: no iron any more
     int left = state_.inventory.add(stack);
     if (left > 0) {
         ItemStack rest = stack;
@@ -4010,6 +4012,13 @@ void Session::travelThroughPortal() {
 // ---------------------------------------------------------------- frame
 
 void Session::update(float dt, double time, float guiW, float guiH, const Settings& settings) {
+    if (kFeatures290) {
+        // 2.9.0: iron is gone: what the player carries and what the open chest holds turns into steel.
+        for (ItemStack& st : state_.inventory.slots) st.id = withoutIron(st.id);
+        if (ChestContents* oc = chest(openChest)) for (ItemStack& st : *oc) st.id = withoutIron(st.id);
+        if (hasChest2)
+            if (ChestContents* oc2 = chest(openChest2)) for (ItemStack& st : *oc2) st.id = withoutIron(st.id);
+    }
     journalTick(dt);
     announceTick(dt);
     if (kFeatures250 && world_ == &overworld_ && (int)(time * 2) != (int)((time - dt) * 2)) {

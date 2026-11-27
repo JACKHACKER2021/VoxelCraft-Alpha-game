@@ -83,7 +83,7 @@ struct StructureSeed {
 const StructureSeed* structureSeeds(int& count);  // only the ones this edition has
 
 // 2.5.0 preview build 5: developer-only test maps (flat worlds laid out from fixed coordinates).
-constexpr int kDevMaps = 6;
+constexpr int kDevMaps = kFeatures290 ? 7 : 6;  // 2.9.0: the VoxelSoftworks seat (HQ and the developer's house)
 const char* devMapName(int map);              // Czech, for tr(); 0 = none
 int devMapSpawn(int map, int& x, int& z);     // the spawn of the map; returns the ground's height
 // The developer structures (they stand in the test world of structures and the metro lab).

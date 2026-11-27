@@ -15,6 +15,11 @@ inline bool isItemOnly(ItemId id) {
 inline bool isPlaceable(ItemId id) { return id != AIR && !isItemOnly(id); }
 
 const char* itemName(ItemId id);
+// 2.9.0 preview (on the way to 3.0.0): iron things leave the game. Iron ore is still found and smelted, but an
+// iron ingot only goes with coal into steel mix (smelted to steel). Iron tools become steel ones; the iron door
+// is called the steel door. The id itself otherwise.
+ItemId withoutIron(ItemId id);
+inline bool isIronThing(ItemId id) { return withoutIron(id) != id; }
 // Stable English keys used in JSON files ("stone", "oak_log", ...).
 const char* itemKey(ItemId id);
 ItemId itemFromKey(const std::string& key);  // AIR when unknown

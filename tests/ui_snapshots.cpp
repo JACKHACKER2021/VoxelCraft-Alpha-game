@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdio>
 #include <filesystem>
+#include <fstream>
 #include <string>
 #include <vector>
 #include <thread>
@@ -98,6 +99,8 @@ int main(int argc, char** argv) {
     fs::path data = fs::temp_directory_path() / "vc_snapshots";
     fs::remove_all(data);
     fs::create_directories(data);
+
+    std::filesystem::create_directories(data), std::ofstream((data / "welcome_3.0.0").string()) << "3.0.0\n";  // 3.0.0: the welcome was seen
 
     Game game(data.string());
 

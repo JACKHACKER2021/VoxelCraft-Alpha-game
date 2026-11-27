@@ -516,7 +516,10 @@ void World::generateOverworld(Chunk& c) {
     }
     if (config_.generation >= 4 && config_.overworld.caves) decorateCaves(c, cols);
     uint32_t salt = 0xC0A1u;
-    for (const OreDef& ore : config_.overworld.ores) placeOres(c, ore, salt += 0x9E37u);
+    for (const OreDef& ore : config_.overworld.ores) {
+        salt += 0x9E37u;
+        placeOres(c, ore, salt);
+    }
     if (config_.generation >= 4) {
         // Hardium: small, rare veins, only in deepstone.
         OreDef hardium;
