@@ -3,6 +3,8 @@
 #include <cctype>
 
 #include "Lang.h"
+#include "Json.h"
+#include <cstdio>
 
 #include <algorithm>
 #include <cmath>
@@ -520,6 +522,67 @@ bool Ui::slider(float x, float y, float w, float h, const std::string& label, fl
     button(kx, y, 8, h, "", true);
     textCentered(x + w / 2, y + (h - 8) / 2, label, {0.88f, 0.88f, 0.88f, 1});
     return changed;
+}
+
+
+// 2.8.0 preview: themes. The menu colours by name, as theme/theme.json of a pack holds them ([r, g, b, a], 0..1).
+namespace {
+struct ThemeColor {
+    const char* key;
+    Color* color;
+};
+const ThemeColor kThemeColors[] = {
+    {"accent", &theme::kAccent},
+    {"backdrop", &theme::kBackdrop},
+    {"border", &theme::kBorder},
+    {"border_dark", &theme::kBorderDark},
+    {"button", &theme::kButton},
+    {"button_down", &theme::kButtonDown},
+    {"code", &theme::kCode},
+    {"error", &theme::kError},
+    {"field", &theme::kField},
+    {"gold", &theme::kGold},
+    {"green", &theme::kGreen},
+    {"green_border", &theme::kGreenBorder},
+    {"green_down", &theme::kGreenDown},
+    {"panel", &theme::kPanel},
+    {"panel_inner", &theme::kPanelInner},
+    {"separator", &theme::kSeparator},
+    {"text", &theme::kText},
+    {"text_bright", &theme::kTextBright},
+    {"text_dim", &theme::kTextDim},
+    {"title", &theme::kTitle}};
+}  // namespace
+
+bool theme::applyTheme(const std::string& json, std::string* error) {
+    Json doc;
+    std::string err;
+    if (!Json::parse(json, doc, err) || !doc.isObject()) {
+        if (error) *error = err.empty() ? "theme.json" : err;
+        return false;
+    }
+    const Json& c = doc["colors"].isObject() ? doc["colors"] : doc;
+    for (const ThemeColor& t : kThemeColors) {
+        const Json& v = c[t.key];
+        if (!v.isArray() || v.size() < 3) continue;
+        t.color->r = std::clamp((float)v[0].num(t.color->r), 0.0f, 1.0f);
+        t.color->g = std::clamp((float)v[1].num(t.color->g), 0.0f, 1.0f);
+        t.color->b = std::clamp((float)v[2].num(t.color->b), 0.0f, 1.0f);
+        t.color->a = std::clamp((float)v[3].num(t.color->a), 0.0f, 1.0f);
+    }
+    return true;
+}
+
+std::string theme::themeJson() {
+    std::string out = "{\n  \"name\": \"VoxelCraft\",\n  \"colors\": {\n";
+    char b[160];
+    for (size_t i = 0; i < sizeof(kThemeColors) / sizeof(kThemeColors[0]); ++i) {
+        const Color& c = *kThemeColors[i].color;
+        std::snprintf(b, sizeof b, "    \"%s\": [%.3f, %.3f, %.3f, %.3f]%s\n", kThemeColors[i].key, c.r, c.g, c.b, c.a,
+                      i + 1 < sizeof(kThemeColors) / sizeof(kThemeColors[0]) ? "," : "");
+        out += b;
+    }
+    return out + "  }\n}\n";
 }
 
 }  // namespace vc

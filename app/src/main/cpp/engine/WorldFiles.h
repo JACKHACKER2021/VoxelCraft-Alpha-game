@@ -18,6 +18,7 @@ bool restoreBackup(const std::string& worldFolder, const std::string& backupDir,
 // binary) go in as readable text (.vct, see regionToText) and come back as .vcr on import; older
 // files (plain .vcr inside) and the sealed files of 2.6.0 preview build 6 are still read.
 bool exportWorld(const std::string& worldFolder, const std::string& file, std::string& error);
+bool exportFolderZip(const std::string& folder, const std::string& file, std::string& error);  // 2.8.0: a .vcaddon
 // Unpacks a .vcworld made by exportWorld into a new folder under `worldsRoot`.
 bool importWorld(const std::string& file, const std::string& worldsRoot, std::string& folder, std::string& error);
 // 2.6.0: a region file (.vcr) as readable text and back.

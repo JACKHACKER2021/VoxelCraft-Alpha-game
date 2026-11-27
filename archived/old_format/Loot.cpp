@@ -1,0 +1,287 @@
+#include "Loot.h"
+
+#include <sstream>
+
+#include "Json.h"
+#include "VcData.h"
+
+#include <vector>
+
+namespace vc {
+
+namespace {
+
+using LootEntry = VcLootEntry;  // 2.8.0: the same as vc/loot.json holds
+
+// Loot tables: a few rolls of weighted entries per chest.
+const std::vector<LootEntry>& table(ItemId chest, int& rollsMin, int& rollsMax) {
+    static const std::vector<LootEntry> kRuin = {
+        {APPLE, 10, 1, 3},      {STICK, 10, 2, 6},         {COAL, 8, 2, 5},         {IRON_INGOT, 5, 1, 3},
+        {BRONZE_INGOT, 4, 1, 2}, {WOOD_PICKAXE, 3, 1, 1},  {STONE_AXE, 3, 1, 1},    {WOOL, 4, 1, 3},
+        {OAK_DOOR_ITEM, 2, 1, 1}, {FLINT_AND_STEEL, 2, 1, 1}, {armorItem(0, 0), 2, 1, 1}, {armorItem(1, 3), 2, 1, 1},
+    };
+    static const std::vector<LootEntry> kShip = {
+        {IRON_INGOT, 8, 1, 4},  {BRONZE_INGOT, 8, 1, 4}, {COAL, 8, 2, 8},           {PLANKS, 8, 4, 12},
+        {APPLE, 6, 1, 4},       {STEEL_INGOT, 3, 1, 2},  {RUBY, 2, 1, 2},           {BOAT, 2, 1, 1},
+        {armorItem(2, 1), 2, 1, 1}, {armorItem(2, 0), 2, 1, 1}, {CHEST, 1, 1, 1},
+    };
+    static const std::vector<LootEntry> kDungeon = {
+        {IRON_INGOT, 8, 2, 5},  {STEEL_INGOT, 5, 1, 3},  {RUBY, 3, 1, 3},           {APPLE, 6, 1, 3},
+        {FLINT_AND_STEEL, 3, 1, 1}, {armorItem(3, 0), 2, 1, 1}, {armorItem(3, 2), 2, 1, 1}, {armorItem(2, 1), 3, 1, 1},
+        {STEEL_PICKAXE, 2, 1, 1}, {POWERSTONE_LIGHT, 4, 1, 4},  {OBSIDIAN, 3, 1, 3},
+    };
+    static const std::vector<LootEntry> kMine = {
+        {COAL, 10, 3, 9},       {IRON_ORE, 6, 1, 5},     {BRONZE_INGOT, 6, 1, 4},  {STEEL_INGOT, 3, 1, 3},
+        {RUBY, 2, 1, 2},        {STONE_PICKAXE, 3, 1, 1}, {IRON_PICKAXE, 2, 1, 1}, {BRONZE_SHOVEL, 2, 1, 1},
+        {FENCE, 4, 2, 6},       {PLANKS, 5, 3, 10},      {APPLE, 4, 1, 3},
+    };
+    // The Nether fortress: lots of loot, the best metals and the key to the Crimson Void.
+    static const std::vector<LootEntry> kFortress = {
+        {RUBY, 8, 1, 4},          {STEEL_INGOT, 8, 2, 5},     {BRONZE_INGOT, 6, 2, 6},   {IRON_INGOT, 6, 2, 6},
+        {POWERSTONE_LIGHT, 6, 2, 8},     {OBSIDIAN, 5, 2, 6},        {NETHER_BRICK, 5, 4, 12},  {COOKED_PORK, 6, 2, 5},
+        {RUBY_BLOCK, 2, 1, 1},    {STEEL_BLOCK, 2, 1, 2},     {RUBY_PICKAXE, 2, 1, 1},   {STEEL_AXE, 2, 1, 1},
+        {armorItem(4, 1), 2, 1, 1}, {armorItem(4, 0), 2, 1, 1}, {armorItem(3, 2), 3, 1, 1}, {armorItem(3, 3), 3, 1, 1},
+        {VOID_FLINT_AND_STEEL, 3, 1, 1}, {FLINT_AND_STEEL, 3, 1, 1}, {BED_ITEM, 2, 1, 1},
+    };
+    // 1.2.0: the Crimson Void (with the arena compass), desert temples, igloos and watchtowers.
+    static const std::vector<LootEntry> kVoid = {
+        {RUBY, 8, 2, 6},         {STEEL_INGOT, 6, 2, 5},   {VOID_STONE_BRICKS, 5, 4, 12}, {EYE_LOG, 4, 1, 3},
+        {RUBY_SWORD, 2, 1, 1},   {STEEL_SWORD, 3, 1, 1},   {armorItem(4, 2), 2, 1, 1},    {armorItem(4, 3), 2, 1, 1},
+        {POWERSTONE_DUST, 5, 3, 9}, {TNT, 3, 1, 3},        {COOKED_MUTTON, 5, 2, 5},      {BOSS_COMPASS, 3, 1, 1},
+    };
+    static const std::vector<LootEntry> kTemple = {
+        {RUBY, 5, 1, 3},         {BRONZE_INGOT, 8, 2, 6},  {SANDSTONE, 6, 4, 12},         {TNT, 5, 1, 4},
+        {IRON_SWORD, 3, 1, 1},   {BRONZE_SWORD, 3, 1, 1},  {APPLE, 6, 1, 4},              {POWERSTONE_DUST, 5, 2, 6},
+        {armorItem(2, 0), 2, 1, 1}, {BUCKET, 3, 1, 1},
+    };
+    static const std::vector<LootEntry> kIgloo = {
+        {COOKED_PORK, 8, 2, 5},  {COOKED_MUTTON, 8, 2, 5}, {APPLE, 6, 2, 5},              {SNOW_BLOCK, 5, 2, 8},
+        {ICE, 4, 1, 4},          {PINE_SAPLING, 5, 1, 3},  {WOOL, 4, 2, 5},               {IRON_INGOT, 3, 1, 3},
+        {CANDY_CANE, 3, 1, 3},
+    };
+    static const std::vector<LootEntry> kTower = {
+        {IRON_INGOT, 6, 1, 4},   {STONE_SWORD, 4, 1, 1},   {IRON_SWORD, 3, 1, 1},         {armorItem(1, 1), 3, 1, 1},
+        {armorItem(2, 3), 3, 1, 1}, {COOKED_PORK, 6, 1, 4}, {OAK_SAPLING, 5, 1, 3},       {BUCKET, 2, 1, 1},
+        {SPRUCE_PLANKS, 5, 4, 10},
+    };
+    // 1.5.0: the forgotten kingdom. Relics, coins and pages of its story; the portal ruins
+    // always hold the compass to a fortress (added below).
+    static const std::vector<LootEntry> kForgotten = {
+        {POWERSTONE_DUST, 8, 2, 6}, {ANCIENT_COIN, 8, 1, 4},      {POTTERY_SHARD, 6, 1, 3},   {POWERSTONE_BRICKS, 5, 4, 10},
+        {POWERSTONE_LAMP, 3, 1, 2}, {BRUSHER, 3, 1, 1},          {POWERSTONE_RELIC, 2, 1, 1}, {BREAD, 5, 1, 3},
+        {IRON_INGOT, 4, 1, 3},      {SKELETON_HEAD, 2, 1, 1},    {POWERSTONE_CHIP, 3, 1, 2},
+    };
+    static const std::vector<LootEntry> kDrowned = {
+        {ANCIENT_COIN, 8, 2, 6},    {IRON_INGOT, 6, 1, 4},       {BRONZE_INGOT, 6, 1, 4},    {POTTERY_SHARD, 6, 1, 3},
+        {SKELETON_HEAD, 3, 1, 1},   {RUBY, 3, 1, 2},             {POWERSTONE_RELIC, 2, 1, 1}, {BRUSHER, 2, 1, 1},
+        {POWERSTONE_DUST, 4, 1, 4},
+    };
+    static const std::vector<LootEntry> kPortalRuin = {
+        {OBSIDIAN, 8, 1, 4},        {FLINT_AND_STEEL, 4, 1, 1},  {POWERSTONE_DUST, 6, 2, 5}, {ANCIENT_COIN, 5, 1, 3},
+        {IRON_INGOT, 5, 1, 3},      {NETHER_BRICK, 4, 2, 6},     {COOKED_PORK, 4, 1, 3},     {CRACKED_POWERSTONE_BRICKS, 4, 2, 6},
+    };
+    // 1.7.2 build 3: travellers' camps: food, wool, dyes, a little iron.
+    static const std::vector<LootEntry> kCamp = {
+        {BREAD, 8, 1, 4},           {COOKED_MUTTON, 6, 1, 3},    {APPLE, 6, 1, 4},           {TORCH, 6, 2, 8},
+        {STICK, 5, 2, 6},           {IRON_INGOT, 3, 1, 2},       {GRAY_SAPLING, 4, 1, 3},    {DYE + 1, 4, 1, 4},
+        {DYE + 14, 4, 1, 4},        {DYE + 4, 4, 1, 4},          {CARPET + 1, 3, 1, 3},      {EXPLORER_MAP, 1, 1, 1},
+    };
+    // 1.7.2 build 3: the Crimson Void Expansion.
+    static const std::vector<LootEntry> kShrine = {
+        {CRIMSONIUM, 6, 1, 3},      {VOID_SHARD, 8, 2, 6},       {RUBY, 4, 1, 2},            {CRIMSONIUM_PLANKS, 5, 4, 10},
+        {COOKED_PORK, 5, 1, 3},     {EYE_LOG, 2, 1, 2},          {DYE + 14, 4, 2, 5},        {STEEL_INGOT, 3, 1, 3},
+    };
+    static const std::vector<LootEntry> kChamber = {
+        {VOID_SHARD, 10, 3, 8},     {CRIMSONIUM, 4, 1, 2},       {RUBY, 5, 1, 3},            {ANCIENT_COIN, 6, 2, 5},
+        {DARK_SANDSTONE, 5, 4, 10}, {POWERSTONE_RELIC, 2, 1, 1}, {HARDIUM, 2, 1, 2},         {DYE + 10, 4, 2, 5},
+    };
+    // 2.3.0: the Bronze Halls deep under the Overworld: bronze in every shape, and the rare deep metals.
+    static const std::vector<LootEntry> kBronzeHalls = {
+        {BRONZE_INGOT, 10, 3, 8}, {BRONZE_BLOCK, 4, 1, 3},    {CUT_BRONZE, 5, 4, 10},      {CHISELED_BRONZE, 4, 2, 6},
+        {BRONZE_GRATE, 4, 2, 6},  {BRONZE_BULB, 3, 1, 3},     {BRONZE_DOOR_ITEM, 2, 1, 2}, {HONEY_BALL, 4, 1, 4},
+        {STEEL_INGOT, 6, 2, 5},   {RUBY, 4, 1, 3},            {HARDIUM, 3, 1, 3},          {BRONZE_PICKAXE, 2, 1, 1},
+        {STEEL_SWORD, 2, 1, 1},   {armorItem(2, 1), 2, 1, 1}, {RUBY_BLOCK, 1, 1, 1},
+    };
+    // 2.4.0: a ruined station: railway parts left behind, now and then a whole subway car.
+    static const std::vector<LootEntry> kStation = {
+        {RAIL_NS, 10, 4, 12},     {TRACK_BED, 8, 3, 8},        {PLATFORM, 6, 2, 6},         {LATTICE, 6, 2, 6},
+        {STEEL_INGOT, 6, 2, 5},   {IRON_INGOT, 6, 2, 6},       {RAIL_CROSS, 2, 1, 1},       {BUFFER_STOP, 2, 1, 1},
+        {TRAIN_BOOSTER, 2, 1, 2}, {SUBWAY_CAR, 1, 1, 1},       {SUBWAY_LOCOMOTIVE, 1, 1, 1}, {BREAD, 4, 1, 3},
+    };
+    // 2.5.0: the abandoned subway: tools of its workers and parts of its trains.
+    static const std::vector<LootEntry> kMetro = {
+        {RAIL_NS, 8, 4, 12},          {TRACK_BED, 6, 3, 8},     {PLATFORM, 5, 2, 6},        {LATTICE, 5, 2, 6},
+        {STEEL_INGOT, 6, 2, 6},       {POWERSTONE_LIGHT, 4, 1, 3}, {TORCH, 6, 4, 12},       {STEEL_PICKAXE, 2, 1, 1},
+        {SUBWAY_CAR, 2, 1, 1},        {SUBWAY_LOCOMOTIVE, 2, 1, 1}, {RAIL_CROSS, 2, 1, 1},  {BREAD, 3, 1, 3},
+    };
+    switch (chest) {
+        case LOOT_CHEST_BRONZE: rollsMin = 5; rollsMax = 9; return kBronzeHalls;
+        case LOOT_CHEST_STATION: rollsMin = 4; rollsMax = 7; return kStation;
+        case LOOT_CHEST_METRO: rollsMin = 5; rollsMax = 8; return kMetro;
+        case LOOT_CHEST_SHRINE: rollsMin = 4; rollsMax = 7; return kShrine;
+        case LOOT_CHEST_CHAMBER: rollsMin = 5; rollsMax = 9; return kChamber;
+        case LOOT_BARREL_CAMP: rollsMin = 3; rollsMax = 6; return kCamp;
+        case LOOT_CHEST_FORGOTTEN: rollsMin = 4; rollsMax = 8; return kForgotten;
+        case LOOT_CHEST_DROWNED: rollsMin = 4; rollsMax = 7; return kDrowned;
+        case LOOT_CHEST_PORTAL: rollsMin = 4; rollsMax = 7; return kPortalRuin;
+        case LOOT_CHEST_VOID: rollsMin = 5; rollsMax = 9; return kVoid;
+        case LOOT_CHEST_TEMPLE: rollsMin = 4; rollsMax = 8; return kTemple;
+        case LOOT_CHEST_IGLOO: rollsMin = 3; rollsMax = 6; return kIgloo;
+        case LOOT_CHEST_TOWER: rollsMin = 3; rollsMax = 6; return kTower;
+        case LOOT_CHEST_FORTRESS: rollsMin = 6; rollsMax = 11; return kFortress;
+        case LOOT_CHEST_SHIP: rollsMin = 4; rollsMax = 8; return kShip;
+        case LOOT_CHEST_DUNGEON: rollsMin = 3; rollsMax = 7; return kDungeon;
+        case LOOT_CHEST_MINE: rollsMin = 3; rollsMax = 6; return kMine;
+        default: rollsMin = 3; rollsMax = 6; return kRuin;
+    }
+}
+
+}  // namespace
+
+ChestContents generateLoot(ItemId chestBlock, uint32_t seed) {
+    ChestContents out{};
+    uint32_t r = seed * 2654435761u + 0x9E3779B9u;
+    auto rnd = [&](int n) {
+        r ^= r << 13;
+        r ^= r >> 17;
+        r ^= r << 5;
+        return (int)(r % (uint32_t)n);
+    };
+    int rollsMin, rollsMax;
+    const std::vector<LootEntry>* tp = &table(chestBlock, rollsMin, rollsMax);
+    if (const VcLootTable* v = vcLoot(chestBlock)) tp = &v->entries, rollsMin = v->rollsMin, rollsMax = v->rollsMax;  // 2.8.0: vc/loot.json
+    const std::vector<LootEntry>& t = *tp;
+    int total = 0;
+    for (const LootEntry& e : t) total += e.weight;
+    const int rolls = rollsMin + rnd(rollsMax - rollsMin + 1);
+    for (int i = 0; i < rolls; ++i) {
+        int pick = rnd(total);
+        const LootEntry* e = &t[0];
+        for (const LootEntry& c : t) {
+            if (pick < c.weight) {
+                e = &c;
+                break;
+            }
+            pick -= c.weight;
+        }
+        int count = std::min(e->minCount + rnd(e->maxCount - e->minCount + 1), maxStack(e->id));
+        if (e->id == VOID_FLINT_AND_STEEL || e->id == BOSS_COMPASS || e->id == BRUSHER) count = 1;
+        // Scattered over the chest like in the classic game; never on top of other loot.
+        for (int tries = 0; tries < 40; ++tries) {
+            ItemStack& slot = out[rnd(kChestSize)];
+            if (slot.empty()) {
+                slot = {e->id, (uint8_t)count, 0};
+                break;
+            }
+        }
+    }
+    // Every other fortress chest holds the void flint and steel for sure.
+    if (chestBlock == LOOT_CHEST_FORTRESS && rnd(2) == 0) {
+        bool has = false;
+        for (const ItemStack& st : out) has |= st.id == VOID_FLINT_AND_STEEL;
+        for (int tries = 0; tries < 60 && !has; ++tries) {
+            ItemStack& slot = out[rnd(kChestSize)];
+            if (slot.empty()) {
+                slot = {VOID_FLINT_AND_STEEL, 1, 0};
+                has = true;
+            }
+        }
+    }
+    // Void chests point the way to the arena often.
+    if (chestBlock == LOOT_CHEST_VOID && rnd(5) < 2) {
+        bool has = false;
+        for (const ItemStack& st : out) has |= st.id == BOSS_COMPASS;
+        for (int tries = 0; tries < 60 && !has; ++tries) {
+            ItemStack& slot = out[rnd(kChestSize)];
+            if (slot.empty()) {
+                slot = {BOSS_COMPASS, 1, 0};
+                has = true;
+            }
+        }
+    }
+    // The story of the forgotten kingdom: a page in every chest of its ruins (and in some
+    // fortress chests), each kind of place holding its own part of the tale.
+    auto put = [&](ItemId id) {
+        for (int tries = 0; tries < 60; ++tries) {
+            ItemStack& slot = out[rnd(kChestSize)];
+            if (slot.empty()) {
+                slot = {id, 1, 0};
+                return;
+            }
+        }
+    };
+    if (chestBlock == LOOT_CHEST_FORGOTTEN) put((ItemId)(OLD_DOCUMENT + rnd(4)));          // pages I-IV
+    if (chestBlock == LOOT_CHEST_PORTAL) put((ItemId)(OLD_DOCUMENT + 3 + rnd(3)));         // IV-VI
+    if (chestBlock == LOOT_CHEST_DROWNED) put((ItemId)(OLD_DOCUMENT + 5 + rnd(3)));        // VI-VIII
+    if (chestBlock == LOOT_CHEST_FORTRESS && rnd(3) == 0) put((ItemId)(OLD_DOCUMENT + 5 + rnd(2)));
+    // 2.5.0: the dead explorer left a page of his journal in every kind of place he passed.
+    if (kFeatures250) {
+        int page = -1;
+        switch (chestBlock) {
+            case LOOT_CHEST_RUIN: page = 0; break;
+            case LOOT_CHEST_SHIP: page = 1; break;
+            case LOOT_CHEST_DUNGEON: page = 2; break;
+            case LOOT_CHEST_MINE: page = 3; break;
+            case LOOT_CHEST_TEMPLE: page = 4; break;
+            case LOOT_CHEST_IGLOO: page = 5; break;
+            case LOOT_CHEST_TOWER: page = 6; break;
+            case LOOT_BARREL_CAMP: page = 7; break;
+            case LOOT_CHEST_STATION: page = 8; break;
+            case LOOT_CHEST_BRONZE: page = 9; break;
+            case LOOT_CHEST_FORTRESS: page = 10; break;
+            case LOOT_CHEST_METRO: page = 11; break;
+            default: break;
+        }
+        if (page >= 0) put((ItemId)(JOURNAL + page));
+    }
+    // Broken portal ruins: the compass that finds a Nether fortress, always.
+    if (chestBlock == LOOT_CHEST_PORTAL) put(FORTRESS_COMPASS);
+    return out;
+}
+
+ItemStack archaeologyFind(uint32_t seed) {
+    uint32_t r = seed * 2654435761u + 0x51ED2Bu;
+    r ^= r << 13;
+    r ^= r >> 17;
+    r ^= r << 5;
+    const int roll = (int)(r % 100), extra = (int)((r >> 8) % 8);
+    if (roll < 10) return {SKELETON_HEAD, 1, 0};
+    if (roll < 35) return {ANCIENT_COIN, (uint8_t)(1 + extra % 3), 0};
+    if (roll < 55) return {POTTERY_SHARD, 1, 0};
+    if (roll < 70) return {(ItemId)(OLD_DOCUMENT + extra), 1, 0};
+    if (roll < 75) return {POWERSTONE_RELIC, 1, 0};
+    if (roll < 90) return {POWERSTONE_DUST, (uint8_t)(1 + extra % 4), 0};
+    return {FLINT, 1, 0};
+}
+
+std::string exportVcLoot() {
+    // Every chest with its table, written with the code's values.
+    static const ItemId kChests[] = {LOOT_CHEST_RUIN, LOOT_CHEST_SHIP, LOOT_CHEST_DUNGEON, LOOT_CHEST_MINE, LOOT_CHEST_FORTRESS, LOOT_CHEST_VOID,
+                                     LOOT_CHEST_TEMPLE, LOOT_CHEST_IGLOO, LOOT_CHEST_TOWER, LOOT_CHEST_FORGOTTEN, LOOT_CHEST_DROWNED, LOOT_CHEST_PORTAL,
+                                     LOOT_BARREL_CAMP, LOOT_CHEST_SHRINE, LOOT_CHEST_CHAMBER, LOOT_CHEST_BRONZE, LOOT_CHEST_STATION, LOOT_CHEST_METRO};
+    std::ostringstream o;
+    o << "{\"format\": \"vc:loot\", \"version\": \"2.8.0\",\n \"chests\": {\n";
+    bool first = true;
+    for (ItemId c : kChests) {
+        int lo, hi;
+        const std::vector<LootEntry>& t = table(c, lo, hi);
+        Json chest = Json::object(), rolls = Json::array(), list = Json::array();
+        rolls.push(Json::number(lo)), rolls.push(Json::number(hi));
+        for (const LootEntry& e : t) {
+            Json j = Json::object(), count = Json::array();
+            j.set("item", Json::string(vcKey(e.id)));
+            j.set("weight", Json::number(e.weight));
+            count.push(Json::number(e.minCount)), count.push(Json::number(e.maxCount));
+            j.set("count", count);
+            list.push(j);
+        }
+        chest.set("rolls", rolls);
+        chest.set("entries", list);
+        o << (first ? "  \"" : ",\n  \"") << vcKey(c) << "\": " << chest.dump();
+        first = false;
+    }
+    o << "\n }}\n";
+    return o.str();
+}
+
+}  // namespace vc

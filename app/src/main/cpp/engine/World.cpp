@@ -1769,14 +1769,16 @@ int World::cornerBiomeAt(int x, int z) const {
     if (!kFeatures220 || dim_ != Dimension::Nether || config_.nether.fill != NETHERRACK || wastelandAt(x, z)) return 0;
     const float a = humidity_.perlin2(x / 170.0f + 1300, z / 170.0f - 900);
     const float b = humidity_.perlin2(x / 170.0f - 700, z / 170.0f + 500);
-    if (a > 0.18f) return 1;
-    if (a < -0.22f) return 2;
-    if (b > 0.2f) return 3;
+    const NetherDef& n = config_.nether;  // 2.8.0: on/off and where each starts, from cornerstone.json
+    if (n.biomeOn[1] && a > n.biomeNoise[1]) return 1;
+    if (n.biomeOn[2] && a < n.biomeNoise[2]) return 2;
+    if (n.biomeOn[3] && b > n.biomeNoise[3]) return 3;
     return 0;
 }
 
 bool World::wastelandAt(int x, int z) const {
-    return dim_ == Dimension::Nether && config_.nether.fill == NETHERRACK && humidity_.perlin2(x / 150.0f + 400, z / 150.0f - 200) > 0.12f;
+    return dim_ == Dimension::Nether && config_.nether.fill == NETHERRACK && config_.nether.biomeOn[4] &&
+           humidity_.perlin2(x / 150.0f + 400, z / 150.0f - 200) > config_.nether.biomeNoise[4];
 }
 
 bool World::forgottenVillageIn(int rx, int rz, int& cx, int& cy, int& cz) const {
@@ -1793,7 +1795,9 @@ bool World::forgottenVillageIn(int rx, int rz, int& cx, int& cy, int& cz) const 
 
 // ---------------------------------------------------------------- 1.1.0 lands
 
-bool World::netherGrassAt(int x, int z) const { return temperature_.perlin2(x / 96.0f, z / 96.0f) > 0.05f; }
+bool World::netherGrassAt(int x, int z) const {
+    return config_.nether.biomeOn[5] && temperature_.perlin2(x / 96.0f, z / 96.0f) > config_.nether.biomeNoise[5];
+}
 
 bool World::crimsonShaftIn(int rx, int rz, int& ox, int& oy, int& oz) const {
     if (dim_ != Dimension::Nether || !config_.overworld.structures || config_.generation < 2) return false;
@@ -1907,8 +1911,8 @@ int World::voidHeight(int x, int z) const {
 std::string World::placeName(int x, int z) const {
     switch (dim_) {
         case Dimension::Nether:
-            if (const int cb = cornerBiomeAt(x, z)) return cb == 1 ? "Zlatavý lom" : cb == 2 ? "Prizmatické pobřeží" : "Zarostlý monolit";
-            return wastelandAt(x, z) ? "Powerstonová pustina" : netherGrassAt(x, z) ? "Louka úhelného kamene" : "Dimenze úhelného kamene";
+            if (const int cb = cornerBiomeAt(x, z)) return config_.nether.biomeName[cb];
+            return config_.nether.biomeName[wastelandAt(x, z) ? 4 : netherGrassAt(x, z) ? 5 : 0];
         case Dimension::Celestial: return "Nebeská říše";
         case Dimension::Void:
             switch (voidBiomeAt(x, z)) {

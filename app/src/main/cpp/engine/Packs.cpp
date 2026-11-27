@@ -1,4 +1,9 @@
 #include "Packs.h"
+#include "Blocks.h"
+#include "Ui.h"
+#include "Shaders.h"
+#include "Png.h"
+#include "TexturePack.h"
 
 #include <algorithm>
 #include <cctype>
@@ -77,6 +82,7 @@ void PackManager::ensureDefaultPack() {
 }
 )");
     const fs::path dir = fs::path(root_) / "default";
+    writeDefaultResources(dir.string());
     if (!fs::exists(dir / "manifest.json")) {
         resetDefaultPack();
         return;
@@ -116,6 +122,42 @@ void PackManager::ensureDefaultPack() {
             writeText(dir / "dimensions" / "overworld.json", overworld.dump() + "\n");
         }
     }
+}
+
+// 2.8.0 preview: the default pack holds the game's own resources too, so they can be exported, edited and
+// brought back as an add-on: every texture (textures/blocks, textures/items), the shader numbers and the
+// shaders (shaders/), the menu colours (theme/theme.json). Written once per version.
+void PackManager::writeDefaultResources(const std::string& dir) {
+    if (!kFeatures280) return;
+    const fs::path d(dir), marker = d / "textures" / ".vc_2.8.0";
+    if (fs::exists(marker)) return;
+    int size = 0;
+    const std::vector<uint8_t> atlas = buildFallbackAtlas(size);
+    const int t = size / kAtlasCols;
+    for (int tile = 0; tile < T_COUNT; ++tile) {
+        const std::string rel = tileFilePath(tile);
+        if (rel.empty()) continue;
+        const fs::path file = d / "textures" / rel;
+        if (fs::exists(file)) continue;  // the first tile of a name wins, as the loader reads it
+        std::error_code ec;
+        fs::create_directories(file.parent_path(), ec);
+        std::vector<uint8_t> px((size_t)t * t * 4);
+        for (int y = 0; y < t; ++y)
+            std::copy_n(&atlas[((size_t)((tile / kAtlasCols) * t + y) * size + (tile % kAtlasCols) * t) * 4], (size_t)t * 4, &px[(size_t)y * t * 4]);
+        writePng(file.string(), t, t, px);
+    }
+    writeText(d / "shaders" / "shader.json", shaderProfileJson(ShaderProfile{}));
+    writeText(d / "shaders" / "world.fsh.example", kVibrantWorldFs);
+    writeText(d / "shaders" / "classic_world.fsh.example", kClassicWorldFs);
+    writeText(d / "shaders" / "README.txt", kShaderPackGuide);
+    writeText(d / "theme" / "theme.json", theme::themeJson());
+    writeText(d / "README_RESOURCES.txt",
+              "VoxelCraft: the game's own textures, shaders and menu colours.\n"
+              "Export this add-on (.vcaddon), change what you like, and import it back as your own resource pack.\n"
+              "textures/blocks, textures/items: 16 x 16 PNG per block or item (bigger works too)\n"
+              "shaders/shader.json: the Vibrant shader's numbers; world.fsh.example: rename to world.fsh to write your own\n"
+              "theme/theme.json: the colours of the menus [r, g, b, a]\n");
+    writeText(marker, "2.8.0\n");
 }
 
 void PackManager::resetDefaultPack() {
@@ -244,7 +286,8 @@ GenConfig PackManager::buildConfig(std::vector<std::string>* w) const {
     for (const std::string& id : enabledOrder()) {
         fs::path dir = fs::path(root_) / id;
         if (!fs::exists(dir)) continue;
-        for (const char* dim : {"overworld", "nether"}) {
+        // 2.8.0: cornerstone.json is the nether's new name; a pack's own nether.json (older packs) still wins over it.
+        for (const char* dim : {"overworld", "cornerstone", "nether"}) {
             fs::path f = dir / "dimensions" / (std::string(dim) + ".json");
             Json j;
             if (!fs::exists(f) || !parseFile(f, j, w, id + "/dimensions/" + dim + ".json")) continue;
@@ -291,13 +334,15 @@ RecipeBook PackManager::buildRecipes(std::vector<std::string>* w) const {
 std::string PackManager::shaderPackDir() const {
     std::string out;
     for (const std::string& id : enabledOrder())
-        if (fs::is_directory(fs::path(root_) / id / "shaders")) out = (fs::path(root_) / id).string();
+        if (id != "default" && fs::is_directory(fs::path(root_) / id / "shaders"))  // 2.8.0: the default's are the game's own
+            out = (fs::path(root_) / id).string();
     return out;
 }
 
 std::vector<std::string> PackManager::textureDirs() const {
     std::vector<std::string> out;
     for (const std::string& id : enabledOrder()) {
+        if (id == "default") continue;  // 2.8.0: the default pack's textures are the game's own (to copy and edit)
         fs::path t = fs::path(root_) / id / "textures";
         if (fs::is_directory(t)) out.push_back(t.string());
     }

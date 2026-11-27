@@ -639,7 +639,14 @@ static int testJsonAndPacks() {
     auto list = pm.list();
     CHECK(list.size() == 2 && list[0].builtin && list[0].enabled && list[0].name == "VoxelCraft Default" &&
           list[1].name == "Pre-Alpha Style" && !list[1].enabled && list[1].style == "pre_alpha");
-    CHECK(pm.files("default").size() == (kFeatures250 ? 31u : 30u) + (kFeatures260 ? 1u : 0u) + (kFeatures270 ? 1u : 0u) + (kFeatures280 ? 1u : 0u) && pm.files("default")[0] == "manifest.json");
+    CHECK(pm.files("default").size() == (kFeatures250 ? 31u : 30u) + (kFeatures260 ? 1u : 0u) + (kFeatures270 ? 1u : 0u) + (kFeatures280 ? 3u : 0u) && pm.files("default")[0] == "manifest.json");
+    if (kFeatures280) {
+        // 2.8.0: the Cornerstone Dimension's file (with its biomes) instead of nether.json; the game's own resources.
+        const auto df = pm.files("default");
+        CHECK(std::count(df.begin(), df.end(), "dimensions/cornerstone.json") == 1 && std::count(df.begin(), df.end(), "dimensions/nether.json") == 0);
+        CHECK(fs::exists(root / "packs/default/textures/blocks/stone.png") && fs::exists(root / "packs/default/theme/theme.json") && fs::exists(root / "packs/default/shaders/shader.json"));
+        CHECK(GenConfig::defaults().nether.biomeName[1] == "Zlatavý lom" && GenConfig::defaults().nether.biomeOn[2]);
+    }
     warn.clear();
     GenConfig cfg = pm.buildConfig(&warn);
     CHECK(warn.empty() && cfg.biomes.size() == 8);

@@ -51,6 +51,36 @@ const char* kNether = R"({
   "fog_color": [0.22, 0.04, 0.03]
 })";
 
+// 2.8.0 preview: the dimension is the Cornerstone Dimension now, with biomes of its own: nether.json became
+// cornerstone.json (nether.json is still read, for packs made before).
+const char* kCornerstone = R"({
+  // Dimenze úhelného kamene (dřív "Nether"): lávové moře, z čeho jsou stěny a podlaha, powerstone, mlha a biomy.
+  "lava_level": 31,
+  "blocks": {
+    "fill": "netherrack",
+    "liquid": "lava",
+    "floor": "nether_grass",
+    "shore": "gravel",
+    "ore": "powerstone_ore",
+    "ceiling": "bedrock"
+  },
+  "floor_amount": 0.25,
+  "ore_chance": 0.01,
+  "glowstone_clusters": 2,
+  "caves": {"scale": 32, "openness": 0.05},
+  "fog_color": [0.22, 0.04, 0.03],
+  // Biomy: "enabled" zapne nebo vypne, "noise" je hranice šumu, od které biom začíná (pobřeží: pod ní).
+  "biomes": [
+    {"id": "cornerstone", "name": "Dimenze úhelného kamene"},
+    {"id": "gilded_quarry", "name": "Zlatavý lom", "enabled": true, "noise": 0.18},
+    {"id": "prismatide_coast", "name": "Prizmatické pobřeží", "enabled": true, "noise": -0.22},
+    {"id": "overgrown_monolith", "name": "Zarostlý monolit", "enabled": true, "noise": 0.2},
+    {"id": "powerstone_wasteland", "name": "Powerstonová pustina", "enabled": true, "noise": 0.12},
+    {"id": "cornerstone_meadow", "name": "Louka úhelného kamene", "enabled": true, "noise": 0.05}
+  ]
+})";
+
+
 // The Nether of 1.0 and 1.1 (soul sand, quartz), replaced if the player never changed it.
 const char* kNetherV1 = R"({
   // Nether: lávové moře, z čeho jsou stěny a podlaha, světlit a mlha.
@@ -874,6 +904,9 @@ BiomeDef parseBiome(const Json& b, std::vector<std::string>* w) {
 
 }  // namespace
 
+const char* const kCornerBiomeIds[NetherDef::kCornerBiomes] = {"cornerstone", "gilded_quarry", "prismatide_coast", "overgrown_monolith",
+                                                               "powerstone_wasteland", "cornerstone_meadow"};
+
 const std::vector<std::pair<std::string, std::string>>& defaultPackFiles() {
     static const std::vector<std::pair<std::string, std::string>> files = [] {
     std::vector<std::pair<std::string, std::string>> f = {
@@ -911,7 +944,10 @@ const std::vector<std::pair<std::string, std::string>>& defaultPackFiles() {
     if (kFeatures250) f.push_back({"recipes/update_2_5_0_preview.json", kUpdate250});
     if (kFeatures260) f.push_back({"recipes/update_2_6_0_preview.json", kUpdate260});
     if (kFeatures270) f.push_back({"recipes/update_2_7_0_preview.json", kUpdate270});  // 2.7.0 preview: wallet
-    if (kFeatures280) f.push_back({"recipes/update_2_8_0_preview.json", kUpdate280});  // 2.8.0 preview: tickets  // 2.6.0 preview  // 2.5.0 preview: the subway network
+    if (kFeatures280) f.push_back({"recipes/update_2_8_0_preview.json", kUpdate280});
+    if (kFeatures280)  // 2.8.0: the Cornerstone Dimension's file, with its biomes, instead of nether.json
+        for (auto& [path, text] : f)
+            if (path == "dimensions/nether.json") path = "dimensions/cornerstone.json", text = kCornerstone;  // 2.8.0 preview: tickets  // 2.6.0 preview  // 2.5.0 preview: the subway network
     return f;
     }();
     return files;
@@ -931,9 +967,11 @@ void addMissingOres(GenConfig& c) {
 }
 
 const std::vector<std::pair<std::string, std::string>>& retiredDefaults() {
-    static const std::vector<std::pair<std::string, std::string>> files = {
-        {"biomes/powerstone_wasteland.json", kWastelandV150},
-    };
+    static const std::vector<std::pair<std::string, std::string>> files = [] {
+        std::vector<std::pair<std::string, std::string>> f = {{"biomes/powerstone_wasteland.json", kWastelandV150}};
+        if (kFeatures280) f.emplace_back("dimensions/nether.json", kNether);  // 2.8.0: cornerstone.json instead, if never changed
+        return f;
+    }();
     return files;
 }
 
@@ -961,7 +999,7 @@ const GenConfig& GenConfig::defaults() {
             Json j;
             if (!Json::parse(text, j, err)) continue;
             if (path == "dimensions/overworld.json") doc.set("overworld", j);
-            else if (path == "dimensions/nether.json") doc.set("nether", j);
+            else if (path == "dimensions/nether.json" || path == "dimensions/cornerstone.json") doc.set("nether", j);
             else if (path.rfind("biomes/", 0) == 0) biomes.push(j);
         }
         doc.set("biomes", biomes);
@@ -1007,6 +1045,15 @@ GenConfig GenConfig::fromJson(const Json& doc, std::vector<std::string>* w) {
     c.nether.caveScale = std::clamp((float)n["caves"]["scale"].num(32), 4.0f, 256.0f);
     c.nether.openness = std::clamp((float)n["caves"]["openness"].num(0.05), -1.0f, 1.0f);
     colorOr(n["fog_color"], c.nether.fog);
+    for (size_t i = 0; i < n["biomes"].size(); ++i) {
+        const Json& b = n["biomes"][i];
+        for (int k = 0; k < NetherDef::kCornerBiomes; ++k) {
+            if (b["id"].str("") != kCornerBiomeIds[k]) continue;
+            c.nether.biomeOn[k] = b["enabled"].boolean(true);
+            c.nether.biomeNoise[k] = std::clamp((float)b["noise"].num(c.nether.biomeNoise[k]), -1.0f, 1.0f);
+            c.nether.biomeName[k] = b["name"].str(c.nether.biomeName[k]);
+        }
+    }
 
     const Json& biomes = doc["biomes"];
     for (size_t i = 0; i < biomes.size(); ++i) c.biomes.push_back(parseBiome(biomes[i], w));
@@ -1065,6 +1112,16 @@ Json GenConfig::toJson() const {
     nc.set("openness", Json::number(nether.openness));
     n.set("caves", nc);
     n.set("fog_color", color(nether.fog));
+    Json cbs = Json::array();
+    for (int k = 0; k < NetherDef::kCornerBiomes; ++k) {
+        Json b = Json::object();
+        b.set("id", Json::string(kCornerBiomeIds[k]));
+        b.set("name", Json::string(nether.biomeName[k]));
+        b.set("enabled", Json::fromBool(nether.biomeOn[k]));
+        b.set("noise", Json::number(nether.biomeNoise[k]));
+        cbs.push(b);
+    }
+    n.set("biomes", cbs);
 
     Json bs = Json::array();
     for (const BiomeDef& d : biomes) {

@@ -87,23 +87,23 @@ The rest of this page (history of every version, how to build) is in Czech.
 
 ---
 
-## 🆕 2.7.0 – Batohy a doplňky
+## 🆕 2.8.0 – VC jazyk
 
-> **2.7.1:** shadery se už nevypnou při načítání světa (hra 20 s počká a měří déle), Galaxy A14 dostane Smoother+.
+Celá hra je teď ve **VC jazyce**: věci, které byly dřív jen v kódu, leží v souborech (`assets/vc`) a doplněk je může přepsat.
 
-- 🎒 **batohy** v šesti úrovních (kůže, ocel, ocelobronz, bronzorubín, hardium, celestium): 9–54 míst, výroba uvnitř, pec od rubínu, nošení na zádech i pod brněním
-- 👛 **peněženka** na 500 věcí, 🦊 **obarvitelný obojek** pro lišáka, 🐄 **kůže** z krav
-- 🧩 nový **správce doplňků**: Bedrock .mcaddon a .mcpack se převedou do VC jazyka, každá chyba je vidět; **Tvůrce** bloků a mobů bez JSON
-- ⚙️ **ocelová směs** ze železa a uhlí, **rezavějící ocel**, 📦 **velká truhla** s 54 místy
-- 🎨 nová vajíčka, maso, šíp, provázek, ingoty a hardiová ruda; betonové **zarážedlo**, otevřená kabina metra
-- 🐢 **Výkon zařízení**: Plný, Smoother+ a Slabé, shadery se samy vypnou, když telefon nestíhá
-- 🛒 **Pre-Alpha Style** v obchodě mezi texturami
+- 🐷 **noví tvorové**: prase, ovce, slepice, kráva a duch s novými modely a obličeji; **všech 26 tvorů jako GLB** (i bossové, sliz, liška s obojkem, nebeské prase a ovce), pohyby přímo v souboru
+- 🧱 **bloky a předměty** (`blocks.json`), 💰 **loot truhel** (`loot.json`), ✨ **shadery** (`shaders/`), 🏰 **stavby** (`.vcstructure`), 🌋 `cornerstone.json` s biomy dimenze úhelného kamene místo `nether.json`
+- 🛠️ **Tvůrce** se vším: bloky (i s vlastním modelem), předměty, moby s tělem kteréhokoli tvora, **modely z kostek s malováním textury**, recepty, shadery a balíček
+- 🎨 výchozí doplněk obsahuje **textury, shadery a téma menu**; každý doplněk jde **exportovat jako .vcaddon**, upravit a nahrát zpět
+- 🎫 **jízdenky a turnikety**, 📢 hlášení „Příští stanice…“, 📓 **deník hráče**, 🏆 deset nových úspěchů
+- 🧟 vylepšený skin Forgotten mana; vánoční a halloweenské věci jen se zapnutým doplňkem
 
-## 🧪 2.8.0 Preview – připravuje se
+Popis formátů: [`app/src/main/assets/vc/README.md`](app/src/main/assets/vc/README.md), plán přestavby: [`docs/VC_JAZYK_PRESTAVBA.pdf`](docs/VC_JAZYK_PRESTAVBA.pdf).
 
-- 📓 deník hráče, 🏆 nové úspěchy
-- 🏚️ opuštěné nádraží s pokladnou a čekárnou, 🔧 depo na opravu a přebarvení vagonů
-- 📢 hlášení „Příští stanice…“, 🎫 jízdenky do metra a úspěch „Cestovatel“
+## 🧪 2.9.0 Preview – připravuje se
+
+- 🏚️ opuštěné nádraží s pokladnou a čekárnou, 🔧 vozovna na opravu a přebarvení vagonů
+- ⚙️ cesta k **3.0.0**: železo odchází ze hry, jeho místo zaujme ocel
 
 
 ## 📥 Import světa z Minecraftu – jak se bloky převedou

@@ -12,7 +12,7 @@ namespace vc {
 // World generation settings, loaded from JSON files in packs:
 //   biomes/<id>.json          one biome each
 //   dimensions/overworld.json sea level, caves, ores
-//   dimensions/nether.json    lava sea, blocks, glowstone, fog
+//   dimensions/nether.json    lava sea, blocks, glowstone, fog (2.8.0 preview: dimensions/cornerstone.json, with its biomes)
 // A copy is stored with every world (generator.json) so editing packs never
 // changes the terrain of worlds that already exist.
 
@@ -59,7 +59,17 @@ struct NetherDef {
     float caveScale = 32;
     float openness = 0.05f;      // bigger = more open caverns
     float fog[3] = {0.22f, 0.04f, 0.03f};
+    // 2.8.0: the Cornerstone Dimension's biomes (dimensions/cornerstone.json, "biomes"): whether each is on,
+    // the noise level where it starts, and its name. 0 the plain dimension, 1 Gilded Quarry, 2 Prismatide Coast,
+    // 3 Overgrown Monolith, 4 Powerstone Wasteland, 5 Cornerstone Meadow.
+    static constexpr int kCornerBiomes = 6;
+    bool biomeOn[kCornerBiomes] = {true, true, true, true, true, true};
+    float biomeNoise[kCornerBiomes] = {0, 0.18f, -0.22f, 0.2f, 0.12f, 0.05f};
+    std::string biomeName[kCornerBiomes] = {"Dimenze úhelného kamene", "Zlatavý lom", "Prizmatické pobřeží", "Zarostlý monolit",
+                                            "Powerstonová pustina", "Louka úhelného kamene"};
 };
+// The ids of the Cornerstone biomes in cornerstone.json, in NetherDef's order.
+extern const char* const kCornerBiomeIds[NetherDef::kCornerBiomes];
 
 struct GenConfig;
 // Worlds made before 1.0 get the bronze, steel and ruby ores they lack.

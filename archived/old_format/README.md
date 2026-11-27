@@ -25,3 +25,8 @@ nebeské prase a ovce), bloky a předměty (`blocks.json`), loot (`loot.json`), 
 (`structures_examples/`, doplněk je nahradí přes `vc/structures/`). Hodnoty v kódu zůstávají jen jako záloha,
 když soubor chybí, a pro normální edici, která se nemění. Generátory staveb v kódu dál tvoří náhodné varianty;
 soubor stavby z doplňku má přednost.
+
+## 2.8.0 (vydání): kopie kódu, ze kterého se VC soubory vyexportovaly
+
+`Loot.cpp`, `Shaders.cpp`, `WorldStructures.cpp`, `GenConfig.cpp` (s `nether.json`), `Items.cpp`: tabulky a funkce,
+jak je hra měla v kódu. Ve hře zůstávají jen jako záloha, když soubor ve VC jazyce chybí.

@@ -223,10 +223,20 @@ bool textToRegion(const std::string& text, std::vector<uint8_t>& vcr) {
     return true;
 }
 
-bool exportWorld(const std::string& worldFolder, const std::string& file, std::string& error) {
+namespace {
+bool zipFolder(const std::string& worldFolder, const std::string& file, std::string& error, bool world);
+}  // namespace
+
+bool exportWorld(const std::string& worldFolder, const std::string& file, std::string& error) { return zipFolder(worldFolder, file, error, true); }
+
+// 2.8.0: an add-on (a pack folder) as a .vcaddon: a plain zip of its files.
+bool exportFolderZip(const std::string& folder, const std::string& file, std::string& error) { return zipFolder(folder, file, error, false); }
+
+namespace {
+bool zipFolder(const std::string& worldFolder, const std::string& file, std::string& error, bool world) {
     std::error_code ec;
     const fs::path root(worldFolder);
-    if (!fs::is_regular_file(root / "level.dat")) {
+    if (world && !fs::is_regular_file(root / "level.dat")) {
         error = "Svět nemá level.dat";
         return false;
     }
@@ -238,7 +248,7 @@ bool exportWorld(const std::string& worldFolder, const std::string& file, std::s
         std::vector<uint8_t> data = readAll(e.path());
         uint32_t method = 0;
         std::vector<uint8_t> stored = data;
-        if (name.size() > 4 && name.compare(name.size() - 4, 4, ".vcr") == 0) {
+        if (world && name.size() > 4 && name.compare(name.size() - 4, 4, ".vcr") == 0) {
             // 2.6.0: a region goes in readable (.vct), deflated so the file stays small.
             const std::string text = regionToText(data, name);
             data.assign(text.begin(), text.end());
@@ -290,6 +300,7 @@ bool exportWorld(const std::string& worldFolder, const std::string& file, std::s
     }
     return true;
 }
+}  // namespace
 
 bool importWorld(const std::string& file, const std::string& worldsRoot, std::string& folder, std::string& error) {
     std::vector<uint8_t> d = readAll(file);

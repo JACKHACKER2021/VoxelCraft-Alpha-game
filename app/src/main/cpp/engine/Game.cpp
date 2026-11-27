@@ -44,7 +44,7 @@ namespace vc {
 namespace vc {
 
 namespace {
-const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.8.0 Preview build 7" : "VoxelCraft 2.7.1";
+const char* kVersion = kClassicEdition ? "VoxelCraft Classic 0.0.3" : kPreviewEdition ? "VoxelCraft 2.9.0 Preview build 1" : "VoxelCraft 2.8.0";
 
 // Splash texts under the logo; a different one every time the title screen opens.
 const char* const kSplashes[] = {
@@ -486,6 +486,17 @@ void Game::rebuildFromPacks() {
         for (const std::string& d : modDirs) vcDirs.push_back(d);
         loadVcData(vcDirs, &packWarnings_);
         setVcStructureDirs(std::vector<std::string>(modDirs.rbegin(), modDirs.rend()));  // packs only: the code's structures stay the default
+        // Themes: the game's colours, then each enabled pack's theme/theme.json over them.
+        static const std::string kDefaultTheme = theme::themeJson();
+        theme::applyTheme(kDefaultTheme);
+        for (const std::string& d : modDirs) {
+            std::ifstream tin(d + "/theme/theme.json");
+            if (!tin) continue;
+            std::stringstream ts;
+            ts << tin.rdbuf();
+            std::string terr;
+            if (!theme::applyTheme(ts.str(), &terr)) packWarnings_.push_back(d + "/theme/theme.json: " + terr);
+        }
     }
     setRecipes(packs_.buildRecipes(&packWarnings_));
     packs_.buildConfig(&packWarnings_);  // only to report problems; worlds snapshot it when created
@@ -1518,6 +1529,17 @@ void Game::presentsScreen(float dt) {
         "Obojek pro lišáka, rezavějící ocel, velká truhla",
         "Nové textury a režim pro slabá zařízení",
     };
+    static const char* const kNew280[] = {
+        "VC jazyk: tvorové, bloky, loot, shadery a stavby v souborech",
+        "Noví tvorové: prase, ovce, slepice, kráva a duch",
+        "Tvůrce: bloky, předměty, moby, modely, recepty, shadery",
+        "Jízdenky, turnikety, hlášení stanic a deník hráče",
+        "Výchozí textury, shadery a téma k úpravě a export doplňků",
+    };
+    static const char* const kNext280[] = {
+        "Opuštěné nádraží s pokladnou a čekárnou, vozovna",
+        "Cesta k 3.0.0: železo odchází ze hry",
+    };
     static const char* const kNext270[] = {
         "Jízdenky, hlášení stanic a opuštěné nádraží",
         "Deník hráče a nové úspěchy",
@@ -1526,11 +1548,11 @@ void Game::presentsScreen(float dt) {
         "Jízdenky, hlášení stanic a opuštěné nádraží",
         "Deník hráče, peněženka a obojek pro lišáka",
     };
-    const char* const* kNew = kFeatures270 ? kNew270 : kFeatures260 ? kNew260 : kFeatures250 ? kNew250 : kNew240;
+    const char* const* kNew = kFeatures280 ? kNew280 : kFeatures270 ? kNew270 : kFeatures260 ? kNew260 : kFeatures250 ? kNew250 : kNew240;
     const int kNewCount = 5;
-    const char* const* kNext = kFeatures270 ? kNext270 : kFeatures260 ? kNext260 : kFeatures250 ? kNext250 : kNext240;
+    const char* const* kNext = kFeatures280 ? kNext280 : kFeatures270 ? kNext270 : kFeatures260 ? kNext260 : kFeatures250 ? kNext250 : kNext240;
     const int kNextCount = kFeatures250 ? 2 : 3;
-    const char* nextTitle = kFeatures270 ? "PŘIPRAVUJEME VE 2.8.0" : kFeatures260 ? "PŘIPRAVUJEME VE 2.7.0" : kFeatures250 ? "PŘIPRAVUJEME VE 2.6.0" : "PŘIPRAVUJEME VE 2.5.0";
+    const char* nextTitle = kFeatures280 ? "PŘIPRAVUJEME VE 2.9.0" : kFeatures270 ? "PŘIPRAVUJEME VE 2.8.0" : kFeatures260 ? "PŘIPRAVUJEME VE 2.7.0" : kFeatures250 ? "PŘIPRAVUJEME VE 2.6.0" : "PŘIPRAVUJEME VE 2.5.0";
     // Long lines wrap at word boundaries (they used to be cut off). On a small screen the two lists
     // sit side by side.
     auto wrap = [&](const std::string& prefix, const char* source, float width) {
@@ -2097,7 +2119,7 @@ void Game::titleScreen() {
         // 2.5.0: on a low screen there is no room under the menu: the button goes to the top left corner.
         const bool under = ny + 20 < H - 12;
         const float bx = under ? (W - nw) / 2 : 4, by = under ? ny : 4;
-        if (ui_.menuButton(bx, by, nw, 20, kFeatures270 ? "Novinky 2.7.0" : kFeatures260 ? "Novinky 2.6.0" : kFeatures250 ? "Novinky 2.5.0" : "Novinky 2.4.0", St::Primary, Font::Star, live)) newsOpen_ = true;
+        if (ui_.menuButton(bx, by, nw, 20, kFeatures280 ? "Novinky 2.8.0" : kFeatures270 ? "Novinky 2.7.0" : kFeatures260 ? "Novinky 2.6.0" : kFeatures250 ? "Novinky 2.5.0" : "Novinky 2.4.0", St::Primary, Font::Star, live)) newsOpen_ = true;
     }
     if (newsOpen_) newsPanel();
     ui_.text(3, H - 10, kVersion, kText);
@@ -2116,7 +2138,7 @@ void Game::newsPanel() {
     const float pw = std::min(420.0f, W - 20), ph = std::min(260.0f, H - 20), px = (W - pw) / 2, py = (H - ph) / 2;
     ui_.roundPanel(px, py, pw, ph);
     const Color gold{1.0f, 0.82f, 0.43f, 1};
-    ui_.textCentered(W / 2, py + 8, kFeatures270 ? "Co je nového ve VoxelCraftu 2.7.0" : kFeatures260 ? "Co je nového ve VoxelCraftu 2.6.0" : kFeatures250 ? "Co je nového ve VoxelCraftu 2.5.0" : "Co je nového ve VoxelCraftu 2.4.0", gold);
+    ui_.textCentered(W / 2, py + 8, kFeatures280 ? "Co je nového ve VoxelCraftu 2.8.0" : kFeatures270 ? "Co je nového ve VoxelCraftu 2.7.0" : kFeatures260 ? "Co je nového ve VoxelCraftu 2.6.0" : kFeatures250 ? "Co je nového ve VoxelCraftu 2.5.0" : "Co je nového ve VoxelCraftu 2.4.0", gold);
     struct Row { const char* head; const char* text; };
     static const Row rows250[] = {
         {"Síť metra", "Linky východ-západ nahoře a sever-jih dole, tunely mezi stanicemi"},
@@ -2138,6 +2160,24 @@ void Game::newsPanel() {
         {"Voxel Bucks", "Mince jsou Voxel Bucks s ikonou kostičky; v obchodě balíčky za Kč"},
         {"Úspěchy", "Každý nový survival svět začíná úspěchy od nuly"},
         {"Chyby", "Nahlásit chybu v nastavení otevře GitHub Issues s vyplněnými údaji"},
+    };
+    static const Row rows280[] = {
+        {"VC jazyk", "Tvorové, bloky, předměty, loot, shadery a stavby jsou v souborech; doplněk je přepíše"},
+        {"Tvorové", "Nové prase, ovce, slepice, kráva a duch; všichni tvorové jako GLB modely"},
+        {"Tvůrce", "Bloky, předměty, moby, modely s malováním, recepty, shadery a balíček"},
+        {"Metro", "Automaty na jízdenky, turnikety a hlášení příští stanice česky i anglicky"},
+        {"Deník", "Deník hráče: dimenze, stavby, stanice, úspěchy i smrt"},
+        {"Úspěchy", "Deset nových úspěchů od lišáka po celestiový batoh"},
+        {"Doplňky", "Výchozí textury, shadery a téma menu k úpravě; export doplňku jako .vcaddon"},
+        {"Cornerstone", "cornerstone.json místo nether.json, s biomy dimenze úhelného kamene"},
+    };
+    static const Row rows280b[] = {
+        {"Forgotten man", "Nový skin: rozcuchané vlasy, svítící oči, tunika s páskem"},
+        {"Obličeje", "Zvířata mají zřetelné oči, čumák a zobák"},
+        {"Bossové", "Údery bossů, smáčknutí slizu a obojek lišáka i v nových modelech"},
+        {"Modely", "Všechny modely ze hry jako GLB pro Blockbench a Blender"},
+        {"Sezóny", "Vánoční a halloweenské věci jen se zapnutým doplňkem"},
+        {"Opravy", "Pád hry při načítání balíčků s shadery"},
     };
     static const Row rows270[] = {
         {"Batohy", "Šest úrovní od kůže po celestium, výroba uvnitř, pec od rubínu, nošení na zádech"},
@@ -2187,8 +2227,8 @@ void Game::newsPanel() {
     };
     const int pages = kFeatures250 ? 2 : 1;
     newsPage_ = std::clamp(newsPage_, 0, pages - 1);
-    const Row* rows = kFeatures270 ? (newsPage_ == 0 ? rows270 : rows270b) : kFeatures260 ? (newsPage_ == 0 ? rows260 : rows260b) : kFeatures250 ? (newsPage_ == 0 ? rows250 : rows250b) : rows240;
-    const int rowCount = kFeatures270 ? (newsPage_ == 0 ? 8 : 6) : kFeatures260 ? (newsPage_ == 0 ? 8 : 7) : kFeatures250 ? 8 : 7;
+    const Row* rows = kFeatures280 ? (newsPage_ == 0 ? rows280 : rows280b) : kFeatures270 ? (newsPage_ == 0 ? rows270 : rows270b) : kFeatures260 ? (newsPage_ == 0 ? rows260 : rows260b) : kFeatures250 ? (newsPage_ == 0 ? rows250 : rows250b) : rows240;
+    const int rowCount = kFeatures280 ? (newsPage_ == 0 ? 8 : 6) : kFeatures270 ? (newsPage_ == 0 ? 8 : 6) : kFeatures260 ? (newsPage_ == 0 ? 8 : 7) : kFeatures250 ? 8 : 7;
     float y = py + 24;
     // 2.5.0: the heads' column as wide as the widest head (English ones are longer).
     float headW = 90;
@@ -4952,7 +4992,9 @@ CraftResult Game::craftResult(int size) const {
     CraftResult r = matchRecipe(grid_.data(), size);
     Settings s = playSettings();
     // 2.6.0: the Halloween and Christmas things, with the addon or in their season.
-    const bool spooky = s.addonHalloween || s.season == Season::Halloween, festive = s.addonWinter || s.season == Season::Christmas;
+    // 2.8.0: only the addon brings them; the season (by the date or chosen for good) only changes the look.
+    const bool spooky = s.addonHalloween || (!kFeatures280 && s.season == Season::Halloween),
+               festive = s.addonWinter || (!kFeatures280 && s.season == Season::Christmas);
     if ((halloweenItem(r.id) && !spooky) || (christmasItem(r.id) && !festive)) return {};
     if ((r.id == NUKE_TNT && !s.addonHalloween) || ((r.id == GIFT_BOX || r.id == CANDY_CANE) && !s.addonWinter) ||
         ((r.id == CAKE || isAnniversaryItem(r.id)) && !s.addonAnniversary))
@@ -5036,8 +5078,8 @@ std::vector<Game::BookEntry> Game::bookEntries(int gridSize) const {
     auto allowed = [&](ItemId id) {
         if (id == NUKE_TNT) return play.addonHalloween;
         if (id == GIFT_BOX || id == CANDY_CANE) return play.addonWinter;
-        if (halloweenItem(id)) return play.addonHalloween || play.season == Season::Halloween;  // 2.6.0
-        if (christmasItem(id)) return play.addonWinter || play.season == Season::Christmas;
+        if (halloweenItem(id)) return play.addonHalloween || (!kFeatures280 && play.season == Season::Halloween);  // 2.6.0; 2.8.0: the addon only
+        if (christmasItem(id)) return play.addonWinter || (!kFeatures280 && play.season == Season::Christmas);
         if (id == CAKE || isAnniversaryItem(id)) return play.addonAnniversary;
         return true;
     };
@@ -5880,9 +5922,10 @@ void Game::creativeInventoryScreen() {
     std::vector<ItemId> addonItems;
     if (play.addonWinter) addonItems.insert(addonItems.end(), {GIFT_BOX, CANDY_CANE});
     if (play.addonHalloween) addonItems.insert(addonItems.end(), {NUKE_TNT, PUMPKIN});
-    if (kFeatures260 && (play.addonHalloween || play.season == Season::Halloween))  // 2.6.0
+    // 2.6.0; 2.8.0: the holiday things only while their addon is on (the season only changes the look).
+    if (kFeatures260 && (play.addonHalloween || (!kFeatures280 && play.season == Season::Halloween)))
         addonItems.insert(addonItems.end(), {JACK_LANTERN, JACK_LANTERN + 1, JACK_LANTERN + 2, JACK_LANTERN + 3, COBWEB, GRAVESTONE, BAT_LANTERN, LOLLIPOP, CARAMEL});
-    if (kFeatures260 && (play.addonWinter || play.season == Season::Christmas))
+    if (kFeatures260 && (play.addonWinter || (!kFeatures280 && play.season == Season::Christmas)))
         addonItems.insert(addonItems.end(), {XMAS_TREE, STRING_LIGHTS, STOCKING, GINGERBREAD, SLED});
     const std::vector<ItemId>& modItems = ModRegistry::get().creative();
     if (play.addonAnniversary)

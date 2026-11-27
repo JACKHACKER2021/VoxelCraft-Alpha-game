@@ -20,44 +20,48 @@ enum UiTex { TexNone = 0, TexAtlas = 1, TexGui = 2, TexSkins = 3, TexMap = 4 };
 namespace theme {
 #if 1  // 2.2.0: the green theme in both editions
 // 2.2.0 preview: the forest-green menus of the project's own design instead of the old brown.
-constexpr Color kBackdrop{0.09f, 0.15f, 0.1f, 0.85f};
-constexpr Color kPanel{0.14f, 0.23f, 0.16f, 1};
-constexpr Color kPanelInner{0.17f, 0.28f, 0.19f, 1};
-constexpr Color kBorder{0.11f, 0.17f, 0.12f, 1};
-constexpr Color kBorderDark{0.06f, 0.1f, 0.07f, 1};
-constexpr Color kButton{0.2f, 0.36f, 0.23f, 1};
-constexpr Color kButtonDown{0.25f, 0.43f, 0.28f, 1};
+inline Color kBackdrop{0.09f, 0.15f, 0.1f, 0.85f};
+inline Color kPanel{0.14f, 0.23f, 0.16f, 1};
+inline Color kPanelInner{0.17f, 0.28f, 0.19f, 1};
+inline Color kBorder{0.11f, 0.17f, 0.12f, 1};
+inline Color kBorderDark{0.06f, 0.1f, 0.07f, 1};
+inline Color kButton{0.2f, 0.36f, 0.23f, 1};
+inline Color kButtonDown{0.25f, 0.43f, 0.28f, 1};
 #else
-constexpr Color kBackdrop{0.07f, 0.06f, 0.05f, 0.82f};
-constexpr Color kPanel{0.165f, 0.145f, 0.125f, 1};
-constexpr Color kPanelInner{0.21f, 0.19f, 0.165f, 1};
-constexpr Color kBorder{0.43f, 0.4f, 0.35f, 1};
-constexpr Color kBorderDark{0.1f, 0.09f, 0.08f, 1};
-constexpr Color kButton{0.235f, 0.21f, 0.185f, 1};
-constexpr Color kButtonDown{0.3f, 0.27f, 0.235f, 1};
+inline Color kBackdrop{0.07f, 0.06f, 0.05f, 0.82f};
+inline Color kPanel{0.165f, 0.145f, 0.125f, 1};
+inline Color kPanelInner{0.21f, 0.19f, 0.165f, 1};
+inline Color kBorder{0.43f, 0.4f, 0.35f, 1};
+inline Color kBorderDark{0.1f, 0.09f, 0.08f, 1};
+inline Color kButton{0.235f, 0.21f, 0.185f, 1};
+inline Color kButtonDown{0.3f, 0.27f, 0.235f, 1};
 #endif
-constexpr Color kGreen{0.165f, 0.31f, 0.04f, 1};
-constexpr Color kGreenDown{0.22f, 0.4f, 0.07f, 1};
-constexpr Color kGreenBorder{0.42f, 0.56f, 0.23f, 1};
-constexpr Color kAccent{0.36f, 0.5f, 0.17f, 1};
+inline Color kGreen{0.165f, 0.31f, 0.04f, 1};
+inline Color kGreenDown{0.22f, 0.4f, 0.07f, 1};
+inline Color kGreenBorder{0.42f, 0.56f, 0.23f, 1};
+inline Color kAccent{0.36f, 0.5f, 0.17f, 1};
 #if 1  // 2.2.0: the green theme in both editions
-constexpr Color kText{0.88f, 0.84f, 0.68f, 1};
-constexpr Color kTextBright{0.96f, 0.9f, 0.7f, 1};
-constexpr Color kTextDim{0.62f, 0.66f, 0.55f, 1};
-constexpr Color kTitle{0.95f, 0.87f, 0.64f, 1};
-constexpr Color kSeparator{0.24f, 0.36f, 0.26f, 1};
-constexpr Color kField{0.06f, 0.1f, 0.07f, 1};
+inline Color kText{0.88f, 0.84f, 0.68f, 1};
+inline Color kTextBright{0.96f, 0.9f, 0.7f, 1};
+inline Color kTextDim{0.62f, 0.66f, 0.55f, 1};
+inline Color kTitle{0.95f, 0.87f, 0.64f, 1};
+inline Color kSeparator{0.24f, 0.36f, 0.26f, 1};
+inline Color kField{0.06f, 0.1f, 0.07f, 1};
 #else
-constexpr Color kText{0.79f, 0.72f, 0.61f, 1};
-constexpr Color kTextBright{0.9f, 0.85f, 0.72f, 1};
-constexpr Color kTextDim{0.6f, 0.55f, 0.47f, 1};
-constexpr Color kTitle{0.76f, 0.66f, 0.53f, 1};
-constexpr Color kSeparator{0.29f, 0.27f, 0.24f, 1};
-constexpr Color kField{0.08f, 0.07f, 0.055f, 1};
+inline Color kText{0.79f, 0.72f, 0.61f, 1};
+inline Color kTextBright{0.9f, 0.85f, 0.72f, 1};
+inline Color kTextDim{0.6f, 0.55f, 0.47f, 1};
+inline Color kTitle{0.76f, 0.66f, 0.53f, 1};
+inline Color kSeparator{0.29f, 0.27f, 0.24f, 1};
+inline Color kField{0.08f, 0.07f, 0.055f, 1};
 #endif
-constexpr Color kCode{0.5f, 0.75f, 0.42f, 1};
-constexpr Color kError{0.9f, 0.4f, 0.32f, 1};
-constexpr Color kGold{0.85f, 0.65f, 0.25f, 1};
+inline Color kCode{0.5f, 0.75f, 0.42f, 1};
+inline Color kError{0.9f, 0.4f, 0.32f, 1};
+inline Color kGold{0.85f, 0.65f, 0.25f, 1};
+// 2.8.0 preview: the colours above can come from a pack's theme/theme.json (the default pack has the
+// game's own); applyTheme sets them, themeJson writes them.
+bool applyTheme(const std::string& json, std::string* error = nullptr);
+std::string themeJson();
 }  // namespace theme
 
 struct UiVert {

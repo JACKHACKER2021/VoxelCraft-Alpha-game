@@ -24,6 +24,8 @@ struct PackInfo {
 //   recipes/*.json            recipes, smelting and fuels ("replace": true starts from scratch)
 //   textures/                 terrain.png, blocks/, items/ like a texture pack
 //   shaders/                  shader.json and world.fsh, a shader pack (see Shaders.h)
+//   theme/theme.json          2.8.0: the colours of the menus (see theme::applyTheme)
+//   vc/                       2.8.0: blocks.json, loot.json, structures/ in the VC language (see VcData.h)
 // Enabled packs are applied in order; the order is stored in packs.json.
 class PackManager {
 public:
@@ -31,6 +33,7 @@ public:
 
     void ensureDefaultPack();
     void resetDefaultPack();
+    void writeDefaultResources(const std::string& dir);  // 2.8.0: textures, shaders and theme of the game
     std::vector<PackInfo> list() const;
     void setEnabled(const std::string& id, bool enabled);
     void move(const std::string& id, int delta);  // change the order of enabled packs

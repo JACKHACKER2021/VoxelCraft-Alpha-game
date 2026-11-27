@@ -13,6 +13,7 @@
 #include "Mods.h"
 #include "Png.h"
 #include "Store.h"
+#include "WorldFiles.h"
 
 namespace vc {
 
@@ -142,7 +143,8 @@ void Game::addonListTab(float x, float y, float w, float h) {
     if (packList_.empty()) return;
     // The selected add-on's actions.
     PackInfo& p = packList_[packSelected_];
-    const float by = y + listH + 4, bw = std::floor((w - 5 * 4) / 6);
+    const int cols = kFeatures280 ? 7 : 6;
+    const float by = y + listH + 4, bw = std::floor((w - (cols - 1) * 4) / cols);
     ui_.text(x, by - 0, "", kText, 1, false);
     if (ui_.button(x, by, bw, 20, "Chyby", !addonInfo(p).lines.empty())) addonReportPack_ = p.id;
     if (ui_.button(x + (bw + 4), by, bw, 20, "Výš", p.enabled)) {
@@ -165,6 +167,14 @@ void Game::addonListTab(float x, float y, float w, float h) {
     } else if (ui_.button(x + 5 * (bw + 4), by, bw, 20, "Smazat")) {
         packs_.deletePack(p.id);
         rebuildFromPacks();
+    }
+    if (kFeatures280 && ui_.button(x + 6 * (bw + 4), by, bw, 20, "Exportovat", true, true)) {
+        // 2.8.0: the add-on as a .vcaddon (a zip of its folder) to Downloads/VoxelCraft: edit it and import it back.
+        const std::string name = (p.builtin ? std::string("voxelcraft_default") : p.id) + ".vcaddon", file = dataDir_ + "/exports/" + name;
+        std::string err;
+        if (exportFolderZip(p.dir, file, err) && onExportWorld) onExportWorld(file, name), toast_ = trf("Doplněk exportován: {0}", {name});
+        else toast_ = err.empty() ? tr("Export se nepovedl") : err;
+        toastUntil_ = now_ + 5;
     }
 }
 
