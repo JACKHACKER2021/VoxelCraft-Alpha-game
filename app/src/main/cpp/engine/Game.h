@@ -246,6 +246,10 @@ private:
     int creatorMode_ = 0, creatorFood_ = 0, creatorStack_ = 64, creatorSpawn_ = 1, creatorDrop_ = 0, creatorShape_ = -1;
     std::vector<std::array<int, 6>> creatorBoxes_;  // the model's boxes: x, y, z, width, height, depth (pixels)
     int creatorBox_ = 0, creatorAxis_ = 0;
+    void creatorModelTexture();             // fits the model's texture to its boxes
+    std::vector<uint32_t> creatorModelPix_;  // the model's own texture (its box layout), painted
+    int creatorModelW_ = 0, creatorModelH_ = 0;
+    bool creatorModelPaint_ = false;
     int creatorGrid_[9] = {-1, -1, -1, -1, -1, -1, -1, -1, -1}, creatorResult_ = 0, creatorCount_ = 1, creatorIngredient_ = 0;
     int creatorShader_[6] = {100, 100, 0, 20, 30, 100};  // saturation, contrast, warmth, vignette, glow, fog (in hundredths)
     std::string creatorShaderName_ = "Můj shader", creatorPackName_ = "Moje tvorba", creatorPackText_ = "Vytvořeno v Tvůrci";

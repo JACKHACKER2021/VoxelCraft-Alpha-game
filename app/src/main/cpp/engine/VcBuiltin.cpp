@@ -20,8 +20,9 @@ constexpr const char* kIds[(int)MobType::Count] = {"pig", "sheep", "pumpkin_slim
                                                   "sky_guardian", "cornerstone_golem", "moss_lurker", "sporeling", "ember_moth", "ash_fox", "fox", "ghost", "snowman"};
 
 std::vector<std::string> gDirs;
-VcModel gModels[(int)MobType::Count][2];
-bool gHave[(int)MobType::Count][2] = {};
+// [type][0 standing, 1 sitting, 2 celestial]
+VcModel gModels[(int)MobType::Count][3];
+bool gHave[(int)MobType::Count][3] = {};
 struct Blit { int x, y, w, h; std::vector<uint8_t> rgba; };  // in 16-pixel atlas pixels
 std::vector<Blit> gBlits;
 
@@ -52,7 +53,7 @@ void setVcModelDirs(const std::vector<std::string>& dirs) { gDirs = dirs; }
 
 int loadVcMobModels(const std::vector<uint8_t>& atlas, int size, std::vector<std::string>* warnings) {
     gBlits.clear();
-    for (auto& h : gHave) h[0] = h[1] = false;
+    for (auto& h : gHave) h[0] = h[1] = h[2] = false;
     if (!kFeatures280) return 0;
     const int t = size / kAtlasCols;  // 16 for the built-in atlas
     // Every tile of the atlas by its pixels, to share the tiles a model already finds there.
@@ -66,8 +67,9 @@ int loadVcMobModels(const std::vector<uint8_t>& atlas, int size, std::vector<std
     Shelf shelf;
     int count = 0;
     for (int type = 0; type < (int)MobType::Count; ++type)
-        for (int sit = 0; sit < 2; ++sit) {
-            const std::string file = std::string("models/mobs/") + kIds[type] + (sit ? "_sit" : "") + ".glb";
+        for (int sit = 0; sit < 3; ++sit) {
+            static const char* const kSuffix[3] = {"", "_sit", "_celestial"};
+            const std::string file = std::string("models/mobs/") + kIds[type] + kSuffix[sit] + ".glb";
             std::vector<uint8_t> data;
             std::string from;
             for (const std::string& d : gDirs)
@@ -163,8 +165,9 @@ void blitVcMobTextures(std::vector<uint8_t>& rgba, int size) {
             }
 }
 
-const VcModel* builtinMobModel(MobType type, bool sitting) {
+const VcModel* builtinMobModel(MobType type, bool sitting, const char* variant) {
     if (!kFeatures280 || gVcLegacyMobs || (int)type < 0 || (int)type >= (int)MobType::Count) return nullptr;
+    if (variant) return std::string(variant) == "celestial" && gHave[(int)type][2] ? &gModels[(int)type][2] : nullptr;
     if (sitting && gHave[(int)type][1]) return &gModels[(int)type][1];
     return gHave[(int)type][0] ? &gModels[(int)type][0] : nullptr;
 }

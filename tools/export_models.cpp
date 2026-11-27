@@ -38,6 +38,8 @@ std::vector<uint8_t> pngBytes(int w, int h, const std::vector<uint8_t>& rgba) {
 // 2.8.0 build 6: how a box moves (the VC language's animation, in the node's "extras": {"vc": {...}}).
 struct BoxAnim {
     float swing = 0, flap = 0;  // radians per unit of walk swing / share of the flap
+    float attack = 0;           // radians per unit of the attack swing (a boss's slam)
+    bool collar = false;        // drawn only when the creature wears a collar
     float pivot[3] = {0, 0, 0};
 };
 
@@ -75,9 +77,9 @@ void writeGlb(const fs::path& file, const std::string& name, const std::vector<V
         meshes << (b ? "," : "") << "{\"name\":\"cube_" << b << "\",\"primitives\":[{\"attributes\":{\"POSITION\":" << a << ",\"TEXCOORD_0\":" << a + 1
                << "},\"material\":0}]}";
         nodes << ",{\"name\":\"cube_" << b << "\",\"mesh\":" << b;
-        if (b < anims.size() && (anims[b].swing != 0 || anims[b].flap != 0))
-            nodes << ",\"extras\":{\"vc\":{\"swing\":" << anims[b].swing << ",\"flap\":" << anims[b].flap << ",\"pivot\":[" << anims[b].pivot[0] << ","
-                  << anims[b].pivot[1] << "," << anims[b].pivot[2] << "]}}";
+        if (b < anims.size() && (anims[b].swing != 0 || anims[b].flap != 0 || anims[b].attack != 0 || anims[b].collar))
+            nodes << ",\"extras\":{\"vc\":{\"swing\":" << anims[b].swing << ",\"flap\":" << anims[b].flap << ",\"attack\":" << anims[b].attack
+                  << (anims[b].collar ? ",\"show\":\"collar\"" : "") << ",\"pivot\":[" << anims[b].pivot[0] << "," << anims[b].pivot[1] << "," << anims[b].pivot[2] << "]}}";
         nodes << "}";
     }
     pad4(bin, 0);
@@ -194,6 +196,7 @@ int main(int argc, char** argv) {
             m.yaw = 0, m.pos = Vec3(0, 0, 0);
             if (sit) m.sitting = true, m.sit = 1;
             std::vector<Vertex> v;
+            if ((MobType)t == MobType::Fox) m.tamed = true, m.collar = 0;  // 2.8.0: with the collar's boxes (shown only when worn)
             ms.buildVertices(0, 0, v);
             if (v.empty()) continue;
             if (sit) {
@@ -209,26 +212,52 @@ int main(int argc, char** argv) {
             // 2.8.0 build 6: the animation, measured from the engine itself: the walk (swing 0 against 0.5)
             // and the wings (two moments of the flap).
             std::vector<BoxAnim> anims(v.size() / 36);
-            std::string rootExtras = ",\"extras\":{\"vc\":{}}";  // says how it moves, even when it does not
-            auto pose = [&](float swing, float time) {
+            if ((MobType)t == MobType::Fox) {
+                // The collar: the boxes a fox without one does not have.
+                std::vector<Vertex> bare;
+                MobSystem m3;
+                m3.spawn(MobType::Fox, 0, Vec3(0, 0, 0));
+                m3.mobs().back().yaw = 0, m3.mobs().back().pos = Vec3(0, 0, 0);
+                if (sit) m3.mobs().back().sitting = true, m3.mobs().back().sit = 1;
+                m3.buildVertices(0, 0, bare);
+                for (size_t k = 0; k < anims.size(); ++k) {
+                    bool found = false;
+                    for (size_t q = 0; q + 36 <= bare.size() && !found; q += 36)
+                        found = std::abs(bare[q].x - v[k * 36].x) + std::abs(bare[q].y - v[k * 36].y) + std::abs(bare[q].z - v[k * 36].z) < 1e-4f &&
+                                std::abs(bare[q + 35].x - v[k * 36 + 35].x) + std::abs(bare[q + 35].y - v[k * 36 + 35].y) < 1e-4f;
+                    anims[k].collar = !found;
+                }
+            }
+            std::string rootExtras = (MobType)t == MobType::PumpkinSlime ? ",\"extras\":{\"vc\":{\"squash\":1}}"  // squashes and stretches
+                                                                          : ",\"extras\":{\"vc\":{}}";  // says how it moves, even when it does not
+            auto pose = [&](float swing, float time, float attack = 0, bool collar = false) {
                 MobSystem m2;
                 m2.spawn((MobType)t, 0, Vec3(0, 0, 0));
                 Mob& mm = m2.mobs().back();
-                mm.yaw = 0, mm.pos = Vec3(0, 0, 0), mm.age = 0, mm.swing = swing, mm.onGround = false;
+                mm.yaw = 0, mm.pos = Vec3(0, 0, 0), mm.age = 0, mm.swing = swing, mm.onGround = false, mm.attackAnim = attack;
+                if (collar) mm.tamed = true, mm.collar = 0;
                 if (sit) mm.sitting = true, mm.sit = 1;
                 std::vector<Vertex> r;
                 m2.buildVertices(0, time, r);
                 return r;
             };
             if (!sit) {
-                const auto walk = boxTurns(pose(0, 0), pose(0.5f, 0), 0);
+                const bool fox = (MobType)t == MobType::Fox;
+                const auto walk = boxTurns(pose(0, 0, 0, fox), pose(0.5f, 0, 0, fox), 0);
+                const auto hit = boxTurns(pose(0, 0, 0, fox), pose(0, 0, 0.5f, fox), 0);
+                for (size_t k = 0; k < anims.size() && k < hit.size(); ++k)
+                    if (hit[k].first != 0) {
+                        anims[k].attack = hit[k].first / 0.5f;
+                        if (walk[k].first == 0) anims[k].pivot[0] = hit[k].second.x, anims[k].pivot[1] = hit[k].second.y, anims[k].pivot[2] = hit[k].second.z;
+                    }
                 for (size_t k = 0; k < anims.size() && k < walk.size(); ++k)
                     if (walk[k].first != 0) anims[k].swing = walk[k].first / 0.5f, anims[k].pivot[0] = walk[k].second.x, anims[k].pivot[1] = walk[k].second.y, anims[k].pivot[2] = walk[k].second.z;
                 struct Flap { MobType type; float speed, amp, rest; };
                 static const Flap kFlaps[] = {{MobType::Bat, 22, 0.9f, 0.9f}, {MobType::Chicken, 30, 0.9f, 0.1f}, {MobType::SkyDrifter, 2.2f, 0.35f, 0.35f},
-                                              {MobType::EmberMoth, 14, 0.7f, 0.7f}};
+                                              {MobType::EmberMoth, 14, 0.7f, 0.7f}, {MobType::SkyGuardian, 1.8f, 0.3f, 0.3f}};
                 for (const Flap& fl : kFlaps) {
                     if (fl.type != (MobType)t) continue;
+                    // The flap is measured from a moment where it is zero (time 0 with age 0 is sin(0)).
                     const auto turn = boxTurns(pose(0, 0), pose(0, 1.5707963f / fl.speed), 2);
                     for (size_t k = 0; k < anims.size() && k < turn.size(); ++k)
                         if (turn[k].first != 0) {

@@ -1697,6 +1697,8 @@
 {"Width", "Šířka", "Anchura", "Ширина", "Breite"},
 {"My creations", "Moje tvorba", "Mis creaciones", "Мои творения", "Meine Werke"},
 {"Made in the Creator", "Vytvořeno v Tvůrci", "Hecho en el Creador", "Создано в Творце", "Im Ersteller gemacht"},
+{"Painting the texture", "Malování textury", "Pintar la textura", "Рисование текстуры", "Textur malen"},
+{"From Block", "Z Bloku", "Desde Bloque", "Из Блока", "Aus Block"},
 {"Spawn Egg: Hogman", "Vejce: Prasák", "Huevo: Cerdo guerrero", "Яйцо: Свинолюд", "Spawn-Ei: Schweinemann"},
 {"Hogman", "Prasák", "Cerdo guerrero", "Свинолюд", "Schweinemann"},
 {"Light in the Dark", "Světlo do tmy", "Luz en la oscuridad", "Свет во тьме", "Licht im Dunkeln"},

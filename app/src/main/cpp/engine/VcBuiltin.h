@@ -31,7 +31,8 @@ int loadVcMobModels(const std::vector<uint8_t>& atlas, int size, std::vector<std
 // Copies the new texture pieces into the finished atlas (any tile size).
 void blitVcMobTextures(std::vector<uint8_t>& rgba, int size);
 // The model of a creature (null: it keeps the old body, as in the normal edition). Its UVs are in the atlas.
-const VcModel* builtinMobModel(MobType type, bool sitting = false);
+const VcModel* builtinMobModel(MobType type, bool sitting = false, const char* variant = nullptr);
+// Variants with their own files: models/mobs/<id>_<variant>.glb (now "celestial" for the pig and the sheep).
 // Tools that export the old bodies (tools/export_models.cpp) switch the GLB bodies off.
 extern bool gVcLegacyMobs;
 

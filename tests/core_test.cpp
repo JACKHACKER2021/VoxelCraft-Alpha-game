@@ -3466,6 +3466,33 @@ static int testUpdate14() {
                 ++found;
             }
             CHECK(!kFeatures280 || (builtinMobModel(MobType::Fox, true) != builtinMobModel(MobType::Fox, false)));
+            if (kFeatures280) {
+                // 2.8.0 build 7: the last creatures in the VC language: the celestial pig and sheep, the collar,
+                // the bosses' slams and the slime's squash.
+                CHECK(builtinMobModel(MobType::Pig, false, "celestial") && builtinMobModel(MobType::Sheep, false, "celestial"));
+                auto count = [](const VcModel* m, const VcPose& pose) {
+                    std::vector<Vertex> v;
+                    buildVcModel(*m, pose, VcTexRect{}, Vec3(0, 0, 0), 0, 1, v);
+                    return v;
+                };
+                VcPose plain, worn;
+                worn.collar = true;
+                CHECK(count(builtinMobModel(MobType::Fox), worn).size() > count(builtinMobModel(MobType::Fox), plain).size());
+                for (MobType boss : {MobType::CornerstoneGolem, MobType::SkyGuardian}) {
+                    VcPose hit;
+                    hit.attack = 0.8f;
+                    const auto a0 = count(builtinMobModel(boss), plain), a1 = count(builtinMobModel(boss), hit);
+                    bool moved = false;
+                    for (size_t i = 0; i < a0.size(); ++i) moved |= std::abs(a0[i].z - a1[i].z) > 1e-3f;
+                    CHECK(moved);
+                }
+                VcPose tall;
+                tall.stretch = 1.25f;
+                float h0 = 0, h1 = 0;
+                for (const Vertex& q : count(builtinMobModel(MobType::PumpkinSlime), plain)) h0 = std::max(h0, q.y);
+                for (const Vertex& q : count(builtinMobModel(MobType::PumpkinSlime), tall)) h1 = std::max(h1, q.y);
+                CHECK(builtinMobModel(MobType::PumpkinSlime)->squash && std::abs(h1 - h0 * 1.25f) < 1e-3f);
+            }
             std::printf("vanilla VC models: %d\n", found);
             CHECK(kFirstModTile >= T_COUNT);
         }

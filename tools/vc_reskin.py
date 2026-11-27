@@ -193,9 +193,25 @@ def reskin(src, dst, width=128):
     write(dst, name, [(b[0], b[1], [tuple(t) for t in newT[i]], b[3]) for i, b in enumerate(boxes)], full)
     return height
 
+def celestial(src, dst):
+    """2.8.0 build 7: the Celestial Reach's pig and sheep: the same model, sky white with gold flecks."""
+    name, boxes, tex = read(src); px = tex.load(); W, H = tex.size
+    for y in range(H):
+        for x in range(W):
+            r, g, b, a = px[x, y]
+            if a < 128: continue
+            l = (r * 0.3 + g * 0.59 + b * 0.11) / 255
+            if l < 0.25 or (r > 200 and g < 120): continue  # eyes, pupils and other dark marks stay
+            if (x * 7 + y * 13) % 29 == 0: px[x, y] = (236, 196, 84, 255); continue  # gold flecks
+            k = 0.75 + 0.25 * l
+            px[x, y] = (int(214 * k), int(228 * k), int(252 * k), 255)
+    write(dst, name, boxes, tex)
+
 if __name__ == '__main__':
     root = sys.argv[1] if len(sys.argv) > 1 else '.'
     os.makedirs(os.path.join(root, 'assets_src/models_vc/mobs'), exist_ok=True)
     for n in ['pig', 'sheep', 'chicken', 'cow', 'ghost']:
         h = reskin(os.path.join(root, 'assets_src/models_redesign/mobs', n + '.glb'), os.path.join(root, 'assets_src/models_vc/mobs', n + '.glb'))
         print(n, 'texture rows used:', h)
+    for n in ['pig', 'sheep']:
+        celestial(os.path.join(root, 'assets_src/models_vc/mobs', n + '.glb'), os.path.join(root, 'assets_src/models_vc/mobs', n + '_celestial.glb'))

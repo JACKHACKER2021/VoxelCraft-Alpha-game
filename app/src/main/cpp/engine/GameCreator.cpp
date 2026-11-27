@@ -64,7 +64,39 @@ std::string hundredths(int v) {
     return b;
 }
 
+// Where each box's part of the texture lies (the box layout: 2 * depth + 2 * width across, depth + height down).
+struct ModelLayout {
+    std::vector<std::pair<int, int>> at;
+    int w = 64, h = 16;
+};
+ModelLayout modelLayout(const std::vector<std::array<int, 6>>& boxes) {
+    ModelLayout l;
+    for (const auto& b : boxes) l.w = std::max(l.w, 2 * b[5] + 2 * b[3]);
+    int tx = 0, ty = 0, rowH = 0;
+    for (const auto& b : boxes) {
+        const int bw = 2 * b[5] + 2 * b[3], bh = b[5] + b[4];
+        if (tx + bw > l.w) tx = 0, ty += rowH, rowH = 0;
+        l.at.emplace_back(tx, ty);
+        tx += bw, rowH = std::max(rowH, bh);
+    }
+    l.h = std::max(16, (ty + rowH + 15) / 16 * 16);
+    return l;
+}
+
 }  // namespace
+
+// 2.8.0 build 7: the model's own texture, painted right on its box layout. A new layout keeps what was
+// painted where it still fits; new parts start from the Blok picture, repeated.
+void Game::creatorModelTexture() {
+    const ModelLayout l = modelLayout(creatorBoxes_);
+    if (creatorModelW_ == l.w && creatorModelH_ == l.h && creatorModelPix_.size() == (size_t)l.w * l.h) return;
+    std::vector<uint32_t> pix((size_t)l.w * l.h);
+    for (int y = 0; y < l.h; ++y)
+        for (int x = 0; x < l.w; ++x)
+            pix[(size_t)y * l.w + x] = x < creatorModelW_ && y < creatorModelH_ && !creatorModelPix_.empty() ? creatorModelPix_[(size_t)y * creatorModelW_ + x]
+                                                                                                             : creatorPixels_[(size_t)((y % 16) * 16 + x % 16)];
+    creatorModelPix_ = std::move(pix), creatorModelW_ = l.w, creatorModelH_ = l.h;
+}
 
 std::vector<std::string> Game::creatorModels() const {
     std::vector<std::string> out;
@@ -220,26 +252,53 @@ void Game::vcCreatorTab(float x, float y, float w, float h) {
             if (choice(tr("Mění se"), tr(kAxes[creatorAxis_]))) creatorAxis_ = (creatorAxis_ + 1) % 6;
             int& v = creatorBoxes_[(size_t)creatorBox_][(size_t)creatorAxis_];
             stepper(tr("Pixely (16 = blok)"), v, creatorAxis_ < 3 ? -16 : 1, 32, 1, std::to_string(v));
+            // Two views on the right: the shape, or painting its texture.
+            if (ui_.button(rx, cy, 80, 14, "Tvar", true, !creatorModelPaint_)) creatorModelPaint_ = false;
+            if (ui_.button(rx + 84, cy, 130, 14, "Malování textury", true, creatorModelPaint_)) creatorModelPaint_ = true;
+            const float top = cy + 18, room = ch - 18 - 26;
+            creatorModelTexture();
+            if (creatorModelPaint_) {
+                // Painting right on the model's texture: each box's part is outlined (the selected one bright).
+                const ModelLayout lay = modelLayout(creatorBoxes_);
+                const float cell = std::max(1.0f, std::floor(std::min((rw - 80) / creatorModelW_, (room - 4) / creatorModelH_)));
+                ui_.frame(rx - 2, top, creatorModelW_ * cell + 4, creatorModelH_ * cell + 4, kField, kSeparator);
+                for (int i = 0; i < creatorModelW_ * creatorModelH_; ++i) {
+                    const float px = rx + (i % creatorModelW_) * cell, py = top + 2 + (i / creatorModelW_) * cell;
+                    ui_.fill(px, py, cell, cell, rgb(creatorModelPix_[(size_t)i]));
+                    if (ui_.held(px, py, cell, cell)) creatorModelPix_[(size_t)i] = kPal[creatorColor_];
+                }
+                for (size_t i = 0; i < creatorBoxes_.size(); ++i) {
+                    const auto& bx = creatorBoxes_[i];
+                    const float ox = rx + lay.at[i].first * cell, oy = top + 2 + lay.at[i].second * cell, bw = (2 * bx[5] + 2 * bx[3]) * cell, bh = (bx[5] + bx[4]) * cell;
+                    const Color c = (int)i == creatorBox_ ? kTextBright : kSeparator;
+                    ui_.fill(ox, oy, bw, 1, c), ui_.fill(ox, oy + bh - 1, bw, 1, c), ui_.fill(ox, oy, 1, bh, c), ui_.fill(ox + bw - 1, oy, 1, bh, c);
+                }
+                const float palX = rx + creatorModelW_ * cell + 10;
+                for (int k = 0; k < 12; ++k) {
+                    const float cx = palX + (k % 2) * 16, cyy = top + 2 + (k / 2) * 14;
+                    ui_.frame(cx, cyy, 14, 12, rgb(kPal[k]), k == creatorColor_ ? kTextBright : kSeparator);
+                    if (ui_.tapped(cx, cyy, 14, 12)) creatorColor_ = k;
+                }
+                if (ui_.button(palX, top + 90, 60, 16, "Z Bloku")) creatorModelPix_.clear(), creatorModelW_ = 0, creatorModelTexture();
+                break;
+            }
             // The model from the front and from the side.
-            const float pw = std::floor((rw - 8) / 2), ph = std::min(pw, ch - 60), sc = ph / 28;
+            const float pw = std::floor((rw - 8) / 2), ph = std::min(pw, room - 10), sc = ph / 28;
             for (int view = 0; view < 2; ++view) {
-                const float vx = rx + view * (pw + 8), base = cy + 14 + ph - 4;
-                ui_.text(vx, cy, tr(view ? "Z boku" : "Zepředu"), kTextDim, 1, false);
-                ui_.frame(vx, cy + 10, pw, ph, kField, kSeparator);
+                const float vx = rx + view * (pw + 8), base = top + 14 + ph - 4;
+                ui_.text(vx, top, tr(view ? "Z boku" : "Zepředu"), kTextDim, 1, false);
+                ui_.frame(vx, top + 10, pw, ph, kField, kSeparator);
                 ui_.fill(vx + 2, base, pw - 4, 1, kSeparator);
                 for (size_t i = 0; i < creatorBoxes_.size(); ++i) {
-                    const auto& b = creatorBoxes_[i];
-                    const float a0 = view ? b[2] : b[0], aw = view ? b[5] : b[3];
-                    const uint32_t c = kPal[(creatorColor_ + i) % 12];
-                    ui_.frame(vx + pw / 2 + a0 * sc, base - (b[1] + b[4]) * sc, aw * sc, b[4] * sc, rgb(c), (int)i == creatorBox_ ? kTextBright : kSeparator);
+                    const auto& bx = creatorBoxes_[i];
+                    const float a0 = view ? bx[2] : bx[0], aw = view ? bx[5] : bx[3];
+                    // Each box in the colour of the middle of its texture.
+                    const ModelLayout lay = modelLayout(creatorBoxes_);
+                    const int tx = std::min(creatorModelW_ - 1, lay.at[i].first + bx[5] + bx[3] / 2), ty = std::min(creatorModelH_ - 1, lay.at[i].second + bx[5] + bx[4] / 2);
+                    ui_.frame(vx + pw / 2 + a0 * sc, base - (bx[1] + bx[4]) * sc, aw * sc, bx[4] * sc, rgb(creatorModelPix_[(size_t)ty * creatorModelW_ + tx]),
+                              (int)i == creatorBox_ ? kTextBright : kSeparator);
                 }
             }
-            // The texture: the picture painted in Blok / Předmět, repeated over every box.
-            const float sy = cy + ph + 16, cell = 2;
-            for (int i = 0; i < 256; ++i) ui_.fill(rx + (i % 16) * cell, sy + (i / 16) * cell, cell, cell, rgb(creatorPixels_[i]));
-            float ly = sy;
-            for (const std::string& l : wrapText(tr("Textura: obrázek namalovaný v záložce Blok, na každé kostce."), rw - 190))
-                ui_.text(rx + 40, ly, l, kTextDim, 1, false, rw - 190), ly += 10;
             break;
         }
         case 4: {  // a crafting recipe
@@ -398,29 +457,15 @@ void Game::saveVcCreation() {
         }
         case 3: {
             // The boxes as a geo.json (each its own bone; the ones standing on the ground are legs that walk),
-            // the painted picture repeated over each box's part of the texture.
-            struct Place { int u, v; };
-            std::vector<Place> places;
-            int tx = 0, ty = 0, rowH = 0, texW = 64;
-            for (const auto& b : creatorBoxes_) texW = std::max(texW, 2 * b[5] + 2 * b[3]);
-            for (const auto& b : creatorBoxes_) {
-                const int bwid = 2 * b[5] + 2 * b[3], bh = b[5] + b[4];
-                if (tx + bwid > texW) tx = 0, ty += rowH, rowH = 0;
-                places.push_back({tx, ty});
-                tx += bwid, rowH = std::max(rowH, bh);
-            }
-            const int texH = std::max(16, (ty + rowH + 15) / 16 * 16);
-            std::vector<uint8_t> rgba((size_t)texW * texH * 4, 0);
-            for (size_t i = 0; i < creatorBoxes_.size(); ++i) {
-                const auto& b = creatorBoxes_[i];
-                for (int yy = 0; yy < b[5] + b[4]; ++yy)
-                    for (int xx = 0; xx < 2 * b[5] + 2 * b[3]; ++xx) {
-                        const int px = places[i].u + xx, py = places[i].v + yy;
-                        if (px >= texW || py >= texH) continue;
-                        const uint32_t c = creatorPixels_[(size_t)((yy % 16) * 16 + xx % 16)];
-                        uint8_t* p = &rgba[((size_t)py * texW + px) * 4];
-                        p[0] = (c >> 16) & 255, p[1] = (c >> 8) & 255, p[2] = c & 255, p[3] = 255;
-                    }
+            // the texture as painted on the box layout.
+            creatorModelTexture();
+            const ModelLayout lay = modelLayout(creatorBoxes_);
+            std::vector<std::pair<int, int>> places = lay.at;
+            const int texW = lay.w, texH = lay.h;
+            std::vector<uint8_t> rgba((size_t)texW * texH * 4, 255);
+            for (int i = 0; i < texW * texH; ++i) {
+                const uint32_t c = creatorModelPix_[(size_t)i];
+                rgba[(size_t)i * 4] = (c >> 16) & 255, rgba[(size_t)i * 4 + 1] = (c >> 8) & 255, rgba[(size_t)i * 4 + 2] = c & 255;
             }
             writePng(dir + "/textures/mod/" + id + "_model.png", texW, texH, rgba);
             Json bones = Json::array();
@@ -437,7 +482,7 @@ void Game::saveVcCreation() {
                 bone.set("pivot", arr(b[0] + b[3] / 2.0f, (float)(b[1] + b[4]), b[2] + b[5] / 2.0f));
                 cube.set("origin", arr((float)b[0], (float)b[1], (float)b[2]));
                 cube.set("size", arr((float)b[3], (float)b[4], (float)b[5]));
-                uv.push(Json::number(places[i].u)), uv.push(Json::number(places[i].v));
+                uv.push(Json::number(places[i].first)), uv.push(Json::number(places[i].second));
                 cube.set("uv", uv);
                 cubes.push(cube);
                 bone.set("cubes", cubes);

@@ -37,6 +37,8 @@ struct VcPart {
     float pivot[3] = {0, 0, 0};
     float swing = 0;          // radians per unit of the walk's swing (legs +-1, arms the other way), 0: does not move
     float flap = 0;           // share of the wing beat, turning about z round `pivot` (wings), 0: none
+    float attack = 0;         // radians per unit of the attack swing, about x round `pivot` (a slam)
+    bool collar = false;      // drawn only while the creature wears a collar ("show": "collar")
 };
 
 struct VcModel {
@@ -45,6 +47,7 @@ struct VcModel {
     std::vector<VcBone> bones;
     std::vector<VcPart> parts;  // 2.8.0: GLB models
     bool animated = false;      // the GLB said how it moves ("extras": {"vc": ...})
+    bool squash = false;        // squashes on landing and stretches in the air (the slime)
     float flapSpeed = 0, flapAmp = 0, flapRest = 0;  // the wing beat: sin(time * speed) * amp, rest on the ground
     int cubeCount() const;
     int bone(const std::string& name) const;  // -1 if none
@@ -56,6 +59,9 @@ struct VcPose {
     float walk = 0;  // radians: how far the legs of a GLB model swing now
     float fall = 0;  // radians: dying, the whole body tips over sideways round the feet
     float flap = 0;  // radians: the wing beat now
+    float attack = 0;     // the attack swing now (Mob::attackAnim)
+    float stretch = 1;    // squash models: height factor (the width shrinks to keep the volume)
+    bool collar = false;  // show the collar parts
     std::vector<std::pair<int, int>> swaps;  // atlas tiles drawn as others (a villager's robe, a zombie face)
 };
 

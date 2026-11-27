@@ -479,6 +479,10 @@ int main(int argc, char** argv) {
             for (int mode = 0; mode < 7; ++mode) {
                 tap(VC_EDITOR_X0 + mode * VC_EDITOR_DX, VC_EDITOR_Y);
                 shot(("45_editor_" + std::to_string(mode)).c_str());
+                if (mode == 3) {
+                    tap(370, 82);  // Malování textury: painting the model's texture
+                    shot("45_editor_3b");
+                }
             }
         }
     }

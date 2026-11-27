@@ -633,10 +633,11 @@ void MobSystem::buildVertices(int dim, float time, std::vector<Vertex>& out) con
             // 2.8.0 preview (VC language): every creature's body is a GLB model from models/mobs/ (see VcBuiltin.h).
             // A few still have the old body: mod reskins, the Celestial Reach's pig and sheep, a fox in its collar,
             // and the bosses and the slime whose moves (slams, squashing) the VC models cannot show yet.
-            const bool keepOld = ModRegistry::get().mob(m.variant) || (m.dim == 3 && (m.type == MobType::Pig || m.type == MobType::Sheep)) ||
-                                 (m.type == MobType::Fox && m.tamed && m.collar >= 0) || m.type == MobType::CornerstoneGolem ||
-                                 m.type == MobType::SkyGuardian || m.type == MobType::PumpkinSlime;
-            if (const VcModel* model = keepOld ? nullptr : builtinMobModel(m.type, m.sit > 0.5f)) {
+            // Only mod reskins keep the old body; the Celestial Reach's pig and sheep have their own models.
+            const bool keepOld = ModRegistry::get().mob(m.variant) != nullptr;
+            const bool celestial = m.dim == 3 && (m.type == MobType::Pig || m.type == MobType::Sheep);
+            const VcModel* model = keepOld ? nullptr : celestial ? builtinMobModel(m.type, false, "celestial") : builtinMobModel(m.type, m.sit > 0.5f);
+            if (model) {
                 VcPose pose;
                 pose.walk = m.sit > 0.5f ? 0 : m.swing;
                 pose.fall = b.fall;
@@ -649,8 +650,12 @@ void MobSystem::buildVertices(int dim, float time, std::vector<Vertex>& out) con
                         if (r != robe) pose.swaps.emplace_back(r, robe);
                 }
                 if (m.type == MobType::ForgottenMan && zombieSkin) pose.swaps.emplace_back(T_FORGOTTEN_FACE, T_ZOMBIE_FACE);
+                pose.attack = m.attackAnim;
+                pose.stretch = std::clamp(1.0f + m.vel.y * 0.04f, 0.75f, 1.25f);  // squash models only
+                if (m.tamed && m.collar >= 0) pose.collar = true, pose.swaps.emplace_back(T_WOOL, T_WOOL + m.collar);
                 Vec3 at = feet;
                 float l = light;
+                if (m.type == MobType::SkyGuardian) l = std::max(l, 1.15f);  // the boss shines
                 if (m.type == MobType::Ghost) {
                     at.y += std::sin(time * 2.0f + m.age) * 1.2f / 16.0f;  // it bobs in the air
                     l = std::max(l, 3.2f);                                  // and glows pale in the dark

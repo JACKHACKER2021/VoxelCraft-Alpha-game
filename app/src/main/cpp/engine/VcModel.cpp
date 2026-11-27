@@ -144,7 +144,8 @@ bool parseVcGlb(const uint8_t* data, size_t size, VcModel& out, std::vector<uint
             VcPart part;
             part.name = node["name"].str("part" + std::to_string(out.parts.size()));
             if (ex.isObject()) {
-                part.swing = (float)ex["swing"].num(0), part.flap = (float)ex["flap"].num(0);
+                part.swing = (float)ex["swing"].num(0), part.flap = (float)ex["flap"].num(0), part.attack = (float)ex["attack"].num(0);
+                part.collar = ex["show"].str("") == "collar";
                 if (ex["pivot"].isArray()) read3(ex["pivot"], part.pivot);
                 out.animated = true;
             }
@@ -176,6 +177,7 @@ bool parseVcGlb(const uint8_t* data, size_t size, VcModel& out, std::vector<uint
     for (size_t n = 0; n < nodes.size(); ++n) {
         const Json& ex = nodes[n]["extras"]["vc"];
         if (ex.isObject()) out.animated = true;  // its moves are given (none is an answer too)
+        if (ex["squash"].num(0) != 0) out.squash = true;
         if (!ex["flapSpeed"].isNumber()) continue;
         out.flapSpeed = (float)ex["flapSpeed"].num(0), out.flapAmp = (float)ex["flapAmp"].num(0), out.flapRest = (float)ex["flapRest"].num(out.flapAmp);
         out.animated = true;
@@ -276,7 +278,8 @@ void buildVcModel(const VcModel& model, const VcPose& pose, const VcTexRect& tex
     // 2.8.0: GLB parts (already in blocks, not mirrored).
     const float cw = std::cos(pose.walk), sw = std::sin(pose.walk), cf = std::cos(pose.fall), sf = std::sin(pose.fall);
     for (const VcPart& part : model.parts) {
-        const float a = part.swing * pose.walk, ca = part.swing ? std::cos(a) : 1, sa = part.swing ? std::sin(a) : 0;
+        if (part.collar && !pose.collar) continue;
+        const float a = part.swing * pose.walk + part.attack * pose.attack, ca = std::cos(a), sa = std::sin(a);
         const float fa = part.flap * pose.flap, cfa = std::cos(fa), sfa = std::sin(fa);
         (void)cw, (void)sw;
         for (size_t i = 0; i + 15 <= part.tris.size(); i += 15) {
@@ -288,6 +291,10 @@ void buildVcModel(const VcModel& model, const VcPose& pose, const VcTexRect& tex
                 if (sa != 0) {
                     const float y = p.y - part.pivot[1], z = p.z - part.pivot[2];
                     p = Vec3(p.x, part.pivot[1] + y * ca - z * sa, part.pivot[2] + y * sa + z * ca);
+                }
+                if (model.squash && pose.stretch != 1) {
+                    const float k = 1 / std::sqrt(pose.stretch);
+                    p = Vec3(p.x * k, p.y * pose.stretch, p.z * k);
                 }
                 if (fa != 0) {
                     const float x = p.x - part.pivot[0], y = p.y - part.pivot[1];
