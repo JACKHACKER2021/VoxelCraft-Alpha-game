@@ -13,7 +13,7 @@
 ![C++](https://img.shields.io/badge/C%2B%2B-17-00599C?style=for-the-badge&logo=cplusplus&logoColor=white)
 ![OpenGL ES](https://img.shields.io/badge/OpenGL%20ES-3.0-5586A4?style=for-the-badge&logo=opengl&logoColor=white)
 
-[⬇️ Stáhnout APK 3.0.1](release/VoxelCraft-3.0.1.apk) · [📦 Všechny verze](release/) · [❓ FAQ](docs/FAQ.md) · [🎬 Trailer 2.0.0–3.0.0 (2 min)](trailers/t14_3.0.0.mp4) · [🎬 Trailer FAQ (3 min)](trailers/t13_faq.mp4) · [🎬 Trailer (17 min)](trailers/t12_2.0.0.mp4) · [📜 Historie](docs/HISTORIE.md)
+[⬇️ Stáhnout APK 3.0.1](release/VoxelCraft-3.0.1.apk) · [📦 Všechny verze](release/) · [❓ FAQ](docs/FAQ.md) · [🎬 Trailer 2.0.0–3.0.0 (2:11)](trailers/t14_3.0.0.mp4) · [🎬 Trailer FAQ (3 min)](trailers/t13_faq.mp4) · [🎬 Trailer (17 min)](trailers/t12_2.0.0.mp4) · [📜 Historie](docs/HISTORIE.md)
 
 
 **[🇨🇿 Čeština](#cestina)** · **[🇬🇧 English](#english)**

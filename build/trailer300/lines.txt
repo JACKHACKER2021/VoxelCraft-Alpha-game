@@ -1,0 +1,15 @@
+w01|From two point oh to three point oh. This is the road of VoxelCraft.
+w02|Two point oh brought the whole story, and your Minecraft worlds came along with the Bedrock import.
+w03|Two point one put trains on the rails, with a drill car that digs its own way.
+w04|Two point two gave the Cornerstone Dimension its own biomes, and frost that cracks the ice.
+w05|Two point three built the first subway.
+w06|Two point four and two point five went underground: stations, platforms and a whole network.
+w07|Two point six woke the Cornerstone: the golem, the fox, and winter with snow on every leaf.
+w08|Two point seven gave you backpacks, a collar for your fox, and a brand new green menu.
+w09|And the add-on studio: every add-on, behaviour and resource in one place.
+w10|Two point eight is the VC language. Every creature is a model you can open and change.
+w11|The pig, the sheep, the chicken, the cow and the ghost were drawn again.
+w12|The Creator makes blocks, items, mobs, models, recipes and shaders, without writing a single line.
+w13|And three point oh: the VoxelSoftworks seat, and no more iron.
+w14|So two point oh, it was a great ride.
+w15|Welcome to VoxelCraft three point oh.

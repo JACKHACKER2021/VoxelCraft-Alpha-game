@@ -16,7 +16,15 @@ import sys
 
 FILM_DIR = sys.argv[3] if len(sys.argv) > 3 else "build/film30"
 sys.argv = sys.argv[:1] + sys.argv[1:3]
-import trailer155 as k  # noqa: E402
+# The kit of the 1.5.5 trailer, without its own list of groups (it would look for that trailer's footage).
+import types  # noqa: E402
+_kit = os.path.join(os.path.dirname(os.path.abspath(__file__)), "trailer155.py")
+_lines = open(_kit, encoding="utf-8").read().split("\n")
+_a = next(i for i, l in enumerate(_lines) if l.startswith("groups = ["))
+_b = next(i for i, l in enumerate(_lines) if l.startswith('def frame_at')) - 1
+k = types.ModuleType("trailer155")
+k.__file__ = _kit
+exec(compile("\n".join(_lines[:_a] + [""] * (_b + 1 - _a) + _lines[_b + 1:]), _kit, "exec"), k.__dict__)
 
 from PIL import Image, ImageDraw  # noqa: E402
 
@@ -98,10 +106,13 @@ k.starts, k.total = starts, t
 print("groups:", len(groups), "length: %.1f s" % t, flush=True)
 
 
+_kit_boom = k.boom_cues
+
+
 def boom_cues():
     """The explosions of 2.0.0 in the finale (seconds into the shot: the fuse, then the blasts along it)."""
     k_cues = []
-    orig = k.boom_cues
+    orig = _kit_boom
     path = os.path.join(ROOT, "build/trailer6/boom.wav")
     if not os.path.exists(path):
         os.makedirs(os.path.dirname(path), exist_ok=True)
