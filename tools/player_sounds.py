@@ -1,145 +1,361 @@
 #!/usr/bin/env python3
-"""Player sounds for VoxelCraft: damage of every kind, death, respawn, hunger and
-eating, synthesised with the building blocks of tools/mob_sounds.py (numpy only,
-no recordings).
+"""Player sounds for VoxelCraft: damage, falls, freezing, fire, death, respawn,
+hunger and eating. Short, dry and punchy, in the style of classic block games.
+
+Made from physical models instead of plain tones, so they sound natural:
+- the voice: glottal pulses (with jitter, shimmer and breath) through the
+  resonances of the vocal tract (a Klatt-style formant cascade),
+- impacts, crunches, ice and fire: noise and tiny impulses through resonators,
+- the respawn: plucked strings (Karplus-Strong).
+No recordings, nothing from other games. Needs numpy and scipy.
 
     python3 tools/player_sounds.py   ->  assets_src/sounds/player/*.ogg
                                          assets_src/sounds/player_sounds_demo.mp3
 """
 import os
 import subprocess
-import sys
+import wave
 
 import numpy as np
+from scipy.signal import butter, lfilter, sosfilt
 
-sys.dont_write_bytecode = True
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import mob_sounds as ms  # noqa: E402
-from mob_sounds import (SR, T, voice, tone, noise, bubble, click, thump, seq, mixdown, tremolo,  # noqa: E402
-                        room, crackle, finish, write_wav)
-
+SR = 44100
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT = os.path.join(ROOT, "assets_src", "sounds", "player")
+DEMO = os.path.join(ROOT, "assets_src", "sounds", "player_sounds_demo.mp3")
 rng = np.random.default_rng(1207)
-ms.rng = rng
-OUT = os.path.join(ms.ROOT, "assets_src", "sounds", "player")
-DEMO = os.path.join(ms.ROOT, "assets_src", "sounds", "player_sounds_demo.mp3")
+
+
+# ------------------------------------------------------------- basic tools ---
+
+def n_of(d):
+    return max(1, int(d * SR))
+
+
+def interp(points, n):
+    xs, ys = zip(*points)
+    return np.interp(np.linspace(0, 1, n), xs, ys)
+
+
+def bandpass(x, lo, hi, order=2):
+    sos = butter(order, [max(20, lo), min(hi, SR / 2 - 100)], "bandpass", fs=SR, output="sos")
+    return sosfilt(sos, x)
+
+
+def lowpass(x, f, order=2):
+    return sosfilt(butter(order, min(f, SR / 2 - 100), "lowpass", fs=SR, output="sos"), x)
+
+
+def highpass(x, f, order=2):
+    return sosfilt(butter(order, f, "highpass", fs=SR, output="sos"), x)
+
+
+def env_ad(n, attack, decay_s, curve=1.0):
+    t = np.arange(n) / SR
+    e = np.exp(-t / decay_s) ** curve
+    a = min(n, n_of(attack))
+    e[:a] *= np.linspace(0, 1, a)
+    return e
+
+
+def fade(x, fin=0.003, fout=0.02):
+    x = x.copy()
+    a, b = min(len(x), n_of(fin)), min(len(x), n_of(fout))
+    x[:a] *= np.linspace(0, 1, a)
+    x[-b:] *= np.linspace(1, 0, b)
+    return x
+
+
+def norm(x):
+    return x / (np.abs(x).max() + 1e-12)
 
 
 def at(*items):
-    """Places (time in seconds, signal) items on one track."""
-    n = max(int(t * SR) + len(x) for t, x in items)
+    """Places (time, signal, gain) items on one track."""
+    n = max(n_of(t) + len(x) for t, x, *_ in items)
     out = np.zeros(n)
-    for t, x in items:
-        i = int(t * SR)
-        out[i:i + len(x)] += x
+    for t, x, *g in items:
+        i = n_of(t) if t > 0 else 0
+        out[i:i + len(x)] += x * (g[0] if g else 1.0)
     return out
 
 
-def grunt(f=140, d=0.22, v=("a", "u"), rough=1.0):
-    """The player's short pained 'uh'."""
-    return voice(d, [(0, f * 1.15), (0.3, f), (1, f * 0.8)], list(v), rough=rough, breath=0.25)
+def resonator(x, f, bw):
+    """Klatt two-pole resonator (unity gain at DC)."""
+    T = 1 / SR
+    C = -np.exp(-2 * np.pi * bw * T)
+    B = 2 * np.exp(-np.pi * bw * T) * np.cos(2 * np.pi * f * T)
+    A = 1 - B - C
+    return lfilter([A], [1, -B, -C], x)
 
 
-def body_hit(f0=70, weight=1.0):
-    return mixdown((thump(f0, 0.35 * weight), 1.0), (noise(0.12, 150, 1800, 0.001, 0.1, decay=0.03), 0.5 * weight))
+def ping(f, decay, bw=None):
+    """An impulse through a resonator: a natural 'tick', 'tink' or 'pop'."""
+    n = n_of(decay * 5)
+    imp = np.zeros(n)
+    imp[0] = 1
+    bw = bw or 1 / (np.pi * decay)
+    return norm(resonator(imp, f, bw) - resonator(imp, f, bw).mean())
 
 
-def sizzle(d, rate=45):
-    hiss = tremolo(noise(d, 2500, 10000, 0.01, d / 2), 13, 0.5)
-    return mixdown((hiss, 0.6), (crackle(d, rate), 0.7))
+# ------------------------------------------------------------------ voice ---
+
+FORMANTS = {  # an adult voice (Hz): F1..F4 and bandwidths
+    "u": (320, 870, 2250, 3300), "o": (520, 880, 2420, 3300), "oo": (450, 900, 2400, 3300),
+    "a": (720, 1100, 2450, 3400), "uh": (620, 1180, 2400, 3300), "e": (530, 1800, 2480, 3400),
+    "eh": (580, 1700, 2450, 3400), "i": (300, 2250, 2950, 3500), "m": (260, 1050, 2300, 3300),
+}
+BANDWIDTHS = (80, 100, 140, 200)
 
 
-def whoosh(d, lo=200, hi=3000, rise=True):
-    x = noise(d, lo, hi, 0.005, 0.01)
-    env = np.linspace(0, 1, len(x)) ** 2 if rise else np.linspace(1, 0, len(x)) ** 2
-    return x * env
+def glottal(f0, n, jitter=0.012, shimmer=0.12, open_q=0.6):
+    """Glottal flow derivative pulses (Rosenberg) with natural irregularity."""
+    f = f0 * (1 + jitter * rng.standard_normal(n).cumsum() / np.sqrt(np.arange(1, n + 1)))  # slow wander
+    f = f * (1 + jitter * 0.6 * rng.standard_normal(n))
+    phase = np.cumsum(f / SR)
+    ph = phase % 1.0
+    period_id = np.floor(phase).astype(int)
+    amp = 1 + shimmer * rng.standard_normal(period_id.max() + 2)
+    tp, tn = open_q * 0.66, open_q * 0.34
+    flow = np.where(ph < tp, 0.5 * (1 - np.cos(np.pi * ph / tp)),
+                    np.where(ph < tp + tn, np.cos(np.pi / 2 * (ph - tp) / tn), 0.0))
+    return np.diff(flow * amp[period_id], prepend=0.0)
+
+
+def voice(dur, f0, vowels, breath=0.15, jitter=0.012, shimmer=0.12, h_start=0.03, fry=0.0, scale=1.0):
+    """f0: Hz or [(t, Hz)]; vowels: list of vowel names it glides through.
+    breath: aspiration noise; h_start: seconds of breathy onset; fry: creaky end."""
+    n = n_of(dur)
+    f0c = interp(f0, n) if isinstance(f0, (list, tuple)) else np.full(n, float(f0))
+    if fry:
+        k = int(n * (1 - fry))
+        f0c[k:] *= np.linspace(1, 0.55, n - k)  # pitch sinks into vocal fry
+        jitter_c = np.full(n, jitter)
+        jitter_c[k:] = jitter * 6
+        jitter = float(np.mean(jitter_c))
+    src = glottal(f0c, n, jitter, shimmer)
+    src = norm(src)
+    asp = rng.standard_normal(n) * breath
+    hs = n_of(h_start)
+    if h_start:
+        src[:hs] *= np.linspace(0, 1, hs) ** 2
+        asp[:hs] *= 6 * np.linspace(1, 0.3, hs)
+    exc = src + highpass(asp, 600) * np.abs(src).mean() * 8
+    # time-varying formant cascade, 4 ms blocks
+    tracks = np.array([FORMANTS[v] for v in vowels], float) * scale
+    pos = np.linspace(0, len(vowels) - 1, n)
+    out = np.empty(n)
+    blk = n_of(0.004)
+    zis = [np.zeros(2) for _ in range(4)]
+    for i in range(0, n, blk):
+        p = pos[i]
+        lo, hi = int(np.floor(p)), min(int(np.floor(p)) + 1, len(vowels) - 1)
+        fr = p - lo
+        F = tracks[lo] * (1 - fr) + tracks[hi] * fr
+        y = exc[i:i + blk]
+        for j in range(4):
+            T = 1 / SR
+            C = -np.exp(-2 * np.pi * BANDWIDTHS[j] * T)
+            B = 2 * np.exp(-np.pi * BANDWIDTHS[j] * T) * np.cos(2 * np.pi * F[j] * T)
+            A = 1 - B - C
+            y, zis[j] = lfilter([A], [1, -B, -C], y, zi=zis[j])
+        out[i:i + blk] = y
+    out = np.diff(out, prepend=0.0)  # radiation from the lips
+    e = np.ones(n)
+    e[-n_of(0.04):] = np.linspace(1, 0, n_of(0.04)) ** 2
+    return norm(out * e)
+
+
+def oof(f=150, d=0.2, v=("oo", "u"), fry=0.3, breath=0.18):
+    """The short pained 'oof' when the player is hurt."""
+    return voice(d, [(0, f * 1.12), (0.25, f), (1, f * 0.74)], list(v), breath=breath, fry=fry, h_start=0.025)
+
+
+# ---------------------------------------------------------------- impacts ---
+
+def thud(weight=1.0, f=75):
+    """A body hitting the ground: low knock + muffled noise + cloth."""
+    n = n_of(0.35 * weight)
+    t = np.arange(n) / SR
+    knock = np.sin(2 * np.pi * np.cumsum(f + 60 * np.exp(-t / 0.02)) / SR) * env_ad(n, 0.001, 0.07 * weight)
+    body = lowpass(rng.standard_normal(n), 400) * env_ad(n, 0.001, 0.05 * weight)
+    cloth = bandpass(rng.standard_normal(n_of(0.12)), 1500, 6000) * env_ad(n_of(0.12), 0.002, 0.03)
+    return norm(at((0, norm(knock), 1.0), (0, norm(body), 0.7), (0.003, norm(cloth), 0.12)))
+
+
+def punch():
+    """A blow to the body: fast muffled slap."""
+    n = n_of(0.12)
+    slap = bandpass(rng.standard_normal(n), 300, 3500) * env_ad(n, 0.0005, 0.018)
+    return norm(at((0, norm(slap), 1.0), (0, thud(0.4, 95), 0.8)))
+
+
+def grains(dur, rate, lo, hi, decay=(0.0008, 0.003), env=None):
+    """Many tiny resonant ticks: crunches, crackles, gravel."""
+    n = n_of(dur)
+    out = np.zeros(n)
+    for _ in range(int(dur * rate)):
+        g = ping(rng.uniform(lo, hi), rng.uniform(*decay)) * rng.uniform(0.2, 1.0) ** 2
+        i = rng.integers(0, max(1, n - len(g)))
+        out[i:i + len(g)] += g[: n - i]
+    if env is not None:
+        out *= env
+    return out
+
+
+# ------------------------------------------------------------------ fire ---
+
+def fire(dur, intensity=1.0):
+    n = n_of(dur)
+    roar = lowpass(rng.standard_normal(n), 900) * (0.6 + 0.4 * lowpass(rng.standard_normal(n), 6) * 3)
+    hiss = bandpass(rng.standard_normal(n), 2500, 9000) * 0.35
+    pops = grains(dur, 35 * intensity, 600, 4000, (0.001, 0.006))
+    e = np.minimum(1, np.arange(n) / n_of(0.03)) * np.linspace(1, 0.2, n)
+    return norm(at((0, norm(roar) * e, 0.6), (0, norm(hiss) * e, 0.35), (0, norm(pops) * e, 0.8)))
+
+
+def whoosh(dur, f_from, f_to, q=3.0):
+    """Air swept through a moving band (a flying fireball, a gust)."""
+    n = n_of(dur)
+    x = rng.standard_normal(n)
+    out = np.empty(n)
+    fc = np.geomspace(f_from, f_to, n)
+    blk = n_of(0.005)
+    zi = np.zeros(2)
+    for i in range(0, n, blk):
+        f = fc[i]
+        y, zi = lfilter(*_rbj_bp(f, q), x[i:i + blk], zi=zi)
+        out[i:i + blk] = y
+    return norm(out) * np.sin(np.linspace(0, np.pi, n)) ** 1.5
+
+
+def _rbj_bp(f, q):
+    w = 2 * np.pi * f / SR
+    al = np.sin(w) / (2 * q)
+    b = np.array([al, 0, -al])
+    a = np.array([1 + al, -2 * np.cos(w), 1 - al])
+    return b / a[0], a / a[0]
+
+
+# ------------------------------------------------------------------- misc ---
+
+def pluck(f, dur=1.2, bright=0.5):
+    """Karplus-Strong plucked string."""
+    n = n_of(dur)
+    p = int(SR / f)
+    buf = rng.uniform(-1, 1, p)
+    buf = lowpass(buf, 2000 + 6000 * bright)
+    out = np.empty(n)
+    for i in range(n):
+        out[i] = buf[i % p]
+        buf[i % p] = 0.4985 * (buf[i % p] + buf[(i + 1) % p])
+    return norm(out) * env_ad(n, 0.001, dur / 3)
+
+
+def bubble(f0, dur=0.08):
+    n = n_of(dur)
+    t = np.arange(n) / SR
+    f = f0 * (1 + 0.6 * t / dur)  # a bubble rises in pitch as it shrinks
+    return np.sin(2 * np.pi * np.cumsum(f) / SR) * env_ad(n, 0.002, dur / 4)
 
 
 # ------------------------------------------------------------------ sounds ---
 
 def damage(k=0):
-    """An ordinary hit (a mob, a sword, an arrow): a punchy impact and a short 'uh'."""
-    f = (140, 128, 152)[k]
-    v = (("a", "u"), ("o", "u"), ("e", "a"))[k]
-    punch = mixdown((thump(85 + 10 * k, 0.25), 1.0), (noise(0.07, 400, 4000, 0.0008, 0.05, decay=0.015), 0.8))
-    return mixdown((punch, 0.9), (seq(0.015, grunt(f, 0.19, v, rough=1.2)), 0.8))
+    f = (152, 138, 165)[k]
+    v = (("oo", "u"), ("uh", "u"), ("o", "u"))[k]
+    return at((0, punch(), 0.75), (0.008, oof(f, 0.19 + 0.02 * k, v), 0.9))
 
 
 def freeze_hit():
-    crack = noise(0.06, 3000, 12000, 0.0005, 0.04, decay=0.012)
-    tinkle = at(*[(k * 0.04 + rng.uniform(0, 0.015), tone(0.35, f, (1, 0.2), decay=0.1) * rng.uniform(0.3, 0.7))
-                  for k, f in enumerate((3520, 4186, 2960, 4700, 3950))])
-    breath = noise(0.45, 600, 5000, 0.02, 0.3) * 0.35  # a cold 'hhh'
-    return room(mixdown((crack, 1.0), (body_hit(80, 0.7), 0.7), (seq(0.02, tinkle), 0.6),
-                        (seq(0.05, grunt(150, 0.18, ("e", "u"))), 0.6), (seq(0.12, breath), 0.4)), 0.7, 0.3)
+    n = n_of(0.5)
+    crack = grains(0.05, 900, 2500, 9000, (0.0005, 0.002))           # the ice cracks
+    tinkle = grains(0.5, 45, 3500, 8000, (0.01, 0.03), np.exp(-np.arange(n) / SR / 0.12))  # shards
+    frost = bandpass(rng.standard_normal(n), 3000, 10000) * env_ad(n, 0.01, 0.1) * 0.5
+    return at((0, norm(crack), 0.9), (0, punch(), 0.5), (0.01, norm(tinkle), 0.35), (0, norm(frost), 0.25),
+              (0.02, oof(158, 0.2, ("eh", "u")), 0.8))
 
 
 def fall_small():
-    return mixdown((body_hit(75, 0.8), 1.0), (noise(0.18, 1500, 6000, 0.002, 0.12, decay=0.05), 0.25),
-                   (seq(0.02, grunt(135, 0.16)), 0.55))
+    return at((0, thud(0.8, 80), 1.0), (0.01, oof(145, 0.16, ("uh", "u"), fry=0.2), 0.55))
 
 
 def fall_big():
-    crack = seq(click(0.02, 1500, 9000), 0.015, click(0.015, 1200, 7000))  # a nasty crack
-    gravel = seq(0.03, *[p for _ in range(9) for p in (click(0.012, 800, 5000) * rng.uniform(0.2, 0.6), rng.uniform(0.01, 0.04))])
-    return mixdown((body_hit(50, 1.6), 1.0), (thump(38, 0.8), 0.7), (crack, 0.7), (gravel, 0.4),
-                   (seq(0.04, grunt(150, 0.4, ("a", "o", "u"), rough=1.6)), 0.8))
+    crunch = grains(0.07, 700, 800, 5000, (0.0008, 0.004))
+    gravel = grains(0.35, 60, 700, 4000, (0.001, 0.004), np.exp(-np.arange(n_of(0.35)) / SR / 0.1))
+    ugh = voice(0.42, [(0, 175), (0.2, 160), (1, 100)], ["a", "uh", "u"], breath=0.25, fry=0.35, h_start=0.02)
+    return at((0, thud(1.7, 55), 1.0), (0, thud(1.2, 40), 0.6), (0.004, norm(crunch), 0.55),
+              (0.03, norm(gravel), 0.25), (0.02, ugh, 0.85))
 
 
 def death():
-    cry = voice(0.75, [(0, 190), (0.25, 210), (1, 95)], ["a", "o", "u"], rough=1.2, breath=0.2)
-    fall = seq(0.62, body_hit(60, 1.2))
-    gone = seq(0.8, room(tone(1.2, [(0, 220), (1, 110)], (1, 0.3, 0.1)) * np.linspace(1, 0, int(1.2 * SR)), 1.5, 0.5))
-    return mixdown((cry, 1.0), (fall, 0.8), (gone, 0.35))
+    ugh = voice(0.55, [(0, 170), (0.15, 182), (1, 95)], ["uh", "a", "o", "u"], breath=0.25, fry=0.4, h_start=0.03)
+    sigh = voice(0.5, [(0, 105), (1, 80)], ["uh", "m"], breath=0.6, fry=0.5) * np.linspace(1, 0, n_of(0.5))
+    return at((0, punch(), 0.6), (0.01, ugh, 0.9), (0.5, thud(1.4, 60), 0.9), (0.62, sigh, 0.35))
 
 
 def burn(k=0):
-    f = (150, 160)[k]
-    return mixdown((sizzle(0.55), 1.0), (seq(0.03, grunt(f, 0.2, ("e", "a"), rough=1.4)), 0.7))
+    return at((0, fire(0.5, 1.2), 0.7), (0.01, oof((160, 148)[k], 0.19, (("eh", "u"), ("uh", "u"))[k]), 0.85))
 
 
 def husking_flame():
-    """The Husking's fireball hits: whoosh, a soft blast, then the burn."""
-    fly = whoosh(0.35, 150, 2500)
-    blast = mixdown((thump(55, 0.6), 1.0), (noise(0.7, 80, 4000, 0.002, 0.5, decay=0.12), 0.9))
-    return room(seq(fly, (blast, -0.02), (sizzle(0.8, 60), -0.55), (grunt(165, 0.25, ("a", "e"), rough=1.6), -0.9)), 0.8, 0.25)
+    fly = whoosh(0.32, 400, 2200, 2.5)
+    n = n_of(0.5)
+    blast = lowpass(rng.standard_normal(n), 700) * env_ad(n, 0.002, 0.09)
+    return at((0, fly, 0.5), (0.3, norm(blast), 1.0), (0.3, thud(0.8, 60), 0.6), (0.3, fire(0.8, 1.5), 0.6),
+              (0.33, oof(168, 0.2, ("o", "u")), 0.85))
 
 
 def death_fire():
-    cry = voice(0.8, [(0, 210), (0.2, 240), (1, 90)], ["a", "e", "o", "u"], rough=1.6, breath=0.35)
-    flames = tremolo(noise(1.8, 100, 3500, 0.3, 1.0), 7, 0.4)
-    return mixdown((cry, 1.0), (flames, 0.5), (sizzle(1.8, 35), 0.5), (seq(0.7, body_hit(55, 1.2)), 0.7))
+    ugh = voice(0.6, [(0, 185), (0.15, 200), (1, 100)], ["eh", "a", "o", "u"], breath=0.3, fry=0.4)
+    return at((0, fire(1.6, 1.4), 0.6), (0, whoosh(0.5, 300, 1200, 2.0), 0.4), (0.02, ugh, 0.9),
+              (0.55, thud(1.3, 60), 0.8))
 
 
 def respawn():
-    notes = (523.25, 659.25, 783.99, 1046.5, 1318.5)  # C E G C E rising
-    arp = at(*[(k * 0.09, tone(1.2, f, (1, 0.25, 0.08), decay=0.5)) for k, f in enumerate(notes)])
-    up = whoosh(0.6, 400, 6000, rise=True)
-    glow = tone(1.6, 261.63, (1, 0.5, 0.25)) * np.sin(np.linspace(0, np.pi, int(1.6 * SR))) * 0.6
-    return room(mixdown((up, 0.4), (seq(0.45, arp), 1.0), (seq(0.4, glow), 0.5)), 1.6, 0.45)
+    gust = whoosh(0.7, 300, 3000, 1.5)
+    chord = at(*[(0.35 + 0.07 * k, pluck(f, 1.6, 0.4), 0.5) for k, f in enumerate((261.63, 329.63, 392.0, 523.25))])
+    return at((0, gust, 0.35), (0, chord, 1.0))
 
 
 def hunger():
-    """A stomach growl: a low wobbling rumble with gurgles."""
-    rumble = voice(1.3, [(0, 55), (0.3, 75), (0.6, 50), (1, 65)], ["u", "o", "u"], rough=3.0)
-    gurgles = seq(0.2, *[p for f in (180, 140, 220, 160) for p in (bubble(f, 0.12), rng.uniform(0.08, 0.2))])
-    return mixdown((tremolo(rumble, 9, 0.6), 1.0), (gurgles, 0.5))
+    """A stomach growl: low resonant gurgling noise."""
+    n = n_of(1.2)
+    x = rng.standard_normal(n)
+    growl = np.zeros(n)
+    for f, g in ((180, 1.0), (320, 0.6), (520, 0.3)):
+        mod = 1 + 0.15 * np.sin(2 * np.pi * rng.uniform(1.5, 3) * np.arange(n) / SR)
+        growl += g * norm(resonator(x, f, 40)) * mod
+    am = np.clip(lowpass(rng.standard_normal(n), 8) * 4 + 0.6, 0, None)
+    growl = norm(growl * am) * np.sin(np.linspace(0, np.pi, n)) ** 0.7
+    gurgles = at(*[(t, bubble(f, 0.07), 0.4) for t, f in ((0.25, 210), (0.5, 160), (0.62, 240), (0.9, 190))])
+    return at((0, growl, 1.0), (0, gurgles, 1.0))
+
+
+def chomp():
+    """One bite: a crunchy burst of tiny cracks with a soft mouth knock."""
+    d = rng.uniform(0.07, 0.1)
+    n = n_of(d)
+    e = env_ad(n, 0.003, d / 3)
+    crunch = grains(d, 1400, 900, 5500, (0.0004, 0.002), e)
+    knock = thud(0.25, 130)
+    return at((0, norm(crunch), 1.0), (0, knock, 0.25))
 
 
 def eat(k=0):
-    """Chewing: a few crunchy bites, the last one followed by a gulp."""
-    out = []
-    for i in range(3 + k % 2):
-        bite = noise(rng.uniform(0.06, 0.09), 700 + 300 * k, 6000, 0.001, 0.05, decay=0.03)
-        crumbs = at(*[(j * 0.014, click(0.008, 1500, 7000) * rng.uniform(0.3, 1)) for j in range(4)])
-        bite = mixdown((bite, 1.0), (crumbs, 0.4))
-        out += [bite, rng.uniform(0.11, 0.16)]
-    return seq(*out)
+    bites = 3 + (k == 1)
+    t, items = 0.0, []
+    for _ in range(bites):
+        items.append((t, chomp(), rng.uniform(0.75, 1.0)))
+        t += rng.uniform(0.15, 0.2)
+    return at(*items)
 
 
 def eat_finish():
-    gulp = mixdown((bubble(110, 0.18), 1.0), (voice(0.18, [(0, 120), (1, 90)], ["m", "u"]), 0.4))
-    ahh = voice(0.35, [(0, 170), (1, 140)], ["a", "a"], breath=0.5)  # a satisfied 'ahh'
-    return seq(gulp, 0.12, ahh * 0.6)
+    gulp = at((0, bubble(140, 0.1), 1.0), (0, lowpass(rng.standard_normal(n_of(0.08)), 600) * env_ad(n_of(0.08), 0.003, 0.02), 0.5))
+    burp = voice(0.38, [(0, 95), (0.3, 88), (1, 70)], ["o", "oo", "uh"], breath=0.1, jitter=0.05, shimmer=0.35,
+                 h_start=0.0, fry=0.6)
+    return at((0, gulp, 0.6), (0.15, burp, 0.9))
 
 
 SOUNDS = {
@@ -163,19 +379,41 @@ SOUNDS = {
 }
 
 
+def finish(x, loud=-15.0, peak=0.92):
+    x = highpass(np.asarray(x, float), 45)
+    lvl = np.abs(x)
+    end = len(x)
+    while end > SR // 20 and lvl[end - SR // 100:end].max() < lvl.max() * 3e-3:
+        end -= SR // 200
+    x = fade(x[:end], 0.001, 0.015)
+    x = norm(x)
+    win = n_of(0.03)
+    frames = [np.sqrt(np.mean(x[i:i + win] ** 2)) for i in range(0, max(1, len(x) - win), win)]
+    x = x * 10 ** (loud / 20) / (np.percentile(frames, 85) + 1e-9)
+    return np.tanh(x / peak) * peak
+
+
+def write_wav(path, x):
+    with wave.open(path, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(SR)
+        w.writeframes((np.clip(x, -1, 1) * 32767).astype("<i2").tobytes())
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     demo, t = [], 0.0
     for name, make in SOUNDS.items():
-        x = finish(make(), 0.9)
+        x = finish(make())
         wav = os.path.join(OUT, name + ".wav")
         write_wav(wav, x)
-        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", wav, "-c:a", "libvorbis", "-q:a", "4",
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", wav, "-c:a", "libvorbis", "-q:a", "5",
                         wav[:-4] + ".ogg"], check=True)
         os.remove(wav)
         print(f"{int(t // 60)}:{int(t % 60):02d}  {name}  ({len(x) / SR:.2f} s)")
-        demo += [x, np.zeros(int(1.0 * SR))]
-        t += len(x) / SR + 1.0
+        demo += [x, np.zeros(n_of(0.9))]
+        t += len(x) / SR + 0.9
     wav = DEMO[:-4] + ".wav"
     write_wav(wav, np.concatenate(demo))
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", wav, "-b:a", "160k",
