@@ -7,13 +7,13 @@
 **Kostičková hra pro Android s vlastním enginem v C++**
 *Hoppy_Hopsy21 · VoxelSoftworks · vytvořeno společně s Claude*
 
-![Verze](https://img.shields.io/badge/verze-3.0.0-2ea44f?style=for-the-badge)
+![Verze](https://img.shields.io/badge/verze-3.0.1-2ea44f?style=for-the-badge)
 ![Preview](https://img.shields.io/badge/preview-3.1.0-orange?style=for-the-badge)
 ![Android](https://img.shields.io/badge/Android-arm64-3DDC84?style=for-the-badge&logo=android&logoColor=white)
 ![C++](https://img.shields.io/badge/C%2B%2B-17-00599C?style=for-the-badge&logo=cplusplus&logoColor=white)
 ![OpenGL ES](https://img.shields.io/badge/OpenGL%20ES-3.0-5586A4?style=for-the-badge&logo=opengl&logoColor=white)
 
-[⬇️ Stáhnout APK 3.0.0](release/VoxelCraft-3.0.0.apk) · [📦 Všechny verze](release/) · [❓ FAQ](docs/FAQ.md) · [🎬 Trailer 2.0.0–3.0.0 (2 min)](trailers/t14_3.0.0.mp4) · [🎬 Trailer FAQ (3 min)](trailers/t13_faq.mp4) · [🎬 Trailer (17 min)](trailers/t12_2.0.0.mp4) · [📜 Historie](docs/HISTORIE.md)
+[⬇️ Stáhnout APK 3.0.1](release/VoxelCraft-3.0.1.apk) · [📦 Všechny verze](release/) · [❓ FAQ](docs/FAQ.md) · [🎬 Trailer 2.0.0–3.0.0 (2 min)](trailers/t14_3.0.0.mp4) · [🎬 Trailer FAQ (3 min)](trailers/t13_faq.mp4) · [🎬 Trailer (17 min)](trailers/t12_2.0.0.mp4) · [📜 Historie](docs/HISTORIE.md)
 
 
 **[🇨🇿 Čeština](#cestina)** · **[🇬🇧 English](#english)**
@@ -27,7 +27,7 @@
 **VoxelCraft** is a block-building game for Android with its own C++ engine, by Hoppy_Hopsy21 and VoxelSoftworks, made together with Claude.
 All code, textures, models and music are our own: **no textures, sounds, music or code from Mojang**, and it is not connected with Mojang or Microsoft.
 
-**⬇️ [VoxelCraft 3.0.0](release/VoxelCraft-3.0.0.apk)** · **[📦 all versions](release/)** · **[❓ FAQ](docs/FAQ.md)**
+**⬇️ [VoxelCraft 3.0.1](release/VoxelCraft-3.0.1.apk)** · **[📦 all versions](release/)** · **[❓ FAQ](docs/FAQ.md)**
 
 #### 🆕 3.0.0 – no iron, the Cornerstone wholly its own
 - ⚙️ iron tools are gone (they became steel); iron ore is still mined and smelted, but an ingot only goes with coal into **steel mix**
@@ -85,6 +85,8 @@ The rest of this page (history of every version, how to build) is in Czech.
 ---
 
 ## 🆕 3.0.0 – Bez železa, úhelný kámen celý svůj
+
+> **3.0.1:** vývojářská mapa Sídlo VoxelSoftworks se už neotevře jako Trailer studio.
 
 - ⚙️ **železné nástroje odešly**: jsou z nich ocelové; železná ruda se dál těží a taví, ale ingot jde jen **s uhlím do ocelové směsi**, která se vypálí na ocel
 - 🚪 **ocelové dveře** (dřív železné), 🟫 **nová rezavá ocel**: rez od okrajů a spojů, stékající pruhy, šupiny

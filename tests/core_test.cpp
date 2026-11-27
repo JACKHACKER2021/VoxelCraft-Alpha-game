@@ -4401,6 +4401,12 @@ static int testWorld159() {
               stairsVariant(stairsId(19, 2, true)) == 6 && shapeMaterialBlock(18) == HARDENED_CONCRETE && isLeaves(ORANGE_LEAVES) &&
               itemFromKey("gray_slab") == slabId(19, 0) && itemFromKey("dusty_concrete") == DUSTY_CONCRETE);
     }
+    {
+        // 3.0.1: the VoxelSoftworks seat (developer map 7) is kept: it was cut to 6, the trailer studio.
+        GenConfig g = GenConfig::defaults();
+        g.devMap = kDevMaps;
+        CHECK(GenConfig::fromJson(g.toJson()).devMap == kDevMaps);
+    }
     size_t total = 0;
     for (int c = 0; c < CatCount; ++c) total += creativeCategoryItems(c).size();
     size_t ironGone = 0;  // 2.9.0: the iron things left the creative inventory

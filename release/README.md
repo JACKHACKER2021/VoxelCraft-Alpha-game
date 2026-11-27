@@ -4,7 +4,7 @@
 
 <a id="cz"></a>
 Všechna APK VoxelCraftu. Hra pro Android od Hoppy_Hopsy21 a VoxelSoftworks, vytvořená společně s Claude.
-Nejnovější je **3.0.0**. Preview další verze (3.1.0) je jen pro vývojáře; z dřívějších preview je tu 2.9.0, protože z něj rovnou vznikla 3.0.0. Neoficiální fanouškovský projekt, bez obsahu od Mojangu.
+Nejnovější je **3.0.1**. Preview další verze (3.1.0) je jen pro vývojáře; z dřívějších preview je tu 2.9.0, protože z něj rovnou vznikla 3.0.0. Neoficiální fanouškovský projekt, bez obsahu od Mojangu.
 
 > [!IMPORTANT]
 > Od verze **2.4.0** má hra nové ID (`cz.voxelsoftworks.voxelcraft`) a nový podpis. Nainstaluje se **vedle** starší verze.
@@ -16,7 +16,7 @@ Nejnovější je **3.0.0**. Preview další verze (3.1.0) je jen pro vývojáře
 - 🧩 další tvorové a bloky ve VC jazyce
 
 <a id="en"></a>
-All VoxelCraft APKs. Newest: **3.0.0**. The preview of the next version (3.1.0) is for developers only; the 2.9.0 preview is here because 3.0.0 grew straight out of it. From 2.4.0 the app has a new id and a new
+All VoxelCraft APKs. Newest: **3.0.1**. The preview of the next version (3.1.0) is for developers only; the 2.9.0 preview is here because 3.0.0 grew straight out of it. From 2.4.0 the app has a new id and a new
 signature, so it installs **next to** an older one (move worlds with *Export* / *Import*). The 2.2.0 and 2.3.x APKs were lost; 2.4.0 has all of them.
 
 ### 🧪 3.1.0 Preview – coming
@@ -24,7 +24,8 @@ signature, so it installs **next to** an older one (move worlds with *Export* / 
 
 | Verze | APK | Co přinesla |
 |---|---|---|
-| **3.0.0** | [VoxelCraft-3.0.0.apk](VoxelCraft-3.0.0.apk) | No iron, the Cornerstone wholly its own: iron tools became steel and iron only goes with coal into steel mix, steel doors, new rusty steel, no "Nether" left in the game, the VoxelSoftworks seat dev map, a festive welcome with fireworks, the backpack page fix, editable resources, a new biome in the add-on manager. ([notes](RELEASE-3.0.0.md)) |
+| **3.0.1** | [VoxelCraft-3.0.1.apk](VoxelCraft-3.0.1.apk) | Fix: the VoxelSoftworks seat developer map is created (3.0.0 opened the trailer studio instead). ([notes](RELEASE-3.0.1.md)) |
+| 3.0.0 | [VoxelCraft-3.0.0.apk](VoxelCraft-3.0.0.apk) | No iron, the Cornerstone wholly its own: iron tools became steel and iron only goes with coal into steel mix, steel doors, new rusty steel, no "Nether" left in the game, the VoxelSoftworks seat dev map, a festive welcome with fireworks, the backpack page fix, editable resources, a new biome in the add-on manager. ([notes](RELEASE-3.0.0.md)) |
 | 2.9.0 Preview | [VoxelCraft-2.9.0-preview.apk](VoxelCraft-2.9.0-preview.apk) | The short preview on the way to 3.0.0: iron starts to leave, the backpack fix, cornerstone.json, the default resources to edit, add-on export. ([notes](RELEASE-2.9.0.md)) |
 | 2.8.0 | [VoxelCraft-2.8.0.apk](VoxelCraft-2.8.0.apk) | The VC language: every creature as a GLB model (new pig, sheep, chicken, cow, ghost), blocks, items, loot, shaders and structures in files a pack can replace, the full Creator (blocks, items, mobs, models with painting, recipes, shaders, pack), tickets and turnstiles, station announcements, the player's journal, ten achievements. ([notes](RELEASE-2.8.0.md)) |
 | 2.7.1 | [VoxelCraft-2.7.1.apk](VoxelCraft-2.7.1.apk) | Fix: the shaders no longer switch off while a world or a dimension loads (20 s wait, 10 s windows under 20 FPS, two in a row); shaders switched off by 2.7.0 get another chance; Galaxy A14 (Mali-G52) gets Smoother+. |

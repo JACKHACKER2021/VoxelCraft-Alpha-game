@@ -11,8 +11,8 @@ android {
         applicationId = "cz.voxelsoftworks.voxelcraft"  // 2.4.0: new id and a lasting signing key (the old key was lost)
         minSdk = 21  // 2.5.0: Android 5.0 and newer
         targetSdk = 36
-        versionCode = 40
-        versionName = "3.0.0"
+        versionCode = 41
+        versionName = "3.0.1"
     }
 
     externalNativeBuild {
