@@ -7445,14 +7445,19 @@ SHOT(t30_mobs) {
         s.mobs().mobs().back().yaw = 3.14159f;  // facing the camera at first
     }
     const Vec3 centre(0, 4.6f, 0.5f);
+    for (Mob& m : s.mobs().mobs()) m.wanderTimer = 999;
     d.idle(10);
     d.shot("t30_mobs");
     d.seconds(9, [&](float k) {
         const float a = 3.14159f * 0.5f + k * 2.2f;
-        p.pos = centre + Vec3(std::cos(a) * 7.5f, 1.2f, std::sin(a) * 7.5f);
+        p.pos = centre + Vec3(std::cos(a) * 6.0f, 0.6f, std::sin(a) * 6.0f);
         p.vel = {};
         d.lookNow(centre);
-        for (Mob& m : s.mobs().mobs()) m.swing = std::sin(k * 40.0f) * 0.5f;  // they walk on the spot
+        for (int i = 0; i < (int)s.mobs().mobs().size(); ++i) {  // they walk on the spot, in a row
+            Mob& m = s.mobs().mobs()[(size_t)i];
+            m.pos = Vec3(-4.0f + i * 2.0f, m.type == MobType::Ghost ? 5.0f : 4.0f, 0.5f), m.vel = {}, m.wandering = false, m.wanderTimer = 999;
+            m.swing = std::sin(k * 40.0f) * 0.5f;
+        }
     });
 }
 
@@ -7468,9 +7473,10 @@ SHOT(t30_hq) {
     d.idle(20);
     d.shot("t30_hq");
     d.seconds(9, [&](float k) {
-        p.pos = Vec3(-45.0f + k * 70.0f, 18.0f - k * 6.0f, -10.0f + k * 4.0f);
+        // From the road in front, high up, along both buildings.
+        p.pos = Vec3(-40.0f + k * 60.0f, 26.0f, 28.0f);
         p.vel = {};
-        d.lookNow(Vec3(-20.0f + k * 35.0f, 8.0f, 2.0f));
+        d.lookNow(Vec3(-20.0f + k * 35.0f, 5.0f, -2.0f));
     });
 }
 
@@ -7484,14 +7490,14 @@ SHOT(t30_finale) {
     Player& p = s.player();
     p.flying = false;
     d.settings().hideGui = true;
-    s.setTimeOfDay(12600);  // dusk: the fireworks show
+    s.setTimeOfDay(12100);  // evening: still light enough, dark enough for the fireworks
     s.mobs().mobs().clear();
     const int y = feetY(w, 0, 0);
     flatten(w, -20, -20, 20, 20, y);
     blockVersion(w, 2, -11, y, -12, -1, STONE_BRICKS, TNT);
     for (int x = -11; x <= 11; ++x) w.setBlock(x, y - 1, -12, TNT);  // a fuse of TNT under it
     blockVersion(w, 3, 11, y, 13, +1, (ItemId)(CONCRETE + 4));
-    for (int x = -11; x <= 11; x += 2) w.setBlock(x, y, 11, POWERSTONE_LAMP_ON);
+    for (int x = -11; x <= 11; x += 2) w.setBlock(x, y - 1, 11, POWERSTONE_LAMP_ON);  // lamps in the ground in front
     p.pos = Vec3(0.5f, (float)y, -3.5f);
     p.yaw = 0, p.pitch = -0.05f;
     d.give(0, TNT, 16);
@@ -7505,6 +7511,7 @@ SHOT(t30_finale) {
     s.selectedSlot() = 1;
     d.frames(8);
     d.use(centre(0, y, -9));  // light it
+    if (w.getBlock(0, y, -9) == TNT) s.explodeAt(Vec3(0.5f, y + 0.5f, -9.5f), 2);  // in case the tap missed: the fuse goes off
     d.seconds(6.5f, [&](float) { d.look(Vec3(0.5f, y + 3.0f, -12.0f), 0.1f); });
     // Turn round to 3.0.0.
     d.settings().hideGui = true;
