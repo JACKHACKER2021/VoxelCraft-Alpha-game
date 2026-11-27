@@ -1063,7 +1063,7 @@ GenConfig GenConfig::fromJson(const Json& doc, std::vector<std::string>* w) {
     }
     c.flat = doc["flat"].boolean(false);
     c.flatPreset = std::clamp((int)doc["flat_preset"].num(0), 0, kFlatPresets - 1);
-    c.devMap = std::clamp((int)doc["dev_map"].num(0), 0, 6);
+    c.devMap = std::clamp((int)doc["dev_map"].num(0), 0, kFeatures290 ? 7 : 6);  // 3.0.0: the VoxelSoftworks seat is map 7
     c.boundedChunks = std::clamp((int)doc["bounded_chunks"].num(0), 0, 64);
     c.spawnX = (int)doc["spawn_x"].num(8);
     c.spawnZ = (int)doc["spawn_z"].num(8);

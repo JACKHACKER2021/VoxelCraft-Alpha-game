@@ -81,7 +81,7 @@ void ParticleSystem::spawnFirework(const World& world, const Vec3& centre, int c
         p.v0 = (T_CONFETTI / kAtlasCols) * kTile + py / 16.0f * kTile;
         p.u1 = p.u0 + 4 / 16.0f * kTile;
         p.v1 = p.v0 + 4 / 16.0f * kTile;
-        p.size = 0.12f;
+        p.size = 0.3f;
         p.light = 1.0f;
         p.fall = 0.02f;
     }

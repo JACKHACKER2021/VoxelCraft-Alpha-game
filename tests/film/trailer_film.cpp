@@ -7511,8 +7511,19 @@ SHOT(t30_finale) {
     s.selectedSlot() = 1;
     d.frames(8);
     d.use(centre(0, y, -9));  // light it
-    if (w.getBlock(0, y, -9) == TNT) s.explodeAt(Vec3(0.5f, y + 0.5f, -9.5f), 2);  // in case the tap missed: the fuse goes off
-    d.seconds(6.5f, [&](float) { d.look(Vec3(0.5f, y + 3.0f, -12.0f), 0.1f); });
+    // The fuse burns (4 s), then it goes off along the whole "2.0.0", from the middle out.
+    d.seconds(3.5f, [&](float) { d.look(Vec3(0.5f, y + 3.0f, -12.0f), 0.1f); });
+    int blast = 0;
+    d.seconds(3.0f, [&](float k) {
+        d.look(Vec3(0.5f, y + 3.0f, -12.0f), 0.1f);
+        const int want = (int)(k * 8);
+        while (blast < want) {
+            const int off = (blast / 2 + 1) * 3 * (blast % 2 ? 1 : -1);
+            s.explodeAt(Vec3(0.5f + off, y + 3.5f, -12.0f), 4.5f);
+            ++blast;
+        }
+    });
+    s.explodeAt(Vec3(0.5f, y + 3.5f, -12.0f), 5);
     // Turn round to 3.0.0.
     d.settings().hideGui = true;
     const float yaw0 = p.yaw;
@@ -7523,7 +7534,7 @@ SHOT(t30_finale) {
         if ((int)(k * 14) > burst) {
             ++burst;
             const uint32_t h = hash3(burst, 7, 300, 3);
-            s.fireworkAt(Vec3(-12.0f + (h % 25), y + 12.0f + (h >> 8) % 6, 16.0f + (h >> 16) % 6));
+            s.fireworkAt(Vec3(-12.0f + (h % 25), y + 12.0f + (h >> 8) % 6, 16.0f + (h >> 16) % 6), 140);
         }
         p.pitch = 0.12f + k * 0.18f;
     });
