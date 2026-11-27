@@ -56,6 +56,14 @@ def whoosh(d, lo=200, hi=3000, rise=True):
 
 # ------------------------------------------------------------------ sounds ---
 
+def damage(k=0):
+    """An ordinary hit (a mob, a sword, an arrow): a punchy impact and a short 'uh'."""
+    f = (140, 128, 152)[k]
+    v = (("a", "u"), ("o", "u"), ("e", "a"))[k]
+    punch = mixdown((thump(85 + 10 * k, 0.25), 1.0), (noise(0.07, 400, 4000, 0.0008, 0.05, decay=0.015), 0.8))
+    return mixdown((punch, 0.9), (seq(0.015, grunt(f, 0.19, v, rough=1.2)), 0.8))
+
+
 def freeze_hit():
     crack = noise(0.06, 3000, 12000, 0.0005, 0.04, decay=0.012)
     tinkle = at(*[(k * 0.04 + rng.uniform(0, 0.015), tone(0.35, f, (1, 0.2), decay=0.1) * rng.uniform(0.3, 0.7))
@@ -135,6 +143,9 @@ def eat_finish():
 
 
 SOUNDS = {
+    "player_damage_1": lambda: damage(0),
+    "player_damage_2": lambda: damage(1),
+    "player_damage_3": lambda: damage(2),
     "player_freeze_hit": freeze_hit,
     "player_fall": fall_small,
     "player_fall_big": fall_big,
