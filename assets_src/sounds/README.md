@@ -47,21 +47,25 @@ Krátké, suché a úderné zvuky ve stylu klasických kostičkových her, skrip
 (numpy + scipy). Místo čistých tónů jsou z fyzikálních modelů, aby zněly přirozeně: hlas jsou pulzy
 hlasivek (s chvěním a dechem) prohnané rezonancemi hrdla a úst, nárazy, křupání, led a oheň jsou šum
 a drobné impulzy přes rezonátory, respawn jsou drnknuté struny. V `player/`, mono Ogg Vorbis.
-Ukázka všech: `player_sounds_demo.mp3` (0:27), v tomto pořadí:
+Ukázka všech: `player_sounds_demo.mp3` (0:28), v tomto pořadí:
 
 | Čas | Soubor | Zvuk |
 |---|---|---|
-| 0:00 | `player_damage_1.ogg` … `player_damage_3.ogg` | zranění: úder do těla a krátké „uf“, tři varianty |
-| 0:03 | `player_freeze_hit.ogg` | zásah mrazem: prasknutí ledu, odlétající střípky, „uf“ |
-| 0:04 | `player_fall.ogg` | pád: dopad těla a krátké „uh“ |
-| 0:05 | `player_fall_big.ogg` | velký pád: těžký dopad, křupnutí, štěrk, „aúgh“ |
-| 0:07 | `player_death.ogg` | smrt: „uaagh“, pád na zem, poslední výdech |
-| 0:09 | `player_burn_1.ogg`, `player_burn_2.ogg` | hoření: praskání a hučení ohně, „uf“ |
-| 0:12 | `player_husking_flame.ogg` | ohnivá koule Huskingu: svist, výbuch plamene, hoření, „uf“ |
+| 0:00 | `player_damage_1.ogg` … `player_damage_3.ogg` | zranění: ostrý mlaskavý úder do těla a drobné vlhké dozvuky, bez hlasu |
+| 0:03 | `player_hurt_classic.ogg` | klasické jasné „uf“ (jako ve starých verzích) |
+| 0:04 | `player_freeze_hit.ogg` | zásah mrazem: prasknutí ledu, střípky, úder, „uf“ |
+| 0:05 | `player_fall.ogg` | pád: dvojitý krátký dopad (nohy, tělo) |
+| 0:06 | `player_fall_big.ogg` | velký pád: série křupavých nárazů |
+| 0:08 | `player_death.ogg` | smrt: úder, „uf“, pád na zem |
+| 0:10 | `player_burn_1.ogg`, `player_burn_2.ogg` | hoření: oheň, úder, „uf“ |
+| 0:12 | `player_husking_flame.ogg` | ohnivá koule Huskingu: svist, výbuch plamene, „uf“ |
 | 0:14 | `player_death_fire.ogg` | smrt v ohni: plameny, výkřik, pád |
-| 0:16 | `player_respawn.ogg` | respawn: závan vzduchu a drnknutý akord C–E–G–C |
-| 0:19 | `player_hunger.ogg` | hlad: kručení v břiše s bubláním |
-| 0:21 | `player_eat_1.ogg` … `player_eat_3.ogg` | jedení: křupavá kousnutí |
-| 0:25 | `player_eat_finish.ogg` | dojedení: polknutí a říhnutí |
+| 0:17 | `player_respawn.ogg` | respawn: závan vzduchu a drnknutý akord C–E–G–C |
+| 0:20 | `player_hunger.ogg` | hlad: kručení v břiše s bubláním |
+| 0:22 | `player_eat_1.ogg` … `player_eat_3.ogg` | jedení: křupavá kousnutí |
+| 0:26 | `player_eat_finish.ogg` | dojedení: polknutí a říhnutí |
+
+Charakter zranění a pádů (délky, průběh hlasitosti, spektrum) je naladěný podle referenčních
+nahrávek, které ale v repozitáři nejsou a nic z nich není použito; zvuky jsou celé syntetizované.
 
     python3 tools/player_sounds.py   # znovu vytvoří zvuky hráče i ukázku (potřebuje numpy a scipy)

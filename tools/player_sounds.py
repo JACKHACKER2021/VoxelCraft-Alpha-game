@@ -103,7 +103,9 @@ def ping(f, decay, bw=None):
 FORMANTS = {  # an adult voice (Hz): F1..F4 and bandwidths
     "u": (320, 870, 2250, 3300), "o": (520, 880, 2420, 3300), "oo": (450, 900, 2400, 3300),
     "a": (720, 1100, 2450, 3400), "uh": (620, 1180, 2400, 3300), "e": (530, 1800, 2480, 3400),
-    "eh": (580, 1700, 2450, 3400), "i": (300, 2250, 2950, 3500), "m": (260, 1050, 2300, 3300),
+    "eh": (580, 1700, 2450, 3400),
+    "cl": (470, 1050, 2750, 3850), "cl2": (400, 950, 2650, 3800),  # the bright classic 'oof'
+ "i": (300, 2250, 2950, 3500), "m": (260, 1050, 2300, 3300),
 }
 BANDWIDTHS = (80, 100, 140, 200)
 
@@ -166,9 +168,28 @@ def voice(dur, f0, vowels, breath=0.15, jitter=0.012, shimmer=0.12, h_start=0.03
     return norm(out * e)
 
 
-def oof(f=150, d=0.2, v=("oo", "u"), fry=0.3, breath=0.18):
-    """The short pained 'oof' when the player is hurt."""
-    return voice(d, [(0, f * 1.12), (0.25, f), (1, f * 0.74)], list(v), breath=breath, fry=fry, h_start=0.025)
+def oof(f=175, d=0.3, v=("cl", "cl2"), fry=0.0, breath=0.08):
+    """The classic short 'oof': bright, swelling to its loudest in the middle."""
+    x = voice(d, [(0, f * 0.95), (0.45, f * 1.06), (1, f * 0.86)], list(v), breath=breath, fry=fry, h_start=0.01,
+              jitter=0.006, shimmer=0.06)
+    x = norm(x + 2.2 * norm(bandpass(x, 2200, 4200)) * np.abs(x).max() * 0.6)  # the bright upper band
+    n = len(x)
+    return x * interp([(0, 0.15), (0.2, 0.4), (0.5, 1.0), (0.7, 0.8), (1, 0.0)], n)
+
+
+def blip(lo=300, hi=3000, d=0.006):
+    n = n_of(d * 5)
+    return norm(bandpass(rng.standard_normal(n), lo, hi)) * env_ad(n, 0.0003, d)
+
+
+def flesh_hit(k=0):
+    """A hit on the body: one sharp wet slap, then a few tiny squelches."""
+    slap = at((0, blip(150, 7000, 0.006), 1.0), (0, thud(0.25, 110), 0.5))
+    items = [(0, slap, 1.0)]
+    for _ in range(4 + k):
+        items.append((rng.uniform(0.03, 0.2), blip(400, rng.uniform(2000, 5000), rng.uniform(0.002, 0.005)),
+                      rng.uniform(0.05, 0.2)))
+    return at(*items)
 
 
 # ---------------------------------------------------------------- impacts ---
@@ -262,9 +283,13 @@ def bubble(f0, dur=0.08):
 # ------------------------------------------------------------------ sounds ---
 
 def damage(k=0):
-    f = (152, 138, 165)[k]
-    v = (("oo", "u"), ("uh", "u"), ("o", "u"))[k]
-    return at((0, punch(), 0.75), (0.008, oof(f, 0.19 + 0.02 * k, v), 0.9))
+    """Like the newer games: just the hit on the body, no voice."""
+    return flesh_hit(k)
+
+
+def hurt_classic():
+    """The old-school hurt: the 'oof' voice alone."""
+    return oof()
 
 
 def freeze_hit():
@@ -273,29 +298,32 @@ def freeze_hit():
     tinkle = grains(0.5, 45, 3500, 8000, (0.01, 0.03), np.exp(-np.arange(n) / SR / 0.12))  # shards
     frost = bandpass(rng.standard_normal(n), 3000, 10000) * env_ad(n, 0.01, 0.1) * 0.5
     return at((0, norm(crack), 0.9), (0, punch(), 0.5), (0.01, norm(tinkle), 0.35), (0, norm(frost), 0.25),
-              (0.02, oof(158, 0.2, ("eh", "u")), 0.8))
+              (0, flesh_hit(), 0.6), (0.02, oof(180), 0.7))
 
 
 def fall_small():
-    return at((0, thud(0.8, 80), 1.0), (0.01, oof(145, 0.16, ("uh", "u"), fry=0.2), 0.55))
+    """Two quick broadband knocks: the feet, then the body."""
+    return at((0, blip(80, 6000, 0.008), 1.0), (0, thud(0.2, 85), 0.5), (0.025, blip(80, 5000, 0.01), 0.9),
+              (0.04, blip(100, 3000, 0.015), 0.25))
 
 
 def fall_big():
-    crunch = grains(0.07, 700, 800, 5000, (0.0008, 0.004))
-    gravel = grains(0.35, 60, 700, 4000, (0.001, 0.004), np.exp(-np.arange(n_of(0.35)) / SR / 0.1))
-    ugh = voice(0.42, [(0, 175), (0.2, 160), (1, 100)], ["a", "uh", "u"], breath=0.25, fry=0.35, h_start=0.02)
-    return at((0, thud(1.7, 55), 1.0), (0, thud(1.2, 40), 0.6), (0.004, norm(crunch), 0.55),
-              (0.03, norm(gravel), 0.25), (0.02, ugh, 0.85))
+    """A run of crunchy knocks within a third of a second."""
+    items = [(0, thud(0.5, 60), 0.7)]
+    for k, t in enumerate((0.0, 0.03, 0.05, 0.1, 0.16, 0.24)):
+        crunch = grains(0.03, 1500, 500, 6000, (0.0004, 0.002), env_ad(n_of(0.03), 0.001, 0.008))
+        items.append((t + rng.uniform(0, 0.01), norm(crunch), rng.uniform(0.5, 1.0) * (1 - 0.08 * k)))
+    return at(*items)
 
 
 def death():
     ugh = voice(0.55, [(0, 170), (0.15, 182), (1, 95)], ["uh", "a", "o", "u"], breath=0.25, fry=0.4, h_start=0.03)
     sigh = voice(0.5, [(0, 105), (1, 80)], ["uh", "m"], breath=0.6, fry=0.5) * np.linspace(1, 0, n_of(0.5))
-    return at((0, punch(), 0.6), (0.01, ugh, 0.9), (0.5, thud(1.4, 60), 0.9), (0.62, sigh, 0.35))
+    return at((0, flesh_hit(1), 0.7), (0.01, oof(170, 0.34), 0.9), (0.38, thud(1.4, 60), 0.8), (0.48, sigh, 0.2))
 
 
 def burn(k=0):
-    return at((0, fire(0.5, 1.2), 0.7), (0.01, oof((160, 148)[k], 0.19, (("eh", "u"), ("uh", "u"))[k]), 0.85))
+    return at((0, fire(0.5, 1.2), 0.7), (0, flesh_hit(k), 0.6), (0.01, oof((175, 168)[k]), 0.7))
 
 
 def husking_flame():
@@ -303,7 +331,7 @@ def husking_flame():
     n = n_of(0.5)
     blast = lowpass(rng.standard_normal(n), 700) * env_ad(n, 0.002, 0.09)
     return at((0, fly, 0.5), (0.3, norm(blast), 1.0), (0.3, thud(0.8, 60), 0.6), (0.3, fire(0.8, 1.5), 0.6),
-              (0.33, oof(168, 0.2, ("o", "u")), 0.85))
+              (0.3, flesh_hit(2), 0.5), (0.33, oof(172), 0.7))
 
 
 def death_fire():
@@ -362,6 +390,7 @@ SOUNDS = {
     "player_damage_1": lambda: damage(0),
     "player_damage_2": lambda: damage(1),
     "player_damage_3": lambda: damage(2),
+    "player_hurt_classic": hurt_classic,
     "player_freeze_hit": freeze_hit,
     "player_fall": fall_small,
     "player_fall_big": fall_big,
