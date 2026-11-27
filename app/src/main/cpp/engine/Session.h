@@ -195,6 +195,8 @@ public:
     void summon(MobType type);  // in front of the player (commands, tests)
     // An explosion like TNT's (radius in blocks); public for commands and tests.
     void explodeAt(const Vec3& center, float radius) { explode(center, radius, radius > 6); }
+    // 3.0.0: a firework bursting at `center` (the trailer's celebration, the festive welcome).
+    void fireworkAt(const Vec3& center, int sparks = 90) { particles_.spawnFirework(*world_, center, sparks); }
 
     // 1.4.0 multiplayer: set by the game while the world is shared.
     std::function<bool(int x, int y, int z)> canEdit;  // spawn protection (null: anything goes)

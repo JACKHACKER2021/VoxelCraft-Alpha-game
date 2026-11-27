@@ -69,6 +69,24 @@ void ParticleSystem::spawnBurst(const World& world, int x, int y, int z, ItemId 
             }
 }
 
+void ParticleSystem::spawnFirework(const World& world, const Vec3& centre, int count) {
+    // One colour of the confetti tile per burst; the sparks fly out evenly in a ball.
+    const int px = (int)(random() * 3) * 4, py = (int)(random() * 3) * 4;
+    for (int i = 0; i < count; ++i) {
+        const float a = random() * 6.2831853f, b = std::acos(1 - 2 * random()), sp = 5 + random() * 2;
+        const Vec3 v(std::sin(b) * std::cos(a) * sp, std::cos(b) * sp, std::sin(b) * std::sin(a) * sp);
+        add(world, centre, v, AIR, 1.4f + random() * 0.6f);
+        Particle& p = particles_.back();
+        p.u0 = (T_CONFETTI % kAtlasCols) * kTile + px / 16.0f * kTile;
+        p.v0 = (T_CONFETTI / kAtlasCols) * kTile + py / 16.0f * kTile;
+        p.u1 = p.u0 + 4 / 16.0f * kTile;
+        p.v1 = p.v0 + 4 / 16.0f * kTile;
+        p.size = 0.12f;
+        p.light = 1.0f;
+        p.fall = 0.02f;
+    }
+}
+
 void ParticleSystem::spawnConfetti(const World& world, const Vec3& centre, int count) {
     for (int i = 0; i < count; ++i) {
         Vec3 pos = centre + Vec3((random() - 0.5f) * 10, 3 + random() * 3, (random() - 0.5f) * 10);

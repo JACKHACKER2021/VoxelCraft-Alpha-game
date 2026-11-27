@@ -22,6 +22,8 @@ public:
     void spawnBurst(const World& world, int x, int y, int z, ItemId block);
     // Anniversary confetti falling around `centre`.
     void spawnConfetti(const World& world, const Vec3& centre, int count);
+    // 3.0.0: a firework burst: glowing sparks flying out in a ball from `centre`, slowly falling.
+    void spawnFirework(const World& world, const Vec3& centre, int count);
     // 1.9.0 New Year's Eve: a firework bursting into a glowing ball of one colour.
     void spawnFirework(const World& world, const Vec3& centre, int count, float glow);
     // 1.9.0 build 2: one ambient particle: a leaf drifting down, a flame or a puff of smoke.
